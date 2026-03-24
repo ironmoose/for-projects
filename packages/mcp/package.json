@@ -1,0 +1,25 @@
+{
+  "name": "@alttab/pm-mcp",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "tab-pm-mcp": "./src/standalone.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "dev": "bun run --hot src/standalone.ts",
+    "start": "bun run src/standalone.ts"
+  },
+  "dependencies": {
+    "@alttab/pm-domain": "^0.1.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "hono": "^4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@alttab/pm-server",
+  "version": "0.1.0",
+  "bin": {
+    "tab-pm": "./src/index.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@alttab/pm-domain": "^0.1.0",
+    "hono": "^4"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2",
+    "typescript": "^5"
+  }
+}
