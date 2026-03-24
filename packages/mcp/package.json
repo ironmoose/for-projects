@@ -1,6 +1,6 @@
 {
-  "name": "@alttab/pm-mcp",
-  "version": "0.1.0",
+  "name": "@alt-t4b/pm-mcp",
+  "version": "0.1.1",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -13,7 +13,7 @@
     "start": "bun run src/standalone.ts"
   },
   "dependencies": {
-    "@alttab/pm-domain": "^0.1.0",
+    "@alt-t4b/pm-domain": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "hono": "^4",
     "zod": "^4.3.6"

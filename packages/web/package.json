@@ -1,6 +1,6 @@
 {
-  "name": "@alttab/pm-web",
-  "version": "0.1.0",
+  "name": "@alt-t4b/pm-web",
+  "version": "0.1.1",
   "type": "module",
   "bin": {
     "tab-pm-web": "./src/serve.ts"

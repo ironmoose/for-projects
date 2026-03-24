@@ -1,14 +1,14 @@
 {
-  "name": "@alttab/project-management",
+  "name": "@alt-t4b/project-management",
   "version": "0.0.1",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --filter '@alttab/pm-web' dev & bun run --filter '@alttab/pm-server' dev & bun run --filter '@alttab/pm-mcp' dev",
-    "build": "bun run --filter '@alttab/pm-web' build && bun run --filter '@alttab/pm-mcp' build && bun run --filter '@alttab/pm-server' build",
-    "serve": "bun run build && bun run --filter '@alttab/pm-server' start & bun run --filter '@alttab/pm-web' serve & bun run --filter '@alttab/pm-mcp' start",
+    "dev": "bun run --filter '@alt-t4b/pm-web' dev & bun run --filter '@alt-t4b/pm-server' dev & bun run --filter '@alt-t4b/pm-mcp' dev",
+    "build": "bun run --filter '@alt-t4b/pm-web' build && bun run --filter '@alt-t4b/pm-mcp' build && bun run --filter '@alt-t4b/pm-server' build",
+    "serve": "bun run build && bun run --filter '@alt-t4b/pm-server' start & bun run --filter '@alt-t4b/pm-web' serve & bun run --filter '@alt-t4b/pm-mcp' start",
     "test": "bun test"
   }
 }

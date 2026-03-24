@@ -5,7 +5,7 @@ import {
   type IProjectService,
   type CreateProjectInput,
   type UpdateProjectInput,
-} from "@alttab/pm-domain";
+} from "@alt-t4b/pm-domain";
 
 export function projectRoutes(service: IProjectService): Hono {
   const app = new Hono();

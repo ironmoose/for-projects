@@ -7,7 +7,7 @@ import {
   TASK_STATUSES,
   type IProjectService,
   type ITaskService,
-} from "@alttab/pm-domain";
+} from "@alt-t4b/pm-domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;

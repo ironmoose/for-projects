@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { networkInterfaces } from "os";
-import { bootstrap, ServiceError } from "@alttab/pm-domain";
+import { bootstrap, ServiceError } from "@alt-t4b/pm-domain";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
@@ -73,8 +73,8 @@ if (host === "0.0.0.0") {
   }
 }
 
-export default {
+Bun.serve({
   port,
   hostname: host,
   fetch: app.fetch,
-};
+});

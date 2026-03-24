@@ -5,7 +5,7 @@ import {
   type ITaskService,
   type CreateTaskInput,
   type UpdateTaskInput,
-} from "@alttab/pm-domain";
+} from "@alt-t4b/pm-domain";
 
 export function taskRoutes(service: ITaskService): Hono {
   const app = new Hono();

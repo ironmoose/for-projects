@@ -1,6 +1,6 @@
 {
-  "name": "@alttab/pm-server",
-  "version": "0.1.0",
+  "name": "@alt-t4b/pm-server",
+  "version": "0.1.1",
   "bin": {
     "tab-pm": "./src/index.ts"
   },
@@ -10,7 +10,7 @@
     "start": "bun run src/index.ts"
   },
   "dependencies": {
-    "@alttab/pm-domain": "^0.1.0",
+    "@alt-t4b/pm-domain": "^0.1.0",
     "hono": "^4"
   },
   "devDependencies": {

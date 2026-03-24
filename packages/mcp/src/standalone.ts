@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { bootstrap } from "@alttab/pm-domain";
+import { bootstrap } from "@alt-t4b/pm-domain";
 import { handleMcpHttp } from "./server";
 import { networkInterfaces } from "os";
 
