@@ -11,7 +11,7 @@ import { join } from "path";
 import { readFileSync, existsSync } from "fs";
 import { bootstrap, ServiceError } from "../domain";
 import type { DomainEvent } from "../domain/events";
-import { parseArgs, logListening, type ServerOptions } from "../domain/args";
+import { parseArgs, parseCorsOrigins, logListening, type ServerOptions } from "../domain/args";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
@@ -32,6 +32,7 @@ export class Server {
     const ctx = bootstrap(dbPath);
 
     const app = new Hono();
+    const isAllowedOrigin = parseCorsOrigins(process.env.PM_CORS_ORIGINS);
 
     // ── Global middleware ──────────────────────────────────
     app.use("*", secureHeaders());
@@ -40,10 +41,7 @@ export class Server {
     app.use(
       "*",
       cors({
-        origin: (origin) =>
-          origin?.startsWith("http://localhost") || origin?.startsWith("http://127.0.0.1")
-            ? origin
-            : null,
+        origin: (origin) => (origin && isAllowedOrigin(origin)) ? origin : null,
         allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allowHeaders: ["Content-Type", "mcp-session-id", "Last-Event-ID", "mcp-protocol-version"],
         exposeHeaders: ["mcp-session-id", "mcp-protocol-version"],

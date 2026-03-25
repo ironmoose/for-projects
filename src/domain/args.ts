@@ -9,7 +9,7 @@ export interface ServerOptions {
 export function parseArgs(defaults: { port: number; portEnv: string }): ServerOptions {
   const args = process.argv.slice(2);
   let port = Number(process.env[defaults.portEnv]) || defaults.port;
-  let host = process.env.PM_HOST ?? "127.0.0.1";
+  let host = process.env.PM_HOST ?? "0.0.0.0";
   let dbPath: string | undefined = process.env.SQLITE_PATH;
 
   for (let i = 0; i < args.length; i++) {
@@ -27,6 +27,16 @@ export function getNetworkAddress(): string | undefined {
       if (addr.family === "IPv4" && !addr.internal) return addr.address;
     }
   }
+}
+
+export function parseCorsOrigins(envValue?: string): (origin: string) => boolean {
+  if (!envValue) {
+    return (origin) =>
+      origin.startsWith("http://localhost") || origin.startsWith("http://127.0.0.1");
+  }
+  if (envValue.trim() === "*") return () => true;
+  const allowed = new Set(envValue.split(",").map(s => s.trim()).filter(Boolean));
+  return (origin) => allowed.has(origin);
 }
 
 export function logListening(name: string, host: string, port: number): void {

@@ -60,28 +60,18 @@ export class TaskRepository {
     const id = ulid();
     const now = new Date().toISOString();
 
-    // Atomically assign next number for this project
-    const row = this.db
-      .query("SELECT COALESCE(MAX(number), 0) + 1 as next_number FROM tasks WHERE project_id = ?")
-      .get(projectId) as { next_number: number };
-    const number = row.next_number;
+    this.db.transaction(() => {
+      const row = this.db
+        .query("SELECT COALESCE(MAX(number), 0) + 1 as next_number FROM tasks WHERE project_id = ?")
+        .get(projectId) as { next_number: number };
 
-    this.db
-      .query(
-        `INSERT INTO tasks (id, project_id, number, title, description, status, priority, created_at, updated_at)
+      this.db
+        .query(
+          `INSERT INTO tasks (id, project_id, number, title, description, status, priority, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        id,
-        projectId,
-        number,
-        input.title,
-        input.description ?? "",
-        input.status ?? "todo",
-        input.priority ?? null,
-        now,
-        now
-      );
+        )
+        .run(id, projectId, row.next_number, input.title, input.description ?? "", input.status ?? "todo", input.priority ?? null, now, now);
+    })();
 
     return this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Task;
   }

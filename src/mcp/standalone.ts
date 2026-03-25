@@ -4,7 +4,7 @@ import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { bootstrap } from "../domain";
-import { parseArgs, logListening, type ServerOptions } from "../domain/args";
+import { parseArgs, parseCorsOrigins, logListening, type ServerOptions } from "../domain/args";
 import { createMcpHttpHandler } from "./server";
 
 export class McpStandaloneServer {
@@ -20,14 +20,12 @@ export class McpStandaloneServer {
     const ctx = bootstrap(dbPath);
 
     const app = new Hono();
+    const isAllowedOrigin = parseCorsOrigins(process.env.PM_CORS_ORIGINS);
     app.use("*", secureHeaders());
     app.use(
       "*",
       cors({
-        origin: (origin) =>
-          origin?.startsWith("http://localhost") || origin?.startsWith("http://127.0.0.1")
-            ? origin
-            : null,
+        origin: (origin) => (origin && isAllowedOrigin(origin)) ? origin : null,
         allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
         allowHeaders: ["Content-Type", "mcp-session-id", "Last-Event-ID", "mcp-protocol-version"],
         exposeHeaders: ["mcp-session-id", "mcp-protocol-version"],

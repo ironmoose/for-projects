@@ -270,12 +270,14 @@ export function createMcpHttpHandler(ctx: McpServiceContext): (req: Request) => 
   return (req: Request): Promise<Response> => {
     const result = pending.then(async () => {
       const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });
-      await server.connect(transport);
-      const response = await transport.handleRequest(req);
-      await server.close();
-      return response;
+      try {
+        await server.connect(transport);
+        const response = await transport.handleRequest(req);
+        return response;
+      } finally {
+        await server.close();
+      }
     });
-    // Chain subsequent requests, swallowing errors so the chain never rejects
     pending = result.catch(() => {});
     return result;
   };
