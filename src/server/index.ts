@@ -9,11 +9,13 @@ import { etag } from "hono/etag";
 import { join } from "path";
 import { readFileSync, existsSync } from "fs";
 import { bootstrap, ServiceError } from "../domain";
+import type { DomainEvent } from "../domain/events";
 import { parseArgs, logListening, type ServerOptions } from "../domain/args";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
-import { handleMcpHttp } from "../mcp/server";
+import { createMcpHttpHandler } from "../mcp/server";
+import type { ServerWebSocket } from "bun";
 
 export class Server {
   private options: ServerOptions;
@@ -51,8 +53,10 @@ export class Server {
     app.route("/api/projects", projectRoutes(ctx.projectService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
-    // ── MCP (no logging) ──────────────────────────────────
-    app.all("/mcp", (c) => handleMcpHttp(ctx, c.req.raw));
+    // ── MCP ────────────────────────────────────────────────
+    app.use("/mcp", logger((str) => process.stderr.write(str + "\n")));
+    const handleMcp = createMcpHttpHandler(ctx);
+    app.all("/mcp", (c) => handleMcp(c.req.raw));
 
     // ── Static web assets ─────────────────────────────────
     const dist = join(import.meta.dir, "../web/dist");
@@ -86,12 +90,40 @@ export class Server {
       return c.json({ error: "internal server error" }, 500);
     });
 
+    // ── WebSocket client tracking ─────────────────────────
+    const wsClients = new Set<ServerWebSocket<unknown>>();
+
+    ctx.eventBus.subscribe((event: DomainEvent) => {
+      const msg = JSON.stringify(event);
+      for (const ws of wsClients) {
+        ws.send(msg);
+      }
+    });
+
     logListening("tab-for-projects", host, port);
 
     Bun.serve({
       port,
       hostname: host,
-      fetch: app.fetch,
+      fetch(req, server) {
+        // WebSocket upgrade
+        if (new URL(req.url).pathname === "/ws") {
+          if (server.upgrade(req)) return undefined;
+          return new Response("WebSocket upgrade failed", { status: 400 });
+        }
+        return app.fetch(req, server);
+      },
+      websocket: {
+        open(ws) {
+          wsClients.add(ws);
+        },
+        close(ws) {
+          wsClients.delete(ws);
+        },
+        message() {
+          // broadcast-only — client messages are ignored
+        },
+      },
     });
   }
 }

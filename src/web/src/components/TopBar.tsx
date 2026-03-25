@@ -1,7 +1,7 @@
 import { useTheme } from "./ThemeContext";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
-export function TopBar() {
+export function TopBar({ trailing }: { trailing?: React.ReactNode }) {
   const { theme } = useTheme();
 
   return (
@@ -27,9 +27,11 @@ export function TopBar() {
           maxWidth: 1400,
           padding: `${theme.spacing.md} ${theme.spacing["2xl"]}`,
           boxSizing: "border-box",
+          gap: 8,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {trailing}
           <ThemeSwitcher />
         </div>
       </div>

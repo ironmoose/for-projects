@@ -21,6 +21,10 @@ COPY --from=build /app/src/web/dist src/web/dist/
 COPY package.json ./
 COPY src/ src/
 
+# Run as non-root user (bun user is built into oven/bun base image)
+RUN mkdir -p /app/data && chown -R bun:bun /app/data
+USER bun
+
 ENV PM_HOST=0.0.0.0
 ENV PM_PORT=3000
 EXPOSE 3000

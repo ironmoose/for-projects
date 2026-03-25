@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 import { Hono } from "hono";
+import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { bootstrap } from "../domain";
 import { parseArgs, logListening, type ServerOptions } from "../domain/args";
-import { handleMcpHttp } from "./server";
+import { createMcpHttpHandler } from "./server";
 
 export class McpStandaloneServer {
   private options: ServerOptions;
@@ -30,7 +31,9 @@ export class McpStandaloneServer {
         exposeHeaders: ["mcp-session-id", "mcp-protocol-version"],
       })
     );
-    app.all("/*", (c) => handleMcpHttp(ctx, c.req.raw));
+    app.use("*", logger((str) => process.stderr.write(str + "\n")));
+    const handleMcp = createMcpHttpHandler(ctx);
+    app.all("/*", (c) => handleMcp(c.req.raw));
 
     logListening("tab-for-projects mcp (standalone)", host, port);
 

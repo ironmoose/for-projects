@@ -26,8 +26,8 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // POST /api/projects
   app.post("/", async (c) => {
-    const body = await c.req.json<CreateProjectInput>();
     try {
+      const body = await c.req.json<CreateProjectInput>();
       const project = service.create(body);
       return c.json(project, 201);
     } catch (e: unknown) {
@@ -45,8 +45,8 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // PATCH /api/projects/:slug
   app.patch("/:slug", async (c) => {
-    const body = await c.req.json<UpdateProjectInput>();
     try {
+      const body = await c.req.json<UpdateProjectInput>();
       const project = service.update(c.req.param("slug"), body);
       if (!project) return c.json({ error: "project not found" }, 404);
       return c.json(project);

@@ -33,8 +33,8 @@ export function taskRoutes(service: ITaskService): Hono {
   // POST /api/projects/:projectSlug/tasks
   app.post("/", async (c) => {
     const projectSlug = c.req.param("projectSlug")!;
-    const body = await c.req.json<CreateTaskInput>();
     try {
+      const body = await c.req.json<CreateTaskInput>();
       const task = service.create(projectSlug, body);
       return c.json(task, 201);
     } catch (e: unknown) {
@@ -45,8 +45,8 @@ export function taskRoutes(service: ITaskService): Hono {
 
   // PATCH /api/projects/:projectSlug/tasks/:id
   app.patch("/:id", async (c) => {
-    const body = await c.req.json<UpdateTaskInput>();
     try {
+      const body = await c.req.json<UpdateTaskInput>();
       const task = service.update(c.req.param("id")!, body);
       if (!task) return c.json({ error: "task not found" }, 404);
       return c.json(task);

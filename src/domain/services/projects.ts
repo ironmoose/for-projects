@@ -4,11 +4,12 @@ import type { IProjectService, Paginated, ProjectFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
 import { PROJECT_STATUSES } from "../statuses";
+import type { EventBus } from "../events";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export class ProjectService implements IProjectService {
-  constructor(private repo: ProjectRepository) {}
+  constructor(private repo: ProjectRepository, private eventBus?: EventBus) {}
 
   findAll(limit = 50, offset = 0, filter?: ProjectFilter): Paginated<Project> {
     return {
@@ -46,7 +47,9 @@ export class ProjectService implements IProjectService {
     if (this.repo.findBySlug(input.slug)) {
       throw new ServiceError("slug already exists", 409);
     }
-    return this.repo.create(input);
+    const project = this.repo.create(input);
+    this.eventBus?.emit({ entity: "project", action: "created", payload: project });
+    return project;
   }
 
   update(slug: string, input: UpdateProjectInput): Project | null {
@@ -62,10 +65,19 @@ export class ProjectService implements IProjectService {
     if (input.status !== undefined && !(PROJECT_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${PROJECT_STATUSES.join(", ")}`, 400);
     }
-    return this.repo.update(slug, input);
+    const project = this.repo.update(slug, input);
+    if (project) {
+      this.eventBus?.emit({ entity: "project", action: "updated", payload: project });
+    }
+    return project;
   }
 
   delete(slug: string): boolean {
-    return this.repo.delete(slug);
+    const project = this.repo.findBySlug(slug);
+    const deleted = this.repo.delete(slug);
+    if (deleted && project) {
+      this.eventBus?.emit({ entity: "project", action: "deleted", payload: { id: project.id } });
+    }
+    return deleted;
   }
 }

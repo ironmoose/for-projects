@@ -148,12 +148,28 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   return server;
 }
 
-/** Handle a single MCP-over-HTTP request (stateless, one server per request). */
-export async function handleMcpHttp(ctx: McpServiceContext, req: Request): Promise<Response> {
+/**
+ * Create a stateless HTTP handler that reuses a single McpServer instance.
+ *
+ * McpServer supports sequential connect → handle → close cycles (close() resets
+ * the internal transport reference), but does NOT support concurrent connections.
+ * A promise chain serializes requests so connect() is never called while a
+ * previous transport is still active.
+ */
+export function createMcpHttpHandler(ctx: McpServiceContext): (req: Request) => Promise<Response> {
   const server = createMcpServer(ctx);
-  const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });
-  await server.connect(transport);
-  const response = await transport.handleRequest(req);
-  await server.close();
-  return response;
+  let pending: Promise<unknown> = Promise.resolve();
+
+  return (req: Request): Promise<Response> => {
+    const result = pending.then(async () => {
+      const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });
+      await server.connect(transport);
+      const response = await transport.handleRequest(req);
+      await server.close();
+      return response;
+    });
+    // Chain subsequent requests, swallowing errors so the chain never rejects
+    pending = result.catch(() => {});
+    return result;
+  };
 }

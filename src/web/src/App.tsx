@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -12,6 +12,7 @@ import {
   useTheme,
 } from "./components";
 import { API_BASE } from "./api";
+import { useRealtimeEvents, type DomainEvent } from "./useRealtimeEvents";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,15 +79,29 @@ export function App() {
   const projectSlugMatch = path.match(/^\/projects\/([^/]+)$/);
   const projectSlug = projectSlugMatch?.[1] ?? null;
 
+  // Real-time event listeners from child views
+  const eventListenersRef = useRef(new Set<(e: DomainEvent) => void>());
+
+  const onEvent = useCallback((event: DomainEvent) => {
+    for (const fn of eventListenersRef.current) fn(event);
+  }, []);
+
+  const { connected } = useRealtimeEvents(onEvent);
+
+  const subscribeEvents = useCallback((fn: (e: DomainEvent) => void) => {
+    eventListenersRef.current.add(fn);
+    return () => { eventListenersRef.current.delete(fn); };
+  }, []);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", fontFamily: theme.font.body }}>
-      <TopBar />
+      <TopBar trailing={<ConnectionIndicator connected={connected} />} />
 
       <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}>
         {projectSlug ? (
-          <ProjectView slug={projectSlug} onBack={() => navigate("/")} />
+          <ProjectView slug={projectSlug} onBack={() => navigate("/")} subscribeEvents={subscribeEvents} />
         ) : (
-          <DashboardView onOpenProject={(slug) => navigate(`/projects/${slug}`)} />
+          <DashboardView onOpenProject={(slug) => navigate(`/projects/${slug}`)} subscribeEvents={subscribeEvents} />
         )}
       </main>
     </div>
@@ -94,10 +109,31 @@ export function App() {
 }
 
 // ---------------------------------------------------------------------------
+// ConnectionIndicator
+// ---------------------------------------------------------------------------
+
+function ConnectionIndicator({ connected }: { connected: boolean }) {
+  const { theme } = useTheme();
+  return (
+    <span
+      title={connected ? "Live updates active" : "Reconnecting..."}
+      style={{
+        display: "inline-block",
+        width: 8,
+        height: 8,
+        borderRadius: theme.radius.full,
+        background: connected ? theme.color.success : theme.color.textFaint,
+        transition: "background 0.3s",
+      }}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // DashboardView
 // ---------------------------------------------------------------------------
 
-function DashboardView({ onOpenProject }: { onOpenProject: (slug: string) => void }) {
+function DashboardView({ onOpenProject, subscribeEvents }: { onOpenProject: (slug: string) => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void }) {
   const { theme } = useTheme();
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
@@ -105,29 +141,37 @@ function DashboardView({ onOpenProject }: { onOpenProject: (slug: string) => voi
   const [description, setDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
 
+  const fetchProjectsRef = useRef<() => void>();
+
   async function fetchProjects() {
     const res = await fetch(`${API_BASE}/api/projects`);
+    if (!res.ok) return;
     const body = await res.json();
     setProjects(body.data);
   }
 
+  fetchProjectsRef.current = fetchProjects;
+
   useEffect(() => {
     fetchProjects();
-  }, []);
+    return subscribeEvents((event) => {
+      if (event.entity === "project") fetchProjectsRef.current?.();
+    });
+  }, [subscribeEvents]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    await fetch(`${API_BASE}/api/projects`, {
+    const res = await fetch(`${API_BASE}/api/projects`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, slug, description }),
     });
+    if (!res.ok) return;
     setName("");
     setSlug("");
     setDescription("");
     setShowCreateForm(false);
-    fetchProjects();
   }
 
   return (
@@ -350,7 +394,7 @@ const taskStatusOptions = [
   { value: "done", label: "Done" },
 ];
 
-function ProjectView({ slug, onBack }: { slug: string; onBack: () => void }) {
+function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: () => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void }) {
   const { theme } = useTheme();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -359,6 +403,9 @@ function ProjectView({ slug, onBack }: { slug: string; onBack: () => void }) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
+
+  const slugRef = useRef(slug);
+  slugRef.current = slug;
 
   async function fetchProject() {
     const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(slug)}`);
@@ -369,10 +416,14 @@ function ProjectView({ slug, onBack }: { slug: string; onBack: () => void }) {
   }
 
   async function fetchTasks(projectSlug: string) {
-    const res = await fetch(`${API_BASE}/api/projects/${projectSlug}/tasks`);
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks`);
+    if (!res.ok) return;
     const body = await res.json();
     setTasks(body.data);
   }
+
+  const fetchProjectRef = useRef(fetchProject);
+  fetchProjectRef.current = fetchProject;
 
   useEffect(() => {
     setNotFound(false);
@@ -380,44 +431,50 @@ function ProjectView({ slug, onBack }: { slug: string; onBack: () => void }) {
     setTasks([]);
     setSelectedTaskId(null);
     fetchProject();
-  }, [slug]);
+
+    return subscribeEvents((event) => {
+      if (event.entity === "project" || event.entity === "task") {
+        fetchProjectRef.current();
+      }
+    });
+  }, [slug, subscribeEvents]);
 
   async function handleStatusChange(status: Project["status"]) {
     if (!project) return;
-    await fetch(`${API_BASE}/api/projects/${project.slug}`, {
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    fetchProject();
+    if (!res.ok) return;
   }
 
   async function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
     if (!newTaskTitle.trim() || !project) return;
-    await fetch(`${API_BASE}/api/projects/${project.slug}/tasks`, {
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: newTaskTitle }),
     });
+    if (!res.ok) return;
     setNewTaskTitle("");
-    fetchTasks(project.slug);
   }
 
   async function handleTaskStatusChange(taskId: string, status: Task["status"]) {
     if (!project) return;
-    await fetch(`${API_BASE}/api/projects/${project.slug}/tasks/${taskId}`, {
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    fetchTasks(project.slug);
+    if (!res.ok) return;
   }
 
   async function handleDeleteTask(taskId: string) {
     if (!project) return;
-    await fetch(`${API_BASE}/api/projects/${project.slug}/tasks/${taskId}`, { method: "DELETE" });
-    fetchTasks(project.slug);
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, { method: "DELETE" });
+    if (!res.ok) return;
   }
 
   if (notFound) {

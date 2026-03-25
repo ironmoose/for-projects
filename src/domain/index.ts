@@ -3,6 +3,7 @@ export * from "./entities";
 export * from "./inputs";
 export * from "./errors";
 export * from "./services";
+export * from "./events";
 export * from "./bootstrap";
 export { createDatabase, getDbPath } from "./db/connection";
 export { runMigrations } from "./db/schema";

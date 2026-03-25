@@ -5,11 +5,13 @@ import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
 import { TASK_STATUSES } from "../statuses";
+import type { EventBus } from "../events";
 
 export class TaskService implements ITaskService {
   constructor(
     private taskRepo: TaskRepository,
-    private projectRepo: ProjectRepository
+    private projectRepo: ProjectRepository,
+    private eventBus?: EventBus,
   ) {}
 
   findByProjectSlug(projectSlug: string, limit = 100, offset = 0, filter?: TaskFilter): Paginated<Task> {
@@ -40,7 +42,9 @@ export class TaskService implements ITaskService {
     if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${TASK_STATUSES.join(", ")}`, 400);
     }
-    return this.taskRepo.create(project.id, input);
+    const task = this.taskRepo.create(project.id, input);
+    this.eventBus?.emit({ entity: "task", action: "created", payload: task });
+    return task;
   }
 
   update(id: string, input: UpdateTaskInput): Task | null {
@@ -56,10 +60,18 @@ export class TaskService implements ITaskService {
     if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${TASK_STATUSES.join(", ")}`, 400);
     }
-    return this.taskRepo.update(id, input);
+    const task = this.taskRepo.update(id, input);
+    if (task) {
+      this.eventBus?.emit({ entity: "task", action: "updated", payload: task });
+    }
+    return task;
   }
 
   delete(id: string): boolean {
-    return this.taskRepo.delete(id);
+    const deleted = this.taskRepo.delete(id);
+    if (deleted) {
+      this.eventBus?.emit({ entity: "task", action: "deleted", payload: { id } });
+    }
+    return deleted;
   }
 }
