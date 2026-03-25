@@ -25,12 +25,24 @@ export function runMigrations(db: Database): void {
       description TEXT NOT NULL DEFAULT '',
       status      TEXT NOT NULL DEFAULT 'todo'
                   CHECK (status IN ('todo', 'in_progress', 'done')),
+      type        TEXT CHECK (type IN ('research', 'implementation', 'review', 'design', 'planning', 'testing', 'documentation')),
+      effort      TEXT CHECK (effort IN ('trivial', 'low', 'moderate', 'high', 'extreme')),
       priority    INTEGER CHECK (priority BETWEEN 1 AND 10),
       created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
       updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
       UNIQUE(project_id, number)
     )
   `);
+
+  // ── Migrate: add type and effort columns to tasks ────────
+  const taskCols = db.query("PRAGMA table_info(tasks)").all() as { name: string }[];
+  const colNames = new Set(taskCols.map((c) => c.name));
+  if (!colNames.has("type")) {
+    db.run("ALTER TABLE tasks ADD COLUMN type TEXT CHECK (type IN ('research', 'implementation', 'review', 'design', 'planning', 'testing', 'documentation'))");
+  }
+  if (!colNames.has("effort")) {
+    db.run("ALTER TABLE tasks ADD COLUMN effort TEXT CHECK (effort IN ('trivial', 'low', 'moderate', 'high', 'extreme'))");
+  }
 
   db.run("CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_tasks_project_number ON tasks(project_id, number)");
@@ -40,9 +52,21 @@ export function runMigrations(db: Database): void {
     CREATE TABLE IF NOT EXISTS tags (
       id         TEXT PRIMARY KEY,
       name       TEXT NOT NULL UNIQUE,
+      prefix     TEXT,
       created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     )
   `);
+
+  // ── Migrate: add prefix column to tags ──────────────────
+  const tagCols = db.query("PRAGMA table_info(tags)").all() as { name: string }[];
+  const tagColNames = new Set(tagCols.map((c) => c.name));
+  if (!tagColNames.has("prefix")) {
+    db.run("ALTER TABLE tags ADD COLUMN prefix TEXT");
+    // Backfill prefix for existing tags that contain a colon
+    db.run("UPDATE tags SET prefix = SUBSTR(name, 1, INSTR(name, ':') - 1) WHERE INSTR(name, ':') > 0");
+  }
+
+  db.run("CREATE INDEX IF NOT EXISTS idx_tags_prefix ON tags(prefix)");
 
   db.run(`
     CREATE TABLE IF NOT EXISTS task_tags (

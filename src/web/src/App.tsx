@@ -28,6 +28,9 @@ interface Project {
   updated_at: string;
 }
 
+type TaskType = "research" | "implementation" | "review" | "design" | "planning" | "testing" | "documentation";
+type TaskEffort = "trivial" | "low" | "moderate" | "high" | "extreme";
+
 interface Task {
   id: string;
   project_id: string;
@@ -35,6 +38,8 @@ interface Task {
   title: string;
   description: string;
   status: "todo" | "in_progress" | "done";
+  type: TaskType | null;
+  effort: TaskEffort | null;
   priority: number | null;
   created_at: string;
   updated_at: string;
@@ -43,6 +48,7 @@ interface Task {
 interface Tag {
   id: string;
   name: string;
+  prefix: string | null;
   created_at: string;
 }
 
@@ -661,6 +667,36 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
                             #{task.number}
                           </span>
                           {task.title}
+                          {task.type != null && (
+                            <span
+                              style={{
+                                flexShrink: 0,
+                                fontSize: "0.6rem",
+                                fontWeight: 600,
+                                color: theme.color.primary,
+                                background: theme.color.surfaceContainerHigh,
+                                borderRadius: theme.radius.sm,
+                                padding: "1px 4px",
+                              }}
+                            >
+                              {task.type}
+                            </span>
+                          )}
+                          {task.effort != null && (
+                            <span
+                              style={{
+                                flexShrink: 0,
+                                fontSize: "0.6rem",
+                                fontWeight: 600,
+                                color: task.effort === "extreme" || task.effort === "high" ? theme.color.error : task.effort === "moderate" ? theme.color.tertiary : theme.color.textFaint,
+                                background: theme.color.surfaceContainerHigh,
+                                borderRadius: theme.radius.sm,
+                                padding: "1px 4px",
+                              }}
+                            >
+                              {task.effort}
+                            </span>
+                          )}
                           {task.priority != null && (
                             <span
                               style={{
@@ -936,7 +972,14 @@ function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSl
                     padding: "2px 8px",
                   }}
                 >
-                  {tag.name}
+                  {tag.prefix ? (
+                    <>
+                      <span style={{ color: theme.color.textFaint, fontWeight: 600 }}>{tag.prefix}:</span>
+                      {tag.name.slice(tag.prefix.length + 1)}
+                    </>
+                  ) : (
+                    tag.name
+                  )}
                   <span
                     onClick={() => handleRemoveTag(tag.id)}
                     style={{ cursor: "pointer", color: theme.color.textFaint, fontSize: "0.6rem", lineHeight: 1 }}
@@ -989,6 +1032,8 @@ function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSl
               {[
                 { label: "Number", value: `#${task.number}` },
                 { label: "ID", value: task.id },
+                { label: "Type", value: task.type ?? "—" },
+                { label: "Effort", value: task.effort ?? "—" },
                 { label: "Priority", value: task.priority != null ? `${task.priority}` : "—" },
                 { label: "Created", value: formatDate(task.created_at) },
                 { label: "Updated", value: formatDate(task.updated_at) },

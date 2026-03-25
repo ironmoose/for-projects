@@ -1,4 +1,4 @@
-import type { ProjectStatus, TaskStatus } from "./statuses";
+import type { ProjectStatus, TaskStatus, TaskType, TaskEffort } from "./statuses";
 
 export interface Project {
   id: string;
@@ -17,6 +17,8 @@ export interface Task {
   title: string;
   description: string;
   status: TaskStatus;
+  type: TaskType | null;
+  effort: TaskEffort | null;
   priority: number | null;
   created_at: string;
   updated_at: string;
@@ -25,5 +27,6 @@ export interface Task {
 export interface Tag {
   id: string;
   name: string;
+  prefix: string | null;
   created_at: string;
 }

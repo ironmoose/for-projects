@@ -21,22 +21,42 @@ export class TagService implements ITagService {
     return this.tagRepo.findByName(name);
   }
 
-  create(name: string): Tag {
-    const trimmed = name.trim().toLowerCase();
+  findByPrefix(prefix: string, limit = 100, offset = 0): Paginated<Tag> {
+    return {
+      data: this.tagRepo.findByPrefix(prefix, limit, offset),
+      total: this.tagRepo.countByPrefix(prefix),
+    };
+  }
+
+  private static extractPrefix(name: string): string | null {
+    const idx = name.indexOf(":");
+    return idx > 0 ? name.slice(0, idx) : null;
+  }
+
+  private static validateTagName(trimmed: string): void {
     if (!trimmed) {
       throw new ServiceError("tag name is required", 400);
     }
     if (trimmed.length > 50) {
       throw new ServiceError("tag name must be 50 characters or fewer", 400);
     }
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(trimmed)) {
-      throw new ServiceError("tag name must be lowercase alphanumeric with hyphens", 400);
+    if (!/^[a-z0-9][a-z0-9-:]*[a-z0-9]$/.test(trimmed) && !/^[a-z0-9]$/.test(trimmed)) {
+      throw new ServiceError("tag name must be lowercase alphanumeric with hyphens and colons (e.g. 'agent:researcher')", 400);
     }
+    if (/::/.test(trimmed) || /--/.test(trimmed) || /-:/.test(trimmed) || /:-/.test(trimmed)) {
+      throw new ServiceError("tag name must not contain consecutive separators", 400);
+    }
+  }
+
+  create(name: string): Tag {
+    const trimmed = name.trim().toLowerCase();
+    TagService.validateTagName(trimmed);
     const existing = this.tagRepo.findByName(trimmed);
     if (existing) {
       throw new ServiceError("tag already exists", 409);
     }
-    return this.tagRepo.create(trimmed);
+    const prefix = TagService.extractPrefix(trimmed);
+    return this.tagRepo.create(trimmed, prefix);
   }
 
   delete(id: string): boolean {
@@ -49,16 +69,11 @@ export class TagService implements ITagService {
       throw new ServiceError("task not found", 404);
     }
     const trimmed = tagName.trim().toLowerCase();
-    // Auto-create tag if it doesn't exist
     let tag = this.tagRepo.findByName(trimmed);
     if (!tag) {
-      if (!trimmed || trimmed.length > 50) {
-        throw new ServiceError("tag name must be 1-50 lowercase alphanumeric characters with hyphens", 400);
-      }
-      if (!/^[a-z0-9][a-z0-9-]*$/.test(trimmed)) {
-        throw new ServiceError("tag name must be lowercase alphanumeric with hyphens", 400);
-      }
-      tag = this.tagRepo.create(trimmed);
+      TagService.validateTagName(trimmed);
+      const prefix = TagService.extractPrefix(trimmed);
+      tag = this.tagRepo.create(trimmed, prefix);
     }
     this.tagRepo.addTagToTask(taskId, tag.id);
     return tag;
@@ -80,6 +95,13 @@ export class TagService implements ITagService {
     return {
       data: this.tagRepo.findTasksByTag(tag.id, limit, offset),
       total: this.tagRepo.countTasksByTag(tag.id),
+    };
+  }
+
+  findTasksByTagPrefix(prefix: string, limit = 100, offset = 0): Paginated<Task> {
+    return {
+      data: this.tagRepo.findTasksByTagPrefix(prefix, limit, offset),
+      total: this.tagRepo.countTasksByTagPrefix(prefix),
     };
   }
 }

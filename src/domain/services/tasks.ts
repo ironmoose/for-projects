@@ -4,7 +4,7 @@ import type { ITaskService, Paginated, TaskFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
-import { TASK_STATUSES } from "../statuses";
+import { TASK_STATUSES, TASK_TYPES, TASK_EFFORTS } from "../statuses";
 import type { EventBus } from "../events";
 
 export class TaskService implements ITaskService {
@@ -50,6 +50,12 @@ export class TaskService implements ITaskService {
     if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${TASK_STATUSES.join(", ")}`, 400);
     }
+    if (input.type !== undefined && input.type !== null && !(TASK_TYPES as readonly string[]).includes(input.type)) {
+      throw new ServiceError(`type must be one of: ${TASK_TYPES.join(", ")}`, 400);
+    }
+    if (input.effort !== undefined && input.effort !== null && !(TASK_EFFORTS as readonly string[]).includes(input.effort)) {
+      throw new ServiceError(`effort must be one of: ${TASK_EFFORTS.join(", ")}`, 400);
+    }
     if (input.priority !== undefined && input.priority !== null) {
       if (!Number.isInteger(input.priority) || input.priority < 1 || input.priority > 10) {
         throw new ServiceError("priority must be an integer between 1 and 10", 400);
@@ -76,6 +82,12 @@ export class TaskService implements ITaskService {
     }
     if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${TASK_STATUSES.join(", ")}`, 400);
+    }
+    if (input.type !== undefined && input.type !== null && !(TASK_TYPES as readonly string[]).includes(input.type)) {
+      throw new ServiceError(`type must be one of: ${TASK_TYPES.join(", ")}`, 400);
+    }
+    if (input.effort !== undefined && input.effort !== null && !(TASK_EFFORTS as readonly string[]).includes(input.effort)) {
+      throw new ServiceError(`effort must be one of: ${TASK_EFFORTS.join(", ")}`, 400);
     }
     if (input.priority !== undefined && input.priority !== null) {
       if (!Number.isInteger(input.priority) || input.priority < 1 || input.priority > 10) {

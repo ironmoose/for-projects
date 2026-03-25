@@ -5,6 +5,8 @@ import {
   ServiceError,
   PROJECT_STATUSES,
   TASK_STATUSES,
+  TASK_TYPES,
+  TASK_EFFORTS,
   type IProjectService,
   type ITaskService,
   type ITagService,
@@ -105,19 +107,25 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tasks",
     {
-      description: "List tasks for a project (paginated, filterable by status and tag)",
+      description: "List tasks for a project (paginated, filterable by status, type, effort, tag, and tag_prefix)",
       inputSchema: {
         project_slug: z.string().max(100),
         limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
         status: z.enum(TASK_STATUSES).optional(),
+        type: z.enum(TASK_TYPES).optional(),
+        effort: z.enum(TASK_EFFORTS).optional(),
         tag: z.string().max(50).optional(),
+        tag_prefix: z.string().max(50).optional(),
       },
     },
-    ({ project_slug, limit, offset, status, tag }) => {
-      const filter: { status?: typeof status; tag?: string } = {};
+    ({ project_slug, limit, offset, status, type, effort, tag, tag_prefix }) => {
+      const filter: { status?: typeof status; type?: typeof type; effort?: typeof effort; tag?: string; tag_prefix?: string } = {};
       if (status) filter.status = status;
+      if (type) filter.type = type;
+      if (effort) filter.effort = effort;
       if (tag) filter.tag = tag;
+      if (tag_prefix) filter.tag_prefix = tag_prefix;
       return handle(() => taskService.findByProjectSlug(project_slug, limit, offset, Object.keys(filter).length ? filter : undefined));
     }
   );
@@ -143,6 +151,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         title: z.string().max(500),
         description: z.string().max(10000).optional(),
         status: z.enum(TASK_STATUSES).optional(),
+        type: z.enum(TASK_TYPES).optional(),
+        effort: z.enum(TASK_EFFORTS).optional(),
         priority: z.number().int().min(1).max(10).optional(),
       },
     },
@@ -152,13 +162,15 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update a task by ID (must specify the project it belongs to). Supports priority (1-10 or null to clear).",
+      description: "Update a task by ID (must specify the project it belongs to). Supports type, effort, and priority (1-10 or null to clear).",
       inputSchema: {
         project_slug: z.string().max(100),
         id: z.string().max(26),
         title: z.string().max(500).optional(),
         description: z.string().max(10000).optional(),
         status: z.enum(TASK_STATUSES).optional(),
+        type: z.enum(TASK_TYPES).nullable().optional(),
+        effort: z.enum(TASK_EFFORTS).nullable().optional(),
         priority: z.number().int().min(1).max(10).nullable().optional(),
       },
     },
@@ -179,13 +191,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tags",
     {
-      description: "List all tags (paginated)",
+      description: "List all tags (paginated). Filter by prefix to get all tags in a namespace (e.g. prefix='agent' returns 'agent:researcher', 'agent:tab:reviewer').",
       inputSchema: {
         limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
+        prefix: z.string().max(50).optional(),
       },
     },
-    ({ limit, offset }) => handle(() => tagService.findAll(limit, offset))
+    ({ limit, offset, prefix }) => handle(() => prefix ? tagService.findByPrefix(prefix, limit, offset) : tagService.findAll(limit, offset))
   );
 
   server.registerTool(
@@ -250,6 +263,19 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ tag_name, limit, offset }) => handle(() => tagService.findTasksByTag(tag_name, limit, offset))
+  );
+
+  server.registerTool(
+    "find_tasks_by_tag_prefix",
+    {
+      description: "Find all tasks that have any tag with the given prefix (cross-project). E.g. prefix='agent' matches tags 'agent:researcher', 'agent:tab:reviewer'.",
+      inputSchema: {
+        prefix: z.string().max(50),
+        limit: z.number().int().min(1).max(500).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ prefix, limit, offset }) => handle(() => tagService.findTasksByTagPrefix(prefix, limit, offset))
   );
 
   return server;

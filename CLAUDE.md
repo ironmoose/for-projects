@@ -2,7 +2,7 @@
 
 Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 
-## Tracker
+## Tab for Projects
 
 When using the `tab-for-projects` MCP tools to manage tasks for this project, use project slug: `tab-projects`
 

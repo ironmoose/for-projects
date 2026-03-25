@@ -11,7 +11,11 @@ export function tagRoutes(service: ITagService): Hono {
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 500) : 100;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+    const prefix = c.req.query("prefix");
     try {
+      if (prefix) {
+        return c.json(service.findByPrefix(prefix, limit, offset));
+      }
       return c.json(service.findAll(limit, offset));
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -37,6 +41,20 @@ export function tagRoutes(service: ITagService): Hono {
       const deleted = service.delete(c.req.param("id")!);
       if (!deleted) return c.json({ error: "tag not found" }, 404);
       return c.json({ ok: true });
+    } catch (e: unknown) {
+      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
+      throw e;
+    }
+  });
+
+  // GET /api/tags/prefix/:prefix/tasks
+  app.get("/prefix/:prefix/tasks", (c) => {
+    const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 500) : 100;
+    const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+    try {
+      return c.json(service.findTasksByTagPrefix(c.req.param("prefix")!, limit, offset));
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
       throw e;

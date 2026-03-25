@@ -3,6 +3,8 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
   ServiceError,
   TASK_STATUSES,
+  TASK_TYPES,
+  TASK_EFFORTS,
   type ITaskService,
   type ITagService,
   type TaskFilter,
@@ -25,9 +27,21 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
     if (status && (TASK_STATUSES as readonly string[]).includes(status)) {
       filter.status = status as TaskFilter["status"];
     }
+    const type = c.req.query("type");
+    if (type && (TASK_TYPES as readonly string[]).includes(type)) {
+      filter.type = type as TaskFilter["type"];
+    }
+    const effort = c.req.query("effort");
+    if (effort && (TASK_EFFORTS as readonly string[]).includes(effort)) {
+      filter.effort = effort as TaskFilter["effort"];
+    }
     const tag = c.req.query("tag");
     if (tag) {
       filter.tag = tag;
+    }
+    const tagPrefix = c.req.query("tag_prefix");
+    if (tagPrefix) {
+      filter.tag_prefix = tagPrefix;
     }
     try {
       return c.json(service.findByProjectSlug(projectSlug, limit, offset, filter));
@@ -58,8 +72,8 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
   app.post("/", async (c) => {
     const projectSlug = c.req.param("projectSlug")!;
     try {
-      const { title, description, status, priority } = await c.req.json<CreateTaskInput>();
-      const task = service.create(projectSlug, { title, description, status, priority });
+      const { title, description, status, type, effort, priority } = await c.req.json<CreateTaskInput>();
+      const task = service.create(projectSlug, { title, description, status, type, effort, priority });
       return c.json(task, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -71,8 +85,8 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
   app.patch("/:id", async (c) => {
     const projectSlug = c.req.param("projectSlug")!;
     try {
-      const { title, description, status, priority } = await c.req.json<UpdateTaskInput>();
-      const task = service.update(projectSlug, c.req.param("id")!, { title, description, status, priority });
+      const { title, description, status, type, effort, priority } = await c.req.json<UpdateTaskInput>();
+      const task = service.update(projectSlug, c.req.param("id")!, { title, description, status, type, effort, priority });
       if (!task) return c.json({ error: "task not found" }, 404);
       return c.json(task);
     } catch (e: unknown) {

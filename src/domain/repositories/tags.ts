@@ -23,9 +23,40 @@ export class TagRepository {
     return this.db.query("SELECT * FROM tags WHERE name = ?").get(name) as Tag | null;
   }
 
-  create(name: string): Tag {
+  findByPrefix(prefix: string, limit: number, offset: number): Tag[] {
+    return this.db
+      .query("SELECT * FROM tags WHERE prefix = ? ORDER BY name ASC LIMIT ? OFFSET ?")
+      .all(prefix, limit, offset) as Tag[];
+  }
+
+  countByPrefix(prefix: string): number {
+    return (this.db.query("SELECT COUNT(*) as total FROM tags WHERE prefix = ?").get(prefix) as { total: number }).total;
+  }
+
+  findTasksByTagPrefix(prefix: string, limit: number, offset: number): Task[] {
+    return this.db
+      .query(
+        `SELECT DISTINCT t.* FROM tasks t
+         JOIN task_tags tt ON tt.task_id = t.id
+         JOIN tags tg ON tg.id = tt.tag_id
+         WHERE tg.prefix = ?
+         ORDER BY t.created_at ASC LIMIT ? OFFSET ?`
+      )
+      .all(prefix, limit, offset) as Task[];
+  }
+
+  countTasksByTagPrefix(prefix: string): number {
+    return (this.db.query(
+      `SELECT COUNT(DISTINCT t.id) as total FROM tasks t
+       JOIN task_tags tt ON tt.task_id = t.id
+       JOIN tags tg ON tg.id = tt.tag_id
+       WHERE tg.prefix = ?`
+    ).get(prefix) as { total: number }).total;
+  }
+
+  create(name: string, prefix: string | null = null): Tag {
     const id = ulid();
-    this.db.query("INSERT INTO tags (id, name) VALUES (?, ?)").run(id, name);
+    this.db.query("INSERT INTO tags (id, name, prefix) VALUES (?, ?, ?)").run(id, name, prefix);
     return this.db.query("SELECT * FROM tags WHERE id = ?").get(id) as Tag;
   }
 
