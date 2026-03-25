@@ -14,8 +14,10 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // GET /api/projects
   app.get("/", (c) => {
-    const limit = Math.min(Number(c.req.query("limit")) || 50, 200);
-    const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
+    const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
+    const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const filter: ProjectFilter = {};
     const status = c.req.query("status");
     if (status && (PROJECT_STATUSES as readonly string[]).includes(status)) {
@@ -27,8 +29,8 @@ export function projectRoutes(service: IProjectService): Hono {
   // POST /api/projects
   app.post("/", async (c) => {
     try {
-      const body = await c.req.json<CreateProjectInput>();
-      const project = service.create(body);
+      const { name, slug, description, status } = await c.req.json<CreateProjectInput>();
+      const project = service.create({ name, slug, description, status });
       return c.json(project, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -46,8 +48,8 @@ export function projectRoutes(service: IProjectService): Hono {
   // PATCH /api/projects/:slug
   app.patch("/:slug", async (c) => {
     try {
-      const body = await c.req.json<UpdateProjectInput>();
-      const project = service.update(c.req.param("slug"), body);
+      const { name, description, status } = await c.req.json<UpdateProjectInput>();
+      const project = service.update(c.req.param("slug"), { name, description, status });
       if (!project) return c.json({ error: "project not found" }, 404);
       return c.json(project);
     } catch (e: unknown) {

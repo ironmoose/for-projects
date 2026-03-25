@@ -25,6 +25,14 @@ export class TaskService implements ITaskService {
     };
   }
 
+  findByNumber(projectSlug: string, number: number): Task | null {
+    const project = this.projectRepo.findBySlug(projectSlug);
+    if (!project) {
+      throw new ServiceError("project not found", 404);
+    }
+    return this.taskRepo.findByNumber(project.id, number);
+  }
+
   create(projectSlug: string, input: CreateTaskInput): Task {
     const project = this.projectRepo.findBySlug(projectSlug);
     if (!project) {
@@ -42,12 +50,21 @@ export class TaskService implements ITaskService {
     if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${TASK_STATUSES.join(", ")}`, 400);
     }
+    if (input.priority !== undefined && input.priority !== null) {
+      if (!Number.isInteger(input.priority) || input.priority < 1 || input.priority > 10) {
+        throw new ServiceError("priority must be an integer between 1 and 10", 400);
+      }
+    }
     const task = this.taskRepo.create(project.id, input);
     this.eventBus?.emit({ entity: "task", action: "created", payload: task });
     return task;
   }
 
-  update(id: string, input: UpdateTaskInput): Task | null {
+  update(projectSlug: string, id: string, input: UpdateTaskInput): Task | null {
+    const project = this.projectRepo.findBySlug(projectSlug);
+    if (!project) {
+      throw new ServiceError("project not found", 404);
+    }
     if (input.title !== undefined && !input.title.trim()) {
       throw new ServiceError("title cannot be empty", 400);
     }
@@ -60,15 +77,24 @@ export class TaskService implements ITaskService {
     if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${TASK_STATUSES.join(", ")}`, 400);
     }
-    const task = this.taskRepo.update(id, input);
+    if (input.priority !== undefined && input.priority !== null) {
+      if (!Number.isInteger(input.priority) || input.priority < 1 || input.priority > 10) {
+        throw new ServiceError("priority must be an integer between 1 and 10", 400);
+      }
+    }
+    const task = this.taskRepo.update(id, project.id, input);
     if (task) {
       this.eventBus?.emit({ entity: "task", action: "updated", payload: task });
     }
     return task;
   }
 
-  delete(id: string): boolean {
-    const deleted = this.taskRepo.delete(id);
+  delete(projectSlug: string, id: string): boolean {
+    const project = this.projectRepo.findBySlug(projectSlug);
+    if (!project) {
+      throw new ServiceError("project not found", 404);
+    }
+    const deleted = this.taskRepo.delete(id, project.id);
     if (deleted) {
       this.eventBus?.emit({ entity: "task", action: "deleted", payload: { id } });
     }

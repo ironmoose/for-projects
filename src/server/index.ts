@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
 import { compress } from "hono/compress";
 import { secureHeaders } from "hono/secure-headers";
+import { bodyLimit } from "hono/body-limit";
 import { etag } from "hono/etag";
 import { join } from "path";
 import { readFileSync, existsSync } from "fs";
@@ -14,6 +15,7 @@ import { parseArgs, logListening, type ServerOptions } from "../domain/args";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
+import { tagRoutes } from "./routes/tags";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
 
@@ -34,6 +36,7 @@ export class Server {
     // ── Global middleware ──────────────────────────────────
     app.use("*", secureHeaders());
     app.use("*", compress());
+    app.use("/api/*", bodyLimit({ maxSize: 1 * 1024 * 1024 }));
     app.use(
       "*",
       cors({
@@ -49,8 +52,9 @@ export class Server {
 
     // ── API (with logging) ────────────────────────────────
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
-    app.route("/api/projects/:projectSlug/tasks", taskRoutes(ctx.taskService));
+    app.route("/api/projects/:projectSlug/tasks", taskRoutes(ctx.taskService, ctx.tagService));
     app.route("/api/projects", projectRoutes(ctx.projectService));
+    app.route("/api/tags", tagRoutes(ctx.tagService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
     // ── MCP ────────────────────────────────────────────────

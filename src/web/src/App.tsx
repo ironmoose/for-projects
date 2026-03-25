@@ -31,11 +31,19 @@ interface Project {
 interface Task {
   id: string;
   project_id: string;
+  number: number;
   title: string;
   description: string;
   status: "todo" | "in_progress" | "done";
+  priority: number | null;
   created_at: string;
   updated_at: string;
+}
+
+interface Tag {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 const statusOptions = [
@@ -644,9 +652,30 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: theme.spacing.xs,
                           }}
                         >
+                          <span style={{ color: theme.color.textFaint, fontFamily: "monospace", fontSize: theme.font.size.xs, flexShrink: 0 }}>
+                            #{task.number}
+                          </span>
                           {task.title}
+                          {task.priority != null && (
+                            <span
+                              style={{
+                                flexShrink: 0,
+                                fontSize: "0.6rem",
+                                fontWeight: 600,
+                                color: task.priority <= 3 ? theme.color.error : task.priority <= 6 ? theme.color.tertiary : theme.color.textFaint,
+                                background: theme.color.surfaceContainerHigh,
+                                borderRadius: theme.radius.sm,
+                                padding: "1px 4px",
+                              }}
+                            >
+                              P{task.priority}
+                            </span>
+                          )}
                         </span>
                         <Stack direction="row" gap="xs" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                           <Select
@@ -681,6 +710,7 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
     {selectedTask && (
       <TaskDetailPanel
         task={selectedTask}
+        projectSlug={slug}
         onClose={() => setSelectedTaskId(null)}
       />
     )}
@@ -711,10 +741,42 @@ function useWindowWidth() {
 
 const SMALL_BREAKPOINT = 768;
 
-function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void }) {
+function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSlug: string; onClose: () => void }) {
   const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const isSmall = windowWidth < SMALL_BREAKPOINT;
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [newTagName, setNewTagName] = useState("");
+
+  useEffect(() => {
+    fetchTags();
+  }, [task.id]);
+
+  async function fetchTags() {
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`);
+    if (!res.ok) return;
+    const body = await res.json();
+    setTags(body.data);
+  }
+
+  async function handleAddTag(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newTagName.trim().toLowerCase() }),
+    });
+    if (!res.ok) return;
+    setNewTagName("");
+    fetchTags();
+  }
+
+  async function handleRemoveTag(tagId: string) {
+    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags/${tagId}`, { method: "DELETE" });
+    if (!res.ok) return;
+    fetchTags();
+  }
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-US", {
@@ -781,8 +843,27 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
                   lineHeight: 1.3,
                 }}
               >
+                <span style={{ color: theme.color.textFaint, fontFamily: "monospace", fontWeight: 500, fontSize: theme.font.size.sm }}>
+                  #{task.number}
+                </span>{" "}
                 {task.title}
               </h2>
+              {task.priority != null && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginTop: theme.spacing.xs,
+                    fontSize: theme.font.size.xs,
+                    fontWeight: 600,
+                    color: task.priority <= 3 ? theme.color.error : task.priority <= 6 ? theme.color.tertiary : theme.color.textFaint,
+                    background: theme.color.surfaceContainerHigh,
+                    borderRadius: theme.radius.sm,
+                    padding: "2px 6px",
+                  }}
+                >
+                  Priority {task.priority}
+                </span>
+              )}
             </div>
             <IconButton icon="close" size={18} onClick={onClose} />
           </Stack>
@@ -825,6 +906,64 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
             </p>
           )}
 
+          {/* Tags */}
+          <div style={{ marginTop: theme.spacing.xl }}>
+            <span
+              style={{
+                display: "block",
+                fontSize: "0.625rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: theme.color.textFaint,
+                marginBottom: theme.spacing.sm,
+              }}
+            >
+              Tags
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
+              {tags.map((tag) => (
+                <span
+                  key={tag.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: theme.font.size.xs,
+                    color: theme.color.primary,
+                    background: theme.color.surfaceContainerHigh,
+                    borderRadius: theme.radius.full,
+                    padding: "2px 8px",
+                  }}
+                >
+                  {tag.name}
+                  <span
+                    onClick={() => handleRemoveTag(tag.id)}
+                    style={{ cursor: "pointer", color: theme.color.textFaint, fontSize: "0.6rem", lineHeight: 1 }}
+                  >
+                    x
+                  </span>
+                </span>
+              ))}
+              {tags.length === 0 && (
+                <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
+                  No tags
+                </span>
+              )}
+            </div>
+            <form onSubmit={handleAddTag} style={{ display: "flex", gap: theme.spacing.xs }}>
+              <Input
+                placeholder="Add tag..."
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                style={{ flex: 1, fontSize: theme.font.size.xs, padding: "2px 6px" }}
+              />
+              <Button type="submit" size="sm" style={{ fontSize: theme.font.size.xs, padding: "2px 8px" }}>
+                Add
+              </Button>
+            </form>
+          </div>
+
           {/* Metadata */}
           <div
             style={{
@@ -848,7 +987,9 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
             </span>
             <Stack gap="xs">
               {[
+                { label: "Number", value: `#${task.number}` },
                 { label: "ID", value: task.id },
+                { label: "Priority", value: task.priority != null ? `${task.priority}` : "—" },
                 { label: "Created", value: formatDate(task.created_at) },
                 { label: "Updated", value: formatDate(task.updated_at) },
               ].map((row) => (

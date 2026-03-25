@@ -9,5 +9,7 @@ export { createDatabase, getDbPath } from "./db/connection";
 export { runMigrations } from "./db/schema";
 export { ProjectRepository } from "./repositories/projects";
 export { TaskRepository } from "./repositories/tasks";
+export { TagRepository } from "./repositories/tags";
 export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
+export { TagService } from "./services/tags";

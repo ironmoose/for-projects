@@ -1,4 +1,4 @@
-import type { Project, Task } from "./entities";
+import type { Project, Task, Tag } from "./entities";
 import type { ProjectStatus, TaskStatus } from "./statuses";
 import type {
   CreateProjectInput,
@@ -18,6 +18,7 @@ export interface ProjectFilter {
 
 export interface TaskFilter {
   status?: TaskStatus;
+  tag?: string;
 }
 
 export interface IProjectService {
@@ -30,7 +31,19 @@ export interface IProjectService {
 
 export interface ITaskService {
   findByProjectSlug(projectSlug: string, limit?: number, offset?: number, filter?: TaskFilter): Paginated<Task>;
+  findByNumber(projectSlug: string, number: number): Task | null;
   create(projectSlug: string, input: CreateTaskInput): Task;
-  update(id: string, input: UpdateTaskInput): Task | null;
+  update(projectSlug: string, id: string, input: UpdateTaskInput): Task | null;
+  delete(projectSlug: string, id: string): boolean;
+}
+
+export interface ITagService {
+  findAll(limit?: number, offset?: number): Paginated<Tag>;
+  findByName(name: string): Tag | null;
+  create(name: string): Tag;
   delete(id: string): boolean;
+  addTagToTask(taskId: string, tagName: string): Tag;
+  removeTagFromTask(taskId: string, tagId: string): boolean;
+  getTagsForTask(taskId: string): Tag[];
+  findTasksByTag(tagName: string, limit?: number, offset?: number): Paginated<Task>;
 }

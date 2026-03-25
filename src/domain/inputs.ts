@@ -8,6 +8,6 @@ export type UpdateProjectInput = Partial<
 >;
 
 export type CreateTaskInput = Pick<Task, "title"> &
-  Partial<Pick<Task, "description" | "status">>;
+  Partial<Pick<Task, "description" | "status" | "priority">>;
 
-export type UpdateTaskInput = Partial<Pick<Task, "title" | "description" | "status">>;
+export type UpdateTaskInput = Partial<Pick<Task, "title" | "description" | "status" | "priority">>;

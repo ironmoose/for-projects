@@ -2,6 +2,7 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import { bootstrap } from "../domain";
 import { parseArgs, logListening, type ServerOptions } from "../domain/args";
 import { createMcpHttpHandler } from "./server";
@@ -19,6 +20,7 @@ export class McpStandaloneServer {
     const ctx = bootstrap(dbPath);
 
     const app = new Hono();
+    app.use("*", secureHeaders());
     app.use(
       "*",
       cors({
