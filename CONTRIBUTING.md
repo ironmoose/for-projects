@@ -1,4 +1,4 @@
-# Contributing to tab-pm
+# Contributing to tab-for-projects
 
 ## Prerequisites
 
@@ -13,54 +13,85 @@ Both are pinned in `.tool-versions` if you use asdf or mise.
 git clone https://github.com/alttab/project-management.git
 cd project-management
 bun install
-bun dev
+bun run dev
 ```
 
-`bun dev` starts the API server with hot reload. The server is available at `http://localhost:3000`.
+`bun run dev` starts the Bun server (with hot reload) and the Vite dev server (with HMR). The API and MCP are available at `http://localhost:3000`, and the Vite dev server proxies to it from `http://localhost:3002`.
 
 ## Project structure
 
 ```
-packages/
-├── server/                  Hono API server
-│   └── src/
-│       ├── index.ts         Entrypoint — wires up dependencies and starts the server
-│       ├── db/
-│       │   ├── connection.ts   SQLite connection (bun:sqlite, WAL mode)
-│       │   └── schema.ts       Table definitions and migrations
-│       ├── repositories/
-│       │   └── projects.ts     ProjectRepository — all SQL for projects
-│       └── routes/
-│           └── projects.ts     HTTP handlers for /api/projects
-└── web/                     Vite + React frontend (planned)
+src/
+├── domain/                  Core business logic and data access
+│   ├── index.ts             Domain barrel export
+│   ├── args.ts              CLI argument parsing and server utilities
+│   ├── bootstrap.ts         Wires up DB, repositories, and services
+│   ├── entities.ts          Entity types (Project, Task)
+│   ├── errors.ts            ServiceError
+│   ├── inputs.ts            Create/Update input types
+│   ├── services.ts          Service interfaces
+│   ├── statuses.ts          Status enums
+│   ├── db/
+│   │   ├── connection.ts    SQLite connection (bun:sqlite, WAL mode)
+│   │   └── schema.ts        Table definitions and migrations
+│   ├── repositories/
+│   │   ├── projects.ts      ProjectRepository — all SQL for projects
+│   │   └── tasks.ts         TaskRepository — all SQL for tasks
+│   └── services/
+│       ├── projects.ts      ProjectService
+│       └── tasks.ts         TaskService
+├── server/                  Single Hono server (API + MCP + static web)
+│   ├── index.ts             Entrypoint — Server class, starts on port 3000
+│   └── routes/
+│       ├── projects.ts      HTTP handlers for /api/projects
+│       └── tasks.ts         HTTP handlers for /api/projects/:slug/tasks
+├── mcp/                     MCP tool definitions
+│   ├── index.ts             MCP barrel export
+│   ├── server.ts            MCP tool registration and HTTP handler
+│   └── standalone.ts        Standalone MCP server (for separate-process use)
+└── web/                     Vite + React frontend
+    ├── index.html
+    ├── vite.config.ts
+    ├── tsconfig.json
+    └── src/
+        ├── main.tsx
+        ├── App.tsx
+        ├── api.ts
+        └── components/
 ```
 
 ## Architecture
+
+### Single server
+
+Everything runs in one process on one port (default 3000):
+
+- `/api/*` — REST API (with request logging)
+- `/mcp` — MCP endpoint (no logging)
+- `/*` — static web assets + SPA fallback
 
 ### Request lifecycle
 
 An HTTP request flows through three layers:
 
 ```
-Route handler  →  Repository  →  SQLite
+Route handler  →  Service  →  Repository  →  SQLite
 ```
 
-1. **Route handlers** (`src/routes/`) parse the request, validate input, and return HTTP responses. They never write SQL.
-2. **Repositories** (`src/repositories/`) own all database queries. They accept typed inputs, return typed outputs, and are the only code that imports `bun:sqlite`.
-3. **Database** (`src/db/`) manages the connection and schema. Migrations run once at startup.
+1. **Route handlers** (`src/server/routes/`) parse the request, validate input, and return HTTP responses. They never write SQL.
+2. **Services** (`src/domain/services/`) contain business logic and validation. They sit between route handlers and repositories.
+3. **Repositories** (`src/domain/repositories/`) own all database queries. They accept typed inputs, return typed outputs, and are the only code that imports `bun:sqlite`.
+4. **Database** (`src/domain/db/`) manages the connection and schema. Migrations run once at startup.
 
 This separation means you can test business logic by swapping in a mock repository, and you can change query structure without touching HTTP code.
 
 ### Dependency wiring
 
-Dependencies are wired in `src/index.ts` and passed down explicitly — no global singletons, no service locator. The server entrypoint creates the database, builds repositories, and hands them to route constructors:
+Dependencies are wired in `src/domain/bootstrap.ts` and passed down explicitly — no global singletons, no service locator. The `bootstrap()` function creates the database, builds repositories and services, and returns a context object:
 
 ```typescript
-const db = createDatabase();
-runMigrations(db);
-
-const projectRepo = new ProjectRepository(db);
-app.route("/api/projects", projectRoutes(projectRepo));
+const ctx = bootstrap();
+app.route("/api/projects", projectRoutes(ctx.projectService));
 ```
 
 ## Adding a new feature
@@ -69,7 +100,7 @@ Most features follow the same steps:
 
 ### 1. Add the migration
 
-Add a `CREATE TABLE` statement to `src/db/schema.ts`:
+Add a `CREATE TABLE` statement to `src/domain/db/schema.ts`:
 
 ```typescript
 db.run(`
@@ -86,7 +117,7 @@ db.run(`
 
 ### 2. Create the repository
 
-Add `src/repositories/tasks.ts`. Define your types and a repository class:
+Add `src/domain/repositories/tasks.ts`. Define your types and a repository class:
 
 ```typescript
 export interface Task { ... }
@@ -102,29 +133,29 @@ export class TaskRepository {
 
 ### 3. Create the route handler
 
-Add `src/routes/tasks.ts`. Accept the repository as a parameter:
+Add `src/server/routes/tasks.ts`. Accept the service as a parameter:
 
 ```typescript
-export function taskRoutes(repo: TaskRepository): Hono {
+export function taskRoutes(service: ITaskService): Hono {
   const app = new Hono();
-  app.get("/", (c) => c.json(repo.findByProject(c.req.query("project_id")!)));
+  app.get("/", (c) => c.json(service.findByProjectSlug(c.req.param("projectSlug")!)));
   return app;
 }
 ```
 
 ### 4. Wire it up
 
-In `src/index.ts`:
+In `src/server/index.ts`:
 
 ```typescript
-const taskRepo = new TaskRepository(db);
-app.route("/api/tasks", taskRoutes(taskRepo));
+const ctx = bootstrap();
+app.route("/api/projects/:projectSlug/tasks", taskRoutes(ctx.taskService));
 ```
 
 ### 5. Test it
 
 ```bash
-bun dev &
+bun run dev &
 curl -s http://localhost:3000/api/tasks?project_id=... | jq
 ```
 
@@ -133,7 +164,7 @@ curl -s http://localhost:3000/api/tasks?project_id=... | jq
 - **TypeScript strict mode** is enabled. Don't use `any` — type your inputs and outputs.
 - **IDs** are ULIDs, generated server-side. Never accept client-generated IDs.
 - **Timestamps** are ISO 8601 strings in UTC.
-- **SQL lives in repositories only.** If you're writing a query in a route handler, move it to the repository.
+- **SQL lives in repositories only.** If you're writing a query in a route handler or service, move it to the repository.
 - **No ORMs.** We use raw SQL via `bun:sqlite`. Keep queries simple and readable.
 - **Validation happens in route handlers.** Return `400` with a `{"error": "..."}` body for bad input.
 
@@ -145,9 +176,9 @@ bun test
 
 Tests use an in-memory SQLite database so they run fast and don't touch your local data.
 
-## Testing the CLI locally
+## Testing locally
 
-You can install `tab-pm` globally from your local checkout to test it as a user would.
+You can install `tab-for-projects` globally from your local checkout to test it as a user would.
 
 ### One-time setup: add bun's global bin to your PATH
 
@@ -167,17 +198,17 @@ source ~/.zshrc
 ### Install and run
 
 ```bash
-# Build the frontend and server
+# Build the frontend
 bun run build
 
 # Install globally from the local checkout (use the absolute path to the repo)
 bun install -g /path/to/project-management
 
 # Run it
-tab-pm
+tab-for-projects
 ```
 
-The server runs in the foreground. Open `http://localhost:3000` in a browser and verify the web UI loads. In a separate terminal, check the API:
+Open `http://localhost:3000` in a browser and verify the web UI loads. In a separate terminal, check the API:
 
 ```bash
 curl -s http://localhost:3000/api/health | jq
@@ -185,12 +216,12 @@ curl -s http://localhost:3000/api/health | jq
 
 Press `Ctrl+C` to stop the server.
 
-After making changes, rebuild (`bun run build`) and restart `tab-pm` — the global install symlinks to your local source, so no reinstall is needed.
+After making changes, rebuild (`bun run build`) and restart `tab-for-projects` — the global install symlinks to your local source, so no reinstall is needed.
 
 ### Uninstall
 
 ```bash
-bun remove -g @alttab/project-management
+bun remove -g @x4lt7ab/tab-for-projects
 ```
 
 ## Building for production

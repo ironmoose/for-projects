@@ -3,71 +3,26 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@alttab/project-management",
-    },
-    "packages/domain": {
-      "name": "@alttab/pm-domain",
-      "version": "0.1.0",
+      "name": "@x4lt7ab/tab-for-projects",
       "dependencies": {
-        "ulid": "^2",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "^5",
-      },
-    },
-    "packages/mcp": {
-      "name": "@alttab/pm-mcp",
-      "version": "0.1.0",
-      "dependencies": {
-        "@alttab/pm-domain": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.27.1",
         "hono": "^4",
+        "ulid": "^2",
         "zod": "^4.3.6",
       },
       "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "^5",
-      },
-    },
-    "packages/server": {
-      "name": "@alttab/pm-server",
-      "version": "0.1.0",
-      "dependencies": {
-        "@alttab/pm-domain": "workspace:*",
-        "hono": "^4",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "^5",
-      },
-    },
-    "packages/web": {
-      "name": "@alttab/pm-web",
-      "version": "0.1.0",
-      "dependencies": {
-        "hono": "^4",
-        "react": "^19.1.0",
-        "react-dom": "^19.1.0",
-      },
-      "devDependencies": {
+        "@types/bun": "^1.2",
         "@types/react": "^19.1.2",
         "@types/react-dom": "^19.1.2",
         "@vitejs/plugin-react": "^4.4.1",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
         "typescript": "^5.8.3",
         "vite": "^6.3.5",
       },
     },
   },
   "packages": {
-    "@alttab/pm-domain": ["@alttab/pm-domain@workspace:packages/domain"],
-
-    "@alttab/pm-mcp": ["@alttab/pm-mcp@workspace:packages/mcp"],
-
-    "@alttab/pm-server": ["@alttab/pm-server@workspace:packages/server"],
-
-    "@alttab/pm-web": ["@alttab/pm-web@workspace:packages/web"],
-
     "@babel/code-frame": ["@babel/code-frame@7.29.0", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.28.5", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw=="],
 
     "@babel/compat-data": ["@babel/compat-data@7.29.0", "", {}, "sha512-T1NCJqT/j9+cn8fvkt7jtwbLBfLC/1y1c7NtCeXFRgzGTsafi68MRv8yzkYSapBnFA6L3U2VSc02ciDzoAJhJg=="],
@@ -290,7 +245,7 @@
 
     "ee-first": ["ee-first@1.1.1", "", {}, "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow=="],
 
-    "electron-to-chromium": ["electron-to-chromium@1.5.321", "", {}, "sha512-L2C7Q279W2D/J4PLZLk7sebOILDSWos7bMsMNN06rK482umHUrh/3lM8G7IlHFOYip2oAg5nha1rCMxr/rs6ZQ=="],
+    "electron-to-chromium": ["electron-to-chromium@1.5.322", "", {}, "sha512-vFU34OcrvMcH66T+dYC3G4nURmgfDVewMIu6Q2urXpumAPSMmzvcn04KVVV8Opikq8Vs5nUbO/8laNhNRqSzYw=="],
 
     "encodeurl": ["encodeurl@2.0.0", "", {}, "sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg=="],
 

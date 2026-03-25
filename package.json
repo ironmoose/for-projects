@@ -1,14 +1,38 @@
 {
-  "name": "@alt-t4b/project-management",
-  "version": "0.0.1",
-  "private": true,
-  "workspaces": [
-    "packages/*"
+  "name": "@x4lt7ab/tab-for-projects",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "tab-for-projects": "./src/index.ts"
+  },
+  "files": [
+    "src"
   ],
+  "engines": {
+    "bun": ">=1.3"
+  },
   "scripts": {
-    "dev": "bun run --filter '@alt-t4b/pm-web' dev & bun run --filter '@alt-t4b/pm-server' dev & bun run --filter '@alt-t4b/pm-mcp' dev",
-    "build": "bun run --filter '@alt-t4b/pm-web' build && bun run --filter '@alt-t4b/pm-mcp' build && bun run --filter '@alt-t4b/pm-server' build",
-    "serve": "bun run build && bun run --filter '@alt-t4b/pm-server' start & bun run --filter '@alt-t4b/pm-web' serve & bun run --filter '@alt-t4b/pm-mcp' start",
-    "test": "bun test"
+    "dev": "bun run --hot src/index.ts & cd src/web && vite",
+    "build": "cd src/web && vite build",
+    "start": "bun run src/index.ts",
+    "serve": "bun run build && bun run start",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "hono": "^4",
+    "ulid": "^2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
   }
 }
