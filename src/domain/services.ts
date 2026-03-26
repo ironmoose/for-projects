@@ -1,5 +1,5 @@
 import type { Project, Task, Tag, Workbench, Instruction, InstructionBinding } from "./entities";
-import type { ProjectStatus, TaskStatus, TaskType, TaskEffort } from "./statuses";
+import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, InstructionStatus, WorkbenchStatus } from "./enums";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -45,16 +45,24 @@ export interface ITaskService {
   delete(projectSlug: string, id: string): boolean;
 }
 
+export interface WorkbenchFilter {
+  status?: WorkbenchStatus;
+}
+
 export interface IWorkbenchService {
-  findAll(limit?: number, offset?: number): Paginated<Workbench>;
+  findAll(limit?: number, offset?: number, filter?: WorkbenchFilter): Paginated<Workbench>;
   findById(id: string): Workbench | null;
   create(input: CreateWorkbenchInput): Workbench;
   update(id: string, input: UpdateWorkbenchInput): Workbench | null;
   delete(id: string): boolean;
 }
 
+export interface InstructionFilter {
+  status?: InstructionStatus;
+}
+
 export interface IInstructionService {
-  findByWorkbench(workbenchId: string, limit?: number, offset?: number): Paginated<Instruction>;
+  findByWorkbench(workbenchId: string, limit?: number, offset?: number, filter?: InstructionFilter): Paginated<Instruction>;
   findById(workbenchId: string, instructionId: string): Instruction | null;
   create(workbenchId: string, input: CreateInstructionInput): Instruction;
   update(workbenchId: string, instructionId: string, input: UpdateInstructionInput): Instruction | null;

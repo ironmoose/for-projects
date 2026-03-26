@@ -4,7 +4,7 @@ import type { ITaskService, Paginated, TaskFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
-import { TASK_STATUSES, TASK_TYPES, TASK_EFFORTS } from "../statuses";
+import { TASK_STATUSES, TASK_TYPES, TASK_EFFORTS } from "../enums";
 import type { EventBus } from "../events";
 
 export class TaskService implements ITaskService {

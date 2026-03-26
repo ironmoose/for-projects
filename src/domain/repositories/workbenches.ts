@@ -6,13 +6,21 @@ import type { CreateWorkbenchInput, UpdateWorkbenchInput } from "../inputs";
 export class WorkbenchRepository {
   constructor(private db: Database) {}
 
-  findAll(limit: number, offset: number): Workbench[] {
+  findAll(limit: number, offset: number, status?: string): Workbench[] {
+    if (status) {
+      return this.db
+        .query("SELECT * FROM workbenches WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?")
+        .all(status, limit, offset) as Workbench[];
+    }
     return this.db
       .query("SELECT * FROM workbenches ORDER BY created_at DESC LIMIT ? OFFSET ?")
       .all(limit, offset) as Workbench[];
   }
 
-  count(): number {
+  count(status?: string): number {
+    if (status) {
+      return (this.db.query("SELECT COUNT(*) as total FROM workbenches WHERE status = ?").get(status) as { total: number }).total;
+    }
     return (this.db.query("SELECT COUNT(*) as total FROM workbenches").get() as { total: number }).total;
   }
 
@@ -23,13 +31,15 @@ export class WorkbenchRepository {
   create(input: CreateWorkbenchInput): Workbench {
     const id = ulid();
     const now = new Date().toISOString();
+    const cursor = input.cursor ?? null;
+    const status = input.status ?? "idle";
 
     this.db
       .query(
-        `INSERT INTO workbenches (id, goal, created_at, updated_at)
-         VALUES (?, ?, ?, ?)`
+        `INSERT INTO workbenches (id, goal, cursor, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
       )
-      .run(id, input.goal, now, now);
+      .run(id, input.goal, cursor, status, now, now);
 
     return this.findById(id)!;
   }
@@ -39,11 +49,13 @@ export class WorkbenchRepository {
     if (!existing) return null;
 
     const goal = input.goal ?? existing.goal;
+    const cursor = input.cursor !== undefined ? input.cursor : existing.cursor;
+    const status = input.status ?? existing.status;
     const now = new Date().toISOString();
 
     this.db
-      .query("UPDATE workbenches SET goal = ?, updated_at = ? WHERE id = ?")
-      .run(goal, now, id);
+      .query("UPDATE workbenches SET goal = ?, cursor = ?, status = ?, updated_at = ? WHERE id = ?")
+      .run(goal, cursor, status, now, id);
 
     return this.findById(id)!;
   }

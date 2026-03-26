@@ -12,13 +12,14 @@ export type CreateTaskInput = Pick<Task, "title"> &
 
 export type UpdateTaskInput = Partial<Pick<Task, "title" | "description" | "status" | "type" | "effort" | "priority">>;
 
-export type CreateWorkbenchInput = Pick<Workbench, "goal">;
+export type CreateWorkbenchInput = Pick<Workbench, "goal"> &
+  Partial<Pick<Workbench, "cursor" | "status">>;
 
-export type UpdateWorkbenchInput = Partial<Pick<Workbench, "goal">>;
+export type UpdateWorkbenchInput = Partial<Pick<Workbench, "goal" | "cursor" | "status">>;
 
 export type CreateInstructionInput = Pick<Instruction, "prompt"> &
-  Partial<Pick<Instruction, "position">>;
+  Partial<Pick<Instruction, "position" | "agent" | "parallel" | "actor" | "status">>;
 
-export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt" | "output">>;
+export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt" | "output" | "agent" | "parallel" | "actor" | "status">>;
 
 export type CreateInstructionBindingInput = Pick<InstructionBinding, "arn" | "kind">;

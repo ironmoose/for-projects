@@ -1,4 +1,4 @@
-import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, BindingKind } from "./statuses";
+import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, BindingKind, InstructionActor, InstructionStatus, WorkbenchStatus } from "./enums";
 
 export interface Project {
   id: string;
@@ -34,6 +34,8 @@ export interface Tag {
 export interface Workbench {
   id: string;
   goal: string;
+  cursor: string | null;
+  status: WorkbenchStatus;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +46,10 @@ export interface Instruction {
   prompt: string;
   output: string | null;
   position: number;
+  agent: string | null;
+  parallel: boolean;
+  actor: InstructionActor;
+  status: InstructionStatus;
   created_at: string;
   updated_at: string;
 }

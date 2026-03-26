@@ -1,0 +1,2 @@
+ALTER TABLE workbenches ADD COLUMN cursor TEXT DEFAULT NULL;
+ALTER TABLE workbenches ADD COLUMN status TEXT NOT NULL DEFAULT 'idle';

@@ -3,7 +3,7 @@ import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
 import type { IProjectService, Paginated, ProjectFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
-import { PROJECT_STATUSES } from "../statuses";
+import { PROJECT_STATUSES } from "../enums";
 import type { EventBus } from "../events";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

@@ -1,4 +1,4 @@
-export * from "./statuses";
+export * from "./enums";
 export * from "./entities";
 export * from "./inputs";
 export * from "./errors";

@@ -1,17 +1,22 @@
 import type { Workbench } from "../entities";
 import type { CreateWorkbenchInput, UpdateWorkbenchInput } from "../inputs";
-import type { IWorkbenchService, Paginated } from "../services";
+import type { IWorkbenchService, Paginated, WorkbenchFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { WorkbenchRepository } from "../repositories/workbenches";
+import { WORKBENCH_STATUSES } from "../enums";
 import type { EventBus } from "../events";
 
 export class WorkbenchService implements IWorkbenchService {
   constructor(private repo: WorkbenchRepository, private eventBus?: EventBus) {}
 
-  findAll(limit = 50, offset = 0): Paginated<Workbench> {
+  findAll(limit = 50, offset = 0, filter?: WorkbenchFilter): Paginated<Workbench> {
+    const status = filter?.status;
+    if (status && !(WORKBENCH_STATUSES as readonly string[]).includes(status)) {
+      throw new ServiceError(`status must be one of: ${WORKBENCH_STATUSES.join(", ")}`, 400);
+    }
     return {
-      data: this.repo.findAll(limit, offset),
-      total: this.repo.count(),
+      data: this.repo.findAll(limit, offset, status),
+      total: this.repo.count(status),
     };
   }
 
@@ -26,6 +31,9 @@ export class WorkbenchService implements IWorkbenchService {
     if (input.goal.length > 2000) {
       throw new ServiceError("goal must be 2000 characters or fewer", 400);
     }
+    if (input.status !== undefined && !(WORKBENCH_STATUSES as readonly string[]).includes(input.status)) {
+      throw new ServiceError(`status must be one of: ${WORKBENCH_STATUSES.join(", ")}`, 400);
+    }
     const workbench = this.repo.create(input);
     this.eventBus?.emit({ entity: "workbench", action: "created", payload: workbench });
     return workbench;
@@ -37,6 +45,9 @@ export class WorkbenchService implements IWorkbenchService {
     }
     if (input.goal !== undefined && input.goal.length > 2000) {
       throw new ServiceError("goal must be 2000 characters or fewer", 400);
+    }
+    if (input.status !== undefined && !(WORKBENCH_STATUSES as readonly string[]).includes(input.status)) {
+      throw new ServiceError(`status must be one of: ${WORKBENCH_STATUSES.join(", ")}`, 400);
     }
     const workbench = this.repo.update(id, input);
     if (workbench) {

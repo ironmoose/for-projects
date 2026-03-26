@@ -34,7 +34,9 @@ export function instructionRoutes(
       const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
       const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
       const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-      return c.json(instructionService.findByWorkbench(wbId(c), limit, offset));
+      const status = c.req.query("status") || undefined;
+      const filter = status ? { status: status as import("../../domain").InstructionStatus } : undefined;
+      return c.json(instructionService.findByWorkbench(wbId(c), limit, offset, filter));
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
       throw e;
@@ -44,8 +46,8 @@ export function instructionRoutes(
   // POST /api/workbenches/:id/instructions
   app.post("/", async (c) => {
     try {
-      const { prompt, position } = await c.req.json<CreateInstructionInput>();
-      const instruction = instructionService.create(wbId(c), { prompt, position });
+      const { prompt, position, agent, parallel, actor, status } = await c.req.json<CreateInstructionInput>();
+      const instruction = instructionService.create(wbId(c), { prompt, position, agent, parallel, actor, status });
       return c.json(instruction, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -83,11 +85,11 @@ export function instructionRoutes(
   // PATCH /api/workbenches/:id/instructions/:instructionId
   app.patch("/:instructionId", async (c) => {
     try {
-      const { prompt, output } = await c.req.json<UpdateInstructionInput>();
+      const { prompt, output, agent, parallel, actor, status } = await c.req.json<UpdateInstructionInput>();
       const instruction = instructionService.update(
         wbId(c),
         c.req.param("instructionId"),
-        { prompt, output },
+        { prompt, output, agent, parallel, actor, status },
       );
       if (!instruction) return c.json({ error: "instruction not found" }, 404);
       return c.json(instruction);

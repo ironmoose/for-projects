@@ -16,14 +16,16 @@ export function workbenchRoutes(workbenchService: IWorkbenchService): Hono {
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-    return c.json(workbenchService.findAll(limit, offset));
+    const status = c.req.query("status") || undefined;
+    const filter = status ? { status: status as import("../../domain").WorkbenchStatus } : undefined;
+    return c.json(workbenchService.findAll(limit, offset, filter));
   });
 
   // POST /api/workbenches
   app.post("/", async (c) => {
     try {
-      const { goal } = await c.req.json<CreateWorkbenchInput>();
-      const workbench = workbenchService.create({ goal });
+      const { goal, cursor, status } = await c.req.json<CreateWorkbenchInput>();
+      const workbench = workbenchService.create({ goal, cursor, status });
       return c.json(workbench, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -41,8 +43,8 @@ export function workbenchRoutes(workbenchService: IWorkbenchService): Hono {
   // PATCH /api/workbenches/:id
   app.patch("/:id", async (c) => {
     try {
-      const { goal } = await c.req.json<UpdateWorkbenchInput>();
-      const workbench = workbenchService.update(c.req.param("id"), { goal });
+      const { goal, cursor, status } = await c.req.json<UpdateWorkbenchInput>();
+      const workbench = workbenchService.update(c.req.param("id"), { goal, cursor, status });
       if (!workbench) return c.json({ error: "workbench not found" }, 404);
       return c.json(workbench);
     } catch (e: unknown) {

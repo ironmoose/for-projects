@@ -4,11 +4,11 @@ import type {
   UpdateInstructionInput,
   CreateInstructionBindingInput,
 } from "../inputs";
-import type { IInstructionService, IInstructionBindingService, Paginated } from "../services";
+import type { IInstructionService, IInstructionBindingService, Paginated, InstructionFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { InstructionRepository, InstructionBindingRepository } from "../repositories/instructions";
 import type { WorkbenchRepository } from "../repositories/workbenches";
-import { BINDING_KINDS } from "../statuses";
+import { BINDING_KINDS, INSTRUCTION_ACTORS, INSTRUCTION_STATUSES } from "../enums";
 import type { EventBus } from "../events";
 import { type ArnResolverMap, validateArn, ArnError } from "../arn";
 
@@ -25,11 +25,15 @@ export class InstructionService implements IInstructionService {
     }
   }
 
-  findByWorkbench(workbenchId: string, limit = 50, offset = 0): Paginated<Instruction> {
+  findByWorkbench(workbenchId: string, limit = 50, offset = 0, filter?: InstructionFilter): Paginated<Instruction> {
     this.requireWorkbench(workbenchId);
+    const status = filter?.status;
+    if (status && !(INSTRUCTION_STATUSES as readonly string[]).includes(status)) {
+      throw new ServiceError(`status must be one of: ${INSTRUCTION_STATUSES.join(", ")}`, 400);
+    }
     return {
-      data: this.repo.findByWorkbenchPaginated(workbenchId, limit, offset),
-      total: this.repo.countByWorkbench(workbenchId),
+      data: this.repo.findByWorkbenchPaginated(workbenchId, limit, offset, status),
+      total: this.repo.countByWorkbench(workbenchId, status),
     };
   }
 
@@ -57,6 +61,18 @@ export class InstructionService implements IInstructionService {
       position = this.repo.nextPosition(workbenchId);
     }
 
+    if (input.actor !== undefined && !(INSTRUCTION_ACTORS as readonly string[]).includes(input.actor)) {
+      throw new ServiceError(`actor must be one of: ${INSTRUCTION_ACTORS.join(", ")}`, 400);
+    }
+
+    if (input.parallel !== undefined && typeof input.parallel !== "boolean") {
+      throw new ServiceError("parallel must be a boolean", 400);
+    }
+
+    if (input.status !== undefined && !(INSTRUCTION_STATUSES as readonly string[]).includes(input.status)) {
+      throw new ServiceError(`status must be one of: ${INSTRUCTION_STATUSES.join(", ")}`, 400);
+    }
+
     const instruction = this.repo.create(workbenchId, input, position);
     this.eventBus?.emit({ entity: "instruction", action: "created", payload: instruction });
     return instruction;
@@ -72,7 +88,26 @@ export class InstructionService implements IInstructionService {
       throw new ServiceError("prompt cannot be empty", 400);
     }
 
-    if (input.prompt === undefined && input.output === undefined) {
+    if (input.actor !== undefined && !(INSTRUCTION_ACTORS as readonly string[]).includes(input.actor)) {
+      throw new ServiceError(`actor must be one of: ${INSTRUCTION_ACTORS.join(", ")}`, 400);
+    }
+
+    if (input.parallel !== undefined && typeof input.parallel !== "boolean") {
+      throw new ServiceError("parallel must be a boolean", 400);
+    }
+
+    if (input.status !== undefined && !(INSTRUCTION_STATUSES as readonly string[]).includes(input.status)) {
+      throw new ServiceError(`status must be one of: ${INSTRUCTION_STATUSES.join(", ")}`, 400);
+    }
+
+    if (
+      input.prompt === undefined &&
+      input.output === undefined &&
+      input.agent === undefined &&
+      input.parallel === undefined &&
+      input.actor === undefined &&
+      input.status === undefined
+    ) {
       return existing;
     }
 

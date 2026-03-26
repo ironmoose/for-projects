@@ -14,6 +14,9 @@ import {
   type IInstructionService,
   type IInstructionBindingService,
   BINDING_KINDS,
+  INSTRUCTION_ACTORS,
+  INSTRUCTION_STATUSES,
+  WORKBENCH_STATUSES,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -290,13 +293,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_workbenches",
     {
-      description: "List workbenches (paginated)",
+      description: "List workbenches (paginated, filterable by status)",
       inputSchema: {
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
+        status: z.enum(WORKBENCH_STATUSES).optional(),
       },
     },
-    ({ limit, offset }) => handle(() => workbenchService.findAll(limit, offset))
+    ({ limit, offset, status }) => handle(() => workbenchService.findAll(limit, offset, status ? { status } : undefined))
   );
 
   server.registerTool(
@@ -312,9 +316,13 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     "create_workbench",
     {
       description: "Create a new workbench with a goal",
-      inputSchema: { goal: z.string().max(2000) },
+      inputSchema: {
+        goal: z.string().max(2000),
+        cursor: z.string().max(26).nullable().optional(),
+        status: z.enum(WORKBENCH_STATUSES).optional(),
+      },
     },
-    ({ goal }) => handle(() => workbenchService.create({ goal }))
+    ({ goal, cursor, status }) => handle(() => workbenchService.create({ goal, cursor, status }))
   );
 
   server.registerTool(
@@ -324,6 +332,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         id: z.string().max(26),
         goal: z.string().max(2000).optional(),
+        cursor: z.string().max(26).nullable().optional(),
+        status: z.enum(WORKBENCH_STATUSES).optional(),
       },
     },
     ({ id, ...updates }) => handle(() => workbenchService.update(id, updates))
@@ -343,15 +353,16 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_instructions",
     {
-      description: "List instructions for a workbench (paginated, ordered by position)",
+      description: "List instructions for a workbench (paginated, ordered by position, filterable by status)",
       inputSchema: {
         workbench_id: z.string().max(26),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
+        status: z.enum(INSTRUCTION_STATUSES).optional(),
       },
     },
-    ({ workbench_id, limit, offset }) =>
-      handle(() => instructionService.findByWorkbench(workbench_id, limit, offset))
+    ({ workbench_id, limit, offset, status }) =>
+      handle(() => instructionService.findByWorkbench(workbench_id, limit, offset, status ? { status } : undefined))
   );
 
   server.registerTool(
@@ -375,6 +386,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         workbench_id: z.string().max(26),
         prompt: z.string().max(10000),
         position: z.number().int().min(0).optional(),
+        agent: z.string().max(200).nullable().optional(),
+        parallel: z.boolean().optional(),
+        actor: z.enum(INSTRUCTION_ACTORS).optional(),
+        status: z.enum(INSTRUCTION_STATUSES).optional(),
       },
     },
     ({ workbench_id, ...input }) =>
@@ -384,12 +399,16 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_instruction",
     {
-      description: "Update an instruction's prompt or output",
+      description: "Update an instruction's prompt, output, status, or execution metadata",
       inputSchema: {
         workbench_id: z.string().max(26),
         instruction_id: z.string().max(26),
         prompt: z.string().max(10000).optional(),
         output: z.string().max(100000).nullable().optional(),
+        agent: z.string().max(200).nullable().optional(),
+        parallel: z.boolean().optional(),
+        actor: z.enum(INSTRUCTION_ACTORS).optional(),
+        status: z.enum(INSTRUCTION_STATUSES).optional(),
       },
     },
     ({ workbench_id, instruction_id, ...updates }) =>
