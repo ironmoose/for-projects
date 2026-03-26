@@ -46,6 +46,7 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
     project: (id) => projectRepo.findById(id) !== null,
     task: (id) => taskRepo.findById(id) !== null,
     workbench: (id) => workbenchRepo.findById(id) !== null,
+    instruction: (id) => instructionRepo.findById(id) !== null,
   };
 
   const projectService = new ProjectService(projectRepo, eventBus);

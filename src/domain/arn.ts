@@ -7,7 +7,7 @@
  * Resource existence checks delegate to injected resolvers.
  */
 
-export const ARN_RESOURCE_TYPES = ["project", "task", "workbench"] as const;
+export const ARN_RESOURCE_TYPES = ["project", "task", "workbench", "instruction"] as const;
 export type ArnResourceType = (typeof ARN_RESOURCE_TYPES)[number];
 
 export interface ParsedArn {

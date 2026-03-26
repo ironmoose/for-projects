@@ -28,6 +28,11 @@ describe("parseArn", () => {
     expect(result).toEqual({ type: "workbench", id: "01KMM743S7N1F75M" });
   });
 
+  test("parses a valid instruction ARN", () => {
+    const result = parseArn("tab:instruction:01KMN9QR2X5B3YAH");
+    expect(result).toEqual({ type: "instruction", id: "01KMN9QR2X5B3YAH" });
+  });
+
   test("throws on empty string", () => {
     expect(() => parseArn("")).toThrow(ArnError);
     expect(() => parseArn("")).toThrow("ARN must not be empty");
@@ -83,12 +88,14 @@ describe("validateArn", () => {
     project: () => true,
     task: () => true,
     workbench: () => true,
+    instruction: () => true,
   };
 
   const neverExists: ArnResolverMap = {
     project: () => false,
     task: () => false,
     workbench: () => false,
+    instruction: () => false,
   };
 
   test("returns parsed ARN when resource exists", () => {
@@ -111,6 +118,7 @@ describe("validateArn", () => {
       project: () => true,
       task: () => false,
       workbench: () => true,
+      instruction: () => true,
     };
     expect(() => validateArn("tab:task:123", selective)).toThrow("Resource not found");
     expect(validateArn("tab:project:123", selective)).toEqual({ type: "project", id: "123" });

@@ -8,6 +8,7 @@ export { IconButton } from "./IconButton";
 export { Badge } from "./Badge";
 export { Markdown } from "./Markdown";
 export { TopBar } from "./TopBar";
+export type { NavItem } from "./TopBar";
 export { ThemeProvider, useTheme } from "./ThemeContext";
 export { themes } from "./theme";
 export type { Theme } from "./theme";
