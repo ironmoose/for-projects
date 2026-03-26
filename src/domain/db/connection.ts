@@ -1,12 +1,13 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
-
-const DEFAULT_DB_PATH = join(homedir(), ".tab", "project-management", "sqlite.db");
 
 export function getDbPath(): string {
-  return process.env.SQLITE_PATH ?? DEFAULT_DB_PATH;
+  const path = process.env.SQLITE_PATH;
+  if (!path) {
+    throw new Error("SQLITE_PATH environment variable is required");
+  }
+  return path;
 }
 
 export function createDatabase(dbPath?: string): Database {

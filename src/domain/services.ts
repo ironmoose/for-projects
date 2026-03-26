@@ -1,10 +1,15 @@
-import type { Project, Task, Tag } from "./entities";
+import type { Project, Task, Tag, Workbench, Instruction, InstructionBinding } from "./entities";
 import type { ProjectStatus, TaskStatus, TaskType, TaskEffort } from "./statuses";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateTaskInput,
   UpdateTaskInput,
+  CreateWorkbenchInput,
+  UpdateWorkbenchInput,
+  CreateInstructionInput,
+  UpdateInstructionInput,
+  CreateInstructionBindingInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -38,6 +43,30 @@ export interface ITaskService {
   create(projectSlug: string, input: CreateTaskInput): Task;
   update(projectSlug: string, id: string, input: UpdateTaskInput): Task | null;
   delete(projectSlug: string, id: string): boolean;
+}
+
+export interface IWorkbenchService {
+  findAll(limit?: number, offset?: number): Paginated<Workbench>;
+  findById(id: string): Workbench | null;
+  create(input: CreateWorkbenchInput): Workbench;
+  update(id: string, input: UpdateWorkbenchInput): Workbench | null;
+  delete(id: string): boolean;
+}
+
+export interface IInstructionService {
+  findByWorkbench(workbenchId: string, limit?: number, offset?: number): Paginated<Instruction>;
+  findById(workbenchId: string, instructionId: string): Instruction | null;
+  create(workbenchId: string, input: CreateInstructionInput): Instruction;
+  update(workbenchId: string, instructionId: string, input: UpdateInstructionInput): Instruction | null;
+  delete(workbenchId: string, instructionId: string): boolean;
+  reorder(workbenchId: string, instructionIds: string[]): Instruction[];
+}
+
+export interface IInstructionBindingService {
+  findByInstruction(instructionId: string): InstructionBinding[];
+  findByArn(arn: string): InstructionBinding[];
+  create(instructionId: string, input: CreateInstructionBindingInput): InstructionBinding;
+  delete(instructionId: string, bindingId: string): boolean;
 }
 
 export interface ITagService {

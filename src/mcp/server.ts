@@ -10,12 +10,19 @@ import {
   type IProjectService,
   type ITaskService,
   type ITagService,
+  type IWorkbenchService,
+  type IInstructionService,
+  type IInstructionBindingService,
+  BINDING_KINDS,
 } from "../domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
   tagService: ITagService;
+  workbenchService: IWorkbenchService;
+  instructionService: IInstructionService;
+  instructionBindingService: IInstructionBindingService;
 }
 
 function handle<T>(fn: () => T) {
@@ -39,7 +46,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, tagService } = ctx;
+  const { projectService, taskService, tagService, workbenchService, instructionService, instructionBindingService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -276,6 +283,190 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ prefix, limit, offset }) => handle(() => tagService.findTasksByTagPrefix(prefix, limit, offset))
+  );
+
+  // ── Workbenches ───────────────────────────────────────────
+
+  server.registerTool(
+    "list_workbenches",
+    {
+      description: "List workbenches (paginated)",
+      inputSchema: {
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ limit, offset }) => handle(() => workbenchService.findAll(limit, offset))
+  );
+
+  server.registerTool(
+    "get_workbench",
+    {
+      description: "Get a workbench by ID",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => workbenchService.findById(id))
+  );
+
+  server.registerTool(
+    "create_workbench",
+    {
+      description: "Create a new workbench with a goal",
+      inputSchema: { goal: z.string().max(10000) },
+    },
+    ({ goal }) => handle(() => workbenchService.create({ goal }))
+  );
+
+  server.registerTool(
+    "update_workbench",
+    {
+      description: "Update an existing workbench",
+      inputSchema: {
+        id: z.string().max(26),
+        goal: z.string().max(10000).optional(),
+      },
+    },
+    ({ id, ...updates }) => handle(() => workbenchService.update(id, updates))
+  );
+
+  server.registerTool(
+    "delete_workbench",
+    {
+      description: "Delete a workbench by ID",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => workbenchService.delete(id))
+  );
+
+  // ── Instructions ─────────────────────────────────────────
+
+  server.registerTool(
+    "list_instructions",
+    {
+      description: "List instructions for a workbench (paginated, ordered by position)",
+      inputSchema: {
+        workbench_id: z.string().max(26),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ workbench_id, limit, offset }) =>
+      handle(() => instructionService.findByWorkbench(workbench_id, limit, offset))
+  );
+
+  server.registerTool(
+    "get_instruction",
+    {
+      description: "Get an instruction by ID within a workbench",
+      inputSchema: {
+        workbench_id: z.string().max(26),
+        instruction_id: z.string().max(26),
+      },
+    },
+    ({ workbench_id, instruction_id }) =>
+      handle(() => instructionService.findById(workbench_id, instruction_id))
+  );
+
+  server.registerTool(
+    "create_instruction",
+    {
+      description: "Create an instruction in a workbench",
+      inputSchema: {
+        workbench_id: z.string().max(26),
+        prompt: z.string().max(10000),
+        position: z.number().int().min(0).optional(),
+      },
+    },
+    ({ workbench_id, ...input }) =>
+      handle(() => instructionService.create(workbench_id, input))
+  );
+
+  server.registerTool(
+    "update_instruction",
+    {
+      description: "Update an instruction's prompt",
+      inputSchema: {
+        workbench_id: z.string().max(26),
+        instruction_id: z.string().max(26),
+        prompt: z.string().max(10000).optional(),
+      },
+    },
+    ({ workbench_id, instruction_id, ...updates }) =>
+      handle(() => instructionService.update(workbench_id, instruction_id, updates))
+  );
+
+  server.registerTool(
+    "delete_instruction",
+    {
+      description: "Delete an instruction from a workbench",
+      inputSchema: {
+        workbench_id: z.string().max(26),
+        instruction_id: z.string().max(26),
+      },
+    },
+    ({ workbench_id, instruction_id }) =>
+      handle(() => instructionService.delete(workbench_id, instruction_id))
+  );
+
+  server.registerTool(
+    "reorder_instructions",
+    {
+      description: "Reorder instructions within a workbench by providing the full ordered list of instruction IDs",
+      inputSchema: {
+        workbench_id: z.string().max(26),
+        instruction_ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ workbench_id, instruction_ids }) =>
+      handle(() => instructionService.reorder(workbench_id, instruction_ids))
+  );
+
+  // ── Instruction Bindings ─────────────────────────────────
+
+  server.registerTool(
+    "list_instruction_bindings",
+    {
+      description: "List all bindings for an instruction",
+      inputSchema: { instruction_id: z.string().max(26) },
+    },
+    ({ instruction_id }) =>
+      handle(() => instructionBindingService.findByInstruction(instruction_id))
+  );
+
+  server.registerTool(
+    "find_bindings_by_arn",
+    {
+      description: "Find all instruction bindings that reference a given ARN",
+      inputSchema: { arn: z.string().max(500) },
+    },
+    ({ arn }) => handle(() => instructionBindingService.findByArn(arn))
+  );
+
+  server.registerTool(
+    "create_instruction_binding",
+    {
+      description: "Bind an instruction to a resource via ARN (e.g. project, task, workbench)",
+      inputSchema: {
+        instruction_id: z.string().max(26),
+        arn: z.string().max(500),
+        kind: z.enum(BINDING_KINDS),
+      },
+    },
+    ({ instruction_id, ...input }) =>
+      handle(() => instructionBindingService.create(instruction_id, input))
+  );
+
+  server.registerTool(
+    "delete_instruction_binding",
+    {
+      description: "Remove a binding from an instruction",
+      inputSchema: {
+        instruction_id: z.string().max(26),
+        binding_id: z.string().max(26),
+      },
+    },
+    ({ instruction_id, binding_id }) =>
+      handle(() => instructionBindingService.delete(instruction_id, binding_id))
   );
 
   return server;

@@ -12,9 +12,9 @@
     "bun": ">=1.3"
   },
   "scripts": {
-    "dev": "concurrently --kill-others --names 'api,web' \"bun run --watch src/index.ts\" \"cd src/web && vite\"",
+    "dev": "SQLITE_PATH=.local/data/sqlite.db concurrently --kill-others --names 'api,web' \"bun run --watch src/index.ts\" \"cd src/web && vite\"",
     "build": "cd src/web && vite build",
-    "start": "bun run src/index.ts",
+    "start": "SQLITE_PATH=.local/data/sqlite.db bun run src/index.ts",
     "serve": "bun run build && bun run start",
     "test": "bun test",
     "prepublishOnly": "bun run build"

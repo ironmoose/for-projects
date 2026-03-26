@@ -1,8 +1,11 @@
-import type { Project, Task } from "./entities";
+import type { Project, Task, Workbench, Instruction, InstructionBinding } from "./entities";
 
 export type DomainEvent =
   | { entity: "project"; action: "created" | "updated" | "deleted"; payload: Project | { id: string } }
-  | { entity: "task"; action: "created" | "updated" | "deleted"; payload: Task | { id: string } };
+  | { entity: "task"; action: "created" | "updated" | "deleted"; payload: Task | { id: string } }
+  | { entity: "workbench"; action: "created" | "updated" | "deleted"; payload: Workbench | { id: string } }
+  | { entity: "instruction"; action: "created" | "updated" | "deleted" | "reordered"; payload: Instruction | Instruction[] | { id: string } }
+  | { entity: "instruction_binding"; action: "created" | "deleted"; payload: InstructionBinding | { id: string } };
 
 type Listener = (event: DomainEvent) => void;
 

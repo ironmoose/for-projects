@@ -9,3 +9,6 @@ export type TaskType = (typeof TASK_TYPES)[number];
 
 export const TASK_EFFORTS = ["trivial", "low", "moderate", "high", "extreme"] as const;
 export type TaskEffort = (typeof TASK_EFFORTS)[number];
+
+export const BINDING_KINDS = ["input", "output", "context"] as const;
+export type BindingKind = (typeof BINDING_KINDS)[number];

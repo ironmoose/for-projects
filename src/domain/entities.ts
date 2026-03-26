@@ -1,4 +1,4 @@
-import type { ProjectStatus, TaskStatus, TaskType, TaskEffort } from "./statuses";
+import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, BindingKind } from "./statuses";
 
 export interface Project {
   id: string;
@@ -30,3 +30,29 @@ export interface Tag {
   prefix: string | null;
   created_at: string;
 }
+
+export interface Workbench {
+  id: string;
+  goal: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Instruction {
+  id: string;
+  workbench_id: string;
+  prompt: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InstructionBinding {
+  id: string;
+  instruction_id: string;
+  arn: string;
+  kind: BindingKind;
+  created_at: string;
+  updated_at: string;
+}
+

@@ -34,7 +34,7 @@ Everything works out of the box. If you need to customize, use environment varia
 |----------------------|-----------------|---------------------------------------|------------------------------|
 | `PM_PORT`            | `--port`        | `3000`                                | HTTP port                    |
 | `PM_HOST`            | `--host`        | `127.0.0.1`                           | Bind address                 |
-| `SQLITE_PATH`        | `--sqlite-path` | `~/.tab/project-management/sqlite.db` | Full path to SQLite database |
+| `SQLITE_PATH`        | `--sqlite-path` | *(required)*                          | Full path to SQLite database |
 
 CLI flags take precedence over environment variables.
 
@@ -44,12 +44,12 @@ tab-for-projects --port 8080 --sqlite-path /opt/tab-for-projects/data/sqlite.db
 
 ## Your data
 
-All data is stored in a single file: `~/.tab/project-management/sqlite.db` by default.
+All data is stored in a single SQLite file at the path you specify via `SQLITE_PATH`.
 
 **Back up** your data at any time:
 
 ```bash
-sqlite3 ~/.tab/project-management/sqlite.db ".backup /path/to/backup.db"
+sqlite3 /path/to/your/sqlite.db ".backup /path/to/backup.db"
 ```
 
 **Start fresh** by deleting the database file and restarting. A new one is created automatically.
@@ -365,6 +365,11 @@ sudo systemctl enable --now tab-for-projects
   <array>
     <string>/Users/you/.bun/bin/tab-for-projects</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SQLITE_PATH</key>
+    <string>/Users/you/.tab/project-management/sqlite.db</string>
+  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

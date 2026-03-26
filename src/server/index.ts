@@ -16,6 +16,9 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
 import { tagRoutes } from "./routes/tags";
+import { workbenchRoutes } from "./routes/workbenches";
+import { instructionRoutes } from "./routes/instructions";
+import { bindingRoutes } from "./routes/bindings";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
 
@@ -27,9 +30,9 @@ export class Server {
     this.options = { ...defaults, ...options };
   }
 
-  start(): void {
+  async start(): Promise<void> {
     const { port, host, dbPath } = this.options;
-    const ctx = bootstrap(dbPath);
+    const ctx = await bootstrap(dbPath);
 
     const app = new Hono();
     const isAllowedOrigin = parseCorsOrigins(process.env.PM_CORS_ORIGINS);
@@ -53,6 +56,9 @@ export class Server {
     app.route("/api/projects/:projectSlug/tasks", taskRoutes(ctx.taskService, ctx.tagService));
     app.route("/api/projects", projectRoutes(ctx.projectService));
     app.route("/api/tags", tagRoutes(ctx.tagService));
+    app.route("/api/workbenches", workbenchRoutes(ctx.workbenchService));
+    app.route("/api/workbenches/:id/instructions", instructionRoutes(ctx.instructionService, ctx.instructionBindingService));
+    app.route("/api/bindings", bindingRoutes(ctx.instructionBindingService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
     // ── MCP ────────────────────────────────────────────────

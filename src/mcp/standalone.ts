@@ -15,9 +15,9 @@ export class McpStandaloneServer {
     this.options = { ...defaults, ...options };
   }
 
-  start(): void {
+  async start(): Promise<void> {
     const { port, host, dbPath } = this.options;
-    const ctx = bootstrap(dbPath);
+    const ctx = await bootstrap(dbPath);
 
     const app = new Hono();
     const isAllowedOrigin = parseCorsOrigins(process.env.PM_CORS_ORIGINS);

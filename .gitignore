@@ -17,4 +17,5 @@ src/web/dist/
 .DS_Store
 
 .docker/
+.local/
 *.local.*

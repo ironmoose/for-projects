@@ -27,6 +27,7 @@ USER bun
 
 ENV PM_HOST=0.0.0.0
 ENV PM_PORT=3000
+ENV SQLITE_PATH=/app/data/sqlite.db
 EXPOSE 3000
 
 CMD ["bun", "run", "src/index.ts"]

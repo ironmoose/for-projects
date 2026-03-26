@@ -1,4 +1,4 @@
-import type { Project, Task } from "./entities";
+import type { Project, Task, Workbench, Instruction, InstructionBinding } from "./entities";
 
 export type CreateProjectInput = Pick<Project, "name" | "slug"> &
   Partial<Pick<Project, "description" | "status">>;
@@ -11,3 +11,14 @@ export type CreateTaskInput = Pick<Task, "title"> &
   Partial<Pick<Task, "description" | "status" | "type" | "effort" | "priority">>;
 
 export type UpdateTaskInput = Partial<Pick<Task, "title" | "description" | "status" | "type" | "effort" | "priority">>;
+
+export type CreateWorkbenchInput = Pick<Workbench, "goal">;
+
+export type UpdateWorkbenchInput = Partial<Pick<Workbench, "goal">>;
+
+export type CreateInstructionInput = Pick<Instruction, "prompt"> &
+  Partial<Pick<Instruction, "position">>;
+
+export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt">>;
+
+export type CreateInstructionBindingInput = Pick<InstructionBinding, "arn" | "kind">;
