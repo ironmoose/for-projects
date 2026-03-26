@@ -34,9 +34,23 @@ export function runMigrations(db: Database): void {
     )
   `);
 
-  // ── Migrate: add type and effort columns to tasks ────────
+  // ── Migrate: add columns to tasks ────────────────────────
   const taskCols = db.query("PRAGMA table_info(tasks)").all() as { name: string }[];
   const colNames = new Set(taskCols.map((c) => c.name));
+  if (!colNames.has("number")) {
+    db.run("ALTER TABLE tasks ADD COLUMN number INTEGER");
+    // Backfill: assign sequential numbers per project for existing tasks
+    db.run(`
+      UPDATE tasks SET number = (
+        SELECT COUNT(*) FROM tasks t2
+        WHERE t2.project_id = tasks.project_id AND t2.rowid <= tasks.rowid
+      )
+      WHERE number IS NULL
+    `);
+  }
+  if (!colNames.has("priority")) {
+    db.run("ALTER TABLE tasks ADD COLUMN priority INTEGER CHECK (priority BETWEEN 1 AND 10)");
+  }
   if (!colNames.has("type")) {
     db.run("ALTER TABLE tasks ADD COLUMN type TEXT CHECK (type IN ('research', 'implementation', 'review', 'design', 'planning', 'testing', 'documentation'))");
   }

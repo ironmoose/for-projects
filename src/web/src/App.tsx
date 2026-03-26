@@ -6,6 +6,7 @@ import {
   Icon,
   IconButton,
   Input,
+  Markdown,
   Select,
   Stack,
   TopBar,
@@ -615,8 +616,7 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
           { label: "In Progress", items: inProgress, icon: "pending" },
           { label: "Done", items: done, icon: "check_circle" },
         ].map(
-          (group) =>
-            group.items.length > 0 && (
+          (group) => (
               <div key={group.label}>
                 <Stack direction="row" align="center" gap="xs" style={{ marginBottom: theme.spacing.sm }}>
                   <Icon name={group.icon} size={14} style={{ color: theme.color.textFaint }} />
@@ -917,18 +917,7 @@ function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSl
         >
           {/* Description */}
           {task.description ? (
-            <p
-              style={{
-                margin: 0,
-                fontFamily: theme.font.body,
-                fontSize: theme.font.size.md,
-                color: theme.color.text,
-                lineHeight: 1.75,
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {task.description}
-            </p>
+            <Markdown>{task.description}</Markdown>
           ) : (
             <p
               style={{
@@ -980,12 +969,12 @@ function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSl
                   ) : (
                     tag.name
                   )}
-                  <span
+                  <IconButton
+                    icon="close"
+                    size={12}
                     onClick={() => handleRemoveTag(tag.id)}
-                    style={{ cursor: "pointer", color: theme.color.textFaint, fontSize: "0.6rem", lineHeight: 1 }}
-                  >
-                    x
-                  </span>
+                    style={{ width: 16, height: 16, minWidth: 16 }}
+                  />
                 </span>
               ))}
               {tags.length === 0 && (

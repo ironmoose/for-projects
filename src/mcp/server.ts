@@ -295,6 +295,8 @@ export function createMcpHttpHandler(ctx: McpServiceContext): (req: Request) => 
 
   return (req: Request): Promise<Response> => {
     const result = pending.then(async () => {
+      // enableJsonResponse is load-bearing: without it the transport returns SSE streams,
+      // which breaks the serialized promise-chain handler above.
       const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });
       try {
         await server.connect(transport);

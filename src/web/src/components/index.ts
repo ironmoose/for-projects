@@ -6,6 +6,7 @@ export { Stack } from "./Stack";
 export { Icon } from "./Icon";
 export { IconButton } from "./IconButton";
 export { Badge } from "./Badge";
+export { Markdown } from "./Markdown";
 export { TopBar } from "./TopBar";
 export { ThemeProvider, useTheme } from "./ThemeContext";
 export { themes } from "./theme";

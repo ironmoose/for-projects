@@ -92,6 +92,112 @@ curl -X POST http://localhost:3000/api/projects \
 
 Project status can be `active`, `paused`, `completed`, or `archived`.
 
+### Tasks
+
+```
+GET    /api/projects/:slug/tasks                List tasks (paginated, filterable)
+GET    /api/projects/:slug/tasks/by-number/:n   Get a task by project-scoped number
+POST   /api/projects/:slug/tasks                Create a task
+PATCH  /api/projects/:slug/tasks/:id            Update a task
+DELETE /api/projects/:slug/tasks/:id            Delete a task
+```
+
+**Create a task:**
+
+```bash
+curl -X POST http://localhost:3000/api/projects/website-redesign/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Design homepage hero", "description": "## Requirements\n\n- Full-bleed image\n- CTA button", "type": "design", "effort": "moderate"}'
+```
+
+**Response:**
+
+```json
+{
+  "id": "01JABBCD1234EFGH5678IJKL",
+  "number": 1,
+  "title": "Design homepage hero",
+  "description": "## Requirements\n\n- Full-bleed image\n- CTA button",
+  "status": "todo",
+  "type": "design",
+  "effort": "moderate",
+  "priority": null,
+  "created_at": "2026-03-25T12:00:00.000Z",
+  "updated_at": "2026-03-25T12:00:00.000Z"
+}
+```
+
+**Task fields:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `title` | string | Required. 1–500 characters. |
+| `description` | string | Optional. Up to 10,000 characters. Supports [Markdown](#markdown-in-descriptions). |
+| `status` | string | `todo`, `in_progress`, or `done`. Default: `todo`. |
+| `type` | string \| null | `research`, `implementation`, `review`, `design`, `planning`, `testing`, or `documentation`. |
+| `effort` | string \| null | `trivial`, `low`, `moderate`, `high`, or `extreme`. |
+| `priority` | integer \| null | 1–10. |
+
+**Filtering tasks:**
+
+The list endpoint accepts query parameters to filter and paginate results:
+
+| Parameter | Description |
+|-----------|-------------|
+| `status` | Filter by task status |
+| `type` | Filter by task type |
+| `effort` | Filter by effort level |
+| `tag` | Filter by exact tag name |
+| `tag_prefix` | Filter by tag prefix (e.g., `agent` matches `agent:researcher`) |
+| `limit` | Results per page (1–500, default 100) |
+| `offset` | Pagination offset (default 0) |
+
+```bash
+curl "http://localhost:3000/api/projects/website-redesign/tasks?status=todo&type=design&limit=25"
+```
+
+### Tags
+
+Tags are labels you can attach to tasks. Tag names are lowercase alphanumeric with hyphens and colons as namespace separators (e.g., `frontend`, `agent:researcher`, `priority:high`).
+
+```
+GET    /api/tags                          List all tags (filterable by prefix)
+POST   /api/tags                          Create a tag
+DELETE /api/tags/:id                      Delete a tag
+GET    /api/tags/:name/tasks              Find tasks by exact tag (cross-project)
+GET    /api/tags/prefix/:prefix/tasks     Find tasks by tag prefix (cross-project)
+GET    /api/projects/:slug/tasks/:id/tags Get tags for a task
+POST   /api/projects/:slug/tasks/:id/tags Add a tag to a task (auto-creates if needed)
+DELETE /api/projects/:slug/tasks/:id/tags/:tagId  Remove a tag from a task
+```
+
+**Add a tag to a task:**
+
+```bash
+curl -X POST http://localhost:3000/api/projects/website-redesign/tasks/01JABBCD1234EFGH5678IJKL/tags \
+  -H "Content-Type: application/json" \
+  -d '{"name": "frontend"}'
+```
+
+### Markdown in descriptions
+
+Task descriptions support [GitHub Flavored Markdown](https://github.github.com/gfm/) (GFM). The web UI renders descriptions with full styling — headings, lists, tables, code blocks with syntax highlighting, blockquotes, links, and emphasis.
+
+Markdown is stored as-is and rendered client-side. The API accepts and returns raw Markdown strings.
+
+**Supported syntax:**
+
+- Headings (`#`, `##`, `###`)
+- Bold, italic, strikethrough
+- Ordered and unordered lists (including nested)
+- Task lists (`- [x]`, `- [ ]`)
+- Fenced code blocks with language hints
+- Inline code
+- Tables (GFM)
+- Blockquotes
+- Links (open in new tab)
+- Horizontal rules
+
 ### Health check
 
 ```
@@ -182,6 +288,8 @@ tab-for-projects --sqlite-path /path/to/your/sqlite.db
 
 ### Available tools
 
+**Projects**
+
 | Tool | Description |
 |---|---|
 | `list_projects` | List all projects |
@@ -189,12 +297,32 @@ tab-for-projects --sqlite-path /path/to/your/sqlite.db
 | `create_project` | Create a new project (name, slug, optional description/status) |
 | `update_project` | Update a project's name, description, or status |
 | `delete_project` | Delete a project by slug |
-| `list_tasks` | List all tasks in a project |
-| `create_task` | Create a task in a project (title, optional description/status) |
-| `update_task` | Update a task's title, description, or status |
+
+**Tasks**
+
+| Tool | Description |
+|---|---|
+| `list_tasks` | List tasks in a project (filterable by status, type, effort, tag, tag prefix) |
+| `get_task_by_number` | Get a task by its project-scoped number |
+| `create_task` | Create a task (title, optional description/status/type/effort/priority) |
+| `update_task` | Update a task's fields (supports type, effort, priority — pass null to clear) |
 | `delete_task` | Delete a task by ID |
 
-Task status values: `todo`, `in_progress`, `done`. Project status values: `active`, `paused`, `completed`, `archived`.
+**Tags**
+
+| Tool | Description |
+|---|---|
+| `list_tags` | List all tags (filterable by prefix) |
+| `create_tag` | Create a tag (lowercase alphanumeric, hyphens, colons) |
+| `delete_tag` | Delete a tag by ID |
+| `add_tag_to_task` | Add a tag to a task (auto-creates if tag doesn't exist) |
+| `remove_tag_from_task` | Remove a tag from a task |
+| `get_task_tags` | Get all tags for a task |
+| `find_tasks_by_tag` | Find tasks with a given tag (cross-project) |
+
+Task descriptions support Markdown (GFM) — see [Markdown in descriptions](#markdown-in-descriptions).
+
+Task status: `todo`, `in_progress`, `done`. Task type: `research`, `implementation`, `review`, `design`, `planning`, `testing`, `documentation`. Task effort: `trivial`, `low`, `moderate`, `high`, `extreme`. Priority: 1–10. Project status: `active`, `paused`, `completed`, `archived`.
 
 ## Deploying
 

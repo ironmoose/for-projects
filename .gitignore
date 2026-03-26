@@ -15,3 +15,5 @@ src/web/dist/
 *.tsbuildinfo
 *.log
 .DS_Store
+
+.docker/

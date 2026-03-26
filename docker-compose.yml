@@ -4,9 +4,6 @@ services:
     ports:
       - "0.0.0.0:3000:3000"
     volumes:
-      - data:/app/data
+      - ./.docker/data:/app/data
     environment:
       - SQLITE_PATH=/app/data/sqlite.db
-
-volumes:
-  data:
