@@ -384,11 +384,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_instruction",
     {
-      description: "Update an instruction's prompt",
+      description: "Update an instruction's prompt or output",
       inputSchema: {
         workbench_id: z.string().max(26),
         instruction_id: z.string().max(26),
         prompt: z.string().max(10000).optional(),
+        output: z.string().max(100000).nullable().optional(),
       },
     },
     ({ workbench_id, instruction_id, ...updates }) =>

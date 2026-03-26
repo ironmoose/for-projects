@@ -78,6 +78,10 @@ export class InstructionService implements IInstructionService {
       throw new ServiceError("prompt cannot be empty", 400);
     }
 
+    if (input.prompt === undefined && input.output === undefined) {
+      return existing;
+    }
+
     const instruction = this.repo.update(instructionId, input);
     if (instruction) {
       this.eventBus?.emit({ entity: "instruction", action: "updated", payload: instruction });

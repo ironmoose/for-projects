@@ -42,6 +42,7 @@ export interface Instruction {
   id: string;
   workbench_id: string;
   prompt: string;
+  output: string | null;
   position: number;
   created_at: string;
   updated_at: string;

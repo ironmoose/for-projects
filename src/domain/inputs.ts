@@ -19,6 +19,6 @@ export type UpdateWorkbenchInput = Partial<Pick<Workbench, "goal">>;
 export type CreateInstructionInput = Pick<Instruction, "prompt"> &
   Partial<Pick<Instruction, "position">>;
 
-export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt">>;
+export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt" | "output">>;
 
 export type CreateInstructionBindingInput = Pick<InstructionBinding, "arn" | "kind">;

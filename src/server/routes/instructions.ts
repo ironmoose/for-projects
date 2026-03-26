@@ -83,11 +83,11 @@ export function instructionRoutes(
   // PATCH /api/workbenches/:id/instructions/:instructionId
   app.patch("/:instructionId", async (c) => {
     try {
-      const { prompt } = await c.req.json<UpdateInstructionInput>();
+      const { prompt, output } = await c.req.json<UpdateInstructionInput>();
       const instruction = instructionService.update(
         wbId(c),
         c.req.param("instructionId"),
-        { prompt },
+        { prompt, output },
       );
       if (!instruction) return c.json({ error: "instruction not found" }, 404);
       return c.json(instruction);

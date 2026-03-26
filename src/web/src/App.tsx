@@ -65,6 +65,7 @@ interface Instruction {
   id: string;
   workbench_id: string;
   prompt: string;
+  output: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -1699,6 +1700,30 @@ function InstructionDetailPanel({
             Prompt
           </span>
           <Markdown>{instruction.prompt}</Markdown>
+        </div>
+
+        {/* Output */}
+        <div style={{ marginBottom: theme.spacing.xl }}>
+          <span
+            style={{
+              display: "block",
+              fontSize: "0.625rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: theme.color.textFaint,
+              marginBottom: theme.spacing.sm,
+            }}
+          >
+            Output
+          </span>
+          {instruction.output ? (
+            <Markdown>{instruction.output}</Markdown>
+          ) : (
+            <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
+              No output yet
+            </p>
+          )}
         </div>
 
         {/* Bindings table */}

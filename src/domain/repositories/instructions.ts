@@ -50,11 +50,12 @@ export class InstructionRepository {
     if (!existing) return null;
 
     const prompt = input.prompt ?? existing.prompt;
+    const output = input.output !== undefined ? input.output : existing.output;
     const now = new Date().toISOString();
 
     this.db
-      .query("UPDATE instructions SET prompt = ?, updated_at = ? WHERE id = ?")
-      .run(prompt, now, id);
+      .query("UPDATE instructions SET prompt = ?, output = ?, updated_at = ? WHERE id = ?")
+      .run(prompt, output, now, id);
 
     return this.findById(id)!;
   }
