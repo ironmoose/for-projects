@@ -12,3 +12,5 @@ export type { NavItem } from "./TopBar";
 export { ThemeProvider, useTheme } from "./ThemeContext";
 export { themes } from "./theme";
 export type { Theme } from "./theme";
+export { ToastContainer, useToast } from "./Toast";
+export type { Toast, ToastType } from "./Toast";

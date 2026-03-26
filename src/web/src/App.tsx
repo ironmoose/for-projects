@@ -10,10 +10,12 @@ import {
   Select,
   Stack,
   TopBar,
+  ToastContainer,
   useTheme,
+  useToast,
 } from "./components";
-import type { NavItem } from "./components";
-import { API_BASE } from "./api";
+import type { NavItem, ToastType } from "./components";
+import { apiFetch, ApiError } from "./api";
 import { useRealtimeEvents, type DomainEvent } from "./useRealtimeEvents";
 
 // ---------------------------------------------------------------------------
@@ -123,6 +125,7 @@ const navItems: NavItem[] = [
 export function App() {
   const { theme } = useTheme();
   const { path, navigate } = useHashRoute();
+  const { toasts, showToast, dismiss } = useToast();
 
   // Match /projects/:slug
   const projectSlugMatch = path.match(/^\/projects\/([^/]+)$/);
@@ -151,15 +154,15 @@ export function App() {
 
   function renderView() {
     if (projectSlug) {
-      return <ProjectView slug={projectSlug} onBack={() => navigate("/")} subscribeEvents={subscribeEvents} />;
+      return <ProjectView slug={projectSlug} onBack={() => navigate("/")} subscribeEvents={subscribeEvents} showToast={showToast} />;
     }
     if (workbenchId) {
-      return <WorkbenchView id={workbenchId} onBack={() => navigate("/workbenches")} subscribeEvents={subscribeEvents} />;
+      return <WorkbenchView id={workbenchId} onBack={() => navigate("/workbenches")} subscribeEvents={subscribeEvents} showToast={showToast} />;
     }
     if (path.startsWith("/workbenches")) {
-      return <WorkbenchesView onOpenWorkbench={(id) => navigate(`/workbenches/${id}`)} subscribeEvents={subscribeEvents} />;
+      return <WorkbenchesView onOpenWorkbench={(id) => navigate(`/workbenches/${id}`)} subscribeEvents={subscribeEvents} showToast={showToast} />;
     }
-    return <DashboardView onOpenProject={(slug) => navigate(`/projects/${slug}`)} subscribeEvents={subscribeEvents} />;
+    return <DashboardView onOpenProject={(slug) => navigate(`/projects/${slug}`)} subscribeEvents={subscribeEvents} showToast={showToast} />;
   }
 
   return (
@@ -174,6 +177,8 @@ export function App() {
       <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}>
         {renderView()}
       </main>
+
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
     </div>
   );
 }
@@ -203,21 +208,25 @@ function ConnectionIndicator({ connected }: { connected: boolean }) {
 // DashboardView
 // ---------------------------------------------------------------------------
 
-function DashboardView({ onOpenProject, subscribeEvents }: { onOpenProject: (slug: string) => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void }) {
+function DashboardView({ onOpenProject, subscribeEvents, showToast }: { onOpenProject: (slug: string) => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void; showToast: (message: string, type?: ToastType) => void }) {
   const { theme } = useTheme();
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const fetchProjectsRef = useRef<(() => void) | undefined>(undefined);
 
   async function fetchProjects() {
-    const res = await fetch(`${API_BASE}/api/projects`);
-    if (!res.ok) return;
-    const body = await res.json();
-    setProjects(body.data);
+    try {
+      const res = await apiFetch("/api/projects");
+      const body = await res.json();
+      setProjects(body.data);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to load projects");
+    }
   }
 
   fetchProjectsRef.current = fetchProjects;
@@ -232,16 +241,22 @@ function DashboardView({ onOpenProject, subscribeEvents }: { onOpenProject: (slu
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    const res = await fetch(`${API_BASE}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug, description }),
-    });
-    if (!res.ok) return;
-    setName("");
-    setSlug("");
-    setDescription("");
-    setShowCreateForm(false);
+    setCreating(true);
+    try {
+      await apiFetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, slug, description }),
+      });
+      setName("");
+      setSlug("");
+      setDescription("");
+      setShowCreateForm(false);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to create project");
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -320,7 +335,7 @@ function DashboardView({ onOpenProject, subscribeEvents }: { onOpenProject: (slu
                 />
               </div>
               <Stack direction="row" gap="sm">
-                <Button type="submit">Create</Button>
+                <Button type="submit" disabled={creating}>{creating ? "Creating…" : "Create"}</Button>
                 <Button variant="ghost" onClick={() => setShowCreateForm(false)} type="button">
                   Cancel
                 </Button>
@@ -464,13 +479,14 @@ const taskStatusOptions = [
   { value: "done", label: "Done" },
 ];
 
-function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: () => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void }) {
+function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: string; onBack: () => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void; showToast: (message: string, type?: ToastType) => void }) {
   const { theme } = useTheme();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [addingTask, setAddingTask] = useState(false);
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
 
@@ -478,18 +494,28 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
   slugRef.current = slug;
 
   async function fetchProject() {
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(slug)}`);
-    if (!res.ok) { setNotFound(true); return; }
-    const p: Project = await res.json();
-    setProject(p);
-    fetchTasks(p.slug);
+    try {
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(slug)}`);
+      const p: Project = await res.json();
+      setProject(p);
+      fetchTasks(p.slug);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setNotFound(true);
+      } else {
+        showToast(err instanceof ApiError ? err.message : "Failed to load project");
+      }
+    }
   }
 
   async function fetchTasks(projectSlug: string) {
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks`);
-    if (!res.ok) return;
-    const body = await res.json();
-    setTasks(body.data);
+    try {
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks`);
+      const body = await res.json();
+      setTasks(body.data);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to load tasks");
+    }
   }
 
   const fetchProjectRef = useRef(fetchProject);
@@ -511,40 +537,55 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
 
   async function handleStatusChange(status: Project["status"]) {
     if (!project) return;
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (!res.ok) return;
+    try {
+      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to update project status");
+    }
   }
 
   async function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
     if (!newTaskTitle.trim() || !project) return;
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}/tasks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTaskTitle }),
-    });
-    if (!res.ok) return;
-    setNewTaskTitle("");
+    setAddingTask(true);
+    try {
+      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTaskTitle }),
+      });
+      setNewTaskTitle("");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add task");
+    } finally {
+      setAddingTask(false);
+    }
   }
 
   async function handleTaskStatusChange(taskId: string, status: Task["status"]) {
     if (!project) return;
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (!res.ok) return;
+    try {
+      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to update task");
+    }
   }
 
   async function handleDeleteTask(taskId: string) {
     if (!project) return;
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, { method: "DELETE" });
-    if (!res.ok) return;
+    try {
+      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, { method: "DELETE" });
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to delete task");
+    }
   }
 
   if (notFound) {
@@ -658,8 +699,8 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
               onChange={(e) => setNewTaskTitle(e.target.value)}
             />
           </div>
-          <Button type="submit" size="sm">
-            <Icon name="add" size={16} />
+          <Button type="submit" size="sm" disabled={addingTask}>
+            <Icon name={addingTask ? "hourglass_empty" : "add"} size={16} />
           </Button>
         </Stack>
       </form>
@@ -803,6 +844,7 @@ function ProjectView({ slug, onBack, subscribeEvents }: { slug: string; onBack: 
         task={selectedTask}
         projectSlug={slug}
         onClose={() => setSelectedTaskId(null)}
+        showToast={showToast}
       />
     )}
     </div>
@@ -832,41 +874,54 @@ function useWindowWidth() {
 
 const SMALL_BREAKPOINT = 768;
 
-function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSlug: string; onClose: () => void }) {
+function TaskDetailPanel({ task, projectSlug, onClose, showToast }: { task: Task; projectSlug: string; onClose: () => void; showToast: (message: string, type?: ToastType) => void }) {
   const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const isSmall = windowWidth < SMALL_BREAKPOINT;
   const [tags, setTags] = useState<Tag[]>([]);
   const [newTagName, setNewTagName] = useState("");
+  const [addingTag, setAddingTag] = useState(false);
 
   useEffect(() => {
     fetchTags();
   }, [task.id]);
 
   async function fetchTags() {
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`);
-    if (!res.ok) return;
-    const body = await res.json();
-    setTags(body.data);
+    try {
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`);
+      const body = await res.json();
+      setTags(body.data);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to load tags");
+    }
   }
 
   async function handleAddTag(e: React.FormEvent) {
     e.preventDefault();
     if (!newTagName.trim()) return;
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newTagName.trim().toLowerCase() }),
-    });
-    if (!res.ok) return;
-    setNewTagName("");
-    fetchTags();
+    setAddingTag(true);
+    try {
+      await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newTagName.trim().toLowerCase() }),
+      });
+      setNewTagName("");
+      fetchTags();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add tag");
+    } finally {
+      setAddingTag(false);
+    }
   }
 
   async function handleRemoveTag(tagId: string) {
-    const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags/${tagId}`, { method: "DELETE" });
-    if (!res.ok) return;
-    fetchTags();
+    try {
+      await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags/${tagId}`, { method: "DELETE" });
+      fetchTags();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to remove tag");
+    }
   }
 
   const formatDate = (iso: string) =>
@@ -1045,8 +1100,8 @@ function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSl
                 onChange={(e) => setNewTagName(e.target.value)}
                 style={{ flex: 1, fontSize: theme.font.size.xs, padding: "2px 6px" }}
               />
-              <Button type="submit" size="sm" style={{ fontSize: theme.font.size.xs, padding: "2px 8px" }}>
-                Add
+              <Button type="submit" size="sm" disabled={addingTag} style={{ fontSize: theme.font.size.xs, padding: "2px 8px" }}>
+                {addingTag ? "…" : "Add"}
               </Button>
             </form>
           </div>
@@ -1124,22 +1179,28 @@ function TaskDetailPanel({ task, projectSlug, onClose }: { task: Task; projectSl
 function WorkbenchesView({
   onOpenWorkbench,
   subscribeEvents,
+  showToast,
 }: {
   onOpenWorkbench: (id: string) => void;
   subscribeEvents: (fn: (e: DomainEvent) => void) => () => void;
+  showToast: (message: string, type?: ToastType) => void;
 }) {
   const { theme } = useTheme();
   const [workbenches, setWorkbenches] = useState<Workbench[]>([]);
   const [goal, setGoal] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const fetchRef = useRef<(() => void) | undefined>(undefined);
 
   async function fetchWorkbenches() {
-    const res = await fetch(`${API_BASE}/api/workbenches`);
-    if (!res.ok) return;
-    const body = await res.json();
-    setWorkbenches(body.data);
+    try {
+      const res = await apiFetch("/api/workbenches");
+      const body = await res.json();
+      setWorkbenches(body.data);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to load workbenches");
+    }
   }
 
   fetchRef.current = fetchWorkbenches;
@@ -1154,14 +1215,20 @@ function WorkbenchesView({
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!goal.trim()) return;
-    const res = await fetch(`${API_BASE}/api/workbenches`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goal }),
-    });
-    if (!res.ok) return;
-    setGoal("");
-    setShowCreateForm(false);
+    setCreating(true);
+    try {
+      await apiFetch("/api/workbenches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal }),
+      });
+      setGoal("");
+      setShowCreateForm(false);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to create workbench");
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -1223,7 +1290,7 @@ function WorkbenchesView({
                 />
               </div>
               <Stack direction="row" gap="sm">
-                <Button type="submit">Create</Button>
+                <Button type="submit" disabled={creating}>{creating ? "Creating…" : "Create"}</Button>
                 <Button variant="ghost" onClick={() => setShowCreateForm(false)} type="button">
                   Cancel
                 </Button>
@@ -1325,10 +1392,12 @@ function WorkbenchView({
   id,
   onBack,
   subscribeEvents,
+  showToast,
 }: {
   id: string;
   onBack: () => void;
   subscribeEvents: (fn: (e: DomainEvent) => void) => () => void;
+  showToast: (message: string, type?: ToastType) => void;
 }) {
   const { theme } = useTheme();
   const [workbench, setWorkbench] = useState<Workbench | null>(null);
@@ -1336,6 +1405,7 @@ function WorkbenchView({
   const [newPrompt, setNewPrompt] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [selectedInstructionId, setSelectedInstructionId] = useState<string | null>(null);
+  const [addingInstruction, setAddingInstruction] = useState(false);
 
   const selectedInstruction = selectedInstructionId ? instructions.find((i) => i.id === selectedInstructionId) ?? null : null;
 
@@ -1343,18 +1413,28 @@ function WorkbenchView({
   idRef.current = id;
 
   async function fetchWorkbench() {
-    const res = await fetch(`${API_BASE}/api/workbenches/${encodeURIComponent(id)}`);
-    if (!res.ok) { setNotFound(true); return; }
-    const wb: Workbench = await res.json();
-    setWorkbench(wb);
-    fetchInstructions();
+    try {
+      const res = await apiFetch(`/api/workbenches/${encodeURIComponent(id)}`);
+      const wb: Workbench = await res.json();
+      setWorkbench(wb);
+      fetchInstructions();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setNotFound(true);
+      } else {
+        showToast(err instanceof ApiError ? err.message : "Failed to load workbench");
+      }
+    }
   }
 
   async function fetchInstructions() {
-    const res = await fetch(`${API_BASE}/api/workbenches/${encodeURIComponent(idRef.current)}/instructions`);
-    if (!res.ok) return;
-    const body = await res.json();
-    setInstructions(body.data);
+    try {
+      const res = await apiFetch(`/api/workbenches/${encodeURIComponent(idRef.current)}/instructions`);
+      const body = await res.json();
+      setInstructions(body.data);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to load instructions");
+    }
   }
 
   const fetchRef = useRef(fetchWorkbench);
@@ -1377,19 +1457,28 @@ function WorkbenchView({
   async function handleAddInstruction(e: React.FormEvent) {
     e.preventDefault();
     if (!newPrompt.trim()) return;
-    const res = await fetch(`${API_BASE}/api/workbenches/${encodeURIComponent(id)}/instructions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: newPrompt }),
-    });
-    if (!res.ok) return;
-    setNewPrompt("");
+    setAddingInstruction(true);
+    try {
+      await apiFetch(`/api/workbenches/${encodeURIComponent(id)}/instructions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: newPrompt }),
+      });
+      setNewPrompt("");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add instruction");
+    } finally {
+      setAddingInstruction(false);
+    }
   }
 
   async function handleDeleteInstruction(instructionId: string) {
-    const res = await fetch(`${API_BASE}/api/workbenches/${encodeURIComponent(id)}/instructions/${instructionId}`, { method: "DELETE" });
-    if (!res.ok) return;
-    if (selectedInstructionId === instructionId) setSelectedInstructionId(null);
+    try {
+      await apiFetch(`/api/workbenches/${encodeURIComponent(id)}/instructions/${instructionId}`, { method: "DELETE" });
+      if (selectedInstructionId === instructionId) setSelectedInstructionId(null);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to delete instruction");
+    }
   }
 
   if (notFound) {
@@ -1486,8 +1575,8 @@ function WorkbenchView({
                 onChange={(e) => setNewPrompt(e.target.value)}
               />
             </div>
-            <Button type="submit" size="sm">
-              <Icon name="add" size={16} />
+            <Button type="submit" size="sm" disabled={addingInstruction}>
+              <Icon name={addingInstruction ? "hourglass_empty" : "add"} size={16} />
             </Button>
           </Stack>
         </form>
@@ -1557,6 +1646,7 @@ function WorkbenchView({
           instruction={selectedInstruction}
           workbenchId={id}
           onClose={() => setSelectedInstructionId(null)}
+          showToast={showToast}
         />
       )}
     </div>
@@ -1577,10 +1667,12 @@ function InstructionDetailPanel({
   instruction,
   workbenchId,
   onClose,
+  showToast,
 }: {
   instruction: Instruction;
   workbenchId: string;
   onClose: () => void;
+  showToast: (message: string, type?: ToastType) => void;
 }) {
   const { theme } = useTheme();
   const windowWidth = useWindowWidth();
@@ -1588,43 +1680,56 @@ function InstructionDetailPanel({
   const [bindings, setBindings] = useState<InstructionBinding[]>([]);
   const [newArn, setNewArn] = useState("");
   const [newKind, setNewKind] = useState<BindingKind>("input");
+  const [addingBinding, setAddingBinding] = useState(false);
 
   useEffect(() => {
     fetchBindings();
   }, [instruction.id]);
 
   async function fetchBindings() {
-    const res = await fetch(
-      `${API_BASE}/api/workbenches/${encodeURIComponent(workbenchId)}/instructions/${instruction.id}/bindings`,
-    );
-    if (!res.ok) return;
-    const body = await res.json();
-    setBindings(body.data);
+    try {
+      const res = await apiFetch(
+        `/api/workbenches/${encodeURIComponent(workbenchId)}/instructions/${instruction.id}/bindings`,
+      );
+      const body = await res.json();
+      setBindings(body.data);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to load bindings");
+    }
   }
 
   async function handleAddBinding(e: React.FormEvent) {
     e.preventDefault();
     if (!newArn.trim()) return;
-    const res = await fetch(
-      `${API_BASE}/api/workbenches/${encodeURIComponent(workbenchId)}/instructions/${instruction.id}/bindings`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ arn: newArn.trim(), kind: newKind }),
-      },
-    );
-    if (!res.ok) return;
-    setNewArn("");
-    fetchBindings();
+    setAddingBinding(true);
+    try {
+      await apiFetch(
+        `/api/workbenches/${encodeURIComponent(workbenchId)}/instructions/${instruction.id}/bindings`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ arn: newArn.trim(), kind: newKind }),
+        },
+      );
+      setNewArn("");
+      fetchBindings();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add binding");
+    } finally {
+      setAddingBinding(false);
+    }
   }
 
   async function handleRemoveBinding(bindingId: string) {
-    const res = await fetch(
-      `${API_BASE}/api/workbenches/${encodeURIComponent(workbenchId)}/instructions/${instruction.id}/bindings/${bindingId}`,
-      { method: "DELETE" },
-    );
-    if (!res.ok) return;
-    fetchBindings();
+    try {
+      await apiFetch(
+        `/api/workbenches/${encodeURIComponent(workbenchId)}/instructions/${instruction.id}/bindings/${bindingId}`,
+        { method: "DELETE" },
+      );
+      fetchBindings();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to remove binding");
+    }
   }
 
   const formatDate = (iso: string) =>
@@ -1833,8 +1938,8 @@ function InstructionDetailPanel({
               options={bindingKindOptions}
               style={{ fontSize: "0.625rem", padding: "0.1rem 0.25rem" }}
             />
-            <Button type="submit" size="sm" style={{ fontSize: theme.font.size.xs, padding: "2px 8px" }}>
-              Bind
+            <Button type="submit" size="sm" disabled={addingBinding} style={{ fontSize: theme.font.size.xs, padding: "2px 8px" }}>
+              {addingBinding ? "…" : "Bind"}
             </Button>
           </form>
         </div>

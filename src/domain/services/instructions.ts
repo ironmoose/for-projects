@@ -27,10 +27,9 @@ export class InstructionService implements IInstructionService {
 
   findByWorkbench(workbenchId: string, limit = 50, offset = 0): Paginated<Instruction> {
     this.requireWorkbench(workbenchId);
-    const all = this.repo.findByWorkbench(workbenchId);
     return {
-      data: all.slice(offset, offset + limit),
-      total: all.length,
+      data: this.repo.findByWorkbenchPaginated(workbenchId, limit, offset),
+      total: this.repo.countByWorkbench(workbenchId),
     };
   }
 
@@ -53,11 +52,6 @@ export class InstructionService implements IInstructionService {
       if (!Number.isInteger(input.position) || input.position < 0) {
         throw new ServiceError("position must be a non-negative integer", 400);
       }
-      const count = this.repo.countByWorkbench(workbenchId);
-      if (input.position > count) {
-        throw new ServiceError(`position must be between 0 and ${count}`, 400);
-      }
-      this.repo.shiftUp(workbenchId, input.position);
       position = input.position;
     } else {
       position = this.repo.nextPosition(workbenchId);
@@ -97,7 +91,6 @@ export class InstructionService implements IInstructionService {
 
     const deleted = this.repo.delete(instructionId);
     if (deleted) {
-      this.repo.closeGap(workbenchId, existing.position);
       this.eventBus?.emit({ entity: "instruction", action: "deleted", payload: { id: instructionId } });
     }
     return deleted;
@@ -106,7 +99,7 @@ export class InstructionService implements IInstructionService {
   reorder(workbenchId: string, instructionIds: string[]): Instruction[] {
     this.requireWorkbench(workbenchId);
 
-    const existing = this.repo.findByWorkbench(workbenchId);
+    const existing = this.repo.findAllByWorkbench(workbenchId);
     const existingIds = new Set(existing.map((i) => i.id));
 
     if (instructionIds.length !== existing.length) {
@@ -126,7 +119,7 @@ export class InstructionService implements IInstructionService {
 
     this.repo.reorder(workbenchId, instructionIds);
 
-    const reordered = this.repo.findByWorkbench(workbenchId);
+    const reordered = this.repo.findAllByWorkbench(workbenchId);
     this.eventBus?.emit({ entity: "instruction", action: "reordered", payload: reordered });
     return reordered;
   }

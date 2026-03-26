@@ -31,8 +31,14 @@ export function getNetworkAddress(): string | undefined {
 
 export function parseCorsOrigins(envValue?: string): (origin: string) => boolean {
   if (!envValue) {
-    return (origin) =>
-      origin.startsWith("http://localhost") || origin.startsWith("http://127.0.0.1");
+    return (origin) => {
+      try {
+        const url = new URL(origin);
+        return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+      } catch {
+        return false;
+      }
+    };
   }
   if (envValue.trim() === "*") return () => true;
   const allowed = new Set(envValue.split(",").map(s => s.trim()).filter(Boolean));

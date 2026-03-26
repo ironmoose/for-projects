@@ -23,8 +23,8 @@ export class WorkbenchService implements IWorkbenchService {
     if (!input.goal?.trim()) {
       throw new ServiceError("goal is required", 400);
     }
-    if (input.goal.length > 255) {
-      throw new ServiceError("goal must be 255 characters or fewer", 400);
+    if (input.goal.length > 2000) {
+      throw new ServiceError("goal must be 2000 characters or fewer", 400);
     }
     const workbench = this.repo.create(input);
     this.eventBus?.emit({ entity: "workbench", action: "created", payload: workbench });
@@ -35,8 +35,8 @@ export class WorkbenchService implements IWorkbenchService {
     if (input.goal !== undefined && !input.goal.trim()) {
       throw new ServiceError("goal cannot be empty", 400);
     }
-    if (input.goal !== undefined && input.goal.length > 255) {
-      throw new ServiceError("goal must be 255 characters or fewer", 400);
+    if (input.goal !== undefined && input.goal.length > 2000) {
+      throw new ServiceError("goal must be 2000 characters or fewer", 400);
     }
     const workbench = this.repo.update(id, input);
     if (workbench) {

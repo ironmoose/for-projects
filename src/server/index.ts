@@ -104,7 +104,15 @@ export class Server {
     ctx.eventBus.subscribe((event: DomainEvent) => {
       const msg = JSON.stringify(event);
       for (const ws of wsClients) {
-        ws.send(msg);
+        try {
+          if (ws.readyState === 1) {
+            ws.send(msg);
+          } else {
+            wsClients.delete(ws);
+          }
+        } catch {
+          wsClients.delete(ws);
+        }
       }
     });
 

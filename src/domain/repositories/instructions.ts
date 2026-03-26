@@ -10,10 +10,17 @@ export class InstructionRepository {
     return this.db.query("SELECT * FROM instructions WHERE id = ?").get(id) as Instruction | null;
   }
 
-  findByWorkbench(workbenchId: string): Instruction[] {
+  /** Fetches all instructions for a workbench (unbounded). Used by reorder validation. */
+  findAllByWorkbench(workbenchId: string): Instruction[] {
     return this.db
       .query("SELECT * FROM instructions WHERE workbench_id = ? ORDER BY position ASC")
       .all(workbenchId) as Instruction[];
+  }
+
+  findByWorkbenchPaginated(workbenchId: string, limit: number, offset: number): Instruction[] {
+    return this.db
+      .query("SELECT * FROM instructions WHERE workbench_id = ? ORDER BY position ASC LIMIT ? OFFSET ?")
+      .all(workbenchId, limit, offset) as Instruction[];
   }
 
   countByWorkbench(workbenchId: string): number {
@@ -63,23 +70,6 @@ export class InstructionRepository {
   delete(id: string): boolean {
     const result = this.db.query("DELETE FROM instructions WHERE id = ?").run(id);
     return result.changes > 0;
-  }
-
-  /** Shift positions down to close a gap after deletion */
-  closeGap(workbenchId: string, removedPosition: number): void {
-    this.db
-      .query("UPDATE instructions SET position = position - 1 WHERE workbench_id = ? AND position > ?")
-      .run(workbenchId, removedPosition);
-  }
-
-  /** Shift positions up to make room for insertion at a specific position. */
-  shiftUp(workbenchId: string, fromPosition: number): void {
-    this.db
-      .query("UPDATE instructions SET position = -(position + 1) WHERE workbench_id = ? AND position >= ?")
-      .run(workbenchId, fromPosition);
-    this.db
-      .query("UPDATE instructions SET position = (-position) WHERE workbench_id = ? AND position < 0")
-      .run(workbenchId);
   }
 
   /** Reorder instructions within a workbench. */

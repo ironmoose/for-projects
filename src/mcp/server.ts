@@ -312,7 +312,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     "create_workbench",
     {
       description: "Create a new workbench with a goal",
-      inputSchema: { goal: z.string().max(10000) },
+      inputSchema: { goal: z.string().max(2000) },
     },
     ({ goal }) => handle(() => workbenchService.create({ goal }))
   );
@@ -323,7 +323,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       description: "Update an existing workbench",
       inputSchema: {
         id: z.string().max(26),
-        goal: z.string().max(10000).optional(),
+        goal: z.string().max(2000).optional(),
       },
     },
     ({ id, ...updates }) => handle(() => workbenchService.update(id, updates))

@@ -17,6 +17,9 @@ export function createDatabase(dbPath?: string): Database {
   const db = new Database(resolvedPath);
   db.run("PRAGMA journal_mode = WAL");
   db.run("PRAGMA foreign_keys = ON");
+  db.run("PRAGMA busy_timeout = 5000");
+  db.run("PRAGMA synchronous = NORMAL");
+  db.run("PRAGMA journal_size_limit = 67108864");
 
   return db;
 }
