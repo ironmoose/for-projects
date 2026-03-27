@@ -14,6 +14,10 @@ export class TaskService implements ITaskService {
     private eventBus?: EventBus,
   ) {}
 
+  findById(id: string): Task | null {
+    return this.taskRepo.findById(id);
+  }
+
   findByProjectId(projectId: string, limit = 100, offset = 0, filter?: TaskFilter): Paginated<Task> {
     const project = this.projectRepo.findById(projectId);
     if (!project) {

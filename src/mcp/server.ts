@@ -17,6 +17,8 @@ import {
   INSTRUCTION_ACTORS,
   INSTRUCTION_STATUSES,
   WORKBENCH_STATUSES,
+  parseArn,
+  ArnError,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -59,26 +61,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   // ── Projects ──────────────────────────────────────────────
 
   server.registerTool(
-    "list_projects",
-    {
-      description: "List projects (paginated, filterable)",
-      inputSchema: {
-        limit: z.number().int().min(1).max(200).optional(),
-        offset: z.number().int().min(0).optional(),
-        status: z.enum(PROJECT_STATUSES).optional(),
-      },
-    },
-    ({ limit, offset, status }) =>
-      handle(() => projectService.findAll(limit, offset, status ? { status } : undefined))
-  );
-
-  server.registerTool(
-    "get_project",
-    { description: "Get a project by ID", inputSchema: { id: z.string().max(26) } },
-    ({ id }) => handle(() => projectService.findById(id))
-  );
-
-  server.registerTool(
     "create_project",
     {
       description: "Create a new project",
@@ -105,56 +87,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ id, ...updates }) => handle(() => projectService.update(id, updates))
   );
 
-  server.registerTool(
-    "delete_project",
-    { description: "Delete a project by ID", inputSchema: { id: z.string().max(26) } },
-    ({ id }) => handle(() => projectService.delete(id))
-  );
-
   // ── Tasks ─────────────────────────────────────────────────
-
-  server.registerTool(
-    "list_tasks",
-    {
-      description: "List tasks for a project (paginated, filterable by status, type, effort, tag, and tag_prefix)",
-      inputSchema: {
-        project_id: z.string().max(26),
-        limit: z.number().int().min(1).max(500).optional(),
-        offset: z.number().int().min(0).optional(),
-        status: z.enum(TASK_STATUSES).optional(),
-        type: z.enum(TASK_TYPES).optional(),
-        effort: z.enum(TASK_EFFORTS).optional(),
-        tag: z.string().max(50).optional(),
-        tag_prefix: z.string().max(50).optional(),
-      },
-    },
-    ({ project_id, limit, offset, status, type, effort, tag, tag_prefix }) => {
-      const filter: { status?: typeof status; type?: typeof type; effort?: typeof effort; tag?: string; tag_prefix?: string } = {};
-      if (status) filter.status = status;
-      if (type) filter.type = type;
-      if (effort) filter.effort = effort;
-      if (tag) filter.tag = tag;
-      if (tag_prefix) filter.tag_prefix = tag_prefix;
-      return handle(() => taskService.findByProjectId(project_id, limit, offset, Object.keys(filter).length ? filter : undefined));
-    }
-  );
-
-  server.registerTool(
-    "get_task_by_number",
-    {
-      description: "Get a task by its project-scoped number",
-      inputSchema: {
-        project_id: z.string().max(26),
-        number: z.number().int().min(1),
-      },
-    },
-    ({ project_id, number }) => handle(() => taskService.findByNumber(project_id, number))
-  );
 
   server.registerTool(
     "create_task",
     {
-      description: "Create a task in a project",
+      description: "Create a task in a project. Optionally attach tags (auto-created if they don't exist).",
       inputSchema: {
         project_id: z.string().max(26),
         title: z.string().max(500),
@@ -163,15 +101,25 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         type: z.enum(TASK_TYPES).optional(),
         effort: z.enum(TASK_EFFORTS).optional(),
         priority: z.number().int().min(1).max(10).optional(),
+        tags: z.array(z.string().max(50)).max(20).optional(),
       },
     },
-    ({ project_id, ...input }) => handle(() => taskService.create(project_id, input))
+    ({ project_id, tags: tagNames, ...input }) => handle(() => {
+      const task = taskService.create(project_id, input);
+      if (tagNames) {
+        for (const name of tagNames) {
+          tagService.addTagToTask(task.id, name);
+        }
+      }
+      const tags = tagService.getTagsForTask(task.id);
+      return { ...task, tags: tags.map(t => t.name) };
+    })
   );
 
   server.registerTool(
     "update_task",
     {
-      description: "Update a task by ID (must specify the project it belongs to). Supports type, effort, and priority (1-10 or null to clear).",
+      description: "Update a task by ID (must specify the project it belongs to). Supports type, effort, priority (1-10 or null to clear), and inline tag management via add_tags/remove_tags.",
       inputSchema: {
         project_id: z.string().max(26),
         id: z.string().max(26),
@@ -181,135 +129,29 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         type: z.enum(TASK_TYPES).nullable().optional(),
         effort: z.enum(TASK_EFFORTS).nullable().optional(),
         priority: z.number().int().min(1).max(10).nullable().optional(),
+        add_tags: z.array(z.string().max(50)).max(20).optional(),
+        remove_tags: z.array(z.string().max(50)).max(20).optional(),
       },
     },
-    ({ project_id, id, ...updates }) => handle(() => taskService.update(project_id, id, updates))
-  );
-
-  server.registerTool(
-    "delete_task",
-    {
-      description: "Delete a task by ID (must specify the project it belongs to)",
-      inputSchema: { project_id: z.string().max(26), id: z.string().max(26) },
-    },
-    ({ project_id, id }) => handle(() => taskService.delete(project_id, id))
-  );
-
-  // ── Tags ──────────────────────────────────────────────────
-
-  server.registerTool(
-    "list_tags",
-    {
-      description: "List all tags (paginated). Filter by prefix to get all tags in a namespace (e.g. prefix='agent' returns 'agent:researcher', 'agent:tab:reviewer').",
-      inputSchema: {
-        limit: z.number().int().min(1).max(500).optional(),
-        offset: z.number().int().min(0).optional(),
-        prefix: z.string().max(50).optional(),
-      },
-    },
-    ({ limit, offset, prefix }) => handle(() => prefix ? tagService.findByPrefix(prefix, limit, offset) : tagService.findAll(limit, offset))
-  );
-
-  server.registerTool(
-    "create_tag",
-    {
-      description: "Create a new tag (lowercase alphanumeric with hyphens)",
-      inputSchema: { name: z.string().max(50) },
-    },
-    ({ name }) => handle(() => tagService.create(name))
-  );
-
-  server.registerTool(
-    "delete_tag",
-    {
-      description: "Delete a tag by ID",
-      inputSchema: { id: z.string().max(26) },
-    },
-    ({ id }) => handle(() => tagService.delete(id))
-  );
-
-  server.registerTool(
-    "add_tag_to_task",
-    {
-      description: "Add a tag to a task (auto-creates tag if it doesn't exist)",
-      inputSchema: {
-        task_id: z.string().max(26),
-        tag_name: z.string().max(50),
-      },
-    },
-    ({ task_id, tag_name }) => handle(() => tagService.addTagToTask(task_id, tag_name))
-  );
-
-  server.registerTool(
-    "remove_tag_from_task",
-    {
-      description: "Remove a tag from a task",
-      inputSchema: {
-        task_id: z.string().max(26),
-        tag_id: z.string().max(26),
-      },
-    },
-    ({ task_id, tag_id }) => handle(() => tagService.removeTagFromTask(task_id, tag_id))
-  );
-
-  server.registerTool(
-    "get_task_tags",
-    {
-      description: "Get all tags for a task",
-      inputSchema: { task_id: z.string().max(26) },
-    },
-    ({ task_id }) => handle(() => tagService.getTagsForTask(task_id))
-  );
-
-  server.registerTool(
-    "find_tasks_by_tag",
-    {
-      description: "Find all tasks with a given tag (cross-project)",
-      inputSchema: {
-        tag_name: z.string().max(50),
-        limit: z.number().int().min(1).max(500).optional(),
-        offset: z.number().int().min(0).optional(),
-      },
-    },
-    ({ tag_name, limit, offset }) => handle(() => tagService.findTasksByTag(tag_name, limit, offset))
-  );
-
-  server.registerTool(
-    "find_tasks_by_tag_prefix",
-    {
-      description: "Find all tasks that have any tag with the given prefix (cross-project). E.g. prefix='agent' matches tags 'agent:researcher', 'agent:tab:reviewer'.",
-      inputSchema: {
-        prefix: z.string().max(50),
-        limit: z.number().int().min(1).max(500).optional(),
-        offset: z.number().int().min(0).optional(),
-      },
-    },
-    ({ prefix, limit, offset }) => handle(() => tagService.findTasksByTagPrefix(prefix, limit, offset))
+    ({ project_id, id, add_tags, remove_tags, ...updates }) => handle(() => {
+      const task = taskService.update(project_id, id, updates);
+      if (!task) return task;
+      if (add_tags) {
+        for (const name of add_tags) {
+          tagService.addTagToTask(task.id, name);
+        }
+      }
+      if (remove_tags) {
+        for (const name of remove_tags) {
+          tagService.removeTagFromTaskByName(task.id, name);
+        }
+      }
+      const tags = tagService.getTagsForTask(task.id);
+      return { ...task, tags: tags.map(t => t.name) };
+    })
   );
 
   // ── Workbenches ───────────────────────────────────────────
-
-  server.registerTool(
-    "list_workbenches",
-    {
-      description: "List workbenches (paginated, filterable by status)",
-      inputSchema: {
-        limit: z.number().int().min(1).max(200).optional(),
-        offset: z.number().int().min(0).optional(),
-        status: z.enum(WORKBENCH_STATUSES).optional(),
-      },
-    },
-    ({ limit, offset, status }) => handle(() => workbenchService.findAll(limit, offset, status ? { status } : undefined))
-  );
-
-  server.registerTool(
-    "get_workbench",
-    {
-      description: "Get a workbench by ID",
-      inputSchema: { id: z.string().max(26) },
-    },
-    ({ id }) => handle(() => workbenchService.findById(id))
-  );
 
   server.registerTool(
     "create_workbench",
@@ -338,49 +180,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ id, ...updates }) => handle(() => workbenchService.update(id, updates))
   );
 
-  server.registerTool(
-    "delete_workbench",
-    {
-      description: "Delete a workbench by ID",
-      inputSchema: { id: z.string().max(26) },
-    },
-    ({ id }) => handle(() => workbenchService.delete(id))
-  );
-
   // ── Instructions ─────────────────────────────────────────
-
-  server.registerTool(
-    "list_instructions",
-    {
-      description: "List instructions for a workbench (paginated, ordered by position, filterable by status)",
-      inputSchema: {
-        workbench_id: z.string().max(26),
-        limit: z.number().int().min(1).max(200).optional(),
-        offset: z.number().int().min(0).optional(),
-        status: z.enum(INSTRUCTION_STATUSES).optional(),
-      },
-    },
-    ({ workbench_id, limit, offset, status }) =>
-      handle(() => instructionService.findByWorkbench(workbench_id, limit, offset, status ? { status } : undefined))
-  );
-
-  server.registerTool(
-    "get_instruction",
-    {
-      description: "Get an instruction by ID within a workbench",
-      inputSchema: {
-        workbench_id: z.string().max(26),
-        instruction_id: z.string().max(26),
-      },
-    },
-    ({ workbench_id, instruction_id }) =>
-      handle(() => instructionService.findById(workbench_id, instruction_id))
-  );
 
   server.registerTool(
     "create_instruction",
     {
-      description: "Create an instruction in a workbench",
+      description: "Create an instruction in a workbench, optionally with bindings",
       inputSchema: {
         workbench_id: z.string().max(26),
         prompt: z.string().max(10000),
@@ -389,16 +194,29 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         parallel: z.boolean().optional(),
         actor: z.enum(INSTRUCTION_ACTORS).optional(),
         status: z.enum(INSTRUCTION_STATUSES).optional(),
+        bindings: z.array(z.object({
+          arn: z.string().max(500),
+          kind: z.enum(BINDING_KINDS),
+        })).max(20).optional(),
       },
     },
-    ({ workbench_id, ...input }) =>
-      handle(() => instructionService.create(workbench_id, input))
+    ({ workbench_id, bindings: bindingInputs, ...input }) =>
+      handle(() => {
+        const instruction = instructionService.create(workbench_id, input);
+        if (bindingInputs) {
+          for (const binding of bindingInputs) {
+            instructionBindingService.create(instruction.id, binding);
+          }
+        }
+        const bindings = instructionBindingService.findByInstruction(instruction.id);
+        return { ...instruction, bindings };
+      })
   );
 
   server.registerTool(
     "update_instruction",
     {
-      description: "Update an instruction's prompt, output, status, or execution metadata",
+      description: "Update an instruction's prompt, output, status, or execution metadata. Supports adding/removing bindings inline.",
       inputSchema: {
         workbench_id: z.string().max(26),
         instruction_id: z.string().max(26),
@@ -408,23 +226,30 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         parallel: z.boolean().optional(),
         actor: z.enum(INSTRUCTION_ACTORS).optional(),
         status: z.enum(INSTRUCTION_STATUSES).optional(),
+        add_bindings: z.array(z.object({
+          arn: z.string().max(500),
+          kind: z.enum(BINDING_KINDS),
+        })).max(20).optional(),
+        remove_bindings: z.array(z.string().max(26)).max(20).optional(),
       },
     },
-    ({ workbench_id, instruction_id, ...updates }) =>
-      handle(() => instructionService.update(workbench_id, instruction_id, updates))
-  );
-
-  server.registerTool(
-    "delete_instruction",
-    {
-      description: "Delete an instruction from a workbench",
-      inputSchema: {
-        workbench_id: z.string().max(26),
-        instruction_id: z.string().max(26),
-      },
-    },
-    ({ workbench_id, instruction_id }) =>
-      handle(() => instructionService.delete(workbench_id, instruction_id))
+    ({ workbench_id, instruction_id, add_bindings, remove_bindings, ...updates }) =>
+      handle(() => {
+        const instruction = instructionService.update(workbench_id, instruction_id, updates);
+        if (!instruction) return instruction;
+        if (add_bindings) {
+          for (const binding of add_bindings) {
+            instructionBindingService.create(instruction.id, binding);
+          }
+        }
+        if (remove_bindings) {
+          for (const bindingId of remove_bindings) {
+            instructionBindingService.delete(instruction.id, bindingId);
+          }
+        }
+        const bindings = instructionBindingService.findByInstruction(instruction.id);
+        return { ...instruction, bindings };
+      })
   );
 
   server.registerTool(
@@ -440,52 +265,117 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       handle(() => instructionService.reorder(workbench_id, instruction_ids))
   );
 
-  // ── Instruction Bindings ─────────────────────────────────
+  // ── Resolve ─────────────────────────────────────────────
 
   server.registerTool(
-    "list_instruction_bindings",
+    "resolve",
     {
-      description: "List all bindings for an instruction",
-      inputSchema: { instruction_id: z.string().max(26) },
-    },
-    ({ instruction_id }) =>
-      handle(() => instructionBindingService.findByInstruction(instruction_id))
-  );
-
-  server.registerTool(
-    "find_bindings_by_arn",
-    {
-      description: "Find all instruction bindings that reference a given ARN",
-      inputSchema: { arn: z.string().max(500) },
-    },
-    ({ arn }) => handle(() => instructionBindingService.findByArn(arn))
-  );
-
-  server.registerTool(
-    "create_instruction_binding",
-    {
-      description: "Bind an instruction to a resource via ARN (e.g. project, task, workbench)",
+      description: "Dereference one or more ARNs (e.g. tab:project:01ABC, tab:task:01DEF) into their entities",
       inputSchema: {
-        instruction_id: z.string().max(26),
-        arn: z.string().max(500),
-        kind: z.enum(BINDING_KINDS),
+        arn: z.union([
+          z.string().max(500),
+          z.array(z.string().max(500)).max(20),
+        ]),
       },
     },
-    ({ instruction_id, ...input }) =>
-      handle(() => instructionBindingService.create(instruction_id, input))
+    ({ arn }) => handle(() => {
+      const arns = Array.isArray(arn) ? arn : [arn];
+      const results = arns.map((a) => {
+        try {
+          const parsed = parseArn(a);
+          let data: unknown = null;
+          switch (parsed.type) {
+            case "project":
+              data = projectService.findById(parsed.id);
+              break;
+            case "task":
+              data = taskService.findById(parsed.id);
+              break;
+            case "workbench":
+              data = workbenchService.findById(parsed.id);
+              break;
+            case "instruction":
+              data = instructionService.findByIdDirect(parsed.id);
+              break;
+          }
+          return { arn: a, type: parsed.type, data };
+        } catch (e) {
+          if (e instanceof ArnError) {
+            return { arn: a, type: null, data: null, error: e.message };
+          }
+          throw e;
+        }
+      });
+      return Array.isArray(arn) ? results : results[0];
+    })
   );
 
+  // ── Query ──────────────────────────────────────────────
+
   server.registerTool(
-    "delete_instruction_binding",
+    "query",
     {
-      description: "Remove a binding from an instruction",
+      description: "Filtered list across entity types. Replaces all list_*/find_* read tools.",
       inputSchema: {
-        instruction_id: z.string().max(26),
-        binding_id: z.string().max(26),
+        type: z.enum(["project", "task", "tag", "workbench", "instruction", "binding"]),
+        limit: z.number().int().min(1).max(500).optional(),
+        offset: z.number().int().min(0).optional(),
+        // Context params
+        project_id: z.string().max(26).optional(),
+        workbench_id: z.string().max(26).optional(),
+        instruction_id: z.string().max(26).optional(),
+        // Filter params
+        status: z.string().max(50).optional(),
+        tag: z.string().max(50).optional(),
+        tag_prefix: z.string().max(50).optional(),
+        task_type: z.enum(TASK_TYPES).optional(),
+        effort: z.enum(TASK_EFFORTS).optional(),
+        // Single-entity lookups
+        id: z.string().max(26).optional(),
+        number: z.number().int().min(1).optional(),
+        arn: z.string().max(500).optional(),
       },
     },
-    ({ instruction_id, binding_id }) =>
-      handle(() => instructionBindingService.delete(instruction_id, binding_id))
+    ({ type: entityType, limit, offset, project_id, workbench_id, instruction_id, status, tag, tag_prefix, task_type, effort, id, number, arn: arnFilter }) => handle(() => {
+      switch (entityType) {
+        case "project": {
+          if (id) return projectService.findById(id);
+          const pFilter = status ? { status: status as Parameters<typeof projectService.findAll>[2] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
+          return projectService.findAll(limit, offset, pFilter as Parameters<typeof projectService.findAll>[2]);
+        }
+        case "task": {
+          if (!project_id) throw new ServiceError("project_id is required when querying tasks", 400);
+          if (number) return taskService.findByNumber(project_id, number);
+          const tFilter: Record<string, unknown> = {};
+          if (status) tFilter.status = status;
+          if (task_type) tFilter.type = task_type;
+          if (effort) tFilter.effort = effort;
+          if (tag) tFilter.tag = tag;
+          if (tag_prefix) tFilter.tag_prefix = tag_prefix;
+          return taskService.findByProjectId(project_id, limit, offset, Object.keys(tFilter).length ? tFilter as Parameters<typeof taskService.findByProjectId>[3] : undefined);
+        }
+        case "tag": {
+          if (tag_prefix) return tagService.findByPrefix(tag_prefix, limit, offset);
+          return tagService.findAll(limit, offset);
+        }
+        case "workbench": {
+          if (id) return workbenchService.findById(id);
+          const wFilter = status ? { status: status as Parameters<typeof workbenchService.findAll>[2] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
+          return workbenchService.findAll(limit, offset, wFilter as Parameters<typeof workbenchService.findAll>[2]);
+        }
+        case "instruction": {
+          if (!workbench_id) throw new ServiceError("workbench_id is required when querying instructions", 400);
+          if (id) return instructionService.findById(workbench_id, id);
+          const iFilter = status ? { status: status as Parameters<typeof instructionService.findByWorkbench>[3] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
+          return instructionService.findByWorkbench(workbench_id, limit, offset, iFilter as Parameters<typeof instructionService.findByWorkbench>[3]);
+        }
+        case "binding": {
+          if (instruction_id) return instructionBindingService.findByInstruction(instruction_id);
+          if (arnFilter) return instructionBindingService.findByArn(arnFilter);
+          throw new ServiceError("instruction_id or arn is required when querying bindings", 400);
+        }
+      }
+    })
   );
 
   return server;

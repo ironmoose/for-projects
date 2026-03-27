@@ -83,6 +83,12 @@ export class TagService implements ITagService {
     return this.tagRepo.removeTagFromTask(taskId, tagId);
   }
 
+  removeTagFromTaskByName(taskId: string, tagName: string): boolean {
+    const tag = this.tagRepo.findByName(tagName);
+    if (!tag) return false;
+    return this.tagRepo.removeTagFromTask(taskId, tag.id);
+  }
+
   getTagsForTask(taskId: string): Tag[] {
     return this.tagRepo.getTagsForTask(taskId);
   }

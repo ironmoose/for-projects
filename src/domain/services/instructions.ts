@@ -44,6 +44,10 @@ export class InstructionService implements IInstructionService {
     return instruction;
   }
 
+  findByIdDirect(instructionId: string): Instruction | null {
+    return this.repo.findById(instructionId);
+  }
+
   create(workbenchId: string, input: CreateInstructionInput): Instruction {
     this.requireWorkbench(workbenchId);
 

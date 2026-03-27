@@ -38,6 +38,7 @@ export interface IProjectService {
 }
 
 export interface ITaskService {
+  findById(id: string): Task | null;
   findByProjectId(projectId: string, limit?: number, offset?: number, filter?: TaskFilter): Paginated<Task>;
   findByNumber(projectId: string, number: number): Task | null;
   create(projectId: string, input: CreateTaskInput): Task;
@@ -64,6 +65,7 @@ export interface InstructionFilter {
 export interface IInstructionService {
   findByWorkbench(workbenchId: string, limit?: number, offset?: number, filter?: InstructionFilter): Paginated<Instruction>;
   findById(workbenchId: string, instructionId: string): Instruction | null;
+  findByIdDirect(instructionId: string): Instruction | null;
   create(workbenchId: string, input: CreateInstructionInput): Instruction;
   update(workbenchId: string, instructionId: string, input: UpdateInstructionInput): Instruction | null;
   delete(workbenchId: string, instructionId: string): boolean;
@@ -85,6 +87,7 @@ export interface ITagService {
   delete(id: string): boolean;
   addTagToTask(taskId: string, tagName: string): Tag;
   removeTagFromTask(taskId: string, tagId: string): boolean;
+  removeTagFromTaskByName(taskId: string, tagName: string): boolean;
   getTagsForTask(taskId: string): Tag[];
   findTasksByTag(tagName: string, limit?: number, offset?: number): Paginated<Task>;
   findTasksByTagPrefix(prefix: string, limit?: number, offset?: number): Paginated<Task>;
