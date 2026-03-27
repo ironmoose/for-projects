@@ -1,55 +1,66 @@
 import { useCallback, useRef, useState } from "react";
 import { useVisualEvent } from "./useVisualEvent";
+import { useReducedMotion } from "./useReducedMotion";
 import type { DomainEvent } from "../useRealtimeEvents";
 
-type AnimationState = "idle" | "flash" | "glow" | "shake";
-
-interface EventDrivenAnimationResult {
-  animationState: AnimationState;
-  lastEvent: DomainEvent | null;
-}
+export type AnimationState = "idle" | "flash" | "glow" | "shake";
 
 /**
- * Maps domain events to animation states for a specific entity.
- * Animation states auto-reset after their duration.
+ * Convenience hook that maps domain events to animation states.
+ * Returns the current animation state and the last event received.
  */
 export function useEventDrivenAnimation(
   entityType: DomainEvent["entity"],
   entityId: string | null,
-): EventDrivenAnimationResult {
+): {
+  animationState: AnimationState;
+  lastEvent: DomainEvent | null;
+} {
   const [animationState, setAnimationState] = useState<AnimationState>("idle");
   const [lastEvent, setLastEvent] = useState<DomainEvent | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduced = useReducedMotion();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleEvent = useCallback((event: DomainEvent) => {
-    setLastEvent(event);
+  const handleEvent = useCallback(
+    (event: DomainEvent) => {
+      setLastEvent(event);
+      if (reduced) return;
 
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-    let state: AnimationState = "flash";
-    let duration = 600;
-
-    if (event.entity === "instruction" && event.action === "updated") {
-      const payload = event.payload as Record<string, unknown>;
-      const status = payload.status as string | undefined;
-      if (status === "running") {
-        state = "glow";
-        // Glow persists -- reset after a long duration
-        duration = 5000;
-      } else if (status === "complete") {
-        state = "flash";
-        duration = 600;
-      } else if (status === "failed") {
-        state = "shake";
-        duration = 400;
+      // Clear any pending timer
+      if (timerRef.current != null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
-    }
 
-    setAnimationState(state);
-    timeoutRef.current = setTimeout(() => {
-      setAnimationState("idle");
-    }, duration);
-  }, []);
+      const payload = event.payload as Record<string, unknown>;
+
+      let state: AnimationState = "flash";
+      let duration = 600;
+
+      if (entityType === "instruction" && event.action === "updated") {
+        const status = payload.status as string | undefined;
+        if (status === "running") {
+          state = "glow";
+          // Glow persists until next event, no auto-reset
+          setAnimationState(state);
+          return;
+        } else if (status === "complete") {
+          state = "flash";
+          duration = 600;
+        } else if (status === "failed") {
+          state = "shake";
+          duration = 400;
+        }
+      }
+
+      setAnimationState(state);
+      timerRef.current = setTimeout(() => {
+        setAnimationState("idle");
+        timerRef.current = null;
+      }, duration);
+    },
+    [entityType, reduced],
+  );
 
   useVisualEvent(entityType, entityId, handleEvent);
 

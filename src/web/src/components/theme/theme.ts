@@ -37,7 +37,7 @@ export interface Theme {
     glowPrimary: string;
     glowSuccess: string;
     glowDanger: string;
-    // Activity border
+    // Activity
     activityBorder: string;
   };
   shadow: {

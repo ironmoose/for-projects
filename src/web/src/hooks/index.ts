@@ -12,4 +12,5 @@ export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";
 export { useEventDrivenAnimation } from "./useEventDrivenAnimation";
+export type { AnimationState } from "./useEventDrivenAnimation";
 export { useActivityCount } from "./useActivityCount";

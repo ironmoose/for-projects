@@ -10,10 +10,85 @@ import {
   EmptyState,
   HighlightOnChange,
 } from "../components";
-import { WorkbenchCard } from "../components/organisms/WorkbenchCard";
 import { useWorkbenches } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError } from "../api";
+import { formatDate } from "../utils";
+
+// ---------------------------------------------------------------------------
+// WorkbenchTableRow
+// ---------------------------------------------------------------------------
+
+function WorkbenchTableRow({
+  workbench,
+  onClick,
+}: {
+  workbench: { id: string; goal: string; created_at: string; updated_at: string };
+  onClick: () => void;
+}) {
+  const { theme } = useTheme();
+
+  return (
+    <HighlightOnChange trackValue={workbench.updated_at}>
+      <div
+        onClick={onClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: theme.spacing.md,
+          height: theme.layout.tableRowHeight,
+          padding: `0 ${theme.spacing.lg}`,
+          background: theme.color.surfaceContainer,
+          borderBottom: `1px solid ${theme.color.borderSubtle}`,
+          cursor: "pointer",
+          transition: `background ${theme.animation.duration.fast} ${theme.animation.easing.default}`,
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = theme.color.surfaceContainerHigh; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = theme.color.surfaceContainer; }}
+      >
+        <Icon name="construction" size={16} style={{ color: theme.color.primary, flexShrink: 0 }} />
+
+        <span
+          style={{
+            flex: "1 1 auto",
+            minWidth: 0,
+            fontSize: theme.font.size.sm,
+            fontWeight: 600,
+            color: theme.color.text,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {workbench.goal}
+        </span>
+
+        <span
+          style={{
+            flexShrink: 0,
+            fontSize: theme.font.size.xxs,
+            color: theme.color.textFaint,
+            fontFamily: theme.font.mono,
+            minWidth: 100,
+            textAlign: "right" as const,
+          }}
+        >
+          {formatDate(workbench.updated_at)}
+        </span>
+
+        <Icon name="chevron_right" size={16} style={{ color: theme.color.textFaint, flexShrink: 0 }} />
+      </div>
+    </HighlightOnChange>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // WorkbenchesPage
@@ -74,16 +149,19 @@ export function WorkbenchesPage({ onOpenWorkbench }: { onOpenWorkbench: (id: str
         </div>
       </CreateForm>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.lg }}>
+      <div
+        style={{
+          borderRadius: theme.radius.lg,
+          overflow: "hidden",
+          border: `1px solid ${theme.color.borderSubtle}`,
+        }}
+      >
         {workbenches.map((wb) => (
-          <div
+          <WorkbenchTableRow
             key={wb.id}
-            style={{ flex: `1 1 calc(50% - ${theme.spacing.lg})`, maxWidth: "100%", minWidth: 280 }}
-          >
-            <HighlightOnChange trackValue={wb.updated_at}>
-              <WorkbenchCard workbench={wb} onClick={() => onOpenWorkbench(wb.id)} />
-            </HighlightOnChange>
-          </div>
+            workbench={wb}
+            onClick={() => onOpenWorkbench(wb.id)}
+          />
         ))}
       </div>
 
