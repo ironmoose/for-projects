@@ -19,3 +19,4 @@ src/web/dist/
 .docker/
 .local/
 *.local.*
+.claude/worktrees/
