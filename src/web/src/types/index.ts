@@ -42,12 +42,18 @@ export interface Workbench {
   updated_at: string;
 }
 
+export type InstructionStatus = "pending" | "running" | "complete" | "skipped";
+
 export interface Instruction {
   id: string;
   workbench_id: string;
   prompt: string;
   output: string | null;
   position: number;
+  status: InstructionStatus;
+  agent: string | null;
+  actor: "agent" | "human";
+  parallel: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -79,6 +85,20 @@ export const taskStatusOptions = [
   { value: "in_progress", label: "In Progress" },
   { value: "done", label: "Done" },
 ];
+
+export const instructionStatusOptions = [
+  { value: "pending", label: "Pending" },
+  { value: "running", label: "Running" },
+  { value: "complete", label: "Complete" },
+  { value: "skipped", label: "Skipped" },
+];
+
+export const instructionStatusLabel: Record<InstructionStatus, string> = {
+  pending: "Pending",
+  running: "Running",
+  complete: "Complete",
+  skipped: "Skipped",
+};
 
 export const bindingKindOptions = [
   { value: "input", label: "Input" },

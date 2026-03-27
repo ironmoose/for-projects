@@ -30,6 +30,15 @@ export interface Theme {
     warning: string;
     // Activity flash (primary at ~9% opacity)
     activityFlash: string;
+    // Status-specific
+    running: string;
+    failed: string;
+    // Glow/event colors
+    glowPrimary: string;
+    glowSuccess: string;
+    glowDanger: string;
+    // Activity
+    activityBorder: string;
   };
   shadow: {
     sm: string;
@@ -96,7 +105,16 @@ export interface Theme {
       default: string;
       decelerate: string;
       accelerate: string;
+      spring: string;
     };
+  };
+  layout: {
+    topBarHeight: string;
+    pipelineIndent: string;
+    pipelineNodeSize: string;
+    pipelineLineWidth: string;
+    tableRowHeight: string;
+    maxContentWidth: string;
   };
   breakpoint: {
     sm: number;
@@ -106,7 +124,7 @@ export interface Theme {
   };
 }
 
-const shared: Pick<Theme, "radius" | "spacing" | "font" | "motion" | "animation" | "breakpoint"> = {
+const shared: Pick<Theme, "radius" | "spacing" | "font" | "motion" | "animation" | "layout" | "breakpoint"> = {
   radius: { sm: 2, md: 4, lg: 8, xl: 12, full: 9999 },
   spacing: {
     xs: "0.25rem",
@@ -161,7 +179,16 @@ const shared: Pick<Theme, "radius" | "spacing" | "font" | "motion" | "animation"
       default: "cubic-bezier(0.4, 0, 0.2, 1)",
       decelerate: "cubic-bezier(0, 0, 0.2, 1)",
       accelerate: "cubic-bezier(0.4, 0, 1, 1)",
+      spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
     },
+  },
+  layout: {
+    topBarHeight: "48px",
+    pipelineIndent: "48px",
+    pipelineNodeSize: "12px",
+    pipelineLineWidth: "2px",
+    tableRowHeight: "52px",
+    maxContentWidth: "1400px",
   },
   breakpoint: {
     sm: 640,
@@ -197,6 +224,12 @@ export const themes: Record<string, Theme> = {
       success: "#6dd58c",
       warning: "#fcb97b",
       activityFlash: "rgba(139, 209, 232, 0.09)",
+      running: "#8bd1e8",
+      failed: "#ff8a80",
+      glowPrimary: "rgba(139, 209, 232, 0.30)",
+      glowSuccess: "rgba(109, 213, 140, 0.30)",
+      glowDanger: "rgba(255, 138, 128, 0.30)",
+      activityBorder: "rgba(139, 209, 232, 0.40)",
     },
     shadow: {
       sm: "0 1px 3px rgba(0,0,0,0.4)",
@@ -230,6 +263,12 @@ export const themes: Record<string, Theme> = {
       success: "#a8d5a2",
       warning: "#f5d08a",
       activityFlash: "rgba(232, 112, 64, 0.09)",
+      running: "#e87040",
+      failed: "#ff8a80",
+      glowPrimary: "rgba(232, 112, 64, 0.30)",
+      glowSuccess: "rgba(168, 213, 162, 0.30)",
+      glowDanger: "rgba(255, 138, 128, 0.30)",
+      activityBorder: "rgba(232, 112, 64, 0.40)",
     },
     shadow: {
       sm: "0 1px 3px rgba(0,0,0,0.5)",
@@ -263,6 +302,12 @@ export const themes: Record<string, Theme> = {
       success: "#a3be8c",
       warning: "#ebcb8b",
       activityFlash: "rgba(136, 192, 208, 0.09)",
+      running: "#88c0d0",
+      failed: "#d08770",
+      glowPrimary: "rgba(136, 192, 208, 0.30)",
+      glowSuccess: "rgba(163, 190, 140, 0.30)",
+      glowDanger: "rgba(208, 135, 112, 0.30)",
+      activityBorder: "rgba(136, 192, 208, 0.40)",
     },
     shadow: {
       sm: "0 1px 3px rgba(0,0,0,0.3)",

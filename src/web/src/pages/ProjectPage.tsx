@@ -206,6 +206,18 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
 }
 
 // ---------------------------------------------------------------------------
+// Task accent color
+// ---------------------------------------------------------------------------
+
+function taskAccentColor(theme: ReturnType<typeof useTheme>["theme"], status: Task["status"]): string {
+  switch (status) {
+    case "in_progress": return theme.color.tertiary;
+    case "done": return theme.color.success;
+    case "todo": return theme.color.textFaint;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // ProjectPage
 // ---------------------------------------------------------------------------
 
@@ -256,9 +268,9 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     );
   }
 
-  const todo = tasks.filter((t) => t.status === "todo");
-  const inProgress = tasks.filter((t) => t.status === "in_progress");
-  const done = tasks.filter((t) => t.status === "done");
+  // Sort: in_progress first, then todo, then done
+  const statusOrder: Record<Task["status"], number> = { in_progress: 0, todo: 1, done: 2 };
+  const sortedTasks = [...tasks].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
 
   return (
     <DetailPageLayout expanded={!!selectedTask}>
@@ -321,115 +333,99 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           style={{ marginBottom: theme.spacing.xl }}
         />
 
-        <Stack gap="lg">
-          {[
-            { label: "To Do", items: todo, icon: "radio_button_unchecked" },
-            { label: "In Progress", items: inProgress, icon: "pending" },
-            { label: "Done", items: done, icon: "check_circle" },
-          ].map(
-            (group) => (
-              <div key={group.label}>
-                <Stack direction="row" align="center" gap="xs" style={{ marginBottom: theme.spacing.sm }}>
-                  <Icon name={group.icon} size={14} style={{ color: theme.color.textFaint }} />
-                  <SectionLabel>
-                    {group.label} ({group.items.length})
-                  </SectionLabel>
-                </Stack>
-                <Stack gap="xs">
-                  {group.items.map((task) => (
-                    <ListItem
-                      key={task.id}
-                      onClick={() => setSelectedTaskId(task.id)}
-                      selected={selectedTaskId === task.id}
+        <Stack gap="xs">
+          {sortedTasks.map((task) => (
+            <ListItem
+              key={task.id}
+              onClick={() => setSelectedTaskId(task.id)}
+              selected={selectedTaskId === task.id}
+              style={{ borderLeft: `3px solid ${taskAccentColor(theme, task.status)}` }}
+            >
+              <Stack direction="row" justify="space-between" align="center" gap="xs">
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    fontSize: theme.font.size.sm,
+                    color: task.status === "done" ? theme.color.textFaint : theme.color.text,
+                    textDecoration: task.status === "done" ? "line-through" : undefined,
+                    opacity: task.status === "done" ? 0.5 : 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: theme.spacing.xs,
+                  }}
+                >
+                  <span style={{ color: theme.color.textFaint, fontFamily: theme.font.mono, fontSize: theme.font.size.xs, flexShrink: 0 }}>
+                    #{task.number}
+                  </span>
+                  {task.title}
+                  {task.type != null && (
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        fontSize: "0.6rem",
+                        fontWeight: 600,
+                        color: theme.color.primary,
+                        background: theme.color.surfaceContainerHigh,
+                        borderRadius: theme.radius.sm,
+                        padding: "1px 4px",
+                      }}
                     >
-                      <Stack direction="row" justify="space-between" align="center" gap="xs">
-                        <span
-                          style={{
-                            flex: 1,
-                            minWidth: 0,
-                            fontSize: theme.font.size.sm,
-                            color: task.status === "done" ? theme.color.textFaint : theme.color.text,
-                            textDecoration: task.status === "done" ? "line-through" : undefined,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: theme.spacing.xs,
-                          }}
-                        >
-                          <span style={{ color: theme.color.textFaint, fontFamily: theme.font.mono, fontSize: theme.font.size.xs, flexShrink: 0 }}>
-                            #{task.number}
-                          </span>
-                          {task.title}
-                          {task.type != null && (
-                            <span
-                              style={{
-                                flexShrink: 0,
-                                fontSize: "0.6rem",
-                                fontWeight: 600,
-                                color: theme.color.primary,
-                                background: theme.color.surfaceContainerHigh,
-                                borderRadius: theme.radius.sm,
-                                padding: "1px 4px",
-                              }}
-                            >
-                              {task.type}
-                            </span>
-                          )}
-                          {task.effort != null && (
-                            <span
-                              style={{
-                                flexShrink: 0,
-                                fontSize: "0.6rem",
-                                fontWeight: 600,
-                                color: task.effort === "extreme" || task.effort === "high" ? theme.color.danger : task.effort === "moderate" ? theme.color.tertiary : theme.color.textFaint,
-                                background: theme.color.surfaceContainerHigh,
-                                borderRadius: theme.radius.sm,
-                                padding: "1px 4px",
-                              }}
-                            >
-                              {task.effort}
-                            </span>
-                          )}
-                          {task.priority != null && (
-                            <span
-                              style={{
-                                flexShrink: 0,
-                                fontSize: "0.6rem",
-                                fontWeight: 600,
-                                color: task.priority <= 3 ? theme.color.danger : task.priority <= 6 ? theme.color.tertiary : theme.color.textFaint,
-                                background: theme.color.surfaceContainerHigh,
-                                borderRadius: theme.radius.sm,
-                                padding: "1px 4px",
-                              }}
-                            >
-                              P{task.priority}
-                            </span>
-                          )}
-                        </span>
-                        <Stack direction="row" gap="xs" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                          <Select
-                            value={task.status}
-                            onChange={(e) => updateTaskStatus(task.id, e.target.value as Task["status"])}
-                            options={taskStatusOptions}
-                            style={{ fontSize: theme.font.size.xxs, padding: "0.1rem 0.25rem" }}
-                          />
-                          <IconButton
-                            icon="close"
-                            size={12}
-                            onClick={() => deleteTask(task.id)}
-                            aria-label="Delete task"
-                            style={{ color: theme.color.textFaint, width: 18, height: 18 }}
-                          />
-                        </Stack>
-                      </Stack>
-                    </ListItem>
-                  ))}
+                      {task.type}
+                    </span>
+                  )}
+                  {task.effort != null && (
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        fontSize: "0.6rem",
+                        fontWeight: 600,
+                        color: task.effort === "extreme" || task.effort === "high" ? theme.color.danger : task.effort === "moderate" ? theme.color.tertiary : theme.color.textFaint,
+                        background: theme.color.surfaceContainerHigh,
+                        borderRadius: theme.radius.sm,
+                        padding: "1px 4px",
+                      }}
+                    >
+                      {task.effort}
+                    </span>
+                  )}
+                  {task.priority != null && (
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        fontSize: "0.6rem",
+                        fontWeight: 600,
+                        color: task.priority <= 3 ? theme.color.danger : task.priority <= 6 ? theme.color.tertiary : theme.color.textFaint,
+                        background: theme.color.surfaceContainerHigh,
+                        borderRadius: theme.radius.sm,
+                        padding: "1px 4px",
+                      }}
+                    >
+                      P{task.priority}
+                    </span>
+                  )}
+                </span>
+                <Stack direction="row" gap="xs" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={task.status}
+                    onChange={(e) => updateTaskStatus(task.id, e.target.value as Task["status"])}
+                    options={taskStatusOptions}
+                    style={{ fontSize: theme.font.size.xxs, padding: "0.1rem 0.25rem" }}
+                  />
+                  <IconButton
+                    icon="close"
+                    size={12}
+                    onClick={() => deleteTask(task.id)}
+                    aria-label="Delete task"
+                    style={{ color: theme.color.textFaint, width: 18, height: 18 }}
+                  />
                 </Stack>
-              </div>
-            )
-          )}
+              </Stack>
+            </ListItem>
+          ))}
           {tasks.length === 0 && (
             <EmptyState icon="task" message="No tasks yet. Add one above." />
           )}
