@@ -1,4 +1,4 @@
-import { useTheme } from "./ThemeContext";
+import { useTheme } from "../theme/ThemeContext";
 
 type BadgeVariant = "active" | "paused" | "completed" | "archived" | "default";
 
@@ -39,10 +39,10 @@ export function Badge({ children, variant = "default" }: BadgeProps) {
         display: "inline-block",
         padding: "0.2rem 0.5rem",
         borderRadius: theme.radius.md,
-        fontSize: "0.625rem",
+        fontSize: theme.font.size.xxs,
         fontWeight: 700,
         fontFamily: theme.font.body,
-        letterSpacing: "0.08em",
+        letterSpacing: theme.font.letterSpacing.wide,
         textTransform: "uppercase",
         lineHeight: 1.4,
         ...variantStyles[variant],

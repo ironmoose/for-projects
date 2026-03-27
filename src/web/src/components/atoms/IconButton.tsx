@@ -1,5 +1,5 @@
 import { type ButtonHTMLAttributes } from "react";
-import { useTheme } from "./ThemeContext";
+import { useTheme } from "../theme/ThemeContext";
 import { Icon } from "./Icon";
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -1,5 +1,5 @@
-import { themes } from "./theme";
-import { useTheme } from "./ThemeContext";
+import { themes } from "../theme/theme";
+import { useTheme } from "../theme/ThemeContext";
 
 export function ThemeSwitcher() {
   const { theme, themeName, setTheme } = useTheme();

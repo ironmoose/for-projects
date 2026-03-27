@@ -26,6 +26,10 @@ export interface Theme {
     danger: string;
     // Semantic
     success: string;
+    // Warning
+    warning: string;
+    // Activity flash (primary at ~9% opacity)
+    activityFlash: string;
   };
   shadow: {
     sm: string;
@@ -51,7 +55,9 @@ export interface Theme {
   font: {
     headline: string;
     body: string;
+    mono: string;
     size: {
+      xxs: string;
       xs: string;
       sm: string;
       md: string;
@@ -59,10 +65,48 @@ export interface Theme {
       xl: string;
       "2xl": string;
     };
+    lineHeight: {
+      tight: number;
+      normal: number;
+      relaxed: number;
+      mono: number;
+    };
+    letterSpacing: {
+      tight: string;
+      normal: string;
+      wide: string;
+    };
+  };
+  motion: {
+    fast: string;
+    normal: string;
+    slow: string;
+    easing: string;
+    easingSubtle: string;
+  };
+  animation: {
+    duration: {
+      instant: string;
+      fast: string;
+      normal: string;
+      slow: string;
+      pulse: string;
+    };
+    easing: {
+      default: string;
+      decelerate: string;
+      accelerate: string;
+    };
+  };
+  breakpoint: {
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
   };
 }
 
-const shared: Pick<Theme, "radius" | "spacing" | "font"> = {
+const shared: Pick<Theme, "radius" | "spacing" | "font" | "motion" | "animation" | "breakpoint"> = {
   radius: { sm: 2, md: 4, lg: 8, xl: 12, full: 9999 },
   spacing: {
     xs: "0.25rem",
@@ -76,7 +120,9 @@ const shared: Pick<Theme, "radius" | "spacing" | "font"> = {
   font: {
     headline: "'Manrope', system-ui, sans-serif",
     body: "'Inter', system-ui, sans-serif",
+    mono: "'JetBrains Mono', 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace",
     size: {
+      xxs: "0.625rem",
       xs: "0.75rem",
       sm: "0.8125rem",
       md: "0.875rem",
@@ -84,6 +130,44 @@ const shared: Pick<Theme, "radius" | "spacing" | "font"> = {
       xl: "1.25rem",
       "2xl": "2.25rem",
     },
+    lineHeight: {
+      tight: 1.2,
+      normal: 1.5,
+      relaxed: 1.75,
+      mono: 1.6,
+    },
+    letterSpacing: {
+      tight: "-0.02em",
+      normal: "0",
+      wide: "0.08em",
+    },
+  },
+  motion: {
+    fast: "100ms",
+    normal: "200ms",
+    slow: "400ms",
+    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    easingSubtle: "cubic-bezier(0.25, 0.1, 0.25, 1)",
+  },
+  animation: {
+    duration: {
+      instant: "50ms",
+      fast: "150ms",
+      normal: "300ms",
+      slow: "500ms",
+      pulse: "2000ms",
+    },
+    easing: {
+      default: "cubic-bezier(0.4, 0, 0.2, 1)",
+      decelerate: "cubic-bezier(0, 0, 0.2, 1)",
+      accelerate: "cubic-bezier(0.4, 0, 1, 1)",
+    },
+  },
+  breakpoint: {
+    sm: 640,
+    md: 1024,
+    lg: 1440,
+    xl: 1920,
   },
 };
 
@@ -111,6 +195,8 @@ export const themes: Record<string, Theme> = {
       tertiary: "#fcb97b",
       danger: "#ffb4ab",
       success: "#6dd58c",
+      warning: "#fcb97b",
+      activityFlash: "rgba(139, 209, 232, 0.09)",
     },
     shadow: {
       sm: "0 1px 3px rgba(0,0,0,0.4)",
@@ -142,6 +228,8 @@ export const themes: Record<string, Theme> = {
       tertiary: "#d4bfff",
       danger: "#ffb4ab",
       success: "#a8d5a2",
+      warning: "#f5d08a",
+      activityFlash: "rgba(232, 112, 64, 0.09)",
     },
     shadow: {
       sm: "0 1px 3px rgba(0,0,0,0.5)",
@@ -173,6 +261,8 @@ export const themes: Record<string, Theme> = {
       tertiary: "#ebcb8b",
       danger: "#bf616a",
       success: "#a3be8c",
+      warning: "#ebcb8b",
+      activityFlash: "rgba(136, 192, 208, 0.09)",
     },
     shadow: {
       sm: "0 1px 3px rgba(0,0,0,0.3)",
