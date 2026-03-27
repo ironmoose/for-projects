@@ -29,8 +29,8 @@ export function projectRoutes(service: IProjectService): Hono {
   // POST /api/projects
   app.post("/", async (c) => {
     try {
-      const { name, slug, description, status } = await c.req.json<CreateProjectInput>();
-      const project = service.create({ name, slug, description, status });
+      const { name, description, status } = await c.req.json<CreateProjectInput>();
+      const project = service.create({ name, description, status });
       return c.json(project, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -38,18 +38,18 @@ export function projectRoutes(service: IProjectService): Hono {
     }
   });
 
-  // GET /api/projects/:slug
-  app.get("/:slug", (c) => {
-    const project = service.findBySlug(c.req.param("slug"));
+  // GET /api/projects/:id
+  app.get("/:id", (c) => {
+    const project = service.findById(c.req.param("id"));
     if (!project) return c.json({ error: "project not found" }, 404);
     return c.json(project);
   });
 
-  // PATCH /api/projects/:slug
-  app.patch("/:slug", async (c) => {
+  // PATCH /api/projects/:id
+  app.patch("/:id", async (c) => {
     try {
       const { name, description, status } = await c.req.json<UpdateProjectInput>();
-      const project = service.update(c.req.param("slug"), { name, description, status });
+      const project = service.update(c.req.param("id"), { name, description, status });
       if (!project) return c.json({ error: "project not found" }, 404);
       return c.json(project);
     } catch (e: unknown) {
@@ -58,9 +58,9 @@ export function projectRoutes(service: IProjectService): Hono {
     }
   });
 
-  // DELETE /api/projects/:slug
-  app.delete("/:slug", (c) => {
-    const deleted = service.delete(c.req.param("slug"));
+  // DELETE /api/projects/:id
+  app.delete("/:id", (c) => {
+    const deleted = service.delete(c.req.param("id"));
     if (!deleted) return c.json({ error: "project not found" }, 404);
     return c.json({ ok: true });
   });

@@ -6,8 +6,6 @@ import type { ProjectRepository } from "../repositories/projects";
 import { PROJECT_STATUSES } from "../enums";
 import type { EventBus } from "../events";
 
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 export class ProjectService implements IProjectService {
   constructor(private repo: ProjectRepository, private eventBus?: EventBus) {}
 
@@ -18,8 +16,8 @@ export class ProjectService implements IProjectService {
     };
   }
 
-  findBySlug(slug: string): Project | null {
-    return this.repo.findBySlug(slug);
+  findById(id: string): Project | null {
+    return this.repo.findById(id);
   }
 
   create(input: CreateProjectInput): Project {
@@ -29,30 +27,18 @@ export class ProjectService implements IProjectService {
     if (input.name.length > 255) {
       throw new ServiceError("name must be 255 characters or fewer", 400);
     }
-    if (!input.slug?.trim()) {
-      throw new ServiceError("slug is required", 400);
-    }
-    if (input.slug.length > 100) {
-      throw new ServiceError("slug must be 100 characters or fewer", 400);
-    }
-    if (!SLUG_RE.test(input.slug)) {
-      throw new ServiceError("slug must be lowercase alphanumeric with hyphens only", 400);
-    }
     if (input.description !== undefined && input.description.length > 10000) {
       throw new ServiceError("description must be 10000 characters or fewer", 400);
     }
     if (input.status !== undefined && !(PROJECT_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${PROJECT_STATUSES.join(", ")}`, 400);
     }
-    if (this.repo.findBySlug(input.slug)) {
-      throw new ServiceError("slug already exists", 409);
-    }
     const project = this.repo.create(input);
     this.eventBus?.emit({ entity: "project", action: "created", payload: project });
     return project;
   }
 
-  update(slug: string, input: UpdateProjectInput): Project | null {
+  update(id: string, input: UpdateProjectInput): Project | null {
     if (input.name !== undefined && !input.name.trim()) {
       throw new ServiceError("name cannot be empty", 400);
     }
@@ -65,16 +51,16 @@ export class ProjectService implements IProjectService {
     if (input.status !== undefined && !(PROJECT_STATUSES as readonly string[]).includes(input.status)) {
       throw new ServiceError(`status must be one of: ${PROJECT_STATUSES.join(", ")}`, 400);
     }
-    const project = this.repo.update(slug, input);
+    const project = this.repo.update(id, input);
     if (project) {
       this.eventBus?.emit({ entity: "project", action: "updated", payload: project });
     }
     return project;
   }
 
-  delete(slug: string): boolean {
-    const project = this.repo.findBySlug(slug);
-    const deleted = this.repo.delete(slug);
+  delete(id: string): boolean {
+    const project = this.repo.findById(id);
+    const deleted = this.repo.delete(id);
     if (deleted && project) {
       this.eventBus?.emit({ entity: "project", action: "deleted", payload: { id: project.id } });
     }

@@ -31,24 +31,17 @@ export class ProjectRepository {
     );
   }
 
-  findBySlug(slug: string): Project | null {
-    return (
-      this.db.query("SELECT * FROM projects WHERE slug = ?").get(slug) as Project | null
-    );
-  }
-
   create(input: CreateProjectInput): Project {
     const id = ulid();
     const now = new Date().toISOString();
 
     this.db
       .query(
-        `INSERT INTO projects (id, slug, name, description, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO projects (id, name, description, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
-        input.slug,
         input.name,
         input.description ?? "",
         input.status ?? "active",
@@ -59,8 +52,8 @@ export class ProjectRepository {
     return this.findById(id)!;
   }
 
-  update(slug: string, input: UpdateProjectInput): Project | null {
-    const existing = this.findBySlug(slug);
+  update(id: string, input: UpdateProjectInput): Project | null {
+    const existing = this.findById(id);
     if (!existing) return null;
 
     const name = input.name ?? existing.name;
@@ -72,17 +65,17 @@ export class ProjectRepository {
       .query(
         `UPDATE projects
          SET name = ?, description = ?, status = ?, updated_at = ?
-         WHERE slug = ?`
+         WHERE id = ?`
       )
-      .run(name, description, status, now, slug);
+      .run(name, description, status, now, id);
 
-    return this.findBySlug(slug)!;
+    return this.findById(id)!;
   }
 
-  delete(slug: string): boolean {
+  delete(id: string): boolean {
     const result = this.db
-      .query("DELETE FROM projects WHERE slug = ?")
-      .run(slug);
+      .query("DELETE FROM projects WHERE id = ?")
+      .run(id);
     return result.changes > 0;
   }
 }

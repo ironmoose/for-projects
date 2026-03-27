@@ -63,9 +63,9 @@ tab-for-projects exposes a REST API alongside the web UI. All endpoints return J
 ```
 GET    /api/projects          List all projects
 POST   /api/projects          Create a project
-GET    /api/projects/:slug    Get a project
-PATCH  /api/projects/:slug    Update a project
-DELETE /api/projects/:slug    Delete a project
+GET    /api/projects/:id      Get a project
+PATCH  /api/projects/:id      Update a project
+DELETE /api/projects/:id      Delete a project
 ```
 
 **Create a project:**
@@ -73,7 +73,7 @@ DELETE /api/projects/:slug    Delete a project
 ```bash
 curl -X POST http://localhost:3000/api/projects \
   -H "Content-Type: application/json" \
-  -d '{"name": "Website Redesign", "slug": "website-redesign", "description": "Q2 refresh"}'
+  -d '{"name": "Website Redesign", "description": "Q2 refresh"}'
 ```
 
 **Response:**
@@ -82,7 +82,6 @@ curl -X POST http://localhost:3000/api/projects \
 {
   "id": "01JABBCD1234EFGH5678IJKL",
   "name": "Website Redesign",
-  "slug": "website-redesign",
   "description": "Q2 refresh",
   "status": "active",
   "created_at": "2026-03-23T12:00:00.000Z",
@@ -95,17 +94,17 @@ Project status can be `active`, `paused`, `completed`, or `archived`.
 ### Tasks
 
 ```
-GET    /api/projects/:slug/tasks                List tasks (paginated, filterable)
-GET    /api/projects/:slug/tasks/by-number/:n   Get a task by project-scoped number
-POST   /api/projects/:slug/tasks                Create a task
-PATCH  /api/projects/:slug/tasks/:id            Update a task
-DELETE /api/projects/:slug/tasks/:id            Delete a task
+GET    /api/projects/:id/tasks                List tasks (paginated, filterable)
+GET    /api/projects/:id/tasks/by-number/:n   Get a task by project-scoped number
+POST   /api/projects/:id/tasks                Create a task
+PATCH  /api/projects/:id/tasks/:id            Update a task
+DELETE /api/projects/:id/tasks/:id            Delete a task
 ```
 
 **Create a task:**
 
 ```bash
-curl -X POST http://localhost:3000/api/projects/website-redesign/tasks \
+curl -X POST http://localhost:3000/api/projects/01JABBCD1234EFGH5678IJKL/tasks \
   -H "Content-Type: application/json" \
   -d '{"title": "Design homepage hero", "description": "## Requirements\n\n- Full-bleed image\n- CTA button", "type": "design", "effort": "moderate"}'
 ```
@@ -153,7 +152,7 @@ The list endpoint accepts query parameters to filter and paginate results:
 | `offset` | Pagination offset (default 0) |
 
 ```bash
-curl "http://localhost:3000/api/projects/website-redesign/tasks?status=todo&type=design&limit=25"
+curl "http://localhost:3000/api/projects/01JABBCD1234EFGH5678IJKL/tasks?status=todo&type=design&limit=25"
 ```
 
 ### Tags
@@ -166,15 +165,15 @@ POST   /api/tags                          Create a tag
 DELETE /api/tags/:id                      Delete a tag
 GET    /api/tags/:name/tasks              Find tasks by exact tag (cross-project)
 GET    /api/tags/prefix/:prefix/tasks     Find tasks by tag prefix (cross-project)
-GET    /api/projects/:slug/tasks/:id/tags Get tags for a task
-POST   /api/projects/:slug/tasks/:id/tags Add a tag to a task (auto-creates if needed)
-DELETE /api/projects/:slug/tasks/:id/tags/:tagId  Remove a tag from a task
+GET    /api/projects/:id/tasks/:id/tags Get tags for a task
+POST   /api/projects/:id/tasks/:id/tags Add a tag to a task (auto-creates if needed)
+DELETE /api/projects/:id/tasks/:id/tags/:tagId  Remove a tag from a task
 ```
 
 **Add a tag to a task:**
 
 ```bash
-curl -X POST http://localhost:3000/api/projects/website-redesign/tasks/01JABBCD1234EFGH5678IJKL/tags \
+curl -X POST http://localhost:3000/api/projects/01JABBCD1234EFGH5678IJKL/tasks/01JABBCE5678MNOP9012QRST/tags \
   -H "Content-Type: application/json" \
   -d '{"name": "frontend"}'
 ```
@@ -293,10 +292,10 @@ tab-for-projects --sqlite-path /path/to/your/sqlite.db
 | Tool | Description |
 |---|---|
 | `list_projects` | List all projects |
-| `get_project` | Get a project by its slug |
-| `create_project` | Create a new project (name, slug, optional description/status) |
+| `get_project` | Get a project by ID |
+| `create_project` | Create a new project (name, optional description/status) |
 | `update_project` | Update a project's name, description, or status |
-| `delete_project` | Delete a project by slug |
+| `delete_project` | Delete a project by ID |
 
 **Tasks**
 

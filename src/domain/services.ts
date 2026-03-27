@@ -31,18 +31,18 @@ export interface TaskFilter {
 
 export interface IProjectService {
   findAll(limit?: number, offset?: number, filter?: ProjectFilter): Paginated<Project>;
-  findBySlug(slug: string): Project | null;
+  findById(id: string): Project | null;
   create(input: CreateProjectInput): Project;
-  update(slug: string, input: UpdateProjectInput): Project | null;
-  delete(slug: string): boolean;
+  update(id: string, input: UpdateProjectInput): Project | null;
+  delete(id: string): boolean;
 }
 
 export interface ITaskService {
-  findByProjectSlug(projectSlug: string, limit?: number, offset?: number, filter?: TaskFilter): Paginated<Task>;
-  findByNumber(projectSlug: string, number: number): Task | null;
-  create(projectSlug: string, input: CreateTaskInput): Task;
-  update(projectSlug: string, id: string, input: UpdateTaskInput): Task | null;
-  delete(projectSlug: string, id: string): boolean;
+  findByProjectId(projectId: string, limit?: number, offset?: number, filter?: TaskFilter): Paginated<Task>;
+  findByNumber(projectId: string, number: number): Task | null;
+  create(projectId: string, input: CreateTaskInput): Task;
+  update(projectId: string, id: string, input: UpdateTaskInput): Task | null;
+  delete(projectId: string, id: string): boolean;
 }
 
 export interface WorkbenchFilter {

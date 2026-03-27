@@ -15,9 +15,9 @@ import {
 export function taskRoutes(service: ITaskService, tagService: ITagService): Hono {
   const app = new Hono();
 
-  // GET /api/projects/:projectSlug/tasks
+  // GET /api/projects/:projectId/tasks
   app.get("/", (c) => {
-    const projectSlug = c.req.param("projectSlug")!;
+    const projectId = c.req.param("projectId")!;
     const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 500) : 100;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
@@ -44,22 +44,22 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
       filter.tag_prefix = tagPrefix;
     }
     try {
-      return c.json(service.findByProjectSlug(projectSlug, limit, offset, filter));
+      return c.json(service.findByProjectId(projectId, limit, offset, filter));
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
       throw e;
     }
   });
 
-  // GET /api/projects/:projectSlug/tasks/by-number/:number
+  // GET /api/projects/:projectId/tasks/by-number/:number
   app.get("/by-number/:number", (c) => {
-    const projectSlug = c.req.param("projectSlug")!;
+    const projectId = c.req.param("projectId")!;
     const num = parseInt(c.req.param("number")!, 10);
     if (!Number.isFinite(num) || num < 1) {
       return c.json({ error: "invalid task number" }, 400);
     }
     try {
-      const task = service.findByNumber(projectSlug, num);
+      const task = service.findByNumber(projectId, num);
       if (!task) return c.json({ error: "task not found" }, 404);
       return c.json(task);
     } catch (e: unknown) {
@@ -68,12 +68,12 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
     }
   });
 
-  // POST /api/projects/:projectSlug/tasks
+  // POST /api/projects/:projectId/tasks
   app.post("/", async (c) => {
-    const projectSlug = c.req.param("projectSlug")!;
+    const projectId = c.req.param("projectId")!;
     try {
       const { title, description, status, type, effort, priority } = await c.req.json<CreateTaskInput>();
-      const task = service.create(projectSlug, { title, description, status, type, effort, priority });
+      const task = service.create(projectId, { title, description, status, type, effort, priority });
       return c.json(task, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -81,12 +81,12 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
     }
   });
 
-  // PATCH /api/projects/:projectSlug/tasks/:id
+  // PATCH /api/projects/:projectId/tasks/:id
   app.patch("/:id", async (c) => {
-    const projectSlug = c.req.param("projectSlug")!;
+    const projectId = c.req.param("projectId")!;
     try {
       const { title, description, status, type, effort, priority } = await c.req.json<UpdateTaskInput>();
-      const task = service.update(projectSlug, c.req.param("id")!, { title, description, status, type, effort, priority });
+      const task = service.update(projectId, c.req.param("id")!, { title, description, status, type, effort, priority });
       if (!task) return c.json({ error: "task not found" }, 404);
       return c.json(task);
     } catch (e: unknown) {
@@ -95,11 +95,11 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
     }
   });
 
-  // DELETE /api/projects/:projectSlug/tasks/:id
+  // DELETE /api/projects/:projectId/tasks/:id
   app.delete("/:id", (c) => {
-    const projectSlug = c.req.param("projectSlug")!;
+    const projectId = c.req.param("projectId")!;
     try {
-      const deleted = service.delete(projectSlug, c.req.param("id")!);
+      const deleted = service.delete(projectId, c.req.param("id")!);
       if (!deleted) return c.json({ error: "task not found" }, 404);
       return c.json({ ok: true });
     } catch (e: unknown) {
@@ -110,7 +110,7 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
 
   // ── Task Tags ─────────────────────────────────────────────
 
-  // GET /api/projects/:projectSlug/tasks/:id/tags
+  // GET /api/projects/:projectId/tasks/:id/tags
   app.get("/:id/tags", (c) => {
     try {
       const tags = tagService.getTagsForTask(c.req.param("id")!);
@@ -121,7 +121,7 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
     }
   });
 
-  // POST /api/projects/:projectSlug/tasks/:id/tags
+  // POST /api/projects/:projectId/tasks/:id/tags
   app.post("/:id/tags", async (c) => {
     try {
       const { name } = await c.req.json<{ name: string }>();
@@ -133,7 +133,7 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
     }
   });
 
-  // DELETE /api/projects/:projectSlug/tasks/:id/tags/:tagId
+  // DELETE /api/projects/:projectId/tasks/:id/tags/:tagId
   app.delete("/:id/tags/:tagId", (c) => {
     try {
       const removed = tagService.removeTagFromTask(c.req.param("id")!, c.req.param("tagId")!);

@@ -2,10 +2,6 @@
 
 Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 
-## Tab for Projects
-
-When using the `tab-for-projects` MCP tools to manage tasks for this project, use project slug: `tab-projects`
-
 ## Quick reference
 
 - `bun run dev` — start dev server (hot reload) + Vite HMR

@@ -14,8 +14,8 @@ export class TaskService implements ITaskService {
     private eventBus?: EventBus,
   ) {}
 
-  findByProjectSlug(projectSlug: string, limit = 100, offset = 0, filter?: TaskFilter): Paginated<Task> {
-    const project = this.projectRepo.findBySlug(projectSlug);
+  findByProjectId(projectId: string, limit = 100, offset = 0, filter?: TaskFilter): Paginated<Task> {
+    const project = this.projectRepo.findById(projectId);
     if (!project) {
       throw new ServiceError("project not found", 404);
     }
@@ -25,16 +25,16 @@ export class TaskService implements ITaskService {
     };
   }
 
-  findByNumber(projectSlug: string, number: number): Task | null {
-    const project = this.projectRepo.findBySlug(projectSlug);
+  findByNumber(projectId: string, number: number): Task | null {
+    const project = this.projectRepo.findById(projectId);
     if (!project) {
       throw new ServiceError("project not found", 404);
     }
     return this.taskRepo.findByNumber(project.id, number);
   }
 
-  create(projectSlug: string, input: CreateTaskInput): Task {
-    const project = this.projectRepo.findBySlug(projectSlug);
+  create(projectId: string, input: CreateTaskInput): Task {
+    const project = this.projectRepo.findById(projectId);
     if (!project) {
       throw new ServiceError("project not found", 404);
     }
@@ -66,8 +66,8 @@ export class TaskService implements ITaskService {
     return task;
   }
 
-  update(projectSlug: string, id: string, input: UpdateTaskInput): Task | null {
-    const project = this.projectRepo.findBySlug(projectSlug);
+  update(projectId: string, id: string, input: UpdateTaskInput): Task | null {
+    const project = this.projectRepo.findById(projectId);
     if (!project) {
       throw new ServiceError("project not found", 404);
     }
@@ -101,8 +101,8 @@ export class TaskService implements ITaskService {
     return task;
   }
 
-  delete(projectSlug: string, id: string): boolean {
-    const project = this.projectRepo.findBySlug(projectSlug);
+  delete(projectId: string, id: string): boolean {
+    const project = this.projectRepo.findById(projectId);
     if (!project) {
       throw new ServiceError("project not found", 404);
     }

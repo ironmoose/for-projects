@@ -24,7 +24,6 @@ import { useRealtimeEvents, type DomainEvent } from "./useRealtimeEvents";
 
 interface Project {
   id: string;
-  slug: string;
   name: string;
   description: string;
   status: "active" | "paused" | "completed" | "archived";
@@ -127,9 +126,9 @@ export function App() {
   const { path, navigate } = useHashRoute();
   const { toasts, showToast, dismiss } = useToast();
 
-  // Match /projects/:slug
-  const projectSlugMatch = path.match(/^\/projects\/([^/]+)$/);
-  const projectSlug = projectSlugMatch?.[1] ?? null;
+  // Match /projects/:id
+  const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
+  const projectId = projectIdMatch?.[1] ?? null;
 
   // Match /workbenches/:id
   const workbenchIdMatch = path.match(/^\/workbenches\/([^/]+)$/);
@@ -153,8 +152,8 @@ export function App() {
   const activePath = path.startsWith("/workbenches") ? "/workbenches" : "/";
 
   function renderView() {
-    if (projectSlug) {
-      return <ProjectView slug={projectSlug} onBack={() => navigate("/")} subscribeEvents={subscribeEvents} showToast={showToast} />;
+    if (projectId) {
+      return <ProjectView projectId={projectId} onBack={() => navigate("/")} subscribeEvents={subscribeEvents} showToast={showToast} />;
     }
     if (workbenchId) {
       return <WorkbenchView id={workbenchId} onBack={() => navigate("/workbenches")} subscribeEvents={subscribeEvents} showToast={showToast} />;
@@ -162,7 +161,7 @@ export function App() {
     if (path.startsWith("/workbenches")) {
       return <WorkbenchesView onOpenWorkbench={(id) => navigate(`/workbenches/${id}`)} subscribeEvents={subscribeEvents} showToast={showToast} />;
     }
-    return <DashboardView onOpenProject={(slug) => navigate(`/projects/${slug}`)} subscribeEvents={subscribeEvents} showToast={showToast} />;
+    return <DashboardView onOpenProject={(id) => navigate(`/projects/${id}`)} subscribeEvents={subscribeEvents} showToast={showToast} />;
   }
 
   return (
@@ -208,11 +207,10 @@ function ConnectionIndicator({ connected }: { connected: boolean }) {
 // DashboardView
 // ---------------------------------------------------------------------------
 
-function DashboardView({ onOpenProject, subscribeEvents, showToast }: { onOpenProject: (slug: string) => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void; showToast: (message: string, type?: ToastType) => void }) {
+function DashboardView({ onOpenProject, subscribeEvents, showToast }: { onOpenProject: (id: string) => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void; showToast: (message: string, type?: ToastType) => void }) {
   const { theme } = useTheme();
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -246,10 +244,9 @@ function DashboardView({ onOpenProject, subscribeEvents, showToast }: { onOpenPr
       await apiFetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug, description }),
+        body: JSON.stringify({ name, description }),
       });
       setName("");
-      setSlug("");
       setDescription("");
       setShowCreateForm(false);
     } catch (err) {
@@ -319,15 +316,6 @@ function DashboardView({ onOpenProject, subscribeEvents, showToast }: { onOpenPr
               </div>
               <div style={{ flex: "1 1 180px", minWidth: 0 }}>
                 <Input
-                  label="Slug"
-                  placeholder="e.g. riverfront-pavilion"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  required
-                />
-              </div>
-              <div style={{ flex: "1 1 180px", minWidth: 0 }}>
-                <Input
                   label="Description"
                   placeholder="Brief description (optional)"
                   value={description}
@@ -357,7 +345,7 @@ function DashboardView({ onOpenProject, subscribeEvents, showToast }: { onOpenPr
           <div
             key={p.id}
             style={{ flex: `1 1 calc(50% - ${theme.spacing.lg})`, maxWidth: "100%", minWidth: 280, cursor: "pointer" }}
-            onClick={() => onOpenProject(p.slug)}
+            onClick={() => onOpenProject(p.id)}
           >
             <ProjectCard project={p} />
           </div>
@@ -470,7 +458,7 @@ function ProjectCard({
 }
 
 // ---------------------------------------------------------------------------
-// ProjectView — full project detail page reached via /projects/:slug
+// ProjectView — full project detail page reached via /projects/:id
 // ---------------------------------------------------------------------------
 
 const taskStatusOptions = [
@@ -479,7 +467,7 @@ const taskStatusOptions = [
   { value: "done", label: "Done" },
 ];
 
-function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: string; onBack: () => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void; showToast: (message: string, type?: ToastType) => void }) {
+function ProjectView({ projectId, onBack, subscribeEvents, showToast }: { projectId: string; onBack: () => void; subscribeEvents: (fn: (e: DomainEvent) => void) => () => void; showToast: (message: string, type?: ToastType) => void }) {
   const { theme } = useTheme();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -490,15 +478,15 @@ function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: strin
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
 
-  const slugRef = useRef(slug);
-  slugRef.current = slug;
+  const projectIdRef = useRef(projectId);
+  projectIdRef.current = projectId;
 
   async function fetchProject() {
     try {
-      const res = await apiFetch(`/api/projects/${encodeURIComponent(slug)}`);
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}`);
       const p: Project = await res.json();
       setProject(p);
-      fetchTasks(p.slug);
+      fetchTasks(p.id);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
@@ -508,9 +496,9 @@ function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: strin
     }
   }
 
-  async function fetchTasks(projectSlug: string) {
+  async function fetchTasks(projectId: string) {
     try {
-      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks`);
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/tasks`);
       const body = await res.json();
       setTasks(body.data);
     } catch (err) {
@@ -533,12 +521,12 @@ function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: strin
         fetchProjectRef.current();
       }
     });
-  }, [slug, subscribeEvents]);
+  }, [projectId, subscribeEvents]);
 
   async function handleStatusChange(status: Project["status"]) {
     if (!project) return;
     try {
-      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}`, {
+      await apiFetch(`/api/projects/${encodeURIComponent(project.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -553,7 +541,7 @@ function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: strin
     if (!newTaskTitle.trim() || !project) return;
     setAddingTask(true);
     try {
-      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}/tasks`, {
+      await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newTaskTitle }),
@@ -569,7 +557,7 @@ function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: strin
   async function handleTaskStatusChange(taskId: string, status: Task["status"]) {
     if (!project) return;
     try {
-      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, {
+      await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -582,7 +570,7 @@ function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: strin
   async function handleDeleteTask(taskId: string) {
     if (!project) return;
     try {
-      await apiFetch(`/api/projects/${encodeURIComponent(project.slug)}/tasks/${taskId}`, { method: "DELETE" });
+      await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks/${taskId}`, { method: "DELETE" });
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to delete task");
     }
@@ -842,7 +830,7 @@ function ProjectView({ slug, onBack, subscribeEvents, showToast }: { slug: strin
     {selectedTask && (
       <TaskDetailPanel
         task={selectedTask}
-        projectSlug={slug}
+        projectId={projectId}
         onClose={() => setSelectedTaskId(null)}
         showToast={showToast}
       />
@@ -874,7 +862,7 @@ function useWindowWidth() {
 
 const SMALL_BREAKPOINT = 768;
 
-function TaskDetailPanel({ task, projectSlug, onClose, showToast }: { task: Task; projectSlug: string; onClose: () => void; showToast: (message: string, type?: ToastType) => void }) {
+function TaskDetailPanel({ task, projectId, onClose, showToast }: { task: Task; projectId: string; onClose: () => void; showToast: (message: string, type?: ToastType) => void }) {
   const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const isSmall = windowWidth < SMALL_BREAKPOINT;
@@ -888,7 +876,7 @@ function TaskDetailPanel({ task, projectSlug, onClose, showToast }: { task: Task
 
   async function fetchTags() {
     try {
-      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`);
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/tasks/${task.id}/tags`);
       const body = await res.json();
       setTags(body.data);
     } catch (err) {
@@ -901,7 +889,7 @@ function TaskDetailPanel({ task, projectSlug, onClose, showToast }: { task: Task
     if (!newTagName.trim()) return;
     setAddingTag(true);
     try {
-      await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags`, {
+      await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/tasks/${task.id}/tags`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newTagName.trim().toLowerCase() }),
@@ -917,7 +905,7 @@ function TaskDetailPanel({ task, projectSlug, onClose, showToast }: { task: Task
 
   async function handleRemoveTag(tagId: string) {
     try {
-      await apiFetch(`/api/projects/${encodeURIComponent(projectSlug)}/tasks/${task.id}/tags/${tagId}`, { method: "DELETE" });
+      await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/tasks/${task.id}/tags/${tagId}`, { method: "DELETE" });
       fetchTags();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to remove tag");

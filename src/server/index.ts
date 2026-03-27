@@ -53,7 +53,7 @@ export class Server {
 
     // ── API (with logging) ────────────────────────────────
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
-    app.route("/api/projects/:projectSlug/tasks", taskRoutes(ctx.taskService, ctx.tagService));
+    app.route("/api/projects/:projectId/tasks", taskRoutes(ctx.taskService, ctx.tagService));
     app.route("/api/projects", projectRoutes(ctx.projectService));
     app.route("/api/tags", tagRoutes(ctx.tagService));
     app.route("/api/workbenches", workbenchRoutes(ctx.workbenchService));

@@ -44,7 +44,7 @@ src/
 │   ├── index.ts             Entrypoint — Server class, starts on port 3000
 │   └── routes/
 │       ├── projects.ts      HTTP handlers for /api/projects
-│       └── tasks.ts         HTTP handlers for /api/projects/:slug/tasks
+│       └── tasks.ts         HTTP handlers for /api/projects/:id/tasks
 ├── mcp/                     MCP tool definitions
 │   ├── index.ts             MCP barrel export
 │   ├── server.ts            MCP tool registration and HTTP handler
@@ -138,7 +138,7 @@ Add `src/server/routes/tasks.ts`. Accept the service as a parameter:
 ```typescript
 export function taskRoutes(service: ITaskService): Hono {
   const app = new Hono();
-  app.get("/", (c) => c.json(service.findByProjectSlug(c.req.param("projectSlug")!)));
+  app.get("/", (c) => c.json(service.findByProjectId(c.req.param("projectId")!)));
   return app;
 }
 ```
@@ -149,7 +149,7 @@ In `src/server/index.ts`:
 
 ```typescript
 const ctx = bootstrap();
-app.route("/api/projects/:projectSlug/tasks", taskRoutes(ctx.taskService));
+app.route("/api/projects/:projectId/tasks", taskRoutes(ctx.taskService));
 ```
 
 ### 5. Test it

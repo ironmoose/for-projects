@@ -74,8 +74,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
 
   server.registerTool(
     "get_project",
-    { description: "Get a project by slug", inputSchema: { slug: z.string().max(100) } },
-    ({ slug }) => handle(() => projectService.findBySlug(slug))
+    { description: "Get a project by ID", inputSchema: { id: z.string().max(26) } },
+    ({ id }) => handle(() => projectService.findById(id))
   );
 
   server.registerTool(
@@ -84,7 +84,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       description: "Create a new project",
       inputSchema: {
         name: z.string().max(255),
-        slug: z.string().max(100),
         description: z.string().max(10000).optional(),
         status: z.enum(PROJECT_STATUSES).optional(),
       },
@@ -97,19 +96,19 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     {
       description: "Update an existing project",
       inputSchema: {
-        slug: z.string().max(100),
+        id: z.string().max(26),
         name: z.string().max(255).optional(),
         description: z.string().max(10000).optional(),
         status: z.enum(PROJECT_STATUSES).optional(),
       },
     },
-    ({ slug, ...updates }) => handle(() => projectService.update(slug, updates))
+    ({ id, ...updates }) => handle(() => projectService.update(id, updates))
   );
 
   server.registerTool(
     "delete_project",
-    { description: "Delete a project by slug", inputSchema: { slug: z.string().max(100) } },
-    ({ slug }) => handle(() => projectService.delete(slug))
+    { description: "Delete a project by ID", inputSchema: { id: z.string().max(26) } },
+    ({ id }) => handle(() => projectService.delete(id))
   );
 
   // ── Tasks ─────────────────────────────────────────────────
@@ -119,7 +118,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     {
       description: "List tasks for a project (paginated, filterable by status, type, effort, tag, and tag_prefix)",
       inputSchema: {
-        project_slug: z.string().max(100),
+        project_id: z.string().max(26),
         limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
         status: z.enum(TASK_STATUSES).optional(),
@@ -129,14 +128,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         tag_prefix: z.string().max(50).optional(),
       },
     },
-    ({ project_slug, limit, offset, status, type, effort, tag, tag_prefix }) => {
+    ({ project_id, limit, offset, status, type, effort, tag, tag_prefix }) => {
       const filter: { status?: typeof status; type?: typeof type; effort?: typeof effort; tag?: string; tag_prefix?: string } = {};
       if (status) filter.status = status;
       if (type) filter.type = type;
       if (effort) filter.effort = effort;
       if (tag) filter.tag = tag;
       if (tag_prefix) filter.tag_prefix = tag_prefix;
-      return handle(() => taskService.findByProjectSlug(project_slug, limit, offset, Object.keys(filter).length ? filter : undefined));
+      return handle(() => taskService.findByProjectId(project_id, limit, offset, Object.keys(filter).length ? filter : undefined));
     }
   );
 
@@ -145,11 +144,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     {
       description: "Get a task by its project-scoped number",
       inputSchema: {
-        project_slug: z.string().max(100),
+        project_id: z.string().max(26),
         number: z.number().int().min(1),
       },
     },
-    ({ project_slug, number }) => handle(() => taskService.findByNumber(project_slug, number))
+    ({ project_id, number }) => handle(() => taskService.findByNumber(project_id, number))
   );
 
   server.registerTool(
@@ -157,7 +156,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     {
       description: "Create a task in a project",
       inputSchema: {
-        project_slug: z.string().max(100),
+        project_id: z.string().max(26),
         title: z.string().max(500),
         description: z.string().max(10000).optional(),
         status: z.enum(TASK_STATUSES).optional(),
@@ -166,7 +165,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         priority: z.number().int().min(1).max(10).optional(),
       },
     },
-    ({ project_slug, ...input }) => handle(() => taskService.create(project_slug, input))
+    ({ project_id, ...input }) => handle(() => taskService.create(project_id, input))
   );
 
   server.registerTool(
@@ -174,7 +173,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     {
       description: "Update a task by ID (must specify the project it belongs to). Supports type, effort, and priority (1-10 or null to clear).",
       inputSchema: {
-        project_slug: z.string().max(100),
+        project_id: z.string().max(26),
         id: z.string().max(26),
         title: z.string().max(500).optional(),
         description: z.string().max(10000).optional(),
@@ -184,16 +183,16 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         priority: z.number().int().min(1).max(10).nullable().optional(),
       },
     },
-    ({ project_slug, id, ...updates }) => handle(() => taskService.update(project_slug, id, updates))
+    ({ project_id, id, ...updates }) => handle(() => taskService.update(project_id, id, updates))
   );
 
   server.registerTool(
     "delete_task",
     {
       description: "Delete a task by ID (must specify the project it belongs to)",
-      inputSchema: { project_slug: z.string().max(100), id: z.string().max(26) },
+      inputSchema: { project_id: z.string().max(26), id: z.string().max(26) },
     },
-    ({ project_slug, id }) => handle(() => taskService.delete(project_slug, id))
+    ({ project_id, id }) => handle(() => taskService.delete(project_id, id))
   );
 
   // ── Tags ──────────────────────────────────────────────────

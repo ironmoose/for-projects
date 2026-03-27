@@ -1,6 +1,6 @@
 import type { Project, Task, Workbench, Instruction, InstructionBinding } from "./entities";
 
-export type CreateProjectInput = Pick<Project, "name" | "slug"> &
+export type CreateProjectInput = Pick<Project, "name"> &
   Partial<Pick<Project, "description" | "status">>;
 
 export type UpdateProjectInput = Partial<

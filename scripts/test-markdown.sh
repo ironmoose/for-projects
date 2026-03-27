@@ -3,20 +3,20 @@
 # Usage: bash scripts/test-markdown.sh
 
 API="http://localhost:3000/api"
-SLUG="md-test"
-BASE="$API/projects/$SLUG/tasks"
 
-echo "=== Creating project '$SLUG' ==="
-curl -s -X POST "$API/projects" \
+echo "=== Creating project ==="
+PROJECT_JSON=$(curl -s -X POST "$API/projects" \
   -H "Content-Type: application/json" \
   -d "$(cat <<'JSON'
 {
   "name": "Markdown Test",
-  "slug": "md-test",
   "description": "Throwaway project for testing markdown rendering."
 }
 JSON
-)" | python3 -m json.tool
+)")
+echo "$PROJECT_JSON" | python3 -m json.tool
+PROJECT_ID=$(echo "$PROJECT_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+BASE="$API/projects/$PROJECT_ID/tasks"
 echo
 
 echo "=== Creating tasks with markdown descriptions ==="

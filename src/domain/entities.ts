@@ -2,7 +2,6 @@ import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, BindingKind, Inst
 
 export interface Project {
   id: string;
-  slug: string;
   name: string;
   description: string;
   status: ProjectStatus;
