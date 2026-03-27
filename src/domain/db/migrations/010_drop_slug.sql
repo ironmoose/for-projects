@@ -1,6 +1,5 @@
 -- Drop the slug column from projects.
 -- SQLite cannot drop a UNIQUE column directly, so we rebuild the table.
-
 CREATE TABLE projects_new (
   id          TEXT PRIMARY KEY,
   name        TEXT NOT NULL,

@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
-import { readdirSync, readFileSync } from "node:fs";
-import { join, extname } from "node:path";
+import { readdirSync, readFileSync, copyFileSync } from "node:fs";
+import { join, dirname, basename, extname } from "node:path";
 
 const MIGRATIONS_DIR = join(import.meta.dir, "migrations");
 
@@ -56,6 +56,20 @@ export async function runMigrations(db: Database): Promise<void> {
   const applied = getAppliedMigrations(db);
   const pending = getPendingMigrations(applied);
 
+  if (pending.length > 0) {
+    const dbPath = db.filename;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = join(
+      dirname(dbPath),
+      `${basename(dbPath)}.backup-${timestamp}`
+    );
+    copyFileSync(dbPath, backupPath);
+    console.log(`[migrate] backed up database to ${backupPath}`);
+
+    db.run("PRAGMA foreign_keys = OFF");
+    console.log("[migrate] disabled foreign keys for migration safety");
+  }
+
   for (const filename of pending) {
     if (extname(filename) === ".ts") {
       await applyTsMigration(db, filename);
@@ -63,5 +77,10 @@ export async function runMigrations(db: Database): Promise<void> {
       applySqlMigration(db, filename);
     }
     console.log(`[migrate] applied ${filename}`);
+  }
+
+  if (pending.length > 0) {
+    db.run("PRAGMA foreign_keys = ON");
+    console.log("[migrate] re-enabled foreign keys");
   }
 }
