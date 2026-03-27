@@ -14,6 +14,7 @@ export function ListPageLayout({ children, style }: ListPageLayoutProps) {
         flex: 1,
         width: "100%",
         maxWidth: 1400,
+        alignSelf: "center",
         padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`,
         boxSizing: "border-box",
         overflowY: "auto",

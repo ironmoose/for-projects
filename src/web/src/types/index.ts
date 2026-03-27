@@ -48,6 +48,10 @@ export interface Instruction {
   prompt: string;
   output: string | null;
   position: number;
+  status: "pending" | "running" | "complete" | "skipped";
+  agent: string | null;
+  actor: "agent" | "human";
+  parallel: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -32,11 +32,11 @@ export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 // Organisms
 export { TopBar } from "./organisms/TopBar";
 export type { NavItem } from "./organisms/TopBar";
-export { ProjectCard } from "./organisms/ProjectCard";
-export { WorkbenchCard } from "./organisms/WorkbenchCard";
 export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
+export { PipelineNode } from "./organisms/PipelineNode";
+export { StatusSummaryBar } from "./organisms/StatusSummaryBar";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";
@@ -52,6 +52,3 @@ export type { Theme } from "./theme/theme";
 export { ToastContainer, useToast } from "./Toast";
 export type { Toast, ToastType } from "./Toast";
 export { ToastProvider, useToastContext } from "./ToastContext";
-
-// Legacy (deprecated -- use ConnectionStatus organism instead)
-export { ConnectionIndicator } from "./ConnectionIndicator";

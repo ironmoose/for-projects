@@ -1,5 +1,6 @@
 import { useTheme } from "../theme/ThemeContext";
 import { useWindowWidth, SMALL_BREAKPOINT } from "../../hooks/useWindowWidth";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Overlay } from "../atoms/Overlay";
 
 interface SidePanelLayoutProps {
@@ -12,6 +13,7 @@ export function SidePanelLayout({ children, onClose, style }: SidePanelLayoutPro
   const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const isSmall = windowWidth < SMALL_BREAKPOINT;
+  const reduced = useReducedMotion();
 
   const panel = (
     <div
@@ -24,6 +26,7 @@ export function SidePanelLayout({ children, onClose, style }: SidePanelLayoutPro
         display: "flex",
         flexDirection: "column" as const,
         overflow: "hidden",
+        animation: reduced ? undefined : `fade-in-up 200ms ${theme.animation.easing.decelerate}`,
         ...style,
       }}
     >
