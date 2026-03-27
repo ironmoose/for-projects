@@ -1,13 +1,17 @@
 import { useTheme } from "../theme/ThemeContext";
 
-type BadgeVariant = "active" | "paused" | "completed" | "archived" | "default";
+type BadgeVariant =
+  | "active" | "paused" | "completed" | "archived" | "default"
+  | "pending" | "running" | "complete" | "failed" | "skipped"
+  | "todo" | "in_progress" | "done";
 
 interface BadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
+  style?: React.CSSProperties;
 }
 
-export function Badge({ children, variant = "default" }: BadgeProps) {
+export function Badge({ children, variant = "default", style }: BadgeProps) {
   const { theme } = useTheme();
 
   const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
@@ -31,6 +35,41 @@ export function Badge({ children, variant = "default" }: BadgeProps) {
       background: theme.color.surfaceContainerHigh,
       color: theme.color.textMuted,
     },
+    pending: {
+      background: theme.color.surfaceContainerHigh,
+      color: theme.color.textFaint,
+    },
+    running: {
+      background: `${theme.color.primary}26`,
+      color: theme.color.primary,
+      ["--glow-color" as string]: `${theme.color.primary}33`,
+      animation: `glow-pulse 2s ease-in-out infinite`,
+    },
+    complete: {
+      background: `${theme.color.success}26`,
+      color: theme.color.success,
+    },
+    failed: {
+      background: `${theme.color.danger}26`,
+      color: theme.color.danger,
+    },
+    skipped: {
+      background: theme.color.surfaceContainerHigh,
+      color: theme.color.textFaint,
+      opacity: 0.6,
+    },
+    todo: {
+      background: theme.color.surfaceContainerHigh,
+      color: theme.color.textMuted,
+    },
+    in_progress: {
+      background: `${theme.color.tertiary}26`,
+      color: theme.color.tertiary,
+    },
+    done: {
+      background: `${theme.color.success}26`,
+      color: theme.color.success,
+    },
   };
 
   return (
@@ -45,7 +84,9 @@ export function Badge({ children, variant = "default" }: BadgeProps) {
         letterSpacing: theme.font.letterSpacing.wide,
         textTransform: "uppercase",
         lineHeight: 1.4,
+        transition: `background 200ms, color 200ms, box-shadow 200ms`,
         ...variantStyles[variant],
+        ...style,
       }}
     >
       {children}

@@ -7,11 +7,11 @@ export { IconButton } from "./atoms/IconButton";
 export { Badge } from "./atoms/Badge";
 export { SectionLabel } from "./atoms/SectionLabel";
 export { StatusDot } from "./atoms/StatusDot";
-export { ConnectionDot } from "./atoms/ConnectionDot";
 export { MetaValue } from "./atoms/MetaValue";
 export { Overlay } from "./atoms/Overlay";
 export { AnimationStyles } from "./atoms/AnimationStyles";
 export { Skeleton, CardSkeleton, RowSkeleton } from "./atoms/Skeleton";
+export { ActivityIndicator } from "./atoms/ActivityIndicator";
 
 // Molecules
 export { Card } from "./molecules/Card";
@@ -27,6 +27,7 @@ export { EmptyState } from "./molecules/EmptyState";
 export { BackButton } from "./molecules/BackButton";
 export { HighlightOnChange } from "./molecules/HighlightOnChange";
 export { AnimatedList } from "./molecules/AnimatedList";
+export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 
 // Organisms
 export { TopBar } from "./organisms/TopBar";
@@ -52,5 +53,5 @@ export { ToastContainer, useToast } from "./Toast";
 export type { Toast, ToastType } from "./Toast";
 export { ToastProvider, useToastContext } from "./ToastContext";
 
-// ConnectionIndicator (legacy, now also available as ConnectionDot/ConnectionStatus)
+// Legacy (deprecated -- use ConnectionStatus organism instead)
 export { ConnectionIndicator } from "./ConnectionIndicator";

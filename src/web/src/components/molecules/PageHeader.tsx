@@ -4,10 +4,11 @@ interface PageHeaderProps {
   title: string;
   subtitle?: string;
   trailing?: React.ReactNode;
+  indicator?: React.ReactNode;
   style?: React.CSSProperties;
 }
 
-export function PageHeader({ title, subtitle, trailing, style }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, trailing, indicator, style }: PageHeaderProps) {
   const { theme } = useTheme();
 
   return (
@@ -34,6 +35,11 @@ export function PageHeader({ title, subtitle, trailing, style }: PageHeaderProps
         >
           {title}
         </h2>
+        {indicator && (
+          <div style={{ marginTop: theme.spacing.xs }}>
+            {indicator}
+          </div>
+        )}
         {subtitle && (
           <p
             style={{
