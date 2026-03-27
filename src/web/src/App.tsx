@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import {
+  ActivityIndicator,
   TopBar,
   useTheme,
   ConnectionStatus,
@@ -24,37 +25,6 @@ const navItems: NavItem[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// ActivityIndicator atom (inline to avoid modifying atoms directory)
-// ---------------------------------------------------------------------------
-
-function ActivityIndicator({ count }: { count: number }) {
-  const { theme } = useTheme();
-  const display = count > 99 ? "99+" : `${count}`;
-
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 20,
-        height: 20,
-        borderRadius: theme.radius.full,
-        background: count > 0 ? `${theme.color.primary}26` : theme.color.surfaceContainerHigh,
-        color: count > 0 ? theme.color.primary : theme.color.textFaint,
-        fontFamily: theme.font.mono,
-        fontSize: theme.font.size.xxs,
-        fontWeight: 600,
-        flexShrink: 0,
-        transition: `background ${theme.animation.duration.fast}, color ${theme.animation.duration.fast}`,
-      }}
-    >
-      {display}
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 
@@ -63,7 +33,6 @@ export function App() {
   const { path, navigate } = useHashRoute();
   const { onEvent, subscribeEvents } = useEventFanOut();
   const { connected } = useRealtimeEvents(onEvent);
-  const activityCount = useActivityCount();
 
   const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
   const projectId = projectIdMatch?.[1] ?? null;
@@ -120,12 +89,7 @@ export function App() {
       <AnimationStyles />
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", fontFamily: theme.font.body }}>
         <TopBar
-          trailing={
-            <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-              <ActivityIndicator count={activityCount} />
-              <ConnectionStatus connected={connected} />
-            </div>
-          }
+          trailing={<TrailingIndicators connected={connected} />}
           navItems={navItems}
           activePath={activePath}
           onNavigate={navigate}
@@ -141,5 +105,17 @@ export function App() {
         </main>
       </div>
     </EventSubscriptionContext.Provider>
+  );
+}
+
+/** Renders inside EventSubscriptionContext so useActivityCount can access it. */
+function TrailingIndicators({ connected }: { connected: boolean }) {
+  const { theme } = useTheme();
+  const activityCount = useActivityCount();
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+      <ActivityIndicator count={activityCount} />
+      <ConnectionStatus connected={connected} />
+    </div>
   );
 }
