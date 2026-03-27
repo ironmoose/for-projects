@@ -1,6 +1,6 @@
 import { type HTMLAttributes } from "react";
-import { type Theme } from "./theme";
-import { useTheme } from "./ThemeContext";
+import { type Theme } from "../theme/theme";
+import { useTheme } from "../theme/ThemeContext";
 
 type CardVariant = "default" | "flat";
 

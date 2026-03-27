@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTheme } from "./ThemeContext";
-import { Icon } from "./Icon";
+import { useTheme } from "./theme/ThemeContext";
+import { Icon } from "./atoms/Icon";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,12 +112,6 @@ export function ToastContainer({
           <span style={{ flex: 1, minWidth: 0 }}>{t.message}</span>
         </div>
       ))}
-      <style>{`
-        @keyframes toast-in {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }

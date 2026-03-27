@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { type Theme, defaultThemeName, themes } from "./theme";
+import { type Theme, defaultThemeName, themes } from "../theme/theme";
 
 const STORAGE_KEY = "pm-theme";
 
@@ -19,7 +19,15 @@ function loadSavedTheme(): string {
   return defaultThemeName;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  /** Override theme selection with a specific theme name. */
+  forcedTheme?: string;
+  /** Skip body style effects (useful for nested/isolated providers). */
+  isolated?: boolean;
+}
+
+export function ThemeProvider({ children, forcedTheme, isolated }: ThemeProviderProps) {
   const [themeName, setThemeName] = useState(loadSavedTheme);
 
   const setTheme = useCallback((name: string) => {
@@ -29,18 +37,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const t = themes[themeName]!;
+  const effectiveName = forcedTheme && forcedTheme in themes ? forcedTheme : themeName;
+  const t = themes[effectiveName]!;
 
   useEffect(() => {
+    if (isolated) return;
     const s = document.body.style;
     s.backgroundColor = t.color.surface;
     s.color = t.color.text;
     s.fontFamily = t.font.body;
     s.margin = "0";
-  }, [t]);
+  }, [t, isolated]);
 
   return (
-    <ThemeContext.Provider value={{ theme: t, themeName, setTheme }}>
+    <ThemeContext.Provider value={{ theme: t, themeName: effectiveName, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

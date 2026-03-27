@@ -1,5 +1,5 @@
 import { type SelectHTMLAttributes } from "react";
-import { useTheme } from "./ThemeContext";
+import { useTheme } from "../theme/ThemeContext";
 
 interface SelectOption {
   value: string;

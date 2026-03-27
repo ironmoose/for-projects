@@ -1,6 +1,6 @@
 import { type ButtonHTMLAttributes } from "react";
-import { type Theme } from "./theme";
-import { useTheme } from "./ThemeContext";
+import { type Theme } from "../theme/theme";
+import { useTheme } from "../theme/ThemeContext";
 
 type ButtonVariant = "primary" | "ghost";
 type ButtonSize = "sm" | "md";

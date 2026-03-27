@@ -1,0 +1,14 @@
+import { useEffect, useState } from "react";
+import { SMALL_BREAKPOINT } from "../constants";
+
+export { SMALL_BREAKPOINT };
+
+export function useWindowWidth(): number {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return width;
+}

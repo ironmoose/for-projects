@@ -1,5 +1,5 @@
-import { useTheme } from "./ThemeContext";
-import { ThemeSwitcher } from "./ThemeSwitcher";
+import { useTheme } from "../theme/ThemeContext";
+import { ThemeSwitcher } from "../molecules/ThemeSwitcher";
 
 export interface NavItem {
   label: string;

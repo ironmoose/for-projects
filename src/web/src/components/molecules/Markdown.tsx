@@ -1,8 +1,8 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMemo } from "react";
-import { useTheme } from "./ThemeContext";
-import type { Theme } from "./theme";
+import { useTheme } from "../theme/ThemeContext";
+import type { Theme } from "../theme/theme";
 
 function buildComponents(theme: Theme): Components {
   const { color, font, spacing, radius } = theme;
