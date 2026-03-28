@@ -63,7 +63,7 @@ export interface Instruction {
   updated_at: string;
 }
 
-export interface InstructionBinding {
+export interface Binding {
   id: string;
   instruction_id: string;
   arn: string;

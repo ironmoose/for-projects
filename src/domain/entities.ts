@@ -1,4 +1,5 @@
 import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, WorkflowStatus } from "./enums";
+import type { ArnResourceType } from "./arn";
 
 export interface Project {
   id: string;
@@ -58,10 +59,36 @@ export interface Instruction {
   updated_at: string;
 }
 
-export interface InstructionBinding {
+export interface Binding {
   id: string;
   instruction_id: string;
   arn: string;
   created_at: string;
   updated_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Resolver types
+// ---------------------------------------------------------------------------
+
+export interface ResolvedSection {
+  arn: string;
+  type: ArnResourceType;
+  header: string;
+  content: string;
+  truncated: boolean;
+}
+
+export interface ResolvedEntity {
+  arn: string;
+  type: ArnResourceType | null;
+  data: Project | Task | Workflow | Phase | Instruction | null;
+  bindings?: Binding[];
+  error?: string;
+}
+
+export interface ResolvedInstruction {
+  instruction: Instruction;
+  sections: ResolvedSection[];
+  warnings: string[];
 }

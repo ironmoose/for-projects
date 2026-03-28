@@ -20,6 +20,7 @@ import { workflowRoutes } from "./routes/workflows";
 import { phaseRoutes } from "./routes/phases";
 import { instructionRoutes } from "./routes/instructions";
 import { bindingRoutes } from "./routes/bindings";
+import { resolveRoutes } from "./routes/resolve";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
 
@@ -61,9 +62,10 @@ export class Server {
     app.route("/api/workflows/:workflowId/phases", phaseRoutes(ctx.phaseService));
     app.route(
       "/api/workflows/:workflowId/phases/:phaseId/instructions",
-      instructionRoutes(ctx.instructionService, ctx.instructionBindingService),
+      instructionRoutes(ctx.instructionService, ctx.bindingService),
     );
-    app.route("/api/bindings", bindingRoutes(ctx.instructionBindingService));
+    app.route("/api/bindings", bindingRoutes(ctx.bindingService));
+    app.route("/api/resolve", resolveRoutes(ctx.resolverService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
     // -- MCP --------------------------------------------------------

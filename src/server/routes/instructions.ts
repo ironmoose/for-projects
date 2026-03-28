@@ -3,10 +3,10 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
   ServiceError,
   type IInstructionService,
-  type IInstructionBindingService,
+  type IBindingService,
   type CreateInstructionInput,
   type UpdateInstructionInput,
-  type CreateInstructionBindingInput,
+  type CreateBindingInput,
 } from "../../domain";
 
 /**
@@ -15,7 +15,7 @@ import {
  */
 export function instructionRoutes(
   instructionService: IInstructionService,
-  bindingService: IInstructionBindingService,
+  bindingService: IBindingService,
 ): Hono {
   const app = new Hono();
 
@@ -107,7 +107,7 @@ export function instructionRoutes(
   // POST .../instructions/:instructionId/bindings
   app.post("/:instructionId/bindings", async (c) => {
     try {
-      const { arn } = await c.req.json<CreateInstructionBindingInput>();
+      const { arn } = await c.req.json<CreateBindingInput>();
       const binding = bindingService.create(c.req.param("instructionId"), { arn });
       return c.json(binding, 201);
     } catch (e: unknown) {

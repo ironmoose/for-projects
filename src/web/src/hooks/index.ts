@@ -7,7 +7,7 @@ export { useProject } from "./useProject";
 export { useTaskTags } from "./useTaskTags";
 export { useWorkflows } from "./useWorkflows";
 export { useWorkflow } from "./useWorkflow";
-export { useInstructionBindings } from "./useInstructionBindings";
+export { useBindings } from "./useBindings";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";

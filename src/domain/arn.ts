@@ -70,6 +70,12 @@ export type ArnResolver = (id: string) => boolean;
 /** Map from resource type to its existence resolver. */
 export type ArnResolverMap = Record<ArnResourceType, ArnResolver>;
 
+/** A resolver that returns the full entity for a given ID, or null if not found. */
+export type EntityResolver = (id: string) => unknown;
+
+/** Map from resource type to its entity resolver. */
+export type EntityResolverMap = Partial<Record<ArnResourceType, EntityResolver>>;
+
 /**
  * Validate an ARN: parse it, then confirm the referenced resource exists.
  * Throws ArnError on bad format or missing resource.

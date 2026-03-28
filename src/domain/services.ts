@@ -1,4 +1,7 @@
-import type { Project, Task, Tag, Workflow, Phase, Instruction, InstructionBinding } from "./entities";
+import type {
+  Project, Task, Tag, Workflow, Phase, Instruction, Binding,
+  ResolvedEntity, ResolvedInstruction,
+} from "./entities";
 import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, WorkflowStatus } from "./enums";
 import type {
   CreateProjectInput,
@@ -11,7 +14,7 @@ import type {
   UpdatePhaseInput,
   CreateInstructionInput,
   UpdateInstructionInput,
-  CreateInstructionBindingInput,
+  CreateBindingInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -79,10 +82,10 @@ export interface IInstructionService {
   delete(phaseId: string, instructionId: string): boolean;
 }
 
-export interface IInstructionBindingService {
-  findByInstruction(instructionId: string): InstructionBinding[];
-  findByArn(arn: string): InstructionBinding[];
-  create(instructionId: string, input: CreateInstructionBindingInput): InstructionBinding;
+export interface IBindingService {
+  findByInstruction(instructionId: string): Binding[];
+  findByArn(arn: string): Binding[];
+  create(instructionId: string, input: CreateBindingInput): Binding;
   delete(instructionId: string, bindingId: string): boolean;
 }
 
@@ -98,4 +101,16 @@ export interface ITagService {
   getTagsForTask(taskId: string): Tag[];
   findTasksByTag(tagName: string, limit?: number, offset?: number): Paginated<Task>;
   findTasksByTagPrefix(prefix: string, limit?: number, offset?: number): Paginated<Task>;
+}
+
+export interface ResolveOptions {
+  maxSectionLength?: number;
+}
+
+export interface IResolverService {
+  /** Dereference one or more ARNs into their entities. */
+  resolve(arns: string[]): ResolvedEntity[];
+
+  /** Resolve an instruction and compile its bound context into sections. */
+  compilePrompt(instructionId: string, options?: ResolveOptions): ResolvedInstruction;
 }

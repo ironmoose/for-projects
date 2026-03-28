@@ -6,20 +6,21 @@ import { TaskRepository } from "./repositories/tasks";
 import { TagRepository } from "./repositories/tags";
 import { WorkflowRepository } from "./repositories/workflows";
 import { PhaseRepository } from "./repositories/phases";
-import { InstructionRepository, InstructionBindingRepository } from "./repositories/instructions";
+import { InstructionRepository, BindingRepository } from "./repositories/instructions";
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
 import { TagService } from "./services/tags";
 import { WorkflowService } from "./services/workflows";
 import { PhaseService } from "./services/phases";
-import { InstructionService, InstructionBindingService } from "./services/instructions";
+import { InstructionService, BindingService } from "./services/instructions";
+import { ResolverService } from "./services/resolver";
 import type {
   IProjectService, ITaskService, ITagService,
   IWorkflowService, IPhaseService,
-  IInstructionService, IInstructionBindingService,
+  IInstructionService, IBindingService, IResolverService,
 } from "./services";
 import { EventBus } from "./events";
-import type { ArnResolverMap } from "./arn";
+import type { ArnResolverMap, EntityResolverMap } from "./arn";
 
 export interface AppContext {
   db: Database;
@@ -29,7 +30,8 @@ export interface AppContext {
   workflowService: IWorkflowService;
   phaseService: IPhaseService;
   instructionService: IInstructionService;
-  instructionBindingService: IInstructionBindingService;
+  bindingService: IBindingService;
+  resolverService: IResolverService;
   eventBus: EventBus;
 }
 
@@ -44,7 +46,7 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
   const workflowRepo = new WorkflowRepository(db);
   const phaseRepo = new PhaseRepository(db);
   const instructionRepo = new InstructionRepository(db);
-  const instructionBindingRepo = new InstructionBindingRepository(db);
+  const bindingRepo = new BindingRepository(db);
 
   const arnResolvers: ArnResolverMap = {
     project: (id) => projectRepo.findById(id) !== null,
@@ -60,14 +62,24 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
   const workflowService = new WorkflowService(workflowRepo, eventBus);
   const phaseService = new PhaseService(phaseRepo, workflowRepo, eventBus);
   const instructionService = new InstructionService(instructionRepo, phaseRepo, eventBus);
-  const instructionBindingService = new InstructionBindingService(
-    instructionBindingRepo, instructionRepo, arnResolvers, eventBus,
+  const bindingService = new BindingService(
+    bindingRepo, instructionRepo, arnResolvers, eventBus,
   );
+
+  const entityResolvers: EntityResolverMap = {
+    project: (id) => projectService.findById(id),
+    task: (id) => taskService.findById(id),
+    workflow: (id) => workflowService.findById(id),
+    phase: (id) => phaseService.findByIdDirect(id),
+    instruction: (id) => instructionService.findByIdDirect(id),
+  };
+
+  const resolverService = new ResolverService(bindingService, entityResolvers);
 
   return {
     db, projectService, taskService, tagService,
     workflowService, phaseService,
-    instructionService, instructionBindingService,
-    eventBus,
+    instructionService, bindingService,
+    resolverService, eventBus,
   };
 }

@@ -87,7 +87,7 @@ export function useWorkflow(id: string) {
         event.entity === "workflow" ||
         event.entity === "phase" ||
         event.entity === "instruction" ||
-        event.entity === "instruction_binding"
+        event.entity === "binding"
       ) {
         throttledFetch();
       }

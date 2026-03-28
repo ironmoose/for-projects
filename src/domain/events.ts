@@ -1,4 +1,4 @@
-import type { Project, Task, Workflow, Phase, Instruction, InstructionBinding } from "./entities";
+import type { Project, Task, Workflow, Phase, Instruction, Binding } from "./entities";
 
 export type DomainEvent =
   | { entity: "project"; action: "created" | "updated" | "deleted"; payload: Project | { id: string } }
@@ -6,7 +6,7 @@ export type DomainEvent =
   | { entity: "workflow"; action: "created" | "updated" | "deleted"; payload: Workflow | { id: string } }
   | { entity: "phase"; action: "created" | "updated" | "deleted" | "reordered"; payload: Phase | Phase[] | { id: string } }
   | { entity: "instruction"; action: "created" | "updated" | "deleted"; payload: Instruction | { id: string } }
-  | { entity: "instruction_binding"; action: "created" | "deleted"; payload: InstructionBinding | { id: string } };
+  | { entity: "binding"; action: "created" | "deleted"; payload: Binding | { id: string } };
 
 type Listener = (event: DomainEvent) => void;
 

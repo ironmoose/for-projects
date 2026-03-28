@@ -1,4 +1,4 @@
-import type { Project, Task, Workflow, Phase, Instruction, InstructionBinding } from "./entities";
+import type { Project, Task, Workflow, Phase, Instruction, Binding } from "./entities";
 
 export type CreateProjectInput = Pick<Project, "name"> &
   Partial<Pick<Project, "description" | "status">>;
@@ -27,4 +27,4 @@ export type CreateInstructionInput = Pick<Instruction, "prompt"> &
 
 export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt" | "output" | "agent">>;
 
-export type CreateInstructionBindingInput = Pick<InstructionBinding, "arn">;
+export type CreateBindingInput = Pick<Binding, "arn">;

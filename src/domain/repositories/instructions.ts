@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Instruction, InstructionBinding } from "../entities";
-import type { CreateInstructionInput, UpdateInstructionInput, CreateInstructionBindingInput } from "../inputs";
+import type { Instruction, Binding } from "../entities";
+import type { CreateInstructionInput, UpdateInstructionInput, CreateBindingInput } from "../inputs";
 
 export class InstructionRepository {
   constructor(private db: Database) {}
@@ -67,40 +67,40 @@ export class InstructionRepository {
   }
 }
 
-export class InstructionBindingRepository {
+export class BindingRepository {
   constructor(private db: Database) {}
 
-  findById(id: string): InstructionBinding | null {
-    return this.db.query("SELECT * FROM instruction_bindings WHERE id = ?").get(id) as InstructionBinding | null;
+  findById(id: string): Binding | null {
+    return this.db.query("SELECT * FROM bindings WHERE id = ?").get(id) as Binding | null;
   }
 
-  findByInstruction(instructionId: string): InstructionBinding[] {
+  findByInstruction(instructionId: string): Binding[] {
     return this.db
-      .query("SELECT * FROM instruction_bindings WHERE instruction_id = ? ORDER BY created_at ASC")
-      .all(instructionId) as InstructionBinding[];
+      .query("SELECT * FROM bindings WHERE instruction_id = ? ORDER BY created_at ASC")
+      .all(instructionId) as Binding[];
   }
 
-  findByArn(arn: string): InstructionBinding[] {
+  findByArn(arn: string): Binding[] {
     return this.db
-      .query("SELECT * FROM instruction_bindings WHERE arn = ? ORDER BY created_at ASC")
-      .all(arn) as InstructionBinding[];
+      .query("SELECT * FROM bindings WHERE arn = ? ORDER BY created_at ASC")
+      .all(arn) as Binding[];
   }
 
   countByInstruction(instructionId: string): number {
     return (
       this.db
-        .query("SELECT COUNT(*) as total FROM instruction_bindings WHERE instruction_id = ?")
+        .query("SELECT COUNT(*) as total FROM bindings WHERE instruction_id = ?")
         .get(instructionId) as { total: number }
     ).total;
   }
 
-  create(instructionId: string, input: CreateInstructionBindingInput): InstructionBinding {
+  create(instructionId: string, input: CreateBindingInput): Binding {
     const id = ulid();
     const now = new Date().toISOString();
 
     this.db
       .query(
-        `INSERT INTO instruction_bindings (id, instruction_id, arn, created_at, updated_at)
+        `INSERT INTO bindings (id, instruction_id, arn, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?)`
       )
       .run(id, instructionId, input.arn, now, now);
@@ -109,7 +109,7 @@ export class InstructionBindingRepository {
   }
 
   delete(id: string): boolean {
-    const result = this.db.query("DELETE FROM instruction_bindings WHERE id = ?").run(id);
+    const result = this.db.query("DELETE FROM bindings WHERE id = ?").run(id);
     return result.changes > 0;
   }
 }

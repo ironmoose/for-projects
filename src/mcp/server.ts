@@ -14,7 +14,8 @@ import {
   type IWorkflowService,
   type IPhaseService,
   type IInstructionService,
-  type IInstructionBindingService,
+  type IBindingService,
+  type IResolverService,
   parseArn,
   ArnError,
 } from "../domain";
@@ -26,7 +27,8 @@ export interface McpServiceContext {
   workflowService: IWorkflowService;
   phaseService: IPhaseService;
   instructionService: IInstructionService;
-  instructionBindingService: IInstructionBindingService;
+  bindingService: IBindingService;
+  resolverService: IResolverService;
 }
 
 function handle<T>(fn: () => T) {
@@ -50,7 +52,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, tagService, workflowService, phaseService, instructionService, instructionBindingService } = ctx;
+  const { projectService, taskService, tagService, workflowService, phaseService, instructionService, bindingService, resolverService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -239,10 +241,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         const instruction = instructionService.create(phase_id, input);
         if (bindingInputs) {
           for (const binding of bindingInputs) {
-            instructionBindingService.create(instruction.id, binding);
+            bindingService.create(instruction.id, binding);
           }
         }
-        const bindings = instructionBindingService.findByInstruction(instruction.id);
+        const bindings = bindingService.findByInstruction(instruction.id);
         return { ...instruction, bindings };
       })
   );
@@ -269,15 +271,15 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         if (!instruction) return instruction;
         if (add_bindings) {
           for (const binding of add_bindings) {
-            instructionBindingService.create(instruction.id, binding);
+            bindingService.create(instruction.id, binding);
           }
         }
         if (remove_bindings) {
           for (const bindingId of remove_bindings) {
-            instructionBindingService.delete(instruction.id, bindingId);
+            bindingService.delete(instruction.id, bindingId);
           }
         }
-        const bindings = instructionBindingService.findByInstruction(instruction.id);
+        const bindings = bindingService.findByInstruction(instruction.id);
         return { ...instruction, bindings };
       })
   );
@@ -293,39 +295,33 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           z.string().max(500),
           z.array(z.string().max(500)).max(20),
         ]),
+        compile: z.enum(["prompt"]).optional(),
       },
     },
-    ({ arn }) => handle(() => {
+    ({ arn, compile }) => handle(() => {
       const arns = Array.isArray(arn) ? arn : [arn];
-      const results = arns.map((a) => {
-        try {
-          const parsed = parseArn(a);
-          let data: unknown = null;
-          switch (parsed.type) {
-            case "project":
-              data = projectService.findById(parsed.id);
-              break;
-            case "task":
-              data = taskService.findById(parsed.id);
-              break;
-            case "workflow":
-              data = workflowService.findById(parsed.id);
-              break;
-            case "phase":
-              data = phaseService.findByIdDirect(parsed.id);
-              break;
-            case "instruction":
-              data = instructionService.findByIdDirect(parsed.id);
-              break;
+
+      if (compile === "prompt") {
+        // For compile=prompt, resolve instruction ARNs via compilePrompt.
+        // Non-instruction ARNs are resolved normally.
+        const results = arns.map((a) => {
+          try {
+            const parsed = parseArn(a);
+            if (parsed.type === "instruction") {
+              return resolverService.compilePrompt(parsed.id);
+            }
+          } catch (e) {
+            if (e instanceof ArnError) {
+              return { arn: a, type: null, data: null, error: e.message };
+            }
+            throw e;
           }
-          return { arn: a, type: parsed.type, data };
-        } catch (e) {
-          if (e instanceof ArnError) {
-            return { arn: a, type: null, data: null, error: e.message };
-          }
-          throw e;
-        }
-      });
+          return resolverService.resolve([a])[0];
+        });
+        return Array.isArray(arn) ? results : results[0];
+      }
+
+      const results = resolverService.resolve(arns);
       return Array.isArray(arn) ? results : results[0];
     })
   );
@@ -395,8 +391,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           return instructionService.findByPhase(phase_id, limit, offset);
         }
         case "binding": {
-          if (instruction_id) return instructionBindingService.findByInstruction(instruction_id);
-          if (arnFilter) return instructionBindingService.findByArn(arnFilter);
+          if (instruction_id) return bindingService.findByInstruction(instruction_id);
+          if (arnFilter) return bindingService.findByArn(arnFilter);
           throw new ServiceError("instruction_id or arn is required when querying bindings", 400);
         }
       }

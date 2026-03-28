@@ -17,7 +17,7 @@ import {
   AddItemInput,
   HighlightOnChange,
 } from "../components";
-import { useWorkflow, useInstructionBindings, useEventDrivenAnimation } from "../hooks";
+import { useWorkflow, useBindings, useEventDrivenAnimation } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError } from "../api";
 import type { Instruction, Phase } from "../types";
@@ -195,7 +195,7 @@ function InstructionDetailPanel({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
-  const { bindings, addBinding, removeBinding } = useInstructionBindings(workflowId, phaseId, instruction.id);
+  const { bindings, addBinding, removeBinding } = useBindings(workflowId, phaseId, instruction.id);
   const { showToast } = useToastContext();
   const [newArn, setNewArn] = useState("");
   const [addingBinding, setAddingBinding] = useState(false);

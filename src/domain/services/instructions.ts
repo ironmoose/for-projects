@@ -1,12 +1,12 @@
-import type { Instruction, InstructionBinding } from "../entities";
+import type { Instruction, Binding } from "../entities";
 import type {
   CreateInstructionInput,
   UpdateInstructionInput,
-  CreateInstructionBindingInput,
+  CreateBindingInput,
 } from "../inputs";
-import type { IInstructionService, IInstructionBindingService, Paginated } from "../services";
+import type { IInstructionService, IBindingService, Paginated } from "../services";
 import { ServiceError } from "../errors";
-import type { InstructionRepository, InstructionBindingRepository } from "../repositories/instructions";
+import type { InstructionRepository, BindingRepository } from "../repositories/instructions";
 import type { PhaseRepository } from "../repositories/phases";
 import type { EventBus } from "../events";
 import { type ArnResolverMap, validateArn, ArnError } from "../arn";
@@ -94,9 +94,9 @@ export class InstructionService implements IInstructionService {
   }
 }
 
-export class InstructionBindingService implements IInstructionBindingService {
+export class BindingService implements IBindingService {
   constructor(
-    private repo: InstructionBindingRepository,
+    private repo: BindingRepository,
     private instructionRepo: InstructionRepository,
     private arnResolvers: ArnResolverMap,
     private eventBus?: EventBus,
@@ -110,16 +110,16 @@ export class InstructionBindingService implements IInstructionBindingService {
     return instruction;
   }
 
-  findByInstruction(instructionId: string): InstructionBinding[] {
+  findByInstruction(instructionId: string): Binding[] {
     this.requireInstruction(instructionId);
     return this.repo.findByInstruction(instructionId);
   }
 
-  findByArn(arn: string): InstructionBinding[] {
+  findByArn(arn: string): Binding[] {
     return this.repo.findByArn(arn);
   }
 
-  create(instructionId: string, input: CreateInstructionBindingInput): InstructionBinding {
+  create(instructionId: string, input: CreateBindingInput): Binding {
     this.requireInstruction(instructionId);
 
     if (!input.arn?.trim()) {
@@ -136,7 +136,7 @@ export class InstructionBindingService implements IInstructionBindingService {
     }
 
     const binding = this.repo.create(instructionId, input);
-    this.eventBus?.emit({ entity: "instruction_binding", action: "created", payload: binding });
+    this.eventBus?.emit({ entity: "binding", action: "created", payload: binding });
     return binding;
   }
 
@@ -148,7 +148,7 @@ export class InstructionBindingService implements IInstructionBindingService {
 
     const deleted = this.repo.delete(bindingId);
     if (deleted) {
-      this.eventBus?.emit({ entity: "instruction_binding", action: "deleted", payload: { id: bindingId } });
+      this.eventBus?.emit({ entity: "binding", action: "deleted", payload: { id: bindingId } });
     }
     return deleted;
   }

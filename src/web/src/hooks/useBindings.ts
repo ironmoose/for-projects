@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "../api";
-import type { InstructionBinding } from "../types";
+import type { Binding } from "../types";
 import { useToastContext } from "../components/ToastContext";
 
-export function useInstructionBindings(
+export function useBindings(
   workflowId: string,
   phaseId: string,
   instructionId: string,
 ) {
-  const [bindings, setBindings] = useState<InstructionBinding[]>([]);
+  const [bindings, setBindings] = useState<Binding[]>([]);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToastContext();
 

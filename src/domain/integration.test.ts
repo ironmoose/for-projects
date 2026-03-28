@@ -15,12 +15,12 @@ import { ProjectRepository } from "./repositories/projects";
 import { TaskRepository } from "./repositories/tasks";
 import { WorkflowRepository } from "./repositories/workflows";
 import { PhaseRepository } from "./repositories/phases";
-import { InstructionRepository, InstructionBindingRepository } from "./repositories/instructions";
+import { InstructionRepository, BindingRepository } from "./repositories/instructions";
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
 import { WorkflowService } from "./services/workflows";
 import { PhaseService } from "./services/phases";
-import { InstructionService, InstructionBindingService } from "./services/instructions";
+import { InstructionService, BindingService } from "./services/instructions";
 import { EventBus } from "./events";
 import { ServiceError } from "./errors";
 import { buildArn, type ArnResolverMap } from "./arn";
@@ -36,7 +36,7 @@ interface TestContext {
   workflowService: WorkflowService;
   phaseService: PhaseService;
   instructionService: InstructionService;
-  instructionBindingService: InstructionBindingService;
+  bindingService: BindingService;
   cleanup: () => void;
 }
 
@@ -52,7 +52,7 @@ function createTestContext(): TestContext {
   const workflowRepo = new WorkflowRepository(db);
   const phaseRepo = new PhaseRepository(db);
   const instructionRepo = new InstructionRepository(db);
-  const instructionBindingRepo = new InstructionBindingRepository(db);
+  const bindingRepo = new BindingRepository(db);
 
   const arnResolvers: ArnResolverMap = {
     project: (id) => projectRepo.findById(id) !== null,
@@ -67,13 +67,13 @@ function createTestContext(): TestContext {
   const workflowService = new WorkflowService(workflowRepo, eventBus);
   const phaseService = new PhaseService(phaseRepo, workflowRepo, eventBus);
   const instructionService = new InstructionService(instructionRepo, phaseRepo, eventBus);
-  const instructionBindingService = new InstructionBindingService(
-    instructionBindingRepo, instructionRepo, arnResolvers, eventBus,
+  const bindingService = new BindingService(
+    bindingRepo, instructionRepo, arnResolvers, eventBus,
   );
 
   return {
     db, projectService, taskService, workflowService,
-    phaseService, instructionService, instructionBindingService,
+    phaseService, instructionService, bindingService,
     cleanup: () => {
       db.close();
       rmSync(dir, { recursive: true, force: true });
@@ -130,18 +130,18 @@ describe("integration: full lifecycle", () => {
 
     // 6. Create a binding that references the task
     const taskArn = buildArn("task", task.id);
-    const binding = ctx.instructionBindingService.create(instruction.id, { arn: taskArn });
+    const binding = ctx.bindingService.create(instruction.id, { arn: taskArn });
     expect(binding.id).toBeTruthy();
     expect(binding.instruction_id).toBe(instruction.id);
     expect(binding.arn).toBe(taskArn);
 
     // 7. Verify we can list bindings
-    const bindings = ctx.instructionBindingService.findByInstruction(instruction.id);
+    const bindings = ctx.bindingService.findByInstruction(instruction.id);
     expect(bindings).toHaveLength(1);
     expect(bindings[0].arn).toBe(taskArn);
 
     // 8. Verify reverse lookup by ARN
-    const arnBindings = ctx.instructionBindingService.findByArn(taskArn);
+    const arnBindings = ctx.bindingService.findByArn(taskArn);
     expect(arnBindings).toHaveLength(1);
 
     // 9. Update instruction output
@@ -176,7 +176,7 @@ describe("integration: full lifecycle", () => {
     const workflow = ctx.workflowService.create({ goal: "Will be deleted" });
     const phase = ctx.phaseService.create(workflow.id, { title: "Doomed phase" });
     const instruction = ctx.instructionService.create(phase.id, { prompt: "Do something" });
-    const binding = ctx.instructionBindingService.create(instruction.id, {
+    const binding = ctx.bindingService.create(instruction.id, {
       arn: buildArn("task", task.id),
     });
 
@@ -184,7 +184,7 @@ describe("integration: full lifecycle", () => {
     expect(ctx.workflowService.findById(workflow.id)).not.toBeNull();
     expect(ctx.phaseService.findByIdDirect(phase.id)).not.toBeNull();
     expect(ctx.instructionService.findByIdDirect(instruction.id)).not.toBeNull();
-    expect(ctx.instructionBindingService.findByInstruction(instruction.id)).toHaveLength(1);
+    expect(ctx.bindingService.findByInstruction(instruction.id)).toHaveLength(1);
 
     // Delete the workflow
     const deleted = ctx.workflowService.delete(workflow.id);
@@ -197,7 +197,7 @@ describe("integration: full lifecycle", () => {
 
     // The binding should also be gone (check raw DB since service requires instruction to exist)
     const rawBinding = ctx.db
-      .query("SELECT * FROM instruction_bindings WHERE id = ?")
+      .query("SELECT * FROM bindings WHERE id = ?")
       .get(binding.id);
     expect(rawBinding).toBeNull();
 
@@ -217,7 +217,7 @@ describe("integration: full lifecycle", () => {
     const instr1 = ctx.instructionService.create(phase1.id, { prompt: "In phase A" });
     const instr2 = ctx.instructionService.create(phase2.id, { prompt: "In phase B" });
 
-    ctx.instructionBindingService.create(instr1.id, {
+    ctx.bindingService.create(instr1.id, {
       arn: buildArn("project", project.id),
     });
 
@@ -246,22 +246,22 @@ describe("integration: full lifecycle", () => {
 
     // Bad format
     expect(() => {
-      ctx.instructionBindingService.create(instruction.id, { arn: "not-an-arn" });
+      ctx.bindingService.create(instruction.id, { arn: "not-an-arn" });
     }).toThrow(ServiceError);
 
     // Unknown resource type (workbench is now rejected)
     expect(() => {
-      ctx.instructionBindingService.create(instruction.id, { arn: "tab:workbench:123" });
+      ctx.bindingService.create(instruction.id, { arn: "tab:workbench:123" });
     }).toThrow(ServiceError);
 
     // Non-existent resource
     expect(() => {
-      ctx.instructionBindingService.create(instruction.id, { arn: "tab:task:NONEXISTENT" });
+      ctx.bindingService.create(instruction.id, { arn: "tab:task:NONEXISTENT" });
     }).toThrow(ServiceError);
 
     // Empty ARN
     expect(() => {
-      ctx.instructionBindingService.create(instruction.id, { arn: "" });
+      ctx.bindingService.create(instruction.id, { arn: "" });
     }).toThrow(ServiceError);
   });
 
@@ -276,11 +276,11 @@ describe("integration: full lifecycle", () => {
     // Create a second instruction that binds to the workflow, phase, and first instruction
     const instr2 = ctx.instructionService.create(phase.id, { prompt: "Uses cross-refs" });
 
-    const b1 = ctx.instructionBindingService.create(instr2.id, { arn: buildArn("workflow", workflow.id) });
-    const b2 = ctx.instructionBindingService.create(instr2.id, { arn: buildArn("phase", phase.id) });
-    const b3 = ctx.instructionBindingService.create(instr2.id, { arn: buildArn("instruction", instr.id) });
+    const b1 = ctx.bindingService.create(instr2.id, { arn: buildArn("workflow", workflow.id) });
+    const b2 = ctx.bindingService.create(instr2.id, { arn: buildArn("phase", phase.id) });
+    const b3 = ctx.bindingService.create(instr2.id, { arn: buildArn("instruction", instr.id) });
 
-    const allBindings = ctx.instructionBindingService.findByInstruction(instr2.id);
+    const allBindings = ctx.bindingService.findByInstruction(instr2.id);
     expect(allBindings).toHaveLength(3);
   });
 
@@ -387,18 +387,18 @@ describe("integration: full lifecycle", () => {
     const phase = ctx.phaseService.create(workflow.id, { title: "Phase" });
     const instruction = ctx.instructionService.create(phase.id, { prompt: "Prompt" });
 
-    const binding = ctx.instructionBindingService.create(instruction.id, {
+    const binding = ctx.bindingService.create(instruction.id, {
       arn: buildArn("project", project.id),
     });
 
     // Delete the binding
-    const deleted = ctx.instructionBindingService.delete(instruction.id, binding.id);
+    const deleted = ctx.bindingService.delete(instruction.id, binding.id);
     expect(deleted).toBe(true);
 
     // The project still exists
     expect(ctx.projectService.findById(project.id)).not.toBeNull();
 
     // No bindings remain
-    expect(ctx.instructionBindingService.findByInstruction(instruction.id)).toHaveLength(0);
+    expect(ctx.bindingService.findByInstruction(instruction.id)).toHaveLength(0);
   });
 });

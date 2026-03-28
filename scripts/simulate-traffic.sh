@@ -1,5 +1,5 @@
 #!/bin/bash
-# Traffic simulator — creates projects, tasks, workflows, phases, instructions
+# Traffic simulator — creates projects, tasks, workflows, phases, instructions, bindings
 # and cycles through status changes to trigger WebSocket events.
 # Run with: bash scripts/simulate-traffic.sh
 
@@ -303,6 +303,134 @@ E3=$(curl -s -X POST "$INST/$PH5/instructions" -H 'Content-Type: application/jso
 echo "  ✓ Go/no-go recommendation ($E3)"
 sleep 3
 
+# --- Bindings: link instructions to tasks ---
+echo ""
+echo "━━━ Creating bindings (instruction → task) ━━━"
+BIND="$API/workflows/$WF/phases"
+
+# Analysis instructions → Apollo telemetry task (designed the pipeline they're analyzing)
+echo "  ── Analysis phase bindings ──"
+curl -s -X POST "$BIND/$PH1/instructions/$A1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Inventory nodes → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH1/instructions/$A1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
+echo "  ✓ Inventory nodes → monitoring dashboards task"
+
+curl -s -X POST "$BIND/$PH1/instructions/$A3/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Catalog services → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH1/instructions/$A5/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
+echo "  ✓ Readiness summary → Apollo project"
+
+curl -s -X POST "$BIND/$PH1/instructions/$A5/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Readiness summary → telemetry pipeline task"
+sleep 1
+
+# Planning instructions → related tasks
+echo "  ── Planning phase bindings ──"
+curl -s -X POST "$BIND/$PH2/instructions/$B1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Resource requirements → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH2/instructions/$B1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
+echo "  ✓ Resource requirements → monitoring dashboards task"
+
+curl -s -X POST "$BIND/$PH2/instructions/$B3/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T2\"}" > /dev/null
+echo "  ✓ Health checks → WebSocket event bus task"
+
+curl -s -X POST "$BIND/$PH2/instructions/$B4/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
+echo "  ✓ Deployment plan → Apollo project"
+
+curl -s -X POST "$BIND/$PH2/instructions/$B4/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Deployment plan → telemetry pipeline task"
+sleep 1
+
+# Execution instructions → tasks
+echo "  ── Execution phase bindings ──"
+curl -s -X POST "$BIND/$PH3/instructions/$C4/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Deploy collector → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH3/instructions/$C4/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T2\"}" > /dev/null
+echo "  ✓ Deploy collector → WebSocket event bus task"
+
+curl -s -X POST "$BIND/$PH3/instructions/$C8/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T3\"}" > /dev/null
+echo "  ✓ Smoke tests → integration tests task"
+
+curl -s -X POST "$BIND/$PH3/instructions/$C9/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
+echo "  ✓ Configure monitoring → monitoring dashboards task"
+
+curl -s -X POST "$BIND/$PH3/instructions/$C10/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Switch traffic → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH3/instructions/$C10/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T6\"}" > /dev/null
+echo "  ✓ Switch traffic → shard rebalancing task"
+sleep 1
+
+# Validation instructions → tasks
+echo "  ── Validation phase bindings ──"
+curl -s -X POST "$BIND/$PH4/instructions/$D1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T3\"}" > /dev/null
+echo "  ✓ Integration tests → integration tests task"
+
+curl -s -X POST "$BIND/$PH4/instructions/$D1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T2\"}" > /dev/null
+echo "  ✓ Integration tests → WebSocket event bus task"
+
+curl -s -X POST "$BIND/$PH4/instructions/$D3/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Load test → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH4/instructions/$D5/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
+echo "  ✓ Check alerting → monitoring dashboards task"
+
+curl -s -X POST "$BIND/$PH4/instructions/$D6/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
+echo "  ✓ Validation summary → Apollo project"
+
+curl -s -X POST "$BIND/$PH4/instructions/$D6/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Validation summary → telemetry pipeline task"
+sleep 1
+
+# Reporting instructions → tasks/projects
+echo "  ── Reporting phase bindings ──"
+curl -s -X POST "$BIND/$PH5/instructions/$E1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
+echo "  ✓ Deployment report → Apollo project"
+
+curl -s -X POST "$BIND/$PH5/instructions/$E1/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Deployment report → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH5/instructions/$E3/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
+echo "  ✓ Go/no-go → Apollo project"
+
+curl -s -X POST "$BIND/$PH5/instructions/$E3/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
+echo "  ✓ Go/no-go → telemetry pipeline task"
+
+curl -s -X POST "$BIND/$PH5/instructions/$E3/bindings" -H 'Content-Type: application/json' \
+  -d "{\"arn\":\"tab:task:$T7\"}" > /dev/null
+echo "  ✓ Go/no-go → ZK-proof task (cross-project reference)"
+sleep 1
+
 # --- Pipeline progression ---
 echo ""
 echo "━━━ Pipeline progressing ━━━"
@@ -473,6 +601,96 @@ curl -s -X PATCH "$INST/$PH5/instructions/$E3" -H 'Content-Type: application/jso
   -d '{"output":"GO for production. All validation gates passed. Recommend Tuesday 2am ET deploy window with SRE team lead approval."}' > /dev/null
 sleep 1
 
+# --- Resolve endpoint exercising ---
+echo ""
+echo "━━━ Exercising resolve endpoints ━━━"
+
+# Helper: parse JSON response, print fallback on failure
+parse_or_fail() {
+  local resp
+  resp=$(cat)
+  if [ -z "$resp" ]; then
+    echo "  ✗ Empty response (is the server running with latest code?)"
+    return 1
+  fi
+  echo "$resp" | python3 -c "$1" 2>/dev/null || echo "  ✗ Unexpected response: $resp"
+}
+
+# Single ARN resolve — project
+echo "→ Resolve: single project ARN"
+curl -s "$API/resolve?arn=tab:project:$P1" | parse_or_fail "
+import sys,json; d=json.load(sys.stdin)['data']
+print(f\"  ✓ {d['arn']} → {d['type']}: {d.get('data',{}).get('name','?')}\")
+"
+sleep 1
+
+# Single ARN resolve — task
+echo "→ Resolve: single task ARN"
+curl -s "$API/resolve?arn=tab:task:$T1" | parse_or_fail "
+import sys,json; d=json.load(sys.stdin)['data']
+print(f\"  ✓ {d['arn']} → {d['type']}: {d.get('data',{}).get('title','?')}\")
+"
+sleep 1
+
+# Batch ARN resolve — multiple entities
+echo "→ Resolve: batch (3 ARNs)"
+curl -s "$API/resolve?arn=tab:project:$P1&arn=tab:task:$T1&arn=tab:task:$T5" | parse_or_fail "
+import sys,json
+data=json.load(sys.stdin)['data']
+for d in data:
+    name = d.get('data',{}).get('name') or d.get('data',{}).get('title') or '?'
+    print(f\"  ✓ {d['type']}: {name}\")
+"
+sleep 1
+
+# Resolve instruction with compile=prompt — the new prompt blob assembly
+echo "→ Resolve: compile=prompt on instruction with bindings + output"
+curl -s "$API/resolve?arn=tab:instruction:$A5&compile=prompt" | parse_or_fail "
+import sys,json
+d=json.load(sys.stdin)['data']
+inst=d['instruction']
+secs=d['sections']
+warns=d['warnings']
+print(f\"  ✓ Compiled instruction (prompt: {len(inst['prompt'])} chars)\")
+print(f\"    {len(secs)} sections, {len(warns)} warnings\")
+for s in secs:
+    trunc = ' [truncated]' if s['truncated'] else ''
+    print(f\"    → {s['header']} ({s['type']}): {len(s['content'])} chars{trunc}\")
+"
+sleep 1
+
+# Resolve instruction with no bindings
+echo "→ Resolve: compile=prompt on instruction with no bindings"
+curl -s "$API/resolve?arn=tab:instruction:$A2&compile=prompt" | parse_or_fail "
+import sys,json
+d=json.load(sys.stdin)['data']
+print(f\"  ✓ No-binding instruction: {len(d['sections'])} sections, {len(d['warnings'])} warnings\")
+"
+sleep 1
+
+# Cross-project binding resolution — E3 binds to Apollo project + tasks + ZK-proof task
+echo "→ Resolve: compile=prompt on cross-project instruction (go/no-go)"
+curl -s "$API/resolve?arn=tab:instruction:$E3&compile=prompt" | parse_or_fail "
+import sys,json
+d=json.load(sys.stdin)['data']
+secs=d['sections']
+print(f\"  ✓ Cross-project instruction: {len(secs)} sections\")
+for s in secs:
+    print(f\"    → {s['header']} ({s['type']}): {len(s['content'])} chars\")
+"
+sleep 1
+
+# Resolve workflow ARN
+echo "→ Resolve: workflow ARN"
+curl -s "$API/resolve?arn=tab:workflow:$WF" | parse_or_fail "
+import sys,json; d=json.load(sys.stdin)['data']
+print(f\"  ✓ {d['type']}: {d.get('data',{}).get('goal','?')[:60]}...\")
+"
+sleep 1
+
+echo ""
+echo "━━━ Completing workflow ━━━"
+
 echo "→ Workflow: pipeline complete"
 curl -s -X PATCH "$API/workflows/$WF" -H 'Content-Type: application/json' -d '{"status":"complete"}' > /dev/null
 sleep 1
@@ -487,4 +705,9 @@ echo "Created:"
 echo "  • 3 projects (Apollo, Nebula, Quantum Auth)"
 echo "  • 8 tasks across projects"
 echo "  • 1 workflow with 5 phases, 28 instructions"
-echo "  • ~60 events over ~90 seconds"
+echo "  • 27 bindings across instructions → tasks/projects"
+echo "  • ~90 events over ~2 minutes"
+echo ""
+echo "Exercised:"
+echo "  • GET /api/resolve?arn= (single + batch)"
+echo "  • GET /api/resolve?arn=&compile=prompt (with/without bindings, cross-project)"

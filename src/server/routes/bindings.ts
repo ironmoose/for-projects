@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import type { IInstructionBindingService } from "../../domain";
+import type { IBindingService } from "../../domain";
 
-export function bindingRoutes(bindingService: IInstructionBindingService): Hono {
+export function bindingRoutes(bindingService: IBindingService): Hono {
   const app = new Hono();
 
   // GET /api/bindings?arn=tab:task:01KM...
