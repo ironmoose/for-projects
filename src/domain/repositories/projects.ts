@@ -2,25 +2,24 @@ import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
 import type { Project } from "../entities";
 import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
-import type { ProjectFilter } from "../services";
 
 export class ProjectRepository {
   constructor(private db: Database) {}
 
-  findAll(limit: number, offset: number, filter?: ProjectFilter): Project[] {
-    if (filter?.status) {
+  findAll(limit: number, offset: number, status?: string): Project[] {
+    if (status) {
       return this.db
         .query("SELECT * FROM projects WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?")
-        .all(filter.status, limit, offset) as Project[];
+        .all(status, limit, offset) as Project[];
     }
     return this.db
       .query("SELECT * FROM projects ORDER BY created_at DESC LIMIT ? OFFSET ?")
       .all(limit, offset) as Project[];
   }
 
-  count(filter?: ProjectFilter): number {
-    if (filter?.status) {
-      return (this.db.query("SELECT COUNT(*) as total FROM projects WHERE status = ?").get(filter.status) as { total: number }).total;
+  count(status?: string): number {
+    if (status) {
+      return (this.db.query("SELECT COUNT(*) as total FROM projects WHERE status = ?").get(status) as { total: number }).total;
     }
     return (this.db.query("SELECT COUNT(*) as total FROM projects").get() as { total: number }).total;
   }
@@ -70,12 +69,5 @@ export class ProjectRepository {
       .run(name, description, status, now, id);
 
     return this.findById(id)!;
-  }
-
-  delete(id: string): boolean {
-    const result = this.db
-      .query("DELETE FROM projects WHERE id = ?")
-      .run(id);
-    return result.changes > 0;
   }
 }

@@ -1,713 +1,162 @@
-#!/bin/bash
-# Traffic simulator — creates projects, tasks, workflows, phases, instructions, bindings
-# and cycles through status changes to trigger WebSocket events.
-# Run with: bash scripts/simulate-traffic.sh
-
-API="http://localhost:3000/api"
-
-jq_id() { python3 -c "import sys,json; print(json.load(sys.stdin)['id'])"; }
-
-echo "🚀 Starting traffic simulation..."
-echo ""
-
-# --- Projects ---
-echo "━━━ Creating projects ━━━"
-
-P1=$(curl -s -X POST "$API/projects" -H 'Content-Type: application/json' \
-  -d '{"name":"Apollo Mission Control","description":"Real-time telemetry dashboard for spacecraft monitoring systems"}' | jq_id)
-echo "✓ Project: Apollo Mission Control ($P1)"
-sleep 1
-
-P2=$(curl -s -X POST "$API/projects" -H 'Content-Type: application/json' \
-  -d '{"name":"Nebula Search Engine","description":"Distributed search indexing pipeline with fault-tolerant sharding"}' | jq_id)
-echo "✓ Project: Nebula Search Engine ($P2)"
-sleep 1
-
-P3=$(curl -s -X POST "$API/projects" -H 'Content-Type: application/json' \
-  -d '{"name":"Quantum Auth","description":"Zero-knowledge proof authentication service for edge deployments"}' | jq_id)
-echo "✓ Project: Quantum Auth ($P3)"
-sleep 1
-
-# --- Tasks for Apollo ---
-echo ""
-echo "━━━ Creating tasks for Apollo ━━━"
-
-T1=$(curl -s -X POST "$API/projects/$P1/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Design telemetry ingestion pipeline","type":"design","effort":"high","priority":9}' | jq_id)
-echo "✓ Task: Design telemetry pipeline ($T1)"
-sleep 1
-
-T2=$(curl -s -X POST "$API/projects/$P1/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Implement WebSocket event bus","type":"implementation","effort":"moderate","priority":8}' | jq_id)
-echo "✓ Task: Implement WebSocket event bus ($T2)"
-sleep 1
-
-T3=$(curl -s -X POST "$API/projects/$P1/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Write integration tests for event replay","type":"testing","effort":"moderate","priority":7}' | jq_id)
-echo "✓ Task: Write integration tests ($T3)"
-sleep 1
-
-T4=$(curl -s -X POST "$API/projects/$P1/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Set up monitoring dashboards","type":"implementation","effort":"low","priority":5}' | jq_id)
-echo "✓ Task: Set up monitoring ($T4)"
-sleep 1
-
-# --- Tasks for Nebula ---
-echo ""
-echo "━━━ Creating tasks for Nebula ━━━"
-
-T5=$(curl -s -X POST "$API/projects/$P2/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Research distributed indexing strategies","type":"research","effort":"high","priority":10}' | jq_id)
-echo "✓ Task: Research indexing strategies ($T5)"
-sleep 1
-
-T6=$(curl -s -X POST "$API/projects/$P2/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Build shard rebalancing algorithm","type":"implementation","effort":"extreme","priority":9}' | jq_id)
-echo "✓ Task: Build shard rebalancing ($T6)"
-sleep 1
-
-# --- Tasks for Quantum Auth ---
-echo ""
-echo "━━━ Creating tasks for Quantum Auth ━━━"
-
-T7=$(curl -s -X POST "$API/projects/$P3/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Prototype ZK-proof verification circuit","type":"research","effort":"extreme","priority":10}' | jq_id)
-echo "✓ Task: ZK-proof prototype ($T7)"
-sleep 1
-
-T8=$(curl -s -X POST "$API/projects/$P3/tasks" -H 'Content-Type: application/json' \
-  -d '{"title":"Design API surface for auth endpoints","type":"design","effort":"moderate","priority":8}' | jq_id)
-echo "✓ Task: Design auth API ($T8)"
-sleep 2
-
-# --- Status transitions ---
-echo ""
-echo "━━━ Simulating work — status transitions ━━━"
-
-echo "→ Apollo: moving to active"
-curl -s -X PATCH "$API/projects/$P1" -H 'Content-Type: application/json' -d '{"status":"active"}' > /dev/null
-sleep 1.5
-
-echo "→ Task: telemetry pipeline → in_progress"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T1" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 2
-
-echo "→ Task: telemetry pipeline → done"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T1" -H 'Content-Type: application/json' -d '{"status":"done"}' > /dev/null
-sleep 1.5
-
-echo "→ Task: WebSocket event bus → in_progress"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T2" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 2
-
-echo "→ Task: integration tests → in_progress"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T3" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 1
-
-echo "→ Nebula: moving to active"
-curl -s -X PATCH "$API/projects/$P2" -H 'Content-Type: application/json' -d '{"status":"active"}' > /dev/null
-sleep 1
-
-echo "→ Task: research indexing → in_progress"
-curl -s -X PATCH "$API/projects/$P2/tasks/$T5" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 2
-
-echo "→ Task: WebSocket event bus → done"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T2" -H 'Content-Type: application/json' -d '{"status":"done"}' > /dev/null
-sleep 1
-
-echo "→ Task: research indexing → done"
-curl -s -X PATCH "$API/projects/$P2/tasks/$T5" -H 'Content-Type: application/json' -d '{"status":"done"}' > /dev/null
-sleep 1
-
-echo "→ Quantum Auth: moving to active"
-curl -s -X PATCH "$API/projects/$P3" -H 'Content-Type: application/json' -d '{"status":"active"}' > /dev/null
-sleep 1
-
-echo "→ Task: ZK-proof → in_progress"
-curl -s -X PATCH "$API/projects/$P3/tasks/$T7" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 2
-
-# --- Workflow with phases ---
-echo ""
-echo "━━━ Creating workflow pipeline ━━━"
-
-WF=$(curl -s -X POST "$API/workflows" -H 'Content-Type: application/json' \
-  -d '{"goal":"Deploy telemetry pipeline to staging environment","status":"running"}' | jq_id)
-echo "✓ Workflow: Deploy telemetry ($WF)"
-sleep 1
-
-# Create phases
-PH1=$(curl -s -X POST "$API/workflows/$WF/phases" -H 'Content-Type: application/json' \
-  -d '{"title":"Analysis","position":0}' | jq_id)
-echo "✓ Phase 0: Analysis ($PH1)"
-sleep 1
-
-PH2=$(curl -s -X POST "$API/workflows/$WF/phases" -H 'Content-Type: application/json' \
-  -d '{"title":"Planning","position":1}' | jq_id)
-echo "✓ Phase 1: Planning ($PH2)"
-sleep 1
-
-PH3=$(curl -s -X POST "$API/workflows/$WF/phases" -H 'Content-Type: application/json' \
-  -d '{"title":"Execution","position":2}' | jq_id)
-echo "✓ Phase 2: Execution ($PH3)"
-sleep 1
-
-PH4=$(curl -s -X POST "$API/workflows/$WF/phases" -H 'Content-Type: application/json' \
-  -d '{"title":"Validation","position":3}' | jq_id)
-echo "✓ Phase 3: Validation ($PH4)"
-sleep 1
-
-PH5=$(curl -s -X POST "$API/workflows/$WF/phases" -H 'Content-Type: application/json' \
-  -d '{"title":"Reporting","position":4}' | jq_id)
-echo "✓ Phase 4: Reporting ($PH5)"
-sleep 1
-
-# Create instructions within phases
-INST="$API/workflows/$WF/phases"
-
-# -- Analysis phase (5 instructions) --
-echo ""
-echo "  ── Analysis phase ──"
-
-A1=$(curl -s -X POST "$INST/$PH1/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Inventory current staging nodes. Document CPU, memory, disk, and k8s version per node.","agent":"Executor"}' | jq_id)
-echo "  ✓ Inventory staging nodes ($A1)"
-
-A2=$(curl -s -X POST "$INST/$PH1/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Map network topology. Document VPC peering, load balancer config, DNS entries, and firewall rules.","agent":"Executor"}' | jq_id)
-echo "  ✓ Map network topology ($A2)"
-
-A3=$(curl -s -X POST "$INST/$PH1/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Catalog existing services and their resource consumption. Note CPU/memory requests vs limits.","agent":"Executor"}' | jq_id)
-echo "  ✓ Catalog existing services ($A3)"
-
-A4=$(curl -s -X POST "$INST/$PH1/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Identify capacity headroom. Calculate remaining allocatable resources after existing workloads.","agent":"Executor"}' | jq_id)
-echo "  ✓ Identify capacity headroom ($A4)"
-
-A5=$(curl -s -X POST "$INST/$PH1/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Summarize infrastructure analysis. Produce a readiness assessment with go/no-go recommendation.","agent":"Executor"}' | jq_id)
-echo "  ✓ Summarize analysis ($A5)"
-sleep 1
-
-# -- Planning phase (4 instructions) --
-echo ""
-echo "  ── Planning phase ──"
-
-B1=$(curl -s -X POST "$INST/$PH2/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Define resource requirements for telemetry pipeline. Specify pod count, CPU/memory requests, PVC sizes.","agent":"Executor"}' | jq_id)
-echo "  ✓ Define resource requirements ($B1)"
-
-B2=$(curl -s -X POST "$INST/$PH2/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Design rollback strategy. Document blue-green switch procedure, data migration rollback, and circuit breakers.","agent":"Executor"}' | jq_id)
-echo "  ✓ Design rollback strategy ($B2)"
-
-B3=$(curl -s -X POST "$INST/$PH2/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Define health check endpoints. Specify /healthz, /readyz, and /livez contracts with expected response shapes.","agent":"Executor"}' | jq_id)
-echo "  ✓ Define health checks ($B3)"
-
-B4=$(curl -s -X POST "$INST/$PH2/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Draft the deployment plan document. Consolidate resource requirements, rollback strategy, and health checks into a single runbook.","agent":"Executor"}' | jq_id)
-echo "  ✓ Draft deployment plan ($B4)"
-sleep 1
-
-# -- Execution phase (10 instructions) --
-echo ""
-echo "  ── Execution phase ──"
-
-C1=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Create the telemetry namespace and apply resource quotas.","agent":"Executor"}' | jq_id)
-echo "  ✓ Create namespace ($C1)"
-
-C2=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Deploy ConfigMaps and Secrets for telemetry pipeline configuration.","agent":"Executor"}' | jq_id)
-echo "  ✓ Deploy ConfigMaps/Secrets ($C2)"
-
-C3=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Apply PersistentVolumeClaim manifests for telemetry data storage.","agent":"Executor"}' | jq_id)
-echo "  ✓ Apply PVCs ($C3)"
-
-C4=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Deploy the telemetry collector StatefulSet. Wait for all replicas to reach Running state.","agent":"Executor"}' | jq_id)
-echo "  ✓ Deploy collector StatefulSet ($C4)"
-
-C5=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Deploy the telemetry aggregator Deployment. Verify HPA is configured correctly.","agent":"Executor"}' | jq_id)
-echo "  ✓ Deploy aggregator ($C5)"
-
-C6=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Apply Service and Ingress manifests. Verify DNS resolution and TLS termination.","agent":"Executor"}' | jq_id)
-echo "  ✓ Apply Service/Ingress ($C6)"
-
-C7=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Run pod health verification. Confirm all pods pass readiness and liveness probes.","agent":"Executor"}' | jq_id)
-echo "  ✓ Verify pod health ($C7)"
-
-C8=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Execute smoke tests against the deployed endpoints. Verify basic ingest and query paths.","agent":"Executor"}' | jq_id)
-echo "  ✓ Run smoke tests ($C8)"
-
-C9=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Configure Prometheus scrape targets and Grafana dashboards for the new services.","agent":"Executor"}' | jq_id)
-echo "  ✓ Configure monitoring ($C9)"
-
-C10=$(curl -s -X POST "$INST/$PH3/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Switch traffic from old pipeline to new via service mesh weighted routing. Start at 10%, verify, then 100%.","agent":"Executor"}' | jq_id)
-echo "  ✓ Switch traffic ($C10)"
-sleep 1
-
-# -- Validation phase (6 instructions) --
-echo ""
-echo "  ── Validation phase ──"
-
-D1=$(curl -s -X POST "$INST/$PH4/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Run the full integration test suite against the staging telemetry endpoints.","agent":"Executor"}' | jq_id)
-echo "  ✓ Run integration tests ($D1)"
-
-D2=$(curl -s -X POST "$INST/$PH4/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Verify end-to-end telemetry data flow. Inject synthetic events and confirm they appear in the query layer within SLA.","agent":"Executor"}' | jq_id)
-echo "  ✓ Verify E2E data flow ($D2)"
-
-D3=$(curl -s -X POST "$INST/$PH4/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Load test the ingest path. Target 5k events/sec sustained for 10 minutes. Record p50, p95, p99 latencies.","agent":"Executor"}' | jq_id)
-echo "  ✓ Load test ingest ($D3)"
-
-D4=$(curl -s -X POST "$INST/$PH4/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Validate rollback procedure. Trigger a simulated failure, execute rollback, verify service restoration under 2 minutes.","agent":"Executor"}' | jq_id)
-echo "  ✓ Validate rollback ($D4)"
-
-D5=$(curl -s -X POST "$INST/$PH4/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Check alerting rules. Verify that Prometheus alerts fire correctly for pod crash, high latency, and disk pressure scenarios.","agent":"Executor"}' | jq_id)
-echo "  ✓ Check alerting ($D5)"
-
-D6=$(curl -s -X POST "$INST/$PH4/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Produce validation summary. Consolidate all test results, latency numbers, and rollback timing into a pass/fail matrix.","agent":"Executor"}' | jq_id)
-echo "  ✓ Produce validation summary ($D6)"
-sleep 1
-
-# -- Reporting phase (3 instructions) --
-echo ""
-echo "  ── Reporting phase ──"
-
-E1=$(curl -s -X POST "$INST/$PH5/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Draft deployment report. Summarize what was deployed, configuration changes, and resource consumption delta.","agent":"Executor"}' | jq_id)
-echo "  ✓ Draft deployment report ($E1)"
-
-E2=$(curl -s -X POST "$INST/$PH5/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Document follow-up items. List remaining work for production rollout: capacity planning, runbook updates, on-call briefing.","agent":"Executor"}' | jq_id)
-echo "  ✓ Document follow-ups ($E2)"
-
-E3=$(curl -s -X POST "$INST/$PH5/instructions" -H 'Content-Type: application/json' \
-  -d '{"prompt":"Compile final go/no-go recommendation for production deployment based on all validation results.","agent":"Executor"}' | jq_id)
-echo "  ✓ Go/no-go recommendation ($E3)"
-sleep 3
-
-# --- Bindings: link instructions to tasks ---
-echo ""
-echo "━━━ Creating bindings (instruction → task) ━━━"
-BIND="$API/workflows/$WF/phases"
-
-# Analysis instructions → Apollo telemetry task (designed the pipeline they're analyzing)
-echo "  ── Analysis phase bindings ──"
-curl -s -X POST "$BIND/$PH1/instructions/$A1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Inventory nodes → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH1/instructions/$A1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
-echo "  ✓ Inventory nodes → monitoring dashboards task"
-
-curl -s -X POST "$BIND/$PH1/instructions/$A3/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Catalog services → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH1/instructions/$A5/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
-echo "  ✓ Readiness summary → Apollo project"
-
-curl -s -X POST "$BIND/$PH1/instructions/$A5/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Readiness summary → telemetry pipeline task"
-sleep 1
-
-# Planning instructions → related tasks
-echo "  ── Planning phase bindings ──"
-curl -s -X POST "$BIND/$PH2/instructions/$B1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Resource requirements → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH2/instructions/$B1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
-echo "  ✓ Resource requirements → monitoring dashboards task"
-
-curl -s -X POST "$BIND/$PH2/instructions/$B3/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T2\"}" > /dev/null
-echo "  ✓ Health checks → WebSocket event bus task"
-
-curl -s -X POST "$BIND/$PH2/instructions/$B4/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
-echo "  ✓ Deployment plan → Apollo project"
-
-curl -s -X POST "$BIND/$PH2/instructions/$B4/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Deployment plan → telemetry pipeline task"
-sleep 1
-
-# Execution instructions → tasks
-echo "  ── Execution phase bindings ──"
-curl -s -X POST "$BIND/$PH3/instructions/$C4/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Deploy collector → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH3/instructions/$C4/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T2\"}" > /dev/null
-echo "  ✓ Deploy collector → WebSocket event bus task"
-
-curl -s -X POST "$BIND/$PH3/instructions/$C8/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T3\"}" > /dev/null
-echo "  ✓ Smoke tests → integration tests task"
-
-curl -s -X POST "$BIND/$PH3/instructions/$C9/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
-echo "  ✓ Configure monitoring → monitoring dashboards task"
-
-curl -s -X POST "$BIND/$PH3/instructions/$C10/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Switch traffic → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH3/instructions/$C10/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T6\"}" > /dev/null
-echo "  ✓ Switch traffic → shard rebalancing task"
-sleep 1
-
-# Validation instructions → tasks
-echo "  ── Validation phase bindings ──"
-curl -s -X POST "$BIND/$PH4/instructions/$D1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T3\"}" > /dev/null
-echo "  ✓ Integration tests → integration tests task"
-
-curl -s -X POST "$BIND/$PH4/instructions/$D1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T2\"}" > /dev/null
-echo "  ✓ Integration tests → WebSocket event bus task"
-
-curl -s -X POST "$BIND/$PH4/instructions/$D3/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Load test → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH4/instructions/$D5/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T4\"}" > /dev/null
-echo "  ✓ Check alerting → monitoring dashboards task"
-
-curl -s -X POST "$BIND/$PH4/instructions/$D6/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
-echo "  ✓ Validation summary → Apollo project"
-
-curl -s -X POST "$BIND/$PH4/instructions/$D6/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Validation summary → telemetry pipeline task"
-sleep 1
-
-# Reporting instructions → tasks/projects
-echo "  ── Reporting phase bindings ──"
-curl -s -X POST "$BIND/$PH5/instructions/$E1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
-echo "  ✓ Deployment report → Apollo project"
-
-curl -s -X POST "$BIND/$PH5/instructions/$E1/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Deployment report → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH5/instructions/$E3/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:project:$P1\"}" > /dev/null
-echo "  ✓ Go/no-go → Apollo project"
-
-curl -s -X POST "$BIND/$PH5/instructions/$E3/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T1\"}" > /dev/null
-echo "  ✓ Go/no-go → telemetry pipeline task"
-
-curl -s -X POST "$BIND/$PH5/instructions/$E3/bindings" -H 'Content-Type: application/json' \
-  -d "{\"arn\":\"tab:task:$T7\"}" > /dev/null
-echo "  ✓ Go/no-go → ZK-proof task (cross-project reference)"
-sleep 1
-
-# --- Pipeline progression ---
-echo ""
-echo "━━━ Pipeline progressing ━━━"
-
-# Analysis phase outputs
-echo "→ Analysis: inventory nodes"
-curl -s -X PATCH "$INST/$PH1/instructions/$A1" -H 'Content-Type: application/json' \
-  -d '{"output":"4 nodes: node-1 (4cpu/16GB), node-2 (4cpu/16GB), node-3 (8cpu/32GB), node-4 (8cpu/32GB). k8s 1.28.3."}' > /dev/null
-sleep 1
-
-echo "→ Analysis: network topology"
-curl -s -X PATCH "$INST/$PH1/instructions/$A2" -H 'Content-Type: application/json' \
-  -d '{"output":"3 VPCs peered (staging, shared-services, data). ALB with TLS termination. Route53 private hosted zone. SG allows 443/8080."}' > /dev/null
-sleep 1
-
-echo "→ Analysis: existing services"
-curl -s -X PATCH "$INST/$PH1/instructions/$A3" -H 'Content-Type: application/json' \
-  -d '{"output":"2 services: auth-svc (500m/1Gi req, 1cpu/2Gi lim), gateway-svc (250m/512Mi req, 500m/1Gi lim). Both healthy."}' > /dev/null
-sleep 1
-
-echo "→ Analysis: capacity headroom"
-curl -s -X PATCH "$INST/$PH1/instructions/$A4" -H 'Content-Type: application/json' \
-  -d '{"output":"Allocatable remaining: 21.25 CPU, 89.5Gi memory. Plenty of headroom for telemetry pipeline (est. 4cpu/16Gi)."}' > /dev/null
-sleep 1
-
-echo "→ Analysis: readiness summary"
-curl -s -X PATCH "$INST/$PH1/instructions/$A5" -H 'Content-Type: application/json' \
-  -d '{"output":"GO. Infrastructure has 5x headroom on CPU, 5.5x on memory. Network topology supports new ingress. No blockers identified."}' > /dev/null
-sleep 2
-
-# Planning phase outputs
-echo "→ Planning: resource requirements"
-curl -s -X PATCH "$INST/$PH2/instructions/$B1" -H 'Content-Type: application/json' \
-  -d '{"output":"3 collector pods (500m/2Gi each), 2 aggregator pods (1cpu/4Gi each). 50Gi PVC for buffer. Total: 3.5cpu/14Gi."}' > /dev/null
-sleep 1
-
-echo "→ Planning: rollback strategy"
-curl -s -X PATCH "$INST/$PH2/instructions/$B2" -H 'Content-Type: application/json' \
-  -d '{"output":"Blue-green via Istio VirtualService weight. Rollback: shift weight to old, drain new, delete. Data: append-only, no migration needed. Circuit breaker: 5xx > 5% triggers auto-rollback."}' > /dev/null
-sleep 1
-
-echo "→ Planning: health checks"
-curl -s -X PATCH "$INST/$PH2/instructions/$B3" -H 'Content-Type: application/json' \
-  -d '{"output":"/healthz: 200 + {\"status\":\"ok\"}. /readyz: checks Kafka connectivity + buffer disk. /livez: goroutine leak detection. All 3s interval, 5s timeout."}' > /dev/null
-sleep 1
-
-echo "→ Planning: deployment plan"
-curl -s -X PATCH "$INST/$PH2/instructions/$B4" -H 'Content-Type: application/json' \
-  -d '{"output":"Runbook complete. 12 steps, estimated 45 min. Requires: kubectl access, Istio CLI, Grafana admin. Approval: SRE team lead."}' > /dev/null
-sleep 2
-
-# Interleave task status changes
-echo "→ Task: integration tests → done"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T3" -H 'Content-Type: application/json' -d '{"status":"done"}' > /dev/null
-sleep 1
-
-echo "→ Task: monitoring dashboards → in_progress"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T4" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 1
-
-# Execution phase outputs
-echo "→ Execution: create namespace"
-curl -s -X PATCH "$INST/$PH3/instructions/$C1" -H 'Content-Type: application/json' \
-  -d '{"output":"Namespace telemetry-staging created. ResourceQuota applied: 8cpu/32Gi limit."}' > /dev/null
-sleep 1
-
-echo "→ Execution: ConfigMaps/Secrets"
-curl -s -X PATCH "$INST/$PH3/instructions/$C2" -H 'Content-Type: application/json' \
-  -d '{"output":"3 ConfigMaps (collector-config, aggregator-config, pipeline-config) and 2 Secrets (kafka-creds, tls-certs) applied."}' > /dev/null
-sleep 1
-
-echo "→ Execution: PVCs"
-curl -s -X PATCH "$INST/$PH3/instructions/$C3" -H 'Content-Type: application/json' \
-  -d '{"output":"3x 50Gi PVCs bound (gp3). Provisioning took 8s. All in RWO mode."}' > /dev/null
-sleep 1
-
-echo "→ Execution: collector StatefulSet"
-curl -s -X PATCH "$INST/$PH3/instructions/$C4" -H 'Content-Type: application/json' \
-  -d '{"output":"StatefulSet telemetry-collector: 3/3 replicas Running. Ordinal startup completed in 34s."}' > /dev/null
-sleep 1
-
-echo "→ Task: shard rebalancing → in_progress"
-curl -s -X PATCH "$API/projects/$P2/tasks/$T6" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 1
-
-echo "→ Execution: aggregator Deployment"
-curl -s -X PATCH "$INST/$PH3/instructions/$C5" -H 'Content-Type: application/json' \
-  -d '{"output":"Deployment telemetry-aggregator: 2/2 replicas Ready. HPA configured: min 2, max 8, target 70% CPU."}' > /dev/null
-sleep 1
-
-echo "→ Execution: Service/Ingress"
-curl -s -X PATCH "$INST/$PH3/instructions/$C6" -H 'Content-Type: application/json' \
-  -d '{"output":"ClusterIP services created. Ingress with TLS via cert-manager. DNS resolves: telemetry.staging.internal → ALB."}' > /dev/null
-sleep 1
-
-echo "→ Execution: pod health"
-curl -s -X PATCH "$INST/$PH3/instructions/$C7" -H 'Content-Type: application/json' \
-  -d '{"output":"All 5 pods pass readiness (avg 1.2s) and liveness (avg 0.8s) probes. Zero restarts."}' > /dev/null
-sleep 1
-
-echo "→ Execution: smoke tests"
-curl -s -X PATCH "$INST/$PH3/instructions/$C8" -H 'Content-Type: application/json' \
-  -d '{"output":"Smoke tests: 12/12 passed. Ingest path: 200 OK (avg 23ms). Query path: 200 OK (avg 41ms). Batch ingest: 202 Accepted."}' > /dev/null
-sleep 1
-
-echo "→ Execution: monitoring"
-curl -s -X PATCH "$INST/$PH3/instructions/$C9" -H 'Content-Type: application/json' \
-  -d '{"output":"Prometheus targets: 5/5 UP. Grafana dashboard telemetry-staging imported (12 panels). Alert rules: 6 configured."}' > /dev/null
-sleep 1
-
-echo "→ Execution: traffic switch"
-curl -s -X PATCH "$INST/$PH3/instructions/$C10" -H 'Content-Type: application/json' \
-  -d '{"output":"Traffic shifted 10% → verified 5 min → 50% → verified 5 min → 100%. Zero errors during migration. Old pipeline drained."}' > /dev/null
-sleep 2
-
-# Validation phase outputs
-echo "→ Validation: integration tests"
-curl -s -X PATCH "$INST/$PH4/instructions/$D1" -H 'Content-Type: application/json' \
-  -d '{"output":"Integration suite: 47/47 passed. Covering: ingest, query, batch, auth, rate-limiting, error handling."}' > /dev/null
-sleep 1
-
-echo "→ Validation: E2E data flow"
-curl -s -X PATCH "$INST/$PH4/instructions/$D2" -H 'Content-Type: application/json' \
-  -d '{"output":"1000 synthetic events injected. All appeared in query layer within 1.8s (SLA: 5s). Zero data loss."}' > /dev/null
-sleep 1
-
-echo "→ Validation: load test"
-curl -s -X PATCH "$INST/$PH4/instructions/$D3" -H 'Content-Type: application/json' \
-  -d '{"output":"5k events/sec sustained 10 min. p50: 12ms, p95: 38ms, p99: 67ms. Zero errors. CPU peaked at 62%. Memory stable at 71%."}' > /dev/null
-sleep 1
-
-echo "→ Task: monitoring dashboards → done"
-curl -s -X PATCH "$API/projects/$P1/tasks/$T4" -H 'Content-Type: application/json' -d '{"status":"done"}' > /dev/null
-sleep 1
-
-echo "→ Validation: rollback test"
-curl -s -X PATCH "$INST/$PH4/instructions/$D4" -H 'Content-Type: application/json' \
-  -d '{"output":"Simulated OOM crash on aggregator. Circuit breaker triggered at 5.2% error rate. Rollback completed in 47s (target: <120s). Service restored."}' > /dev/null
-sleep 1
-
-echo "→ Validation: alerting"
-curl -s -X PATCH "$INST/$PH4/instructions/$D5" -H 'Content-Type: application/json' \
-  -d '{"output":"All 6 alert rules verified. Pod crash: fired in 15s. High latency: fired at p99 > 200ms. Disk pressure: fired at 85%. PagerDuty integration confirmed."}' > /dev/null
-sleep 1
-
-echo "→ Task: auth API design → in_progress"
-curl -s -X PATCH "$API/projects/$P3/tasks/$T8" -H 'Content-Type: application/json' -d '{"status":"in_progress"}' > /dev/null
-sleep 1
-
-echo "→ Validation: summary"
-curl -s -X PATCH "$INST/$PH4/instructions/$D6" -H 'Content-Type: application/json' \
-  -d '{"output":"PASS. All tests green. Latency within SLA. Rollback under target. Alerts functional. Ready for production."}' > /dev/null
-sleep 2
-
-# Reporting phase outputs
-echo "→ Reporting: deployment report"
-curl -s -X PATCH "$INST/$PH5/instructions/$E1" -H 'Content-Type: application/json' \
-  -d '{"output":"Deployed telemetry pipeline v1.0 to staging. 5 pods, 3.5cpu/14Gi total. Config: Kafka 3-partition ingest, 2-replica aggregation. Delta: +3.5cpu/+14Gi from baseline."}' > /dev/null
-sleep 1
-
-echo "→ Reporting: follow-ups"
-curl -s -X PATCH "$INST/$PH5/instructions/$E2" -H 'Content-Type: application/json' \
-  -d '{"output":"Follow-ups: 1) Production capacity planning (node-5 may be needed). 2) Update runbook with rollback timings. 3) Brief on-call team. 4) Schedule production deploy window."}' > /dev/null
-sleep 1
-
-echo "→ Reporting: go/no-go"
-curl -s -X PATCH "$INST/$PH5/instructions/$E3" -H 'Content-Type: application/json' \
-  -d '{"output":"GO for production. All validation gates passed. Recommend Tuesday 2am ET deploy window with SRE team lead approval."}' > /dev/null
-sleep 1
-
-# --- Resolve endpoint exercising ---
-echo ""
-echo "━━━ Exercising resolve endpoints ━━━"
-
-# Helper: parse JSON response, print fallback on failure
-parse_or_fail() {
-  local resp
-  resp=$(cat)
-  if [ -z "$resp" ]; then
-    echo "  ✗ Empty response (is the server running with latest code?)"
-    return 1
-  fi
-  echo "$resp" | python3 -c "$1" 2>/dev/null || echo "  ✗ Unexpected response: $resp"
-}
-
-# Single ARN resolve — project
-echo "→ Resolve: single project ARN"
-curl -s "$API/resolve?arn=tab:project:$P1" | parse_or_fail "
-import sys,json; d=json.load(sys.stdin)['data']
-print(f\"  ✓ {d['arn']} → {d['type']}: {d.get('data',{}).get('name','?')}\")
-"
-sleep 1
-
-# Single ARN resolve — task
-echo "→ Resolve: single task ARN"
-curl -s "$API/resolve?arn=tab:task:$T1" | parse_or_fail "
-import sys,json; d=json.load(sys.stdin)['data']
-print(f\"  ✓ {d['arn']} → {d['type']}: {d.get('data',{}).get('title','?')}\")
-"
-sleep 1
-
-# Batch ARN resolve — multiple entities
-echo "→ Resolve: batch (3 ARNs)"
-curl -s "$API/resolve?arn=tab:project:$P1&arn=tab:task:$T1&arn=tab:task:$T5" | parse_or_fail "
-import sys,json
-data=json.load(sys.stdin)['data']
-for d in data:
-    name = d.get('data',{}).get('name') or d.get('data',{}).get('title') or '?'
-    print(f\"  ✓ {d['type']}: {name}\")
-"
-sleep 1
-
-# Resolve instruction with compile=prompt — the new prompt blob assembly
-echo "→ Resolve: compile=prompt on instruction with bindings + output"
-curl -s "$API/resolve?arn=tab:instruction:$A5&compile=prompt" | parse_or_fail "
-import sys,json
-d=json.load(sys.stdin)['data']
-inst=d['instruction']
-secs=d['sections']
-warns=d['warnings']
-print(f\"  ✓ Compiled instruction (prompt: {len(inst['prompt'])} chars)\")
-print(f\"    {len(secs)} sections, {len(warns)} warnings\")
-for s in secs:
-    trunc = ' [truncated]' if s['truncated'] else ''
-    print(f\"    → {s['header']} ({s['type']}): {len(s['content'])} chars{trunc}\")
-"
-sleep 1
-
-# Resolve instruction with no bindings
-echo "→ Resolve: compile=prompt on instruction with no bindings"
-curl -s "$API/resolve?arn=tab:instruction:$A2&compile=prompt" | parse_or_fail "
-import sys,json
-d=json.load(sys.stdin)['data']
-print(f\"  ✓ No-binding instruction: {len(d['sections'])} sections, {len(d['warnings'])} warnings\")
-"
-sleep 1
-
-# Cross-project binding resolution — E3 binds to Apollo project + tasks + ZK-proof task
-echo "→ Resolve: compile=prompt on cross-project instruction (go/no-go)"
-curl -s "$API/resolve?arn=tab:instruction:$E3&compile=prompt" | parse_or_fail "
-import sys,json
-d=json.load(sys.stdin)['data']
-secs=d['sections']
-print(f\"  ✓ Cross-project instruction: {len(secs)} sections\")
-for s in secs:
-    print(f\"    → {s['header']} ({s['type']}): {len(s['content'])} chars\")
-"
-sleep 1
-
-# Resolve workflow ARN
-echo "→ Resolve: workflow ARN"
-curl -s "$API/resolve?arn=tab:workflow:$WF" | parse_or_fail "
-import sys,json; d=json.load(sys.stdin)['data']
-print(f\"  ✓ {d['type']}: {d.get('data',{}).get('goal','?')[:60]}...\")
-"
-sleep 1
+#!/usr/bin/env bash
+# simulate-traffic.sh — exercise the full API surface for WebSocket traffic
+set -euo pipefail
+
+BASE="${1:-http://localhost:3000}"
+API="$BASE/api"
+
+# Helpers
+post()  { curl -sf -X POST   -H 'Content-Type: application/json' -d "$2" "$1"; }
+patch() { curl -sf -X PATCH  -H 'Content-Type: application/json' -d "$2" "$1"; }
+del()   { curl -sf -X DELETE -H 'Content-Type: application/json' -d "$2" "$1"; }
+get()   { curl -sf "$1"; }
+
+jid()   { echo "$1" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4; }
+
+echo "=== Creating projects ==="
+P1=$(post "$API/projects" '{"name":"Alpha","description":"First project"}')
+P1_ID=$(jid "$P1")
+echo "  Project 1: $P1_ID"
+
+P2=$(post "$API/projects" '{"name":"Beta","description":"Second project"}')
+P2_ID=$(jid "$P2")
+echo "  Project 2: $P2_ID"
+
+P3=$(post "$API/projects" '{"name":"Gamma","description":"Third project","status":"active"}')
+P3_ID=$(jid "$P3")
+echo "  Project 3: $P3_ID"
+
+echo "=== Creating tasks under Alpha ==="
+T1=$(post "$API/projects/$P1_ID/tasks" '{"summary":"Design the schema"}')
+T1_ID=$(jid "$T1")
+echo "  Task 1: $T1_ID"
+
+T2=$(post "$API/projects/$P1_ID/tasks" '{"summary":"Write the migration","context":"SQL migration file"}')
+T2_ID=$(jid "$T2")
+echo "  Task 2: $T2_ID"
+
+T3=$(post "$API/projects/$P1_ID/tasks" '{"summary":"Implement the service layer"}')
+T3_ID=$(jid "$T3")
+echo "  Task 3: $T3_ID"
+
+echo "=== Creating tasks under Beta ==="
+T4=$(post "$API/projects/$P2_ID/tasks" '{"summary":"Research competitors"}')
+T4_ID=$(jid "$T4")
+echo "  Task 4: $T4_ID"
+
+T5=$(post "$API/projects/$P2_ID/tasks" '{"summary":"Draft proposal"}')
+T5_ID=$(jid "$T5")
+echo "  Task 5: $T5_ID"
+
+echo "=== Creating templates ==="
+TPL1=$(post "$API/templates" '{"name":"Research","description":"Deep-dive research task","prompt":"Perform thorough research on the target."}')
+TPL1_ID=$(jid "$TPL1")
+echo "  Template Research: $TPL1_ID"
+
+TPL2=$(post "$API/templates" '{"name":"Simplify","description":"Simplification pass","prompt":"Simplify and streamline the target."}')
+TPL2_ID=$(jid "$TPL2")
+echo "  Template Simplify: $TPL2_ID"
+
+TPL3=$(post "$API/templates" '{"name":"Review","description":"Code review","prompt":"Review the target for correctness and quality."}')
+TPL3_ID=$(jid "$TPL3")
+echo "  Template Review: $TPL3_ID"
+
+TPL4=$(post "$API/templates" '{"name":"Implement","description":"Implementation task","prompt":"Implement the specified feature.","agent":"implementation"}')
+TPL4_ID=$(jid "$TPL4")
+echo "  Template Implement: $TPL4_ID"
+
+echo "=== Bulk create actions from templates (targeting projects) ==="
+A_P1=$(post "$API/actions" "{\"target\":\"tab:project:$P1_ID\",\"actions\":[{\"rank\":1,\"template_id\":\"$TPL1_ID\"},{\"rank\":2,\"template_id\":\"$TPL2_ID\"},{\"rank\":3,\"template_id\":\"$TPL3_ID\"}]}")
+echo "  Actions on project Alpha: $(echo "$A_P1" | grep -o '"id"' | wc -l | tr -d ' ') created"
+
+echo "=== Bulk create actions from templates (targeting tasks) ==="
+A_T1=$(post "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"actions\":[{\"rank\":1,\"template_id\":\"$TPL4_ID\"},{\"rank\":2,\"template_id\":\"$TPL3_ID\"}]}")
+echo "  Actions on task 1: $(echo "$A_T1" | grep -o '"id"' | wc -l | tr -d ' ') created"
+
+echo "=== Bulk create actions with explicit prompts (no template) ==="
+A_P2=$(post "$API/actions" "{\"target\":\"tab:project:$P2_ID\",\"actions\":[{\"rank\":1,\"prompt\":\"Audit all dependencies\"},{\"rank\":2,\"prompt\":\"Update changelog\",\"agent\":\"implementation\"},{\"rank\":3,\"prompt\":\"Run integration tests\"}]}")
+echo "  Actions on project Beta: $(echo "$A_P2" | grep -o '"id"' | wc -l | tr -d ' ') created"
+
+A_T4=$(post "$API/actions" "{\"target\":\"tab:task:$T4_ID\",\"actions\":[{\"rank\":1,\"prompt\":\"Compile competitor list\"},{\"rank\":2,\"prompt\":\"Summarize findings\"}]}")
+echo "  Actions on task 4: $(echo "$A_T4" | grep -o '"id"' | wc -l | tr -d ' ') created"
+
+echo "=== Reading back data ==="
+get "$API/projects" > /dev/null
+echo "  GET /api/projects"
+get "$API/projects/$P1_ID" > /dev/null
+echo "  GET /api/projects/$P1_ID"
+get "$API/projects/$P1_ID/tasks" > /dev/null
+echo "  GET /api/projects/$P1_ID/tasks"
+get "$API/templates" > /dev/null
+echo "  GET /api/templates"
+get "$API/actions?target=tab:project:$P1_ID" > /dev/null
+echo "  GET /api/actions?target=tab:project:$P1_ID"
+get "$API/actions?target=tab:task:$T1_ID" > /dev/null
+echo "  GET /api/actions?target=tab:task:$T1_ID"
+
+echo "=== Status transitions ==="
+# Project: active -> archived
+patch "$API/projects/$P3_ID" '{"status":"archived"}' > /dev/null
+echo "  Project Gamma: active -> archived"
+
+# Task: todo -> in_progress -> done
+patch "$API/projects/$P1_ID/tasks/$T1_ID" '{"status":"in_progress"}' > /dev/null
+echo "  Task 1: todo -> in_progress"
+patch "$API/projects/$P1_ID/tasks/$T1_ID" '{"status":"done"}' > /dev/null
+echo "  Task 1: in_progress -> done"
+
+patch "$API/projects/$P1_ID/tasks/$T2_ID" '{"status":"in_progress"}' > /dev/null
+echo "  Task 2: todo -> in_progress"
+
+patch "$API/projects/$P2_ID/tasks/$T4_ID" '{"status":"in_progress"}' > /dev/null
+echo "  Task 4: todo -> in_progress"
+patch "$API/projects/$P2_ID/tasks/$T4_ID" '{"status":"done"}' > /dev/null
+echo "  Task 4: in_progress -> done"
+
+echo "=== Bulk update actions ==="
+# Extract action IDs from project Beta
+A_P2_IDS=$(get "$API/actions?target=tab:project:$P2_ID")
+A_P2_ID1=$(echo "$A_P2_IDS" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+A_P2_ID2=$(echo "$A_P2_IDS" | grep -o '"id":"[^"]*"' | sed -n '2p' | cut -d'"' -f4)
+
+patch "$API/actions" "{\"target\":\"tab:project:$P2_ID\",\"actions\":[{\"id\":\"$A_P2_ID1\",\"prompt\":\"Audit all deps (updated)\"},{\"id\":\"$A_P2_ID2\",\"prompt\":\"Update CHANGELOG.md\"}]}" > /dev/null
+echo "  Updated 2 actions on project Beta"
+
+echo "=== Reorder pattern: bulk delete + bulk recreate ==="
+# Get current actions for task:T1
+EXISTING=$(get "$API/actions?target=tab:task:$T1_ID")
+DEL_IDS=$(echo "$EXISTING" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | paste -sd',' -)
+DEL_JSON="[$(echo "$DEL_IDS" | sed 's/,/","/g; s/^/"/; s/$/"/')]"
+
+del "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"ids\":$DEL_JSON}" > /dev/null
+echo "  Deleted actions from task 1"
+
+post "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"actions\":[{\"rank\":1,\"template_id\":\"$TPL3_ID\"},{\"rank\":2,\"template_id\":\"$TPL4_ID\"},{\"rank\":3,\"prompt\":\"Final verification\"}]}" > /dev/null
+echo "  Recreated actions on task 1 in new order"
+
+echo "=== Delete a template (actions survive) ==="
+curl -sf -X DELETE "$API/templates/$TPL2_ID" > /dev/null
+echo "  Deleted template Simplify ($TPL2_ID)"
+
+# Verify actions on project Alpha still exist
+REMAINING=$(get "$API/actions?target=tab:project:$P1_ID")
+REMAINING_COUNT=$(echo "$REMAINING" | grep -o '"id"' | wc -l | tr -d ' ')
+echo "  Actions remaining on project Alpha: $REMAINING_COUNT"
+
+echo "=== Template update ==="
+patch "$API/templates/$TPL1_ID" '{"prompt":"Perform exhaustive research on the target, including edge cases."}' > /dev/null
+echo "  Updated template Research prompt"
+
+echo "=== Additional reads for WebSocket exercise ==="
+get "$API/projects?status=active" > /dev/null
+echo "  GET /api/projects?status=active"
+get "$API/projects/$P2_ID/tasks?status=done" > /dev/null
+echo "  GET /api/projects/$P2_ID/tasks?status=done"
+get "$API/templates/$TPL3_ID" > /dev/null
+echo "  GET /api/templates/$TPL3_ID"
+get "$API/health" > /dev/null
+echo "  GET /api/health"
 
 echo ""
-echo "━━━ Completing workflow ━━━"
-
-echo "→ Workflow: pipeline complete"
-curl -s -X PATCH "$API/workflows/$WF" -H 'Content-Type: application/json' -d '{"status":"complete"}' > /dev/null
-sleep 1
-
-echo "→ Apollo: completed"
-curl -s -X PATCH "$API/projects/$P1" -H 'Content-Type: application/json' -d '{"status":"completed"}' > /dev/null
-
-echo ""
-echo "━━━ ✅ Simulation complete ━━━"
-echo ""
-echo "Created:"
-echo "  • 3 projects (Apollo, Nebula, Quantum Auth)"
-echo "  • 8 tasks across projects"
-echo "  • 1 workflow with 5 phases, 28 instructions"
-echo "  • 27 bindings across instructions → tasks/projects"
-echo "  • ~90 events over ~2 minutes"
-echo ""
-echo "Exercised:"
-echo "  • GET /api/resolve?arn= (single + batch)"
-echo "  • GET /api/resolve?arn=&compile=prompt (with/without bindings, cross-project)"
+echo "=== Done! ==="
+echo "Traffic simulation complete."

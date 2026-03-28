@@ -1,404 +1,463 @@
-/**
- * Integration smoke tests — full lifecycle through the service layer.
- *
- * Tests exercise the complete create → read → update → delete path
- * for the new data model: Workflow → Phase → Instruction → Binding.
- * Also verifies cascade deletes and cross-entity ARN validation.
- */
-import { describe, test, expect, afterEach } from "bun:test";
-import { Database } from "bun:sqlite";
+import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { runMigrations } from "./db/migrator";
-import { ProjectRepository } from "./repositories/projects";
-import { TaskRepository } from "./repositories/tasks";
-import { WorkflowRepository } from "./repositories/workflows";
-import { PhaseRepository } from "./repositories/phases";
-import { InstructionRepository, BindingRepository } from "./repositories/instructions";
-import { ProjectService } from "./services/projects";
-import { TaskService } from "./services/tasks";
-import { WorkflowService } from "./services/workflows";
-import { PhaseService } from "./services/phases";
-import { InstructionService, BindingService } from "./services/instructions";
-import { EventBus } from "./events";
+import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
-import { buildArn, type ArnResolverMap } from "./arn";
+
+let ctx: AppContext;
+let tempDir: string;
+
+beforeAll(async () => {
+  tempDir = mkdtempSync(join(tmpdir(), "integration-test-"));
+  const dbPath = join(tempDir, "test.db");
+  ctx = await bootstrap(dbPath);
+});
+
+afterAll(() => {
+  ctx.db.close();
+  rmSync(tempDir, { recursive: true, force: true });
+});
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Project CRUD
 // ---------------------------------------------------------------------------
 
-interface TestContext {
-  db: Database;
-  projectService: ProjectService;
-  taskService: TaskService;
-  workflowService: WorkflowService;
-  phaseService: PhaseService;
-  instructionService: InstructionService;
-  bindingService: BindingService;
-  cleanup: () => void;
-}
+describe("Project CRUD", () => {
+  it("creates a project with name + description", () => {
+    const project = ctx.projectService.create({
+      name: "My Project",
+      description: "A fine project",
+    });
 
-function createTestContext(): TestContext {
-  const dir = mkdtempSync(join(tmpdir(), "integration-test-"));
-  const dbPath = join(dir, "test.db");
-  const db = new Database(dbPath);
-  db.run("PRAGMA foreign_keys = ON");
-
-  const eventBus = new EventBus();
-  const projectRepo = new ProjectRepository(db);
-  const taskRepo = new TaskRepository(db);
-  const workflowRepo = new WorkflowRepository(db);
-  const phaseRepo = new PhaseRepository(db);
-  const instructionRepo = new InstructionRepository(db);
-  const bindingRepo = new BindingRepository(db);
-
-  const arnResolvers: ArnResolverMap = {
-    project: (id) => projectRepo.findById(id) !== null,
-    task: (id) => taskRepo.findById(id) !== null,
-    workflow: (id) => workflowRepo.findById(id) !== null,
-    phase: (id) => phaseRepo.findById(id) !== null,
-    instruction: (id) => instructionRepo.findById(id) !== null,
-  };
-
-  const projectService = new ProjectService(projectRepo, eventBus);
-  const taskService = new TaskService(taskRepo, projectRepo, eventBus);
-  const workflowService = new WorkflowService(workflowRepo, eventBus);
-  const phaseService = new PhaseService(phaseRepo, workflowRepo, eventBus);
-  const instructionService = new InstructionService(instructionRepo, phaseRepo, eventBus);
-  const bindingService = new BindingService(
-    bindingRepo, instructionRepo, arnResolvers, eventBus,
-  );
-
-  return {
-    db, projectService, taskService, workflowService,
-    phaseService, instructionService, bindingService,
-    cleanup: () => {
-      db.close();
-      rmSync(dir, { recursive: true, force: true });
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe("integration: full lifecycle", () => {
-  let ctx: TestContext;
-
-  afterEach(() => {
-    ctx?.cleanup();
-  });
-
-  test("workflow → phase → instruction → binding lifecycle", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
-
-    // 1. Create a project + task (needed for binding ARN targets)
-    const project = ctx.projectService.create({ name: "Test Project" });
     expect(project.id).toBeTruthy();
-    expect(project.name).toBe("Test Project");
+    expect(project.id.length).toBeGreaterThan(10); // ULID
+    expect(project.name).toBe("My Project");
+    expect(project.description).toBe("A fine project");
+    expect(project.status).toBe("active");
+    expect(project.created_at).toBeTruthy();
+    expect(project.updated_at).toBeTruthy();
+    // ISO 8601
+    expect(() => new Date(project.created_at)).not.toThrow();
+  });
 
-    const task = ctx.taskService.create(project.id, { title: "Test Task" });
-    expect(task.id).toBeTruthy();
-
-    // 2. Create a workflow
-    const workflow = ctx.workflowService.create({ goal: "Deploy feature X" });
-    expect(workflow.id).toBeTruthy();
-    expect(workflow.goal).toBe("Deploy feature X");
-    expect(workflow.status).toBe("idle");
-
-    // 3. Create a phase within the workflow
-    const phase = ctx.phaseService.create(workflow.id, { title: "Phase 1: Planning" });
-    expect(phase.id).toBeTruthy();
-    expect(phase.workflow_id).toBe(workflow.id);
-    expect(phase.position).toBe(0);
-
-    // 4. Create a second phase and verify auto-positioning
-    const phase2 = ctx.phaseService.create(workflow.id, { title: "Phase 2: Execution" });
-    expect(phase2.position).toBe(1);
-
-    // 5. Create an instruction in the first phase
-    const instruction = ctx.instructionService.create(phase.id, {
-      prompt: "Analyze the requirements",
+  it("updates project name, description, status", () => {
+    const project = ctx.projectService.create({ name: "Original" });
+    const updated = ctx.projectService.update(project.id, {
+      name: "Renamed",
+      description: "New desc",
+      status: "archived",
     });
-    expect(instruction.id).toBeTruthy();
-    expect(instruction.phase_id).toBe(phase.id);
-    expect(instruction.output).toBeNull();
 
-    // 6. Create a binding that references the task
-    const taskArn = buildArn("task", task.id);
-    const binding = ctx.bindingService.create(instruction.id, { arn: taskArn });
-    expect(binding.id).toBeTruthy();
-    expect(binding.instruction_id).toBe(instruction.id);
-    expect(binding.arn).toBe(taskArn);
-
-    // 7. Verify we can list bindings
-    const bindings = ctx.bindingService.findByInstruction(instruction.id);
-    expect(bindings).toHaveLength(1);
-    expect(bindings[0].arn).toBe(taskArn);
-
-    // 8. Verify reverse lookup by ARN
-    const arnBindings = ctx.bindingService.findByArn(taskArn);
-    expect(arnBindings).toHaveLength(1);
-
-    // 9. Update instruction output
-    const updated = ctx.instructionService.update(phase.id, instruction.id, {
-      output: "Requirements analyzed successfully",
-    });
     expect(updated).not.toBeNull();
-    expect(updated!.output).toBe("Requirements analyzed successfully");
-
-    // 10. Update workflow status
-    const updatedWf = ctx.workflowService.update(workflow.id, { status: "running" });
-    expect(updatedWf!.status).toBe("running");
-
-    // 11. Verify listing
-    const phases = ctx.phaseService.findByWorkflow(workflow.id);
-    expect(phases.data).toHaveLength(2);
-    expect(phases.total).toBe(2);
-
-    const instructions = ctx.instructionService.findByPhase(phase.id);
-    expect(instructions.data).toHaveLength(1);
-    expect(instructions.total).toBe(1);
+    expect(updated!.name).toBe("Renamed");
+    expect(updated!.description).toBe("New desc");
+    expect(updated!.status).toBe("archived");
   });
 
-  test("cascade delete: deleting workflow removes phases, instructions, and bindings", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
+  it("lists projects filtered by status", () => {
+    // Create fresh projects with unique names
+    const active = ctx.projectService.create({ name: "Filter Active" });
+    const archived = ctx.projectService.create({ name: "Filter Archived" });
+    ctx.projectService.update(archived.id, { status: "archived" });
 
-    // Create the hierarchy
-    const project = ctx.projectService.create({ name: "Cascade Test" });
-    const task = ctx.taskService.create(project.id, { title: "Task for binding" });
+    const activeResults = ctx.projectService.findAll(100, 0, { status: "active" });
+    const archivedResults = ctx.projectService.findAll(100, 0, { status: "archived" });
 
-    const workflow = ctx.workflowService.create({ goal: "Will be deleted" });
-    const phase = ctx.phaseService.create(workflow.id, { title: "Doomed phase" });
-    const instruction = ctx.instructionService.create(phase.id, { prompt: "Do something" });
-    const binding = ctx.bindingService.create(instruction.id, {
-      arn: buildArn("task", task.id),
+    expect(activeResults.data.some((p) => p.id === active.id)).toBe(true);
+    expect(activeResults.data.some((p) => p.id === archived.id)).toBe(false);
+    expect(archivedResults.data.some((p) => p.id === archived.id)).toBe(true);
+  });
+
+  it("archives a project by setting status to archived", () => {
+    const project = ctx.projectService.create({ name: "To Archive" });
+    expect(project.status).toBe("active");
+
+    const archived = ctx.projectService.update(project.id, { status: "archived" });
+    expect(archived!.status).toBe("archived");
+
+    const fetched = ctx.projectService.findById(project.id);
+    expect(fetched!.status).toBe("archived");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task CRUD
+// ---------------------------------------------------------------------------
+
+describe("Task CRUD", () => {
+  it("creates a task with summary + context under a project", () => {
+    const project = ctx.projectService.create({ name: "Task Project" });
+    const task = ctx.taskService.create({
+      project_id: project.id,
+      summary: "Do the thing",
+      context: "Some context",
     });
 
-    // Verify everything exists
-    expect(ctx.workflowService.findById(workflow.id)).not.toBeNull();
-    expect(ctx.phaseService.findByIdDirect(phase.id)).not.toBeNull();
-    expect(ctx.instructionService.findByIdDirect(instruction.id)).not.toBeNull();
-    expect(ctx.bindingService.findByInstruction(instruction.id)).toHaveLength(1);
+    expect(task.id).toBeTruthy();
+    expect(task.project_id).toBe(project.id);
+    expect(task.summary).toBe("Do the thing");
+    expect(task.context).toBe("Some context");
+    expect(task.status).toBe("todo");
+    expect(task.created_at).toBeTruthy();
+    expect(task.updated_at).toBeTruthy();
+  });
 
-    // Delete the workflow
-    const deleted = ctx.workflowService.delete(workflow.id);
+  it("updates task summary, context, status", () => {
+    const project = ctx.projectService.create({ name: "Task Update Project" });
+    const task = ctx.taskService.create({
+      project_id: project.id,
+      summary: "Original summary",
+    });
+
+    // Update summary
+    const u1 = ctx.taskService.update(task.id, { summary: "New summary" });
+    expect(u1!.summary).toBe("New summary");
+
+    // Update context
+    const u2 = ctx.taskService.update(task.id, { context: "New context" });
+    expect(u2!.context).toBe("New context");
+
+    // Transition through statuses
+    const u3 = ctx.taskService.update(task.id, { status: "in_progress" });
+    expect(u3!.status).toBe("in_progress");
+
+    const u4 = ctx.taskService.update(task.id, { status: "done" });
+    expect(u4!.status).toBe("done");
+  });
+
+  it("lists tasks filtered by project_id and status", () => {
+    const project = ctx.projectService.create({ name: "Task Filter Project" });
+    const t1 = ctx.taskService.create({ project_id: project.id, summary: "Task 1" });
+    const t2 = ctx.taskService.create({ project_id: project.id, summary: "Task 2" });
+    ctx.taskService.update(t2.id, { status: "done" });
+
+    const todoTasks = ctx.taskService.findByProjectId(project.id, 100, 0, { status: "todo" });
+    expect(todoTasks.data.length).toBe(1);
+    expect(todoTasks.data[0].id).toBe(t1.id);
+
+    const doneTasks = ctx.taskService.findByProjectId(project.id, 100, 0, { status: "done" });
+    expect(doneTasks.data.length).toBe(1);
+    expect(doneTasks.data[0].id).toBe(t2.id);
+  });
+
+  it("throws when creating task with nonexistent project_id", () => {
+    expect(() =>
+      ctx.taskService.create({
+        project_id: "nonexistent-id",
+        summary: "Orphan task",
+      })
+    ).toThrow(ServiceError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Template CRUD
+// ---------------------------------------------------------------------------
+
+describe("Template CRUD", () => {
+  it("creates a template with name + prompt", () => {
+    const template = ctx.templateService.create({
+      name: "Code Review",
+      prompt: "Review this code for quality",
+    });
+
+    expect(template.id).toBeTruthy();
+    expect(template.name).toBe("Code Review");
+    expect(template.prompt).toBe("Review this code for quality");
+    expect(template.created_at).toBeTruthy();
+    expect(template.updated_at).toBeTruthy();
+  });
+
+  it("updates template name, description, prompt, agent", () => {
+    const template = ctx.templateService.create({
+      name: "Original",
+      prompt: "Original prompt",
+    });
+
+    const updated = ctx.templateService.update(template.id, {
+      name: "Updated",
+      description: "A description",
+      prompt: "Updated prompt",
+      agent: "research",
+    });
+
+    expect(updated!.name).toBe("Updated");
+    expect(updated!.description).toBe("A description");
+    expect(updated!.prompt).toBe("Updated prompt");
+    expect(updated!.agent).toBe("research");
+  });
+
+  it("lists templates", () => {
+    const before = ctx.templateService.findAll();
+    const t = ctx.templateService.create({ name: "List Test", prompt: "p" });
+    const after = ctx.templateService.findAll();
+
+    expect(after.total).toBe(before.total + 1);
+    expect(after.data.some((tmpl) => tmpl.id === t.id)).toBe(true);
+  });
+
+  it("deletes a template (hard delete)", () => {
+    const template = ctx.templateService.create({ name: "To Delete", prompt: "p" });
+    expect(ctx.templateService.findById(template.id)).not.toBeNull();
+
+    const deleted = ctx.templateService.delete(template.id);
     expect(deleted).toBe(true);
-
-    // Verify cascade: all children are gone
-    expect(ctx.workflowService.findById(workflow.id)).toBeNull();
-    expect(ctx.phaseService.findByIdDirect(phase.id)).toBeNull();
-    expect(ctx.instructionService.findByIdDirect(instruction.id)).toBeNull();
-
-    // The binding should also be gone (check raw DB since service requires instruction to exist)
-    const rawBinding = ctx.db
-      .query("SELECT * FROM bindings WHERE id = ?")
-      .get(binding.id);
-    expect(rawBinding).toBeNull();
-
-    // But the task and project should still exist (they're not children of the workflow)
-    expect(ctx.projectService.findById(project.id)).not.toBeNull();
-    expect(ctx.taskService.findById(task.id)).not.toBeNull();
+    expect(ctx.templateService.findById(template.id)).toBeNull();
   });
 
-  test("cascade delete: deleting phase removes its instructions and bindings", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
-
-    const project = ctx.projectService.create({ name: "Phase Cascade" });
-    const workflow = ctx.workflowService.create({ goal: "Test phase cascade" });
-    const phase1 = ctx.phaseService.create(workflow.id, { title: "Phase A" });
-    const phase2 = ctx.phaseService.create(workflow.id, { title: "Phase B" });
-    const instr1 = ctx.instructionService.create(phase1.id, { prompt: "In phase A" });
-    const instr2 = ctx.instructionService.create(phase2.id, { prompt: "In phase B" });
-
-    ctx.bindingService.create(instr1.id, {
-      arn: buildArn("project", project.id),
+  it("action survives template deletion", () => {
+    const project = ctx.projectService.create({ name: "Template Delete Project" });
+    const template = ctx.templateService.create({
+      name: "Ephemeral",
+      prompt: "Template prompt",
+      agent: "design",
     });
 
-    // Delete phase 1 only
-    ctx.phaseService.delete(workflow.id, phase1.id);
+    const target = `tab:project:${project.id}`;
+    const [action] = ctx.actionService.createMany(target, [
+      { rank: 1, template_id: template.id },
+    ]);
 
-    // Phase 1 and its instruction/binding are gone
-    expect(ctx.phaseService.findByIdDirect(phase1.id)).toBeNull();
-    expect(ctx.instructionService.findByIdDirect(instr1.id)).toBeNull();
+    expect(action.prompt).toBe("Template prompt");
+    expect(action.agent).toBe("design");
 
-    // Phase 2 and its instruction survive
-    expect(ctx.phaseService.findByIdDirect(phase2.id)).not.toBeNull();
-    expect(ctx.instructionService.findByIdDirect(instr2.id)).not.toBeNull();
+    // Delete the template
+    ctx.templateService.delete(template.id);
 
-    // Workflow itself survives
-    expect(ctx.workflowService.findById(workflow.id)).not.toBeNull();
+    // Action still exists with its own prompt/agent
+    const fetched = ctx.actionService.findById(action.id);
+    expect(fetched).not.toBeNull();
+    expect(fetched!.prompt).toBe("Template prompt");
+    expect(fetched!.agent).toBe("design");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Action bulk CRUD
+// ---------------------------------------------------------------------------
+
+describe("Action bulk CRUD", () => {
+  let projectId: string;
+  let target: string;
+
+  beforeAll(() => {
+    const project = ctx.projectService.create({ name: "Action Project" });
+    projectId = project.id;
+    target = `tab:project:${projectId}`;
   });
 
-  test("binding creation rejects invalid ARNs", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
+  it("createMany: creates 3 actions with ranks 1, 2, 3", () => {
+    const actions = ctx.actionService.createMany(target, [
+      { rank: 1, prompt: "First" },
+      { rank: 2, prompt: "Second" },
+      { rank: 3, prompt: "Third" },
+    ]);
 
-    const workflow = ctx.workflowService.create({ goal: "ARN validation test" });
-    const phase = ctx.phaseService.create(workflow.id, { title: "Phase" });
-    const instruction = ctx.instructionService.create(phase.id, { prompt: "Test" });
-
-    // Bad format
-    expect(() => {
-      ctx.bindingService.create(instruction.id, { arn: "not-an-arn" });
-    }).toThrow(ServiceError);
-
-    // Unknown resource type (workbench is now rejected)
-    expect(() => {
-      ctx.bindingService.create(instruction.id, { arn: "tab:workbench:123" });
-    }).toThrow(ServiceError);
-
-    // Non-existent resource
-    expect(() => {
-      ctx.bindingService.create(instruction.id, { arn: "tab:task:NONEXISTENT" });
-    }).toThrow(ServiceError);
-
-    // Empty ARN
-    expect(() => {
-      ctx.bindingService.create(instruction.id, { arn: "" });
-    }).toThrow(ServiceError);
+    expect(actions.length).toBe(3);
+    expect(actions[0].rank).toBe(1);
+    expect(actions[0].prompt).toBe("First");
+    expect(actions[1].rank).toBe(2);
+    expect(actions[2].rank).toBe(3);
+    expect(actions[0].target).toBe(target);
   });
 
-  test("binding can reference workflow, phase, and instruction ARNs", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
-
-    const workflow = ctx.workflowService.create({ goal: "Cross-ref test" });
-    const phase = ctx.phaseService.create(workflow.id, { title: "Phase" });
-    const instr = ctx.instructionService.create(phase.id, { prompt: "Prompt" });
-
-    // Create a second instruction that binds to the workflow, phase, and first instruction
-    const instr2 = ctx.instructionService.create(phase.id, { prompt: "Uses cross-refs" });
-
-    const b1 = ctx.bindingService.create(instr2.id, { arn: buildArn("workflow", workflow.id) });
-    const b2 = ctx.bindingService.create(instr2.id, { arn: buildArn("phase", phase.id) });
-    const b3 = ctx.bindingService.create(instr2.id, { arn: buildArn("instruction", instr.id) });
-
-    const allBindings = ctx.bindingService.findByInstruction(instr2.id);
-    expect(allBindings).toHaveLength(3);
-  });
-
-  test("phase reordering works correctly", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
-
-    const workflow = ctx.workflowService.create({ goal: "Reorder test" });
-    const a = ctx.phaseService.create(workflow.id, { title: "A" });
-    const b = ctx.phaseService.create(workflow.id, { title: "B" });
-    const c = ctx.phaseService.create(workflow.id, { title: "C" });
-
-    expect(a.position).toBe(0);
-    expect(b.position).toBe(1);
-    expect(c.position).toBe(2);
-
-    // Reverse order
-    const reordered = ctx.phaseService.reorder(workflow.id, [c.id, b.id, a.id]);
-    expect(reordered[0].id).toBe(c.id);
-    expect(reordered[0].position).toBe(0);
-    expect(reordered[1].id).toBe(b.id);
-    expect(reordered[1].position).toBe(1);
-    expect(reordered[2].id).toBe(a.id);
-    expect(reordered[2].position).toBe(2);
-  });
-
-  test("service validation rejects empty and oversized inputs", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
-
-    // Workflow: empty goal
-    expect(() => ctx.workflowService.create({ goal: "" })).toThrow("goal is required");
-    expect(() => ctx.workflowService.create({ goal: "   " })).toThrow("goal is required");
-
-    // Workflow: oversized goal
-    expect(() => ctx.workflowService.create({ goal: "x".repeat(2001) })).toThrow("2000 characters");
-
-    // Workflow: invalid status
-    expect(() => ctx.workflowService.create({ goal: "ok", status: "invalid" as "idle" })).toThrow("status must be one of");
-
-    const workflow = ctx.workflowService.create({ goal: "Valid" });
-
-    // Phase: empty title
-    expect(() => ctx.phaseService.create(workflow.id, { title: "" })).toThrow("title is required");
-    expect(() => ctx.phaseService.create(workflow.id, { title: "   " })).toThrow("title is required");
-
-    // Phase: oversized title
-    expect(() => ctx.phaseService.create(workflow.id, { title: "x".repeat(501) })).toThrow("500 characters");
-
-    // Phase: bad position
-    expect(() => ctx.phaseService.create(workflow.id, { title: "Ok", position: -1 })).toThrow("non-negative integer");
-
-    const phase = ctx.phaseService.create(workflow.id, { title: "Valid" });
-
-    // Instruction: empty prompt
-    expect(() => ctx.instructionService.create(phase.id, { prompt: "" })).toThrow("prompt is required");
-    expect(() => ctx.instructionService.create(phase.id, { prompt: "   " })).toThrow("prompt is required");
-
-    // Phase/instruction not found
-    expect(() => ctx.phaseService.create("NONEXISTENT", { title: "x" })).toThrow("workflow not found");
-    expect(() => ctx.instructionService.create("NONEXISTENT", { prompt: "x" })).toThrow("phase not found");
-  });
-
-  test("event bus fires for all entity lifecycle operations", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
-
-    const events: Array<{ entity: string; action: string }> = [];
-    ctx.db; // ensure db is initialized
-    // Access the event bus through the services - we need to subscribe on the same bus
-    // Since we constructed services with the same eventBus, let's just track via a new one
-    // Actually we already wired the same eventBus into all services, so let's create
-    // a fresh context to get access to the bus
-    // The services were built with our local eventBus in createTestContext
-
-    // We need to reconstruct or access the eventBus. Let's modify our approach:
-    // Since we can't easily access the private eventBus, we'll verify events
-    // through the existing subscribe mechanism by using a fresh context
-    // where we intercept the eventBus.
-
-    // Actually, our createTestContext doesn't expose the eventBus. Let me check
-    // that event bus emissions work by verifying state changes instead.
-
-    // Verify the create/update/delete cycle works without errors
-    const workflow = ctx.workflowService.create({ goal: "Event test" });
-    const phase = ctx.phaseService.create(workflow.id, { title: "P1" });
-    const instruction = ctx.instructionService.create(phase.id, { prompt: "Do it" });
-
-    ctx.instructionService.update(phase.id, instruction.id, { output: "Done" });
-    ctx.instructionService.delete(phase.id, instruction.id);
-    ctx.phaseService.delete(workflow.id, phase.id);
-    ctx.workflowService.delete(workflow.id);
-
-    // If any event emission threw, we would not reach this line
-    expect(true).toBe(true);
-  });
-
-  test("deleting a binding does not affect the referenced entity", async () => {
-    ctx = createTestContext();
-    await runMigrations(ctx.db);
-
-    const project = ctx.projectService.create({ name: "Ref target" });
-    const workflow = ctx.workflowService.create({ goal: "Binding delete test" });
-    const phase = ctx.phaseService.create(workflow.id, { title: "Phase" });
-    const instruction = ctx.instructionService.create(phase.id, { prompt: "Prompt" });
-
-    const binding = ctx.bindingService.create(instruction.id, {
-      arn: buildArn("project", project.id),
+  it("createMany: inherits prompt/agent from template", () => {
+    const p = ctx.projectService.create({ name: "Template Inherit Project" });
+    const t = `tab:project:${p.id}`;
+    const template = ctx.templateService.create({
+      name: "Inherit Test",
+      prompt: "Template prompt",
+      agent: "research",
     });
 
-    // Delete the binding
-    const deleted = ctx.bindingService.delete(instruction.id, binding.id);
-    expect(deleted).toBe(true);
+    const [action] = ctx.actionService.createMany(t, [
+      { rank: 1, template_id: template.id },
+    ]);
 
-    // The project still exists
-    expect(ctx.projectService.findById(project.id)).not.toBeNull();
+    expect(action.prompt).toBe("Template prompt");
+    expect(action.agent).toBe("research");
+    expect(action.template_id).toBe(template.id);
+  });
 
-    // No bindings remain
-    expect(ctx.bindingService.findByInstruction(instruction.id)).toHaveLength(0);
+  it("createMany: explicit prompt overrides template prompt", () => {
+    const p = ctx.projectService.create({ name: "Override Prompt Project" });
+    const t = `tab:project:${p.id}`;
+    const template = ctx.templateService.create({
+      name: "Override Test",
+      prompt: "Template prompt",
+      agent: "design",
+    });
+
+    const [action] = ctx.actionService.createMany(t, [
+      { rank: 1, template_id: template.id, prompt: "Explicit prompt" },
+    ]);
+
+    expect(action.prompt).toBe("Explicit prompt");
+    expect(action.agent).toBe("design"); // still inherited
+  });
+
+  it("createMany: explicit agent overrides template agent", () => {
+    const p = ctx.projectService.create({ name: "Override Agent Project" });
+    const t = `tab:project:${p.id}`;
+    const template = ctx.templateService.create({
+      name: "Agent Override",
+      prompt: "Some prompt",
+      agent: "design",
+    });
+
+    const [action] = ctx.actionService.createMany(t, [
+      { rank: 1, template_id: template.id, agent: "review" },
+    ]);
+
+    expect(action.prompt).toBe("Some prompt"); // inherited
+    expect(action.agent).toBe("review"); // overridden
+  });
+
+  it("createMany: requires prompt when no template_id", () => {
+    const p = ctx.projectService.create({ name: "No Prompt Project" });
+    const t = `tab:project:${p.id}`;
+
+    expect(() =>
+      ctx.actionService.createMany(t, [{ rank: 1 }])
+    ).toThrow(ServiceError);
+  });
+
+  it("createMany: throws on nonexistent template_id", () => {
+    const p = ctx.projectService.create({ name: "Bad Template Project" });
+    const t = `tab:project:${p.id}`;
+
+    expect(() =>
+      ctx.actionService.createMany(t, [{ rank: 1, template_id: "nonexistent" }])
+    ).toThrow(ServiceError);
+  });
+
+  it("createMany: throws on duplicate ranks", () => {
+    const p = ctx.projectService.create({ name: "Dupe Rank Project" });
+    const t = `tab:project:${p.id}`;
+
+    expect(() =>
+      ctx.actionService.createMany(t, [
+        { rank: 1, prompt: "A" },
+        { rank: 1, prompt: "B" },
+      ])
+    ).toThrow(ServiceError);
+  });
+
+  it("createMany: throws on nonexistent target", () => {
+    expect(() =>
+      ctx.actionService.createMany("tab:project:nonexistent-id", [
+        { rank: 1, prompt: "A" },
+      ])
+    ).toThrow(ServiceError);
+  });
+
+  it("createMany: throws on malformed ARN", () => {
+    expect(() =>
+      ctx.actionService.createMany("bad:target:123", [
+        { rank: 1, prompt: "A" },
+      ])
+    ).toThrow(ServiceError);
+  });
+
+  it("updateMany: updates prompt and agent on multiple actions", () => {
+    const p = ctx.projectService.create({ name: "Update Many Project" });
+    const t = `tab:project:${p.id}`;
+    const actions = ctx.actionService.createMany(t, [
+      { rank: 1, prompt: "Original 1" },
+      { rank: 2, prompt: "Original 2" },
+    ]);
+
+    const updated = ctx.actionService.updateMany(t, [
+      { id: actions[0].id, prompt: "Updated 1", agent: "research" },
+      { id: actions[1].id, prompt: "Updated 2", agent: "design" },
+    ]);
+
+    expect(updated.length).toBe(2);
+    expect(updated[0].prompt).toBe("Updated 1");
+    expect(updated[0].agent).toBe("research");
+    expect(updated[1].prompt).toBe("Updated 2");
+    expect(updated[1].agent).toBe("design");
+  });
+
+  it("updateMany: action IDs must belong to specified target", () => {
+    const p1 = ctx.projectService.create({ name: "Target 1" });
+    const p2 = ctx.projectService.create({ name: "Target 2" });
+    const t1 = `tab:project:${p1.id}`;
+    const t2 = `tab:project:${p2.id}`;
+
+    const [a1] = ctx.actionService.createMany(t1, [{ rank: 1, prompt: "A" }]);
+
+    expect(() =>
+      ctx.actionService.updateMany(t2, [{ id: a1.id, prompt: "Hijack" }])
+    ).toThrow(ServiceError);
+  });
+
+  it("deleteMany: deletes 2 of 3 actions (hard delete)", () => {
+    const p = ctx.projectService.create({ name: "Delete Many Project" });
+    const t = `tab:project:${p.id}`;
+    const actions = ctx.actionService.createMany(t, [
+      { rank: 1, prompt: "A" },
+      { rank: 2, prompt: "B" },
+      { rank: 3, prompt: "C" },
+    ]);
+
+    const deleted = ctx.actionService.deleteMany(t, [actions[0].id, actions[1].id]);
+    expect(deleted).toBe(2);
+
+    // Verify hard delete
+    expect(ctx.actionService.findById(actions[0].id)).toBeNull();
+    expect(ctx.actionService.findById(actions[1].id)).toBeNull();
+    expect(ctx.actionService.findById(actions[2].id)).not.toBeNull();
+  });
+
+  it("deleteMany: action IDs must belong to specified target", () => {
+    const p1 = ctx.projectService.create({ name: "Delete Target 1" });
+    const p2 = ctx.projectService.create({ name: "Delete Target 2" });
+    const t1 = `tab:project:${p1.id}`;
+    const t2 = `tab:project:${p2.id}`;
+
+    const [a1] = ctx.actionService.createMany(t1, [{ rank: 1, prompt: "A" }]);
+
+    expect(() =>
+      ctx.actionService.deleteMany(t2, [a1.id])
+    ).toThrow(ServiceError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reorder pattern
+// ---------------------------------------------------------------------------
+
+describe("Reorder pattern", () => {
+  it("delete and recreate actions to reorder", () => {
+    const project = ctx.projectService.create({ name: "Reorder Project" });
+    const target = `tab:project:${project.id}`;
+
+    // Create 3 actions with ranks 1, 2, 3
+    const original = ctx.actionService.createMany(target, [
+      { rank: 1, prompt: "Step A" },
+      { rank: 2, prompt: "Step B" },
+      { rank: 3, prompt: "Step C" },
+    ]);
+
+    // Delete ranks 2 and 3
+    ctx.actionService.deleteMany(target, [original[1].id, original[2].id]);
+
+    // Recreate with new prompts at ranks 2 and 3
+    const newActions = ctx.actionService.createMany(target, [
+      { rank: 2, prompt: "Step D" },
+      { rank: 3, prompt: "Step E" },
+    ]);
+
+    // Verify final order and content
+    const all = ctx.actionService.findByTarget(target);
+    expect(all.data.length).toBe(3);
+    expect(all.data[0].rank).toBe(1);
+    expect(all.data[0].prompt).toBe("Step A");
+    expect(all.data[1].rank).toBe(2);
+    expect(all.data[1].prompt).toBe("Step D");
+    expect(all.data[2].rank).toBe(3);
+    expect(all.data[2].prompt).toBe("Step E");
   });
 });

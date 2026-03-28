@@ -15,12 +15,8 @@ import { parseArgs, parseCorsOrigins, logListening, type ServerOptions } from ".
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
-import { tagRoutes } from "./routes/tags";
-import { workflowRoutes } from "./routes/workflows";
-import { phaseRoutes } from "./routes/phases";
-import { instructionRoutes } from "./routes/instructions";
-import { bindingRoutes } from "./routes/bindings";
-import { resolveRoutes } from "./routes/resolve";
+import { templateRoutes } from "./routes/templates";
+import { actionRoutes } from "./routes/actions";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
 
@@ -55,17 +51,10 @@ export class Server {
 
     // -- API (with logging) ----------------------------------------
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
-    app.route("/api/projects/:projectId/tasks", taskRoutes(ctx.taskService, ctx.tagService));
+    app.route("/api/projects", taskRoutes(ctx.taskService));
     app.route("/api/projects", projectRoutes(ctx.projectService));
-    app.route("/api/tags", tagRoutes(ctx.tagService));
-    app.route("/api/workflows", workflowRoutes(ctx.workflowService));
-    app.route("/api/workflows/:workflowId/phases", phaseRoutes(ctx.phaseService));
-    app.route(
-      "/api/workflows/:workflowId/phases/:phaseId/instructions",
-      instructionRoutes(ctx.instructionService, ctx.bindingService),
-    );
-    app.route("/api/bindings", bindingRoutes(ctx.bindingService));
-    app.route("/api/resolve", resolveRoutes(ctx.resolverService));
+    app.route("/api/templates", templateRoutes(ctx.templateService));
+    app.route("/api/actions", actionRoutes(ctx.actionService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
     // -- MCP --------------------------------------------------------

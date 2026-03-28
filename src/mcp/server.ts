@@ -3,32 +3,17 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import {
   ServiceError,
-  PROJECT_STATUSES,
-  TASK_STATUSES,
-  TASK_TYPES,
-  TASK_EFFORTS,
-  WORKFLOW_STATUSES,
   type IProjectService,
   type ITaskService,
-  type ITagService,
-  type IWorkflowService,
-  type IPhaseService,
-  type IInstructionService,
-  type IBindingService,
-  type IResolverService,
-  parseArn,
-  ArnError,
+  type ITemplateService,
+  type IActionService,
 } from "../domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
-  tagService: ITagService;
-  workflowService: IWorkflowService;
-  phaseService: IPhaseService;
-  instructionService: IInstructionService;
-  bindingService: IBindingService;
-  resolverService: IResolverService;
+  templateService: ITemplateService;
+  actionService: IActionService;
 }
 
 function handle<T>(fn: () => T) {
@@ -52,7 +37,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, tagService, workflowService, phaseService, instructionService, bindingService, resolverService } = ctx;
+  const { projectService, taskService, templateService, actionService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -68,7 +53,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         name: z.string().max(255),
         description: z.string().max(10000).optional(),
-        status: z.enum(PROJECT_STATUSES).optional(),
+        status: z.string().max(50).optional(),
       },
     },
     (input) => handle(() => projectService.create(input))
@@ -82,7 +67,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         id: z.string().max(26),
         name: z.string().max(255).optional(),
         description: z.string().max(10000).optional(),
-        status: z.enum(PROJECT_STATUSES).optional(),
+        status: z.string().max(50).optional(),
       },
     },
     ({ id, ...updates }) => handle(() => projectService.update(id, updates))
@@ -93,237 +78,129 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_task",
     {
-      description: "Create a task in a project. Optionally attach tags (auto-created if they don't exist).",
+      description: "Create a task in a project",
       inputSchema: {
         project_id: z.string().max(26),
-        title: z.string().max(500),
-        description: z.string().max(10000).optional(),
-        status: z.enum(TASK_STATUSES).optional(),
-        type: z.enum(TASK_TYPES).optional(),
-        effort: z.enum(TASK_EFFORTS).optional(),
-        priority: z.number().int().min(1).max(10).optional(),
-        tags: z.array(z.string().max(50)).max(20).optional(),
+        summary: z.string().max(500),
+        context: z.string().max(10000).optional(),
+        status: z.string().max(50).optional(),
       },
     },
-    ({ project_id, tags: tagNames, ...input }) => handle(() => {
-      const task = taskService.create(project_id, input);
-      if (tagNames) {
-        for (const name of tagNames) {
-          tagService.addTagToTask(task.id, name);
-        }
-      }
-      const tags = tagService.getTagsForTask(task.id);
-      return { ...task, tags: tags.map(t => t.name) };
-    })
+    ({ project_id, ...input }) =>
+      handle(() => taskService.create({ project_id, ...input }))
   );
 
   server.registerTool(
     "update_task",
     {
-      description: "Update a task by ID (must specify the project it belongs to). Supports type, effort, priority (1-10 or null to clear), and inline tag management via add_tags/remove_tags.",
+      description: "Update a task by ID (must specify the project it belongs to)",
       inputSchema: {
         project_id: z.string().max(26),
         id: z.string().max(26),
-        title: z.string().max(500).optional(),
-        description: z.string().max(10000).optional(),
-        status: z.enum(TASK_STATUSES).optional(),
-        type: z.enum(TASK_TYPES).nullable().optional(),
-        effort: z.enum(TASK_EFFORTS).nullable().optional(),
-        priority: z.number().int().min(1).max(10).nullable().optional(),
-        add_tags: z.array(z.string().max(50)).max(20).optional(),
-        remove_tags: z.array(z.string().max(50)).max(20).optional(),
+        summary: z.string().max(500).optional(),
+        context: z.string().max(10000).optional(),
+        status: z.string().max(50).optional(),
       },
     },
-    ({ project_id, id, add_tags, remove_tags, ...updates }) => handle(() => {
-      const task = taskService.update(project_id, id, updates);
-      if (!task) return task;
-      if (add_tags) {
-        for (const name of add_tags) {
-          tagService.addTagToTask(task.id, name);
-        }
-      }
-      if (remove_tags) {
-        for (const name of remove_tags) {
-          tagService.removeTagFromTaskByName(task.id, name);
-        }
-      }
-      const tags = tagService.getTagsForTask(task.id);
-      return { ...task, tags: tags.map(t => t.name) };
-    })
+    ({ project_id: _project_id, id, ...updates }) =>
+      handle(() => taskService.update(id, updates))
   );
 
-  // -- Workflows ------------------------------------------------------
+  // -- Templates ------------------------------------------------------
 
   server.registerTool(
-    "create_workflow",
+    "create_template",
     {
-      description: "Create a new workflow with a goal",
+      description: "Create a reusable prompt template. Templates can be referenced by actions via template_id to inherit prompt and agent values.",
       inputSchema: {
-        goal: z.string().max(2000),
-        cursor: z.string().max(26).nullable().optional(),
-        status: z.enum(WORKFLOW_STATUSES).optional(),
+        name: z.string().max(255),
+        prompt: z.string().max(10000),
+        description: z.string().max(10000).optional(),
+        agent: z.string().max(200).optional(),
       },
     },
-    ({ goal, cursor, status }) => handle(() => workflowService.create({ goal, cursor, status }))
+    (input) => handle(() => templateService.create(input))
   );
 
   server.registerTool(
-    "update_workflow",
+    "update_template",
     {
-      description: "Update an existing workflow",
+      description: "Update an existing template",
       inputSchema: {
         id: z.string().max(26),
-        goal: z.string().max(2000).optional(),
-        cursor: z.string().max(26).nullable().optional(),
-        status: z.enum(WORKFLOW_STATUSES).optional(),
-      },
-    },
-    ({ id, ...updates }) => handle(() => workflowService.update(id, updates))
-  );
-
-  // -- Phases ---------------------------------------------------------
-
-  server.registerTool(
-    "create_phase",
-    {
-      description: "Create a phase within a workflow",
-      inputSchema: {
-        workflow_id: z.string().max(26),
-        title: z.string().max(500),
-        position: z.number().int().min(0).optional(),
-      },
-    },
-    ({ workflow_id, ...input }) => handle(() => phaseService.create(workflow_id, input))
-  );
-
-  server.registerTool(
-    "update_phase",
-    {
-      description: "Update a phase's title",
-      inputSchema: {
-        workflow_id: z.string().max(26),
-        phase_id: z.string().max(26),
-        title: z.string().max(500).optional(),
-      },
-    },
-    ({ workflow_id, phase_id, ...updates }) => handle(() => phaseService.update(workflow_id, phase_id, updates))
-  );
-
-  server.registerTool(
-    "reorder_phases",
-    {
-      description: "Reorder phases within a workflow by providing the full ordered list of phase IDs",
-      inputSchema: {
-        workflow_id: z.string().max(26),
-        phase_ids: z.array(z.string().max(26)),
-      },
-    },
-    ({ workflow_id, phase_ids }) => handle(() => phaseService.reorder(workflow_id, phase_ids))
-  );
-
-  // -- Instructions ---------------------------------------------------
-
-  server.registerTool(
-    "create_instruction",
-    {
-      description: "Create an instruction in a phase, optionally with bindings",
-      inputSchema: {
-        phase_id: z.string().max(26),
-        prompt: z.string().max(10000),
-        agent: z.string().max(200).nullable().optional(),
-        bindings: z.array(z.object({
-          arn: z.string().max(500),
-        })).max(20).optional(),
-      },
-    },
-    ({ phase_id, bindings: bindingInputs, ...input }) =>
-      handle(() => {
-        const instruction = instructionService.create(phase_id, input);
-        if (bindingInputs) {
-          for (const binding of bindingInputs) {
-            bindingService.create(instruction.id, binding);
-          }
-        }
-        const bindings = bindingService.findByInstruction(instruction.id);
-        return { ...instruction, bindings };
-      })
-  );
-
-  server.registerTool(
-    "update_instruction",
-    {
-      description: "Update an instruction's prompt, output, status, or execution metadata. Supports adding/removing bindings inline.",
-      inputSchema: {
-        phase_id: z.string().max(26),
-        instruction_id: z.string().max(26),
+        name: z.string().max(255).optional(),
+        description: z.string().max(10000).optional(),
         prompt: z.string().max(10000).optional(),
-        output: z.string().max(100000).nullable().optional(),
-        agent: z.string().max(200).nullable().optional(),
-        add_bindings: z.array(z.object({
-          arn: z.string().max(500),
-        })).max(20).optional(),
-        remove_bindings: z.array(z.string().max(26)).max(20).optional(),
+        agent: z.string().max(200).optional(),
       },
     },
-    ({ phase_id, instruction_id, add_bindings, remove_bindings, ...updates }) =>
-      handle(() => {
-        const instruction = instructionService.update(phase_id, instruction_id, updates);
-        if (!instruction) return instruction;
-        if (add_bindings) {
-          for (const binding of add_bindings) {
-            bindingService.create(instruction.id, binding);
-          }
-        }
-        if (remove_bindings) {
-          for (const bindingId of remove_bindings) {
-            bindingService.delete(instruction.id, bindingId);
-          }
-        }
-        const bindings = bindingService.findByInstruction(instruction.id);
-        return { ...instruction, bindings };
-      })
+    ({ id, ...updates }) => handle(() => templateService.update(id, updates))
   );
 
-  // -- Resolve --------------------------------------------------------
-
   server.registerTool(
-    "resolve",
+    "delete_template",
     {
-      description: "Dereference one or more ARNs (e.g. tab:project:01ABC, tab:task:01DEF) into their entities",
+      description: "Permanently delete a template. This is a hard delete.",
       inputSchema: {
-        arn: z.union([
-          z.string().max(500),
-          z.array(z.string().max(500)).max(20),
-        ]),
-        compile: z.enum(["prompt"]).optional(),
+        id: z.string().max(26),
       },
     },
-    ({ arn, compile }) => handle(() => {
-      const arns = Array.isArray(arn) ? arn : [arn];
-
-      if (compile === "prompt") {
-        // For compile=prompt, resolve instruction ARNs via compilePrompt.
-        // Non-instruction ARNs are resolved normally.
-        const results = arns.map((a) => {
-          try {
-            const parsed = parseArn(a);
-            if (parsed.type === "instruction") {
-              return resolverService.compilePrompt(parsed.id);
-            }
-          } catch (e) {
-            if (e instanceof ArnError) {
-              return { arn: a, type: null, data: null, error: e.message };
-            }
-            throw e;
-          }
-          return resolverService.resolve([a])[0];
-        });
-        return Array.isArray(arn) ? results : results[0];
+    ({ id }) => handle(() => {
+      const deleted = templateService.delete(id);
+      if (!deleted) {
+        throw new ServiceError("template not found", 404);
       }
-
-      const results = resolverService.resolve(arns);
-      return Array.isArray(arn) ? results : results[0];
+      return { deleted: true };
     })
+  );
+
+  // -- Actions --------------------------------------------------------
+
+  server.registerTool(
+    "manage_actions",
+    {
+      description:
+        "Manage actions on a target (ARN string, e.g. tab:project:<id> or tab:task:<id>). " +
+        "Supports create, update, and delete operations in a single call. " +
+        "Operations execute in order: delete → update → create. " +
+        "When creating actions, provide a prompt directly or reference a template_id. " +
+        "If template_id is provided, the template's prompt and agent are used as defaults " +
+        "(explicit prompt/agent values override the template).",
+      inputSchema: {
+        target: z.string().max(500),
+        create: z.array(z.object({
+          rank: z.number().int().min(0),
+          prompt: z.string().max(10000).optional(),
+          agent: z.string().max(200).optional(),
+          template_id: z.string().max(26).optional(),
+        })).optional(),
+        update: z.array(z.object({
+          id: z.string().max(26),
+          prompt: z.string().max(10000).optional(),
+          agent: z.string().max(200).optional(),
+        })).optional(),
+        delete: z.array(z.string().max(26)).optional(),
+      },
+    },
+    ({ target, create: createOps, update: updateOps, delete: deleteOps }) =>
+      handle(() => {
+        let deleted = 0;
+        let updated: ReturnType<typeof actionService.updateMany> = [];
+        let created: ReturnType<typeof actionService.createMany> = [];
+
+        // Execute in order: delete → update → create
+        if (deleteOps && deleteOps.length > 0) {
+          deleted = actionService.deleteMany(target, deleteOps);
+        }
+        if (updateOps && updateOps.length > 0) {
+          updated = actionService.updateMany(target, updateOps);
+        }
+        if (createOps && createOps.length > 0) {
+          created = actionService.createMany(target, createOps);
+        }
+
+        return { created, updated, deleted };
+      })
   );
 
   // -- Query ----------------------------------------------------------
@@ -331,72 +208,44 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "query",
     {
-      description: "Filtered list across entity types. Replaces all list_*/find_* read tools.",
+      description: "Filtered list/lookup across entity types. Supports project, task, template, action.",
       inputSchema: {
-        type: z.enum(["project", "task", "tag", "workflow", "phase", "instruction", "binding"]),
+        type: z.enum(["project", "task", "template", "action"]),
         limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
-        // Context params
-        project_id: z.string().max(26).optional(),
-        workflow_id: z.string().max(26).optional(),
-        phase_id: z.string().max(26).optional(),
-        instruction_id: z.string().max(26).optional(),
-        // Filter params
-        status: z.string().max(50).optional(),
-        tag: z.string().max(50).optional(),
-        tag_prefix: z.string().max(50).optional(),
-        task_type: z.enum(TASK_TYPES).optional(),
-        effort: z.enum(TASK_EFFORTS).optional(),
-        // Single-entity lookups
+        // Single-entity lookup
         id: z.string().max(26).optional(),
-        number: z.number().int().min(1).optional(),
-        arn: z.string().max(500).optional(),
+        // Context / filter params
+        project_id: z.string().max(26).optional(),
+        status: z.string().max(50).optional(),
+        target: z.string().max(500).optional(),
       },
     },
-    ({ type: entityType, limit, offset, project_id, workflow_id, phase_id, instruction_id, status, tag, tag_prefix, task_type, effort, id, number, arn: arnFilter }) => handle(() => {
-      switch (entityType) {
-        case "project": {
-          if (id) return projectService.findById(id);
-          const pFilter = status ? { status: status as Parameters<typeof projectService.findAll>[2] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
-          return projectService.findAll(limit, offset, pFilter as Parameters<typeof projectService.findAll>[2]);
+    ({ type: entityType, limit, offset, id, project_id, status, target }) =>
+      handle(() => {
+        switch (entityType) {
+          case "project": {
+            if (id) return projectService.findById(id);
+            const filter = status ? { status } : undefined;
+            return projectService.findAll(limit, offset, filter);
+          }
+          case "task": {
+            if (id) return taskService.findById(id);
+            if (!project_id) throw new ServiceError("project_id is required when querying tasks", 400);
+            const filter = status ? { status } : undefined;
+            return taskService.findByProjectId(project_id, limit, offset, filter);
+          }
+          case "template": {
+            if (id) return templateService.findById(id);
+            return templateService.findAll(limit, offset);
+          }
+          case "action": {
+            if (id) return actionService.findById(id);
+            if (!target) throw new ServiceError("target is required when querying actions", 400);
+            return actionService.findByTarget(target, limit, offset);
+          }
         }
-        case "task": {
-          if (!project_id) throw new ServiceError("project_id is required when querying tasks", 400);
-          if (number) return taskService.findByNumber(project_id, number);
-          const tFilter: Record<string, unknown> = {};
-          if (status) tFilter.status = status;
-          if (task_type) tFilter.type = task_type;
-          if (effort) tFilter.effort = effort;
-          if (tag) tFilter.tag = tag;
-          if (tag_prefix) tFilter.tag_prefix = tag_prefix;
-          return taskService.findByProjectId(project_id, limit, offset, Object.keys(tFilter).length ? tFilter as Parameters<typeof taskService.findByProjectId>[3] : undefined);
-        }
-        case "tag": {
-          if (tag_prefix) return tagService.findByPrefix(tag_prefix, limit, offset);
-          return tagService.findAll(limit, offset);
-        }
-        case "workflow": {
-          if (id) return workflowService.findById(id);
-          const wFilter = status ? { status: status as Parameters<typeof workflowService.findAll>[2] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
-          return workflowService.findAll(limit, offset, wFilter as Parameters<typeof workflowService.findAll>[2]);
-        }
-        case "phase": {
-          if (!workflow_id) throw new ServiceError("workflow_id is required when querying phases", 400);
-          if (id) return phaseService.findById(workflow_id, id);
-          return phaseService.findByWorkflow(workflow_id, limit, offset);
-        }
-        case "instruction": {
-          if (!phase_id) throw new ServiceError("phase_id is required when querying instructions", 400);
-          if (id) return instructionService.findById(phase_id, id);
-          return instructionService.findByPhase(phase_id, limit, offset);
-        }
-        case "binding": {
-          if (instruction_id) return bindingService.findByInstruction(instruction_id);
-          if (arnFilter) return bindingService.findByArn(arnFilter);
-          throw new ServiceError("instruction_id or arn is required when querying bindings", 400);
-        }
-      }
-    })
+      })
   );
 
   return server;

@@ -1,22 +1,16 @@
 import { Hono } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-import {
-  ServiceError,
-  TASK_STATUSES,
-  TASK_TYPES,
-  TASK_EFFORTS,
-  type ITaskService,
-  type ITagService,
-  type TaskFilter,
-  type CreateTaskInput,
-  type UpdateTaskInput,
+import type {
+  ITaskService,
+  TaskFilter,
+  CreateTaskInput,
+  UpdateTaskInput,
 } from "../../domain";
 
-export function taskRoutes(service: ITaskService, tagService: ITagService): Hono {
+export function taskRoutes(service: ITaskService): Hono {
   const app = new Hono();
 
   // GET /api/projects/:projectId/tasks
-  app.get("/", (c) => {
+  app.get("/:projectId/tasks", (c) => {
     const projectId = c.req.param("projectId")!;
     const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 500) : 100;
@@ -24,125 +18,31 @@ export function taskRoutes(service: ITaskService, tagService: ITagService): Hono
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const filter: TaskFilter = {};
     const status = c.req.query("status");
-    if (status && (TASK_STATUSES as readonly string[]).includes(status)) {
-      filter.status = status as TaskFilter["status"];
-    }
-    const type = c.req.query("type");
-    if (type && (TASK_TYPES as readonly string[]).includes(type)) {
-      filter.type = type as TaskFilter["type"];
-    }
-    const effort = c.req.query("effort");
-    if (effort && (TASK_EFFORTS as readonly string[]).includes(effort)) {
-      filter.effort = effort as TaskFilter["effort"];
-    }
-    const tag = c.req.query("tag");
-    if (tag) {
-      filter.tag = tag;
-    }
-    const tagPrefix = c.req.query("tag_prefix");
-    if (tagPrefix) {
-      filter.tag_prefix = tagPrefix;
-    }
-    try {
-      return c.json(service.findByProjectId(projectId, limit, offset, filter));
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
-  });
-
-  // GET /api/projects/:projectId/tasks/by-number/:number
-  app.get("/by-number/:number", (c) => {
-    const projectId = c.req.param("projectId")!;
-    const num = parseInt(c.req.param("number")!, 10);
-    if (!Number.isFinite(num) || num < 1) {
-      return c.json({ error: "invalid task number" }, 400);
-    }
-    try {
-      const task = service.findByNumber(projectId, num);
-      if (!task) return c.json({ error: "task not found" }, 404);
-      return c.json(task);
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
+    if (status) filter.status = status;
+    return c.json(service.findByProjectId(projectId, limit, offset, filter));
   });
 
   // POST /api/projects/:projectId/tasks
-  app.post("/", async (c) => {
+  app.post("/:projectId/tasks", async (c) => {
     const projectId = c.req.param("projectId")!;
-    try {
-      const { title, description, status, type, effort, priority } = await c.req.json<CreateTaskInput>();
-      const task = service.create(projectId, { title, description, status, type, effort, priority });
-      return c.json(task, 201);
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
+    const { summary, context, status } = await c.req.json<Omit<CreateTaskInput, "project_id">>();
+    const task = service.create({ project_id: projectId, summary, context, status });
+    return c.json(task, 201);
+  });
+
+  // GET /api/projects/:projectId/tasks/:id
+  app.get("/:projectId/tasks/:id", (c) => {
+    const task = service.findById(c.req.param("id")!);
+    if (!task) return c.json({ error: "task not found" }, 404);
+    return c.json(task);
   });
 
   // PATCH /api/projects/:projectId/tasks/:id
-  app.patch("/:id", async (c) => {
-    const projectId = c.req.param("projectId")!;
-    try {
-      const { title, description, status, type, effort, priority } = await c.req.json<UpdateTaskInput>();
-      const task = service.update(projectId, c.req.param("id")!, { title, description, status, type, effort, priority });
-      if (!task) return c.json({ error: "task not found" }, 404);
-      return c.json(task);
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
-  });
-
-  // DELETE /api/projects/:projectId/tasks/:id
-  app.delete("/:id", (c) => {
-    const projectId = c.req.param("projectId")!;
-    try {
-      const deleted = service.delete(projectId, c.req.param("id")!);
-      if (!deleted) return c.json({ error: "task not found" }, 404);
-      return c.json({ ok: true });
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
-  });
-
-  // ── Task Tags ─────────────────────────────────────────────
-
-  // GET /api/projects/:projectId/tasks/:id/tags
-  app.get("/:id/tags", (c) => {
-    try {
-      const tags = tagService.getTagsForTask(c.req.param("id")!);
-      return c.json({ data: tags });
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
-  });
-
-  // POST /api/projects/:projectId/tasks/:id/tags
-  app.post("/:id/tags", async (c) => {
-    try {
-      const { name } = await c.req.json<{ name: string }>();
-      const tag = tagService.addTagToTask(c.req.param("id")!, name);
-      return c.json(tag, 201);
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
-  });
-
-  // DELETE /api/projects/:projectId/tasks/:id/tags/:tagId
-  app.delete("/:id/tags/:tagId", (c) => {
-    try {
-      const removed = tagService.removeTagFromTask(c.req.param("id")!, c.req.param("tagId")!);
-      if (!removed) return c.json({ error: "tag not found on task" }, 404);
-      return c.json({ ok: true });
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
+  app.patch("/:projectId/tasks/:id", async (c) => {
+    const { summary, context, status } = await c.req.json<UpdateTaskInput>();
+    const task = service.update(c.req.param("id")!, { summary, context, status });
+    if (!task) return c.json({ error: "task not found" }, 404);
+    return c.json(task);
   });
 
   return app;

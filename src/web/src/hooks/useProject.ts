@@ -77,12 +77,12 @@ export function useProject(projectId: string) {
     }
   }
 
-  async function addTask(title: string) {
+  async function addTask(summary: string) {
     if (!project) return;
     await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ summary }),
     });
   }
 
@@ -99,14 +99,5 @@ export function useProject(projectId: string) {
     }
   }
 
-  async function deleteTask(taskId: string) {
-    if (!project) return;
-    try {
-      await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks/${taskId}`, { method: "DELETE" });
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to delete task");
-    }
-  }
-
-  return { project, tasks, notFound, loading, updateProjectStatus, addTask, updateTaskStatus, deleteTask };
+  return { project, tasks, notFound, loading, updateProjectStatus, addTask, updateTaskStatus };
 }

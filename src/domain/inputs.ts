@@ -1,30 +1,52 @@
-import type { Project, Task, Workflow, Phase, Instruction, Binding } from "./entities";
+export interface CreateProjectInput {
+  name: string;
+  description?: string;
+  status?: string;
+}
 
-export type CreateProjectInput = Pick<Project, "name"> &
-  Partial<Pick<Project, "description" | "status">>;
+export interface UpdateProjectInput {
+  name?: string;
+  description?: string;
+  status?: string;
+}
 
-export type UpdateProjectInput = Partial<
-  Pick<Project, "name" | "description" | "status">
->;
+export interface CreateTaskInput {
+  project_id: string;
+  summary: string;
+  context?: string;
+  status?: string;
+}
 
-export type CreateTaskInput = Pick<Task, "title"> &
-  Partial<Pick<Task, "description" | "status" | "type" | "effort" | "priority">>;
+export interface UpdateTaskInput {
+  summary?: string;
+  context?: string;
+  status?: string;
+}
 
-export type UpdateTaskInput = Partial<Pick<Task, "title" | "description" | "status" | "type" | "effort" | "priority">>;
+export interface CreateTemplateInput {
+  name: string;
+  description?: string;
+  prompt: string;
+  agent?: string;
+}
 
-export type CreateWorkflowInput = Pick<Workflow, "goal"> &
-  Partial<Pick<Workflow, "cursor" | "status">>;
+export interface UpdateTemplateInput {
+  name?: string;
+  description?: string;
+  prompt?: string;
+  agent?: string;
+}
 
-export type UpdateWorkflowInput = Partial<Pick<Workflow, "goal" | "cursor" | "status">>;
+export interface CreateActionInput {
+  target: string;
+  rank: number;
+  prompt: string;
+  agent?: string;
+  template_id?: string;
+}
 
-export type CreatePhaseInput = Pick<Phase, "title"> &
-  Partial<Pick<Phase, "position">>;
-
-export type UpdatePhaseInput = Partial<Pick<Phase, "title">>;
-
-export type CreateInstructionInput = Pick<Instruction, "prompt"> &
-  Partial<Pick<Instruction, "agent">>;
-
-export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt" | "output" | "agent">>;
-
-export type CreateBindingInput = Pick<Binding, "arn">;
+export interface UpdateActionInput {
+  id: string;
+  prompt?: string;
+  agent?: string;
+}

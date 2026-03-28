@@ -3,16 +3,17 @@ import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
 import type { IProjectService, Paginated, ProjectFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
-import { PROJECT_STATUSES } from "../enums";
 import type { EventBus } from "../events";
+
+const VALID_STATUSES = ["active", "archived"] as const;
 
 export class ProjectService implements IProjectService {
   constructor(private repo: ProjectRepository, private eventBus?: EventBus) {}
 
   findAll(limit = 50, offset = 0, filter?: ProjectFilter): Paginated<Project> {
     return {
-      data: this.repo.findAll(limit, offset, filter),
-      total: this.repo.count(filter),
+      data: this.repo.findAll(limit, offset, filter?.status),
+      total: this.repo.count(filter?.status),
     };
   }
 
@@ -30,8 +31,8 @@ export class ProjectService implements IProjectService {
     if (input.description !== undefined && input.description.length > 10000) {
       throw new ServiceError("description must be 10000 characters or fewer", 400);
     }
-    if (input.status !== undefined && !(PROJECT_STATUSES as readonly string[]).includes(input.status)) {
-      throw new ServiceError(`status must be one of: ${PROJECT_STATUSES.join(", ")}`, 400);
+    if (input.status !== undefined && !VALID_STATUSES.includes(input.status as typeof VALID_STATUSES[number])) {
+      throw new ServiceError(`status must be one of: ${VALID_STATUSES.join(", ")}`, 400);
     }
     const project = this.repo.create(input);
     this.eventBus?.emit({ entity: "project", action: "created", payload: project });
@@ -48,22 +49,13 @@ export class ProjectService implements IProjectService {
     if (input.description !== undefined && input.description.length > 10000) {
       throw new ServiceError("description must be 10000 characters or fewer", 400);
     }
-    if (input.status !== undefined && !(PROJECT_STATUSES as readonly string[]).includes(input.status)) {
-      throw new ServiceError(`status must be one of: ${PROJECT_STATUSES.join(", ")}`, 400);
+    if (input.status !== undefined && !VALID_STATUSES.includes(input.status as typeof VALID_STATUSES[number])) {
+      throw new ServiceError(`status must be one of: ${VALID_STATUSES.join(", ")}`, 400);
     }
     const project = this.repo.update(id, input);
     if (project) {
       this.eventBus?.emit({ entity: "project", action: "updated", payload: project });
     }
     return project;
-  }
-
-  delete(id: string): boolean {
-    const project = this.repo.findById(id);
-    const deleted = this.repo.delete(id);
-    if (deleted && project) {
-      this.eventBus?.emit({ entity: "project", action: "deleted", payload: { id: project.id } });
-    }
-    return deleted;
   }
 }

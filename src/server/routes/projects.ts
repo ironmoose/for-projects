@@ -1,12 +1,9 @@
 import { Hono } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-import {
-  ServiceError,
-  PROJECT_STATUSES,
-  type IProjectService,
-  type ProjectFilter,
-  type CreateProjectInput,
-  type UpdateProjectInput,
+import type {
+  IProjectService,
+  ProjectFilter,
+  CreateProjectInput,
+  UpdateProjectInput,
 } from "../../domain";
 
 export function projectRoutes(service: IProjectService): Hono {
@@ -20,22 +17,15 @@ export function projectRoutes(service: IProjectService): Hono {
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const filter: ProjectFilter = {};
     const status = c.req.query("status");
-    if (status && (PROJECT_STATUSES as readonly string[]).includes(status)) {
-      filter.status = status as ProjectFilter["status"];
-    }
+    if (status) filter.status = status;
     return c.json(service.findAll(limit, offset, filter));
   });
 
   // POST /api/projects
   app.post("/", async (c) => {
-    try {
-      const { name, description, status } = await c.req.json<CreateProjectInput>();
-      const project = service.create({ name, description, status });
-      return c.json(project, 201);
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
+    const { name, description, status } = await c.req.json<CreateProjectInput>();
+    const project = service.create({ name, description, status });
+    return c.json(project, 201);
   });
 
   // GET /api/projects/:id
@@ -47,22 +37,10 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // PATCH /api/projects/:id
   app.patch("/:id", async (c) => {
-    try {
-      const { name, description, status } = await c.req.json<UpdateProjectInput>();
-      const project = service.update(c.req.param("id"), { name, description, status });
-      if (!project) return c.json({ error: "project not found" }, 404);
-      return c.json(project);
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
-  });
-
-  // DELETE /api/projects/:id
-  app.delete("/:id", (c) => {
-    const deleted = service.delete(c.req.param("id"));
-    if (!deleted) return c.json({ error: "project not found" }, 404);
-    return c.json({ ok: true });
+    const { name, description, status } = await c.req.json<UpdateProjectInput>();
+    const project = service.update(c.req.param("id"), { name, description, status });
+    if (!project) return c.json({ error: "project not found" }, 404);
+    return c.json(project);
   });
 
   return app;

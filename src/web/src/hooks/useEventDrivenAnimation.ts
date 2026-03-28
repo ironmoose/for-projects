@@ -37,18 +37,9 @@ export function useEventDrivenAnimation(
       let state: AnimationState = "flash";
       let duration = 600;
 
-      if (entityType === "instruction" && event.action === "updated") {
-        // Instructions no longer have status — key off output presence
-        const output = payload.output as string | null | undefined;
-        if (output != null && output.length > 0) {
-          // Output was written — flash to signal completion
-          state = "flash";
-          duration = 600;
-        } else {
-          // Updated without output (prompt/agent change) — subtle flash
-          state = "flash";
-          duration = 400;
-        }
+      if (event.action === "updated") {
+        state = "flash";
+        duration = 400;
       }
 
       setAnimationState(state);

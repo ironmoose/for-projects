@@ -1,20 +1,13 @@
-import type {
-  Project, Task, Tag, Workflow, Phase, Instruction, Binding,
-  ResolvedEntity, ResolvedInstruction,
-} from "./entities";
-import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, WorkflowStatus } from "./enums";
+import type { Project, Task, Template, Action } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateTaskInput,
   UpdateTaskInput,
-  CreateWorkflowInput,
-  UpdateWorkflowInput,
-  CreatePhaseInput,
-  UpdatePhaseInput,
-  CreateInstructionInput,
-  UpdateInstructionInput,
-  CreateBindingInput,
+  CreateTemplateInput,
+  UpdateTemplateInput,
+  CreateActionInput,
+  UpdateActionInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -23,15 +16,11 @@ export interface Paginated<T> {
 }
 
 export interface ProjectFilter {
-  status?: ProjectStatus;
+  status?: string;
 }
 
 export interface TaskFilter {
-  status?: TaskStatus;
-  type?: TaskType;
-  effort?: TaskEffort;
-  tag?: string;
-  tag_prefix?: string;
+  status?: string;
 }
 
 export interface IProjectService {
@@ -39,78 +28,27 @@ export interface IProjectService {
   findById(id: string): Project | null;
   create(input: CreateProjectInput): Project;
   update(id: string, input: UpdateProjectInput): Project | null;
-  delete(id: string): boolean;
 }
 
 export interface ITaskService {
   findById(id: string): Task | null;
   findByProjectId(projectId: string, limit?: number, offset?: number, filter?: TaskFilter): Paginated<Task>;
-  findByNumber(projectId: string, number: number): Task | null;
-  create(projectId: string, input: CreateTaskInput): Task;
-  update(projectId: string, id: string, input: UpdateTaskInput): Task | null;
-  delete(projectId: string, id: string): boolean;
+  create(input: CreateTaskInput): Task;
+  update(id: string, input: UpdateTaskInput): Task | null;
 }
 
-export interface WorkflowFilter {
-  status?: WorkflowStatus;
-}
-
-export interface IWorkflowService {
-  findAll(limit?: number, offset?: number, filter?: WorkflowFilter): Paginated<Workflow>;
-  findById(id: string): Workflow | null;
-  create(input: CreateWorkflowInput): Workflow;
-  update(id: string, input: UpdateWorkflowInput): Workflow | null;
+export interface ITemplateService {
+  findAll(limit?: number, offset?: number): Paginated<Template>;
+  findById(id: string): Template | null;
+  create(input: CreateTemplateInput): Template;
+  update(id: string, input: UpdateTemplateInput): Template | null;
   delete(id: string): boolean;
 }
 
-export interface IPhaseService {
-  findByWorkflow(workflowId: string, limit?: number, offset?: number): Paginated<Phase>;
-  findById(workflowId: string, phaseId: string): Phase | null;
-  findByIdDirect(phaseId: string): Phase | null;
-  create(workflowId: string, input: CreatePhaseInput): Phase;
-  update(workflowId: string, phaseId: string, input: UpdatePhaseInput): Phase | null;
-  delete(workflowId: string, phaseId: string): boolean;
-  reorder(workflowId: string, phaseIds: string[]): Phase[];
-}
-
-export interface IInstructionService {
-  findByPhase(phaseId: string, limit?: number, offset?: number): Paginated<Instruction>;
-  findById(phaseId: string, instructionId: string): Instruction | null;
-  findByIdDirect(instructionId: string): Instruction | null;
-  create(phaseId: string, input: CreateInstructionInput): Instruction;
-  update(phaseId: string, instructionId: string, input: UpdateInstructionInput): Instruction | null;
-  delete(phaseId: string, instructionId: string): boolean;
-}
-
-export interface IBindingService {
-  findByInstruction(instructionId: string): Binding[];
-  findByArn(arn: string): Binding[];
-  create(instructionId: string, input: CreateBindingInput): Binding;
-  delete(instructionId: string, bindingId: string): boolean;
-}
-
-export interface ITagService {
-  findAll(limit?: number, offset?: number): Paginated<Tag>;
-  findByName(name: string): Tag | null;
-  findByPrefix(prefix: string, limit?: number, offset?: number): Paginated<Tag>;
-  create(name: string): Tag;
-  delete(id: string): boolean;
-  addTagToTask(taskId: string, tagName: string): Tag;
-  removeTagFromTask(taskId: string, tagId: string): boolean;
-  removeTagFromTaskByName(taskId: string, tagName: string): boolean;
-  getTagsForTask(taskId: string): Tag[];
-  findTasksByTag(tagName: string, limit?: number, offset?: number): Paginated<Task>;
-  findTasksByTagPrefix(prefix: string, limit?: number, offset?: number): Paginated<Task>;
-}
-
-export interface ResolveOptions {
-  maxSectionLength?: number;
-}
-
-export interface IResolverService {
-  /** Dereference one or more ARNs into their entities. */
-  resolve(arns: string[]): ResolvedEntity[];
-
-  /** Resolve an instruction and compile its bound context into sections. */
-  compilePrompt(instructionId: string, options?: ResolveOptions): ResolvedInstruction;
+export interface IActionService {
+  findByTarget(target: string, limit?: number, offset?: number): Paginated<Action>;
+  findById(id: string): Action | null;
+  createMany(target: string, actions: { rank: number; prompt?: string; agent?: string; template_id?: string }[]): Action[];
+  updateMany(target: string, updates: UpdateActionInput[]): Action[];
+  deleteMany(target: string, ids: string[]): number;
 }

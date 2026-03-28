@@ -11,62 +11,33 @@ export interface Project {
   updated_at: string;
 }
 
-export type TaskType = "research" | "implementation" | "review" | "design" | "planning" | "testing" | "documentation";
-export type TaskEffort = "trivial" | "low" | "moderate" | "high" | "extreme";
-
 export interface Task {
   id: string;
   project_id: string;
-  number: number;
-  title: string;
-  description: string;
+  summary: string;
+  context: string;
   status: "todo" | "in_progress" | "done";
-  type: TaskType | null;
-  effort: TaskEffort | null;
-  priority: number | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface Tag {
+export interface Template {
   id: string;
   name: string;
-  prefix: string | null;
-  created_at: string;
-}
-
-export interface Workflow {
-  id: string;
-  goal: string;
-  cursor: string | null;
-  status: "idle" | "running" | "paused" | "complete";
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Phase {
-  id: string;
-  workflow_id: string;
-  title: string;
-  position: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Instruction {
-  id: string;
-  phase_id: string;
+  description: string;
   prompt: string;
-  output: string | null;
   agent: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface Binding {
+export interface Action {
   id: string;
-  instruction_id: string;
-  arn: string;
+  target: string;
+  rank: number;
+  template_id: string | null;
+  prompt: string;
+  agent: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 export interface DomainEvent {
-  entity: "project" | "task" | "workflow" | "phase" | "instruction" | "binding";
-  action: "created" | "updated" | "deleted" | "reordered";
+  entity: "project" | "task" | "template" | "action";
+  action: "created" | "updated" | "deleted";
   payload: Record<string, unknown>;
 }
 
