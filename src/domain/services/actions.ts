@@ -1,29 +1,34 @@
-import type { Action } from "../entities";
+import type { Action, ActionStatus } from "../entities";
 import type { CreateActionInput, UpdateActionInput } from "../inputs";
 import type { IActionService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { ActionRepository } from "../repositories/actions";
 import type { ProjectRepository } from "../repositories/projects";
 import type { TaskRepository } from "../repositories/tasks";
-import type { TemplateRepository } from "../repositories/templates";
 import type { EventBus } from "../events";
 
 const VALID_AGENTS = ["research", "design", "implementation", "review"] as const;
 const VALID_TARGET_PREFIXES = ["tab:project:", "tab:task:"] as const;
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  'todo': ['in_progress'],
+  'in_progress': ['complete', 'failed'],
+  'complete': [],
+  'failed': ['todo'],
+};
 
 export class ActionService implements IActionService {
   constructor(
     private actionRepo: ActionRepository,
     private projectRepo: ProjectRepository,
     private taskRepo: TaskRepository,
-    private templateRepo: TemplateRepository,
     private eventBus?: EventBus,
   ) {}
 
-  findByTarget(target: string, limit = 100, offset = 0): Paginated<Action> {
+  findByTarget(target: string, limit = 100, offset = 0, status?: string): Paginated<Action> {
     return {
-      data: this.actionRepo.findByTarget(target, limit, offset),
-      total: this.actionRepo.countByTarget(target),
+      data: this.actionRepo.findByTarget(target, limit, offset, status),
+      total: this.actionRepo.countByTarget(target, status),
     };
   }
 
@@ -31,7 +36,7 @@ export class ActionService implements IActionService {
     return this.actionRepo.findById(id);
   }
 
-  createMany(target: string, actions: { rank: number; prompt?: string; agent?: string; template_id?: string }[]): Action[] {
+  createMany(target: string, actions: { rank: number; prompt?: string; agent?: string }[]): Action[] {
     this.validateTarget(target);
 
     const resolved: CreateActionInput[] = [];
@@ -40,22 +45,13 @@ export class ActionService implements IActionService {
         throw new ServiceError("rank must be a non-negative integer", 400);
       }
 
-      let prompt = action.prompt;
-      let agent = action.agent;
-
-      if (action.template_id) {
-        const template = this.templateRepo.findById(action.template_id);
-        if (!template) {
-          throw new ServiceError(`template not found: ${action.template_id}`, 404);
-        }
-        prompt = action.prompt ?? template.prompt;
-        agent = action.agent ?? template.agent ?? undefined;
-      }
+      const prompt = action.prompt;
 
       if (!prompt?.trim()) {
-        throw new ServiceError("prompt is required when no template_id is provided", 400);
+        throw new ServiceError("prompt is required", 400);
       }
 
+      const agent = action.agent;
       if (agent !== undefined && !VALID_AGENTS.includes(agent as typeof VALID_AGENTS[number])) {
         throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
       }
@@ -65,20 +61,12 @@ export class ActionService implements IActionService {
         rank: action.rank,
         prompt,
         agent,
-        template_id: action.template_id,
       });
     }
 
-    try {
-      const created = this.actionRepo.createMany(resolved);
-      this.eventBus?.emit({ entity: "action", action: "created", payload: created });
-      return created;
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
-        throw new ServiceError("duplicate rank for target", 409);
-      }
-      throw err;
-    }
+    const created = this.actionRepo.createMany(resolved);
+    this.eventBus?.emit({ entity: "action", action: "created", payload: created });
+    return created;
   }
 
   updateMany(target: string, updates: UpdateActionInput[]): Action[] {
@@ -121,6 +109,62 @@ export class ActionService implements IActionService {
       this.eventBus?.emit({ entity: "action", action: "deleted", payload: ids.map(id => ({ id })) });
     }
     return deleted;
+  }
+
+  updateStatus(id: string, status: ActionStatus): Action | null {
+    const existing = this.actionRepo.findById(id);
+    if (!existing) {
+      throw new ServiceError(`action not found: ${id}`, 404);
+    }
+
+    const allowed = VALID_TRANSITIONS[existing.status];
+    if (!allowed || !allowed.includes(status)) {
+      throw new ServiceError(
+        `invalid status transition: ${existing.status} → ${status}`,
+        400
+      );
+    }
+
+    const updated = this.actionRepo.updateStatus(id, status);
+    if (updated) {
+      this.eventBus?.emit({ entity: "action", action: "status_changed", payload: [updated] });
+
+      if (this.actionRepo.isTierComplete(existing.target, existing.rank)) {
+        this.eventBus?.emit({
+          entity: "action",
+          action: "tier_complete",
+          payload: { target: existing.target, rank: existing.rank },
+        });
+      }
+    }
+
+    return updated;
+  }
+
+  getExecutableActions(target: string): Action[] {
+    return this.actionRepo.findExecutableActions(target);
+  }
+
+  getActionPlan(target: string): Array<{ rank: number; actions: Action[] }> {
+    const map = this.actionRepo.findByTargetGroupedByRank(target);
+    return Array.from(map.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([rank, actions]) => ({ rank, actions }));
+  }
+
+  getDashboardData(): { executable: Action[]; inProgress: Action[]; recentlyTerminal: Action[] } {
+    const activeTargets = this.actionRepo.findActiveTargets();
+    const executable: Action[] = [];
+    for (const target of activeTargets) {
+      const tierActions = this.actionRepo.findExecutableActions(target);
+      // Only include "todo" actions as executable — in_progress ones belong in the inProgress column
+      executable.push(...tierActions.filter(a => a.status === 'todo'));
+    }
+
+    const inProgress = this.actionRepo.findByStatus('in_progress');
+    const recentlyTerminal = this.actionRepo.findRecentlyTerminal(10);
+
+    return { executable, inProgress, recentlyTerminal };
   }
 
   private validateTarget(target: string): void {

@@ -15,7 +15,6 @@ import { parseArgs, parseCorsOrigins, logListening, type ServerOptions } from ".
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
-import { templateRoutes } from "./routes/templates";
 import { actionRoutes } from "./routes/actions";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
@@ -53,7 +52,6 @@ export class Server {
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
     app.route("/api/projects", taskRoutes(ctx.taskService));
     app.route("/api/projects", projectRoutes(ctx.projectService));
-    app.route("/api/templates", templateRoutes(ctx.templateService));
     app.route("/api/actions", actionRoutes(ctx.actionService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 

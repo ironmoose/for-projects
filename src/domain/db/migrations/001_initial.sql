@@ -17,29 +17,19 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS templates (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    prompt TEXT NOT NULL,
-    agent TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS actions (
     id TEXT PRIMARY KEY,
     target TEXT NOT NULL,
     rank INTEGER NOT NULL,
-    template_id TEXT,
     prompt TEXT NOT NULL,
     agent TEXT,
+    status TEXT NOT NULL DEFAULT 'todo',
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(target, rank)
+    updated_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_actions_target ON actions(target);
-CREATE INDEX IF NOT EXISTS idx_actions_template_id ON actions(template_id);
+CREATE INDEX IF NOT EXISTS idx_actions_status ON actions(status);
+CREATE INDEX IF NOT EXISTS idx_actions_target_rank_status ON actions(target, rank, status);

@@ -1,12 +1,9 @@
-import type { Project, Task, Template, Action } from "./entities";
+import type { Project, Task, Action, ActionStatus } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateTaskInput,
   UpdateTaskInput,
-  CreateTemplateInput,
-  UpdateTemplateInput,
-  CreateActionInput,
   UpdateActionInput,
 } from "./inputs";
 
@@ -37,18 +34,14 @@ export interface ITaskService {
   update(id: string, input: UpdateTaskInput): Task | null;
 }
 
-export interface ITemplateService {
-  findAll(limit?: number, offset?: number): Paginated<Template>;
-  findById(id: string): Template | null;
-  create(input: CreateTemplateInput): Template;
-  update(id: string, input: UpdateTemplateInput): Template | null;
-  delete(id: string): boolean;
-}
-
 export interface IActionService {
-  findByTarget(target: string, limit?: number, offset?: number): Paginated<Action>;
+  findByTarget(target: string, limit?: number, offset?: number, status?: string): Paginated<Action>;
   findById(id: string): Action | null;
-  createMany(target: string, actions: { rank: number; prompt?: string; agent?: string; template_id?: string }[]): Action[];
+  createMany(target: string, actions: { rank: number; prompt?: string; agent?: string }[]): Action[];
   updateMany(target: string, updates: UpdateActionInput[]): Action[];
   deleteMany(target: string, ids: string[]): number;
+  updateStatus(id: string, status: ActionStatus): Action | null;
+  getExecutableActions(target: string): Action[];
+  getActionPlan(target: string): Array<{ rank: number; actions: Action[] }>;
+  getDashboardData(): { executable: Action[]; inProgress: Action[]; recentlyTerminal: Action[] };
 }

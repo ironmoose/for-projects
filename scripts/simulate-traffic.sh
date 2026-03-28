@@ -48,32 +48,14 @@ T5=$(post "$API/projects/$P2_ID/tasks" '{"summary":"Draft proposal"}')
 T5_ID=$(jid "$T5")
 echo "  Task 5: $T5_ID"
 
-echo "=== Creating templates ==="
-TPL1=$(post "$API/templates" '{"name":"Research","description":"Deep-dive research task","prompt":"Perform thorough research on the target."}')
-TPL1_ID=$(jid "$TPL1")
-echo "  Template Research: $TPL1_ID"
-
-TPL2=$(post "$API/templates" '{"name":"Simplify","description":"Simplification pass","prompt":"Simplify and streamline the target."}')
-TPL2_ID=$(jid "$TPL2")
-echo "  Template Simplify: $TPL2_ID"
-
-TPL3=$(post "$API/templates" '{"name":"Review","description":"Code review","prompt":"Review the target for correctness and quality."}')
-TPL3_ID=$(jid "$TPL3")
-echo "  Template Review: $TPL3_ID"
-
-TPL4=$(post "$API/templates" '{"name":"Implement","description":"Implementation task","prompt":"Implement the specified feature.","agent":"implementation"}')
-TPL4_ID=$(jid "$TPL4")
-echo "  Template Implement: $TPL4_ID"
-
-echo "=== Bulk create actions from templates (targeting projects) ==="
-A_P1=$(post "$API/actions" "{\"target\":\"tab:project:$P1_ID\",\"actions\":[{\"rank\":1,\"template_id\":\"$TPL1_ID\"},{\"rank\":2,\"template_id\":\"$TPL2_ID\"},{\"rank\":3,\"template_id\":\"$TPL3_ID\"}]}")
+echo "=== Bulk create actions with explicit prompts ==="
+A_P1=$(post "$API/actions" "{\"target\":\"tab:project:$P1_ID\",\"actions\":[{\"rank\":1,\"prompt\":\"Perform thorough research on the target.\"},{\"rank\":2,\"prompt\":\"Simplify and streamline the target.\"},{\"rank\":3,\"prompt\":\"Review the target for correctness and quality.\"}]}")
 echo "  Actions on project Alpha: $(echo "$A_P1" | grep -o '"id"' | wc -l | tr -d ' ') created"
 
-echo "=== Bulk create actions from templates (targeting tasks) ==="
-A_T1=$(post "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"actions\":[{\"rank\":1,\"template_id\":\"$TPL4_ID\"},{\"rank\":2,\"template_id\":\"$TPL3_ID\"}]}")
+echo "=== Bulk create actions (targeting tasks) ==="
+A_T1=$(post "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"actions\":[{\"rank\":1,\"prompt\":\"Implement the specified feature.\",\"agent\":\"implementation\"},{\"rank\":2,\"prompt\":\"Review the target for correctness and quality.\"}]}")
 echo "  Actions on task 1: $(echo "$A_T1" | grep -o '"id"' | wc -l | tr -d ' ') created"
 
-echo "=== Bulk create actions with explicit prompts (no template) ==="
 A_P2=$(post "$API/actions" "{\"target\":\"tab:project:$P2_ID\",\"actions\":[{\"rank\":1,\"prompt\":\"Audit all dependencies\"},{\"rank\":2,\"prompt\":\"Update changelog\",\"agent\":\"implementation\"},{\"rank\":3,\"prompt\":\"Run integration tests\"}]}")
 echo "  Actions on project Beta: $(echo "$A_P2" | grep -o '"id"' | wc -l | tr -d ' ') created"
 
@@ -87,8 +69,6 @@ get "$API/projects/$P1_ID" > /dev/null
 echo "  GET /api/projects/$P1_ID"
 get "$API/projects/$P1_ID/tasks" > /dev/null
 echo "  GET /api/projects/$P1_ID/tasks"
-get "$API/templates" > /dev/null
-echo "  GET /api/templates"
 get "$API/actions?target=tab:project:$P1_ID" > /dev/null
 echo "  GET /api/actions?target=tab:project:$P1_ID"
 get "$API/actions?target=tab:task:$T1_ID" > /dev/null
@@ -131,29 +111,14 @@ DEL_JSON="[$(echo "$DEL_IDS" | sed 's/,/","/g; s/^/"/; s/$/"/')]"
 del "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"ids\":$DEL_JSON}" > /dev/null
 echo "  Deleted actions from task 1"
 
-post "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"actions\":[{\"rank\":1,\"template_id\":\"$TPL3_ID\"},{\"rank\":2,\"template_id\":\"$TPL4_ID\"},{\"rank\":3,\"prompt\":\"Final verification\"}]}" > /dev/null
+post "$API/actions" "{\"target\":\"tab:task:$T1_ID\",\"actions\":[{\"rank\":1,\"prompt\":\"Review the target for correctness and quality.\"},{\"rank\":2,\"prompt\":\"Implement the specified feature.\",\"agent\":\"implementation\"},{\"rank\":3,\"prompt\":\"Final verification\"}]}" > /dev/null
 echo "  Recreated actions on task 1 in new order"
-
-echo "=== Delete a template (actions survive) ==="
-curl -sf -X DELETE "$API/templates/$TPL2_ID" > /dev/null
-echo "  Deleted template Simplify ($TPL2_ID)"
-
-# Verify actions on project Alpha still exist
-REMAINING=$(get "$API/actions?target=tab:project:$P1_ID")
-REMAINING_COUNT=$(echo "$REMAINING" | grep -o '"id"' | wc -l | tr -d ' ')
-echo "  Actions remaining on project Alpha: $REMAINING_COUNT"
-
-echo "=== Template update ==="
-patch "$API/templates/$TPL1_ID" '{"prompt":"Perform exhaustive research on the target, including edge cases."}' > /dev/null
-echo "  Updated template Research prompt"
 
 echo "=== Additional reads for WebSocket exercise ==="
 get "$API/projects?status=active" > /dev/null
 echo "  GET /api/projects?status=active"
 get "$API/projects/$P2_ID/tasks?status=done" > /dev/null
 echo "  GET /api/projects/$P2_ID/tasks?status=done"
-get "$API/templates/$TPL3_ID" > /dev/null
-echo "  GET /api/templates/$TPL3_ID"
 get "$API/health" > /dev/null
 echo "  GET /api/health"
 

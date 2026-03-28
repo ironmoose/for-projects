@@ -21,23 +21,15 @@ export interface Task {
   updated_at: string;
 }
 
-export interface Template {
-  id: string;
-  name: string;
-  description: string;
-  prompt: string;
-  agent: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type ActionStatus = "todo" | "in_progress" | "complete" | "failed";
 
 export interface Action {
   id: string;
   target: string;
   rank: number;
-  template_id: string | null;
   prompt: string;
   agent: string | null;
+  status: ActionStatus;
   created_at: string;
   updated_at: string;
 }
@@ -63,4 +55,25 @@ export const statusLabel: Record<Task["status"], string> = {
   todo: "To Do",
   in_progress: "In Progress",
   done: "Done",
+};
+
+export const actionStatusOptions: { value: ActionStatus; label: string }[] = [
+  { value: "todo", label: "To Do" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "complete", label: "Complete" },
+  { value: "failed", label: "Failed" },
+];
+
+export const actionStatusLabel: Record<ActionStatus, string> = {
+  todo: "To Do",
+  in_progress: "In Progress",
+  complete: "Complete",
+  failed: "Failed",
+};
+
+export const actionValidTransitions: Record<ActionStatus, ActionStatus[]> = {
+  todo: ["in_progress"],
+  in_progress: ["complete", "failed"],
+  complete: [],
+  failed: ["todo"],
 };

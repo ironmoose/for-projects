@@ -39,3 +39,36 @@ export async function apiFetch(
 
   return res;
 }
+
+// ---------------------------------------------------------------------------
+// Actions API
+// ---------------------------------------------------------------------------
+
+export async function fetchActionsDashboard() {
+  const res = await apiFetch("/api/actions/dashboard");
+  return res.json();
+}
+
+export async function fetchActionPlan(target: string) {
+  const res = await apiFetch(`/api/actions/${encodeURIComponent(target)}/plan`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function updateActionStatus(id: string, status: string) {
+  const res = await apiFetch(`/api/actions/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  return res.json();
+}
+
+export async function fetchActionsByTarget(target: string, params?: { status?: string; limit?: number; offset?: number }) {
+  const searchParams = new URLSearchParams({ target });
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  const res = await apiFetch(`/api/actions?${searchParams}`);
+  return res.json();
+}

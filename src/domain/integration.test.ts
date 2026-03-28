@@ -152,88 +152,6 @@ describe("Task CRUD", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Template CRUD
-// ---------------------------------------------------------------------------
-
-describe("Template CRUD", () => {
-  it("creates a template with name + prompt", () => {
-    const template = ctx.templateService.create({
-      name: "Code Review",
-      prompt: "Review this code for quality",
-    });
-
-    expect(template.id).toBeTruthy();
-    expect(template.name).toBe("Code Review");
-    expect(template.prompt).toBe("Review this code for quality");
-    expect(template.created_at).toBeTruthy();
-    expect(template.updated_at).toBeTruthy();
-  });
-
-  it("updates template name, description, prompt, agent", () => {
-    const template = ctx.templateService.create({
-      name: "Original",
-      prompt: "Original prompt",
-    });
-
-    const updated = ctx.templateService.update(template.id, {
-      name: "Updated",
-      description: "A description",
-      prompt: "Updated prompt",
-      agent: "research",
-    });
-
-    expect(updated!.name).toBe("Updated");
-    expect(updated!.description).toBe("A description");
-    expect(updated!.prompt).toBe("Updated prompt");
-    expect(updated!.agent).toBe("research");
-  });
-
-  it("lists templates", () => {
-    const before = ctx.templateService.findAll();
-    const t = ctx.templateService.create({ name: "List Test", prompt: "p" });
-    const after = ctx.templateService.findAll();
-
-    expect(after.total).toBe(before.total + 1);
-    expect(after.data.some((tmpl) => tmpl.id === t.id)).toBe(true);
-  });
-
-  it("deletes a template (hard delete)", () => {
-    const template = ctx.templateService.create({ name: "To Delete", prompt: "p" });
-    expect(ctx.templateService.findById(template.id)).not.toBeNull();
-
-    const deleted = ctx.templateService.delete(template.id);
-    expect(deleted).toBe(true);
-    expect(ctx.templateService.findById(template.id)).toBeNull();
-  });
-
-  it("action survives template deletion", () => {
-    const project = ctx.projectService.create({ name: "Template Delete Project" });
-    const template = ctx.templateService.create({
-      name: "Ephemeral",
-      prompt: "Template prompt",
-      agent: "design",
-    });
-
-    const target = `tab:project:${project.id}`;
-    const [action] = ctx.actionService.createMany(target, [
-      { rank: 1, template_id: template.id },
-    ]);
-
-    expect(action.prompt).toBe("Template prompt");
-    expect(action.agent).toBe("design");
-
-    // Delete the template
-    ctx.templateService.delete(template.id);
-
-    // Action still exists with its own prompt/agent
-    const fetched = ctx.actionService.findById(action.id);
-    expect(fetched).not.toBeNull();
-    expect(fetched!.prompt).toBe("Template prompt");
-    expect(fetched!.agent).toBe("design");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Action bulk CRUD
 // ---------------------------------------------------------------------------
 
@@ -257,90 +175,18 @@ describe("Action bulk CRUD", () => {
     expect(actions.length).toBe(3);
     expect(actions[0].rank).toBe(1);
     expect(actions[0].prompt).toBe("First");
+    expect(actions[0].status).toBe("todo");
     expect(actions[1].rank).toBe(2);
     expect(actions[2].rank).toBe(3);
     expect(actions[0].target).toBe(target);
   });
 
-  it("createMany: inherits prompt/agent from template", () => {
-    const p = ctx.projectService.create({ name: "Template Inherit Project" });
-    const t = `tab:project:${p.id}`;
-    const template = ctx.templateService.create({
-      name: "Inherit Test",
-      prompt: "Template prompt",
-      agent: "research",
-    });
-
-    const [action] = ctx.actionService.createMany(t, [
-      { rank: 1, template_id: template.id },
-    ]);
-
-    expect(action.prompt).toBe("Template prompt");
-    expect(action.agent).toBe("research");
-    expect(action.template_id).toBe(template.id);
-  });
-
-  it("createMany: explicit prompt overrides template prompt", () => {
-    const p = ctx.projectService.create({ name: "Override Prompt Project" });
-    const t = `tab:project:${p.id}`;
-    const template = ctx.templateService.create({
-      name: "Override Test",
-      prompt: "Template prompt",
-      agent: "design",
-    });
-
-    const [action] = ctx.actionService.createMany(t, [
-      { rank: 1, template_id: template.id, prompt: "Explicit prompt" },
-    ]);
-
-    expect(action.prompt).toBe("Explicit prompt");
-    expect(action.agent).toBe("design"); // still inherited
-  });
-
-  it("createMany: explicit agent overrides template agent", () => {
-    const p = ctx.projectService.create({ name: "Override Agent Project" });
-    const t = `tab:project:${p.id}`;
-    const template = ctx.templateService.create({
-      name: "Agent Override",
-      prompt: "Some prompt",
-      agent: "design",
-    });
-
-    const [action] = ctx.actionService.createMany(t, [
-      { rank: 1, template_id: template.id, agent: "review" },
-    ]);
-
-    expect(action.prompt).toBe("Some prompt"); // inherited
-    expect(action.agent).toBe("review"); // overridden
-  });
-
-  it("createMany: requires prompt when no template_id", () => {
+  it("createMany: requires prompt", () => {
     const p = ctx.projectService.create({ name: "No Prompt Project" });
     const t = `tab:project:${p.id}`;
 
     expect(() =>
       ctx.actionService.createMany(t, [{ rank: 1 }])
-    ).toThrow(ServiceError);
-  });
-
-  it("createMany: throws on nonexistent template_id", () => {
-    const p = ctx.projectService.create({ name: "Bad Template Project" });
-    const t = `tab:project:${p.id}`;
-
-    expect(() =>
-      ctx.actionService.createMany(t, [{ rank: 1, template_id: "nonexistent" }])
-    ).toThrow(ServiceError);
-  });
-
-  it("createMany: throws on duplicate ranks", () => {
-    const p = ctx.projectService.create({ name: "Dupe Rank Project" });
-    const t = `tab:project:${p.id}`;
-
-    expect(() =>
-      ctx.actionService.createMany(t, [
-        { rank: 1, prompt: "A" },
-        { rank: 1, prompt: "B" },
-      ])
     ).toThrow(ServiceError);
   });
 
@@ -426,6 +272,135 @@ describe("Action bulk CRUD", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Status transitions
+// ---------------------------------------------------------------------------
+
+describe("Action status transitions", () => {
+  it("transitions todo -> in_progress -> complete", () => {
+    const p = ctx.projectService.create({ name: "Status Project" });
+    const t = `tab:project:${p.id}`;
+    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Do it" }]);
+
+    expect(action.status).toBe("todo");
+
+    const inProgress = ctx.actionService.updateStatus(action.id, "in_progress");
+    expect(inProgress!.status).toBe("in_progress");
+
+    const complete = ctx.actionService.updateStatus(action.id, "complete");
+    expect(complete!.status).toBe("complete");
+  });
+
+  it("transitions in_progress -> failed -> todo (retry)", () => {
+    const p = ctx.projectService.create({ name: "Retry Project" });
+    const t = `tab:project:${p.id}`;
+    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Retry me" }]);
+
+    ctx.actionService.updateStatus(action.id, "in_progress");
+    const failed = ctx.actionService.updateStatus(action.id, "failed");
+    expect(failed!.status).toBe("failed");
+
+    const retried = ctx.actionService.updateStatus(action.id, "todo");
+    expect(retried!.status).toBe("todo");
+  });
+
+  it("rejects invalid transitions", () => {
+    const p = ctx.projectService.create({ name: "Invalid Transition Project" });
+    const t = `tab:project:${p.id}`;
+    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "No skip" }]);
+
+    // todo -> complete (not allowed, must go through in_progress)
+    expect(() => ctx.actionService.updateStatus(action.id, "complete")).toThrow(ServiceError);
+
+    // todo -> failed (not allowed)
+    expect(() => ctx.actionService.updateStatus(action.id, "failed")).toThrow(ServiceError);
+  });
+
+  it("rejects transition from complete", () => {
+    const p = ctx.projectService.create({ name: "Complete Terminal Project" });
+    const t = `tab:project:${p.id}`;
+    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Done" }]);
+
+    ctx.actionService.updateStatus(action.id, "in_progress");
+    ctx.actionService.updateStatus(action.id, "complete");
+
+    expect(() => ctx.actionService.updateStatus(action.id, "todo")).toThrow(ServiceError);
+    expect(() => ctx.actionService.updateStatus(action.id, "in_progress")).toThrow(ServiceError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Executable actions & tier logic
+// ---------------------------------------------------------------------------
+
+describe("Executable actions and tiers", () => {
+  it("getExecutableActions returns lowest non-complete tier", () => {
+    const p = ctx.projectService.create({ name: "Tier Project" });
+    const t = `tab:project:${p.id}`;
+
+    const actions = ctx.actionService.createMany(t, [
+      { rank: 1, prompt: "Tier 1 - A" },
+      { rank: 1, prompt: "Tier 1 - B" },
+      { rank: 2, prompt: "Tier 2 - A" },
+    ]);
+
+    const executable = ctx.actionService.getExecutableActions(t);
+    expect(executable.length).toBe(2);
+    expect(executable.every((a) => a.rank === 1)).toBe(true);
+  });
+
+  it("getExecutableActions advances to next tier when current is complete", () => {
+    const p = ctx.projectService.create({ name: "Advance Tier Project" });
+    const t = `tab:project:${p.id}`;
+
+    const actions = ctx.actionService.createMany(t, [
+      { rank: 1, prompt: "Tier 1" },
+      { rank: 2, prompt: "Tier 2" },
+    ]);
+
+    // Complete tier 1
+    ctx.actionService.updateStatus(actions[0].id, "in_progress");
+    ctx.actionService.updateStatus(actions[0].id, "complete");
+
+    const executable = ctx.actionService.getExecutableActions(t);
+    expect(executable.length).toBe(1);
+    expect(executable[0].rank).toBe(2);
+  });
+
+  it("getExecutableActions returns empty when all complete", () => {
+    const p = ctx.projectService.create({ name: "All Complete Project" });
+    const t = `tab:project:${p.id}`;
+
+    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Only one" }]);
+    ctx.actionService.updateStatus(action.id, "in_progress");
+    ctx.actionService.updateStatus(action.id, "complete");
+
+    const executable = ctx.actionService.getExecutableActions(t);
+    expect(executable.length).toBe(0);
+  });
+
+  it("getActionPlan returns grouped by rank", () => {
+    const p = ctx.projectService.create({ name: "Plan Project" });
+    const t = `tab:project:${p.id}`;
+
+    ctx.actionService.createMany(t, [
+      { rank: 1, prompt: "A" },
+      { rank: 1, prompt: "B" },
+      { rank: 2, prompt: "C" },
+      { rank: 3, prompt: "D" },
+    ]);
+
+    const plan = ctx.actionService.getActionPlan(t);
+    expect(plan.length).toBe(3);
+    expect(plan[0].rank).toBe(1);
+    expect(plan[0].actions.length).toBe(2);
+    expect(plan[1].rank).toBe(2);
+    expect(plan[1].actions.length).toBe(1);
+    expect(plan[2].rank).toBe(3);
+    expect(plan[2].actions.length).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Reorder pattern
 // ---------------------------------------------------------------------------
 
@@ -459,5 +434,119 @@ describe("Reorder pattern", () => {
     expect(all.data[1].prompt).toBe("Step D");
     expect(all.data[2].rank).toBe(3);
     expect(all.data[2].prompt).toBe("Step E");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dashboard data
+// ---------------------------------------------------------------------------
+
+describe("Action Service - getDashboardData", () => {
+  it("returns executable, inProgress, and recentlyTerminal actions", () => {
+    const project = ctx.projectService.create({ name: "Dashboard Test Project" });
+    const target = `tab:project:${project.id}`;
+    const actions = ctx.actionService.createMany(target, [
+      { rank: 0, prompt: "tier 0 action 1" },
+      { rank: 0, prompt: "tier 0 action 2" },
+      { rank: 1, prompt: "tier 1 action" },
+    ]);
+
+    // Advance one to in_progress
+    ctx.actionService.updateStatus(actions[0].id, "in_progress");
+    // Complete one
+    ctx.actionService.updateStatus(actions[1].id, "in_progress");
+    ctx.actionService.updateStatus(actions[1].id, "complete");
+
+    const dashboard = ctx.actionService.getDashboardData();
+
+    // Use find/some assertions to avoid state leakage
+    expect(dashboard.inProgress.some((a) => a.id === actions[0].id)).toBe(true);
+    expect(dashboard.recentlyTerminal.some((a) => a.id === actions[1].id)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findByTarget with status filter
+// ---------------------------------------------------------------------------
+
+describe("Action Service - findByTarget with status filter", () => {
+  it("returns only actions matching the status filter", () => {
+    const project = ctx.projectService.create({ name: "Filter Test Project" });
+    const target = `tab:project:${project.id}`;
+    const actions = ctx.actionService.createMany(target, [
+      { rank: 0, prompt: "action 1" },
+      { rank: 0, prompt: "action 2" },
+    ]);
+    ctx.actionService.updateStatus(actions[0].id, "in_progress");
+
+    const todoOnly = ctx.actionService.findByTarget(target, 50, 0, "todo");
+    expect(todoOnly.data.length).toBe(1);
+    expect(todoOnly.data[0].id).toBe(actions[1].id);
+
+    const inProgressOnly = ctx.actionService.findByTarget(target, 50, 0, "in_progress");
+    expect(inProgressOnly.data.length).toBe(1);
+    expect(inProgressOnly.data[0].id).toBe(actions[0].id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findRecentlyTerminal
+// ---------------------------------------------------------------------------
+
+describe("Action Repository - findRecentlyTerminal", () => {
+  it("returns terminal actions from recent completions", () => {
+    const project = ctx.projectService.create({ name: "Terminal Test Project" });
+    const target = `tab:project:${project.id}`;
+    const actions = ctx.actionService.createMany(target, [
+      { rank: 0, prompt: "first to complete" },
+      { rank: 0, prompt: "second to complete" },
+      { rank: 0, prompt: "third to complete" },
+    ]);
+
+    // Complete all of them
+    for (const action of actions) {
+      ctx.actionService.updateStatus(action.id, "in_progress");
+      ctx.actionService.updateStatus(action.id, "complete");
+    }
+
+    const dashboard = ctx.actionService.getDashboardData();
+    const terminal = dashboard.recentlyTerminal;
+
+    // All three should appear in terminal
+    expect(terminal.some((a) => a.id === actions[0].id)).toBe(true);
+    expect(terminal.some((a) => a.id === actions[1].id)).toBe(true);
+    expect(terminal.some((a) => a.id === actions[2].id)).toBe(true);
+
+    // All should have terminal status
+    const found = terminal.filter((a) =>
+      actions.some((orig) => orig.id === a.id)
+    );
+    expect(found.every((a) => a.status === "complete")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isTierComplete edge cases
+// ---------------------------------------------------------------------------
+
+describe("Action Repository - isTierComplete edge cases", () => {
+  it("handles tier with mix of complete and failed (tier IS complete)", () => {
+    const project = ctx.projectService.create({ name: "Mixed Terminal Project" });
+    const target = `tab:project:${project.id}`;
+    const actions = ctx.actionService.createMany(target, [
+      { rank: 0, prompt: "will complete" },
+      { rank: 0, prompt: "will fail" },
+      { rank: 1, prompt: "next tier" },
+    ]);
+
+    ctx.actionService.updateStatus(actions[0].id, "in_progress");
+    ctx.actionService.updateStatus(actions[0].id, "complete");
+    ctx.actionService.updateStatus(actions[1].id, "in_progress");
+    ctx.actionService.updateStatus(actions[1].id, "failed");
+
+    // Tier 0 is complete (both terminal)
+    // Tier 1 should now be executable
+    const executable = ctx.actionService.getExecutableActions(target);
+    expect(executable.some((a) => a.id === actions[2].id)).toBe(true);
   });
 });

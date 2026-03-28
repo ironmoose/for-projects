@@ -1,3 +1,5 @@
+import type { ActionStatus } from "./entities";
+
 export interface CreateProjectInput {
   name: string;
   description?: string;
@@ -23,26 +25,12 @@ export interface UpdateTaskInput {
   status?: string;
 }
 
-export interface CreateTemplateInput {
-  name: string;
-  description?: string;
-  prompt: string;
-  agent?: string;
-}
-
-export interface UpdateTemplateInput {
-  name?: string;
-  description?: string;
-  prompt?: string;
-  agent?: string;
-}
-
 export interface CreateActionInput {
   target: string;
   rank: number;
   prompt: string;
   agent?: string;
-  template_id?: string;
+  status?: ActionStatus;
 }
 
 export interface UpdateActionInput {

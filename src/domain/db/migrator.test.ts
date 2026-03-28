@@ -50,7 +50,7 @@ describe("migrator", () => {
     await runMigrations(db);
 
     const tables = getAllUserTables(db);
-    expect(tables.length).toBeGreaterThanOrEqual(4);
+    expect(tables.length).toBeGreaterThanOrEqual(3);
   });
 
   it("running migrations twice is idempotent", async () => {
@@ -78,14 +78,13 @@ describe("migrator", () => {
     expect(countAfter).toBe(countBefore);
   });
 
-  it("all four tables exist after migration", async () => {
+  it("all tables exist after migration", async () => {
     ({ db, cleanup } = createTestDb());
     await runMigrations(db);
 
     const tables = getAllUserTables(db);
     expect(tables).toContain("projects");
     expect(tables).toContain("tasks");
-    expect(tables).toContain("templates");
     expect(tables).toContain("actions");
   });
 
@@ -98,31 +97,6 @@ describe("migrator", () => {
       db.run(
         "INSERT INTO tasks (id, project_id, summary, context, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         [ulid(), "nonexistent-project", "Bad task", "", "todo", now, now]
-      )
-    ).toThrow();
-  });
-
-  it("unique constraint on (target, rank)", async () => {
-    ({ db, cleanup } = createTestDb());
-    await runMigrations(db);
-
-    const now = new Date().toISOString();
-    const projectId = ulid();
-    db.run(
-      "INSERT INTO projects (id, name, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [projectId, "Test", "desc", "active", now, now]
-    );
-
-    const target = `tab:project:${projectId}`;
-    db.run(
-      "INSERT INTO actions (id, target, rank, prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [ulid(), target, 1, "First", now, now]
-    );
-
-    expect(() =>
-      db.run(
-        "INSERT INTO actions (id, target, rank, prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        [ulid(), target, 1, "Duplicate", now, now]
       )
     ).toThrow();
   });

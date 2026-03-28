@@ -18,6 +18,8 @@ import {
   ListItem,
   EmptyState,
   StatusDot,
+  TaskActionsSection,
+  ProjectActionPlan,
 } from "../components";
 import { useProject } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
@@ -104,6 +106,16 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
             No context
           </p>
         )}
+
+        {/* Task Actions */}
+        <TaskActionsSection
+          taskId={task.id}
+          style={{
+            marginTop: theme.spacing.xl,
+            paddingTop: theme.spacing.lg,
+            borderTop: `1px solid ${theme.color.borderSubtle}`,
+          }}
+        />
 
         {/* Metadata */}
         <div
@@ -217,9 +229,9 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
               {project.name}
             </h2>
             {project.description && (
-              <p style={{ margin: `${theme.spacing.sm} 0 0`, color: theme.color.textMuted, fontSize: theme.font.size.sm, lineHeight: 1.5 }}>
-                {project.description}
-              </p>
+              <div style={{ marginTop: theme.spacing.sm }}>
+                <Markdown>{project.description}</Markdown>
+              </div>
             )}
           </div>
           <Select
@@ -228,6 +240,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             options={statusOptions}
           />
         </Stack>
+
+        <ProjectActionPlan
+          projectId={projectId}
+          defaultExpanded={false}
+          style={{ marginBottom: theme.spacing.xl }}
+        />
 
         <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
           <h3
