@@ -23,14 +23,25 @@ describe("parseArn", () => {
     expect(result).toEqual({ type: "project", id: "01KMHYK0CDAYWZ1Q" });
   });
 
-  test("parses a valid workbench ARN", () => {
-    const result = parseArn("tab:workbench:01KMM743S7N1F75M");
-    expect(result).toEqual({ type: "workbench", id: "01KMM743S7N1F75M" });
+  test("parses a valid workflow ARN", () => {
+    const result = parseArn("tab:workflow:01KMM743S7N1F75M");
+    expect(result).toEqual({ type: "workflow", id: "01KMM743S7N1F75M" });
+  });
+
+  test("parses a valid phase ARN", () => {
+    const result = parseArn("tab:phase:01KMM743S7N1F75M");
+    expect(result).toEqual({ type: "phase", id: "01KMM743S7N1F75M" });
   });
 
   test("parses a valid instruction ARN", () => {
     const result = parseArn("tab:instruction:01KMN9QR2X5B3YAH");
     expect(result).toEqual({ type: "instruction", id: "01KMN9QR2X5B3YAH" });
+  });
+
+  test("rejects workbench as unknown resource type", () => {
+    expect(() => parseArn("tab:workbench:01KMM743S7N1F75M")).toThrow(
+      'Unknown ARN resource type "workbench"'
+    );
   });
 
   test("throws on empty string", () => {
@@ -87,14 +98,16 @@ describe("validateArn", () => {
   const alwaysExists: ArnResolverMap = {
     project: () => true,
     task: () => true,
-    workbench: () => true,
+    workflow: () => true,
+    phase: () => true,
     instruction: () => true,
   };
 
   const neverExists: ArnResolverMap = {
     project: () => false,
     task: () => false,
-    workbench: () => false,
+    workflow: () => false,
+    phase: () => false,
     instruction: () => false,
   };
 
@@ -117,7 +130,8 @@ describe("validateArn", () => {
     const selective: ArnResolverMap = {
       project: () => true,
       task: () => false,
-      workbench: () => true,
+      workflow: () => true,
+      phase: () => true,
       instruction: () => true,
     };
     expect(() => validateArn("tab:task:123", selective)).toThrow("Resource not found");

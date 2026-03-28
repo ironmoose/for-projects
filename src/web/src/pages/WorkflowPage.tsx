@@ -6,9 +6,7 @@ import {
   IconButton,
   Input,
   Markdown,
-  Select,
   Stack,
-  StatusDot,
   useTheme,
   DetailPageLayout,
   SidePanelLayout,
@@ -19,40 +17,17 @@ import {
   AddItemInput,
   HighlightOnChange,
 } from "../components";
-import { useWorkbench, useInstructionBindings, useEventDrivenAnimation } from "../hooks";
+import { useWorkflow, useInstructionBindings, useEventDrivenAnimation } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError } from "../api";
-import type { Instruction, BindingKind, InstructionStatus } from "../types";
-import { bindingKindOptions, kindColor, instructionStatusLabel } from "../types";
+import type { Instruction, Phase } from "../types";
 import { formatDate } from "../utils";
 
 // ---------------------------------------------------------------------------
-// Status helpers
+// InstructionNode
 // ---------------------------------------------------------------------------
 
-function instructionStatusColor(theme: ReturnType<typeof useTheme>["theme"], status: InstructionStatus): string {
-  switch (status) {
-    case "running": return theme.color.running;
-    case "complete": return theme.color.success;
-    case "pending": return theme.color.textFaint;
-    case "skipped": return theme.color.textFaint;
-  }
-}
-
-function instructionBadgeVariant(status: InstructionStatus): string {
-  switch (status) {
-    case "running": return "running";
-    case "complete": return "complete";
-    case "pending": return "pending";
-    case "skipped": return "skipped";
-  }
-}
-
-// ---------------------------------------------------------------------------
-// PipelineNode
-// ---------------------------------------------------------------------------
-
-function PipelineNode({
+function InstructionNode({
   instruction,
   isLast,
   isSelected,
@@ -68,27 +43,12 @@ function PipelineNode({
   const { theme } = useTheme();
   const { animationState } = useEventDrivenAnimation("instruction", instruction.id);
 
-  const nodeColor = instructionStatusColor(theme, instruction.status);
-  const isRunning = instruction.status === "running";
-  const isSkipped = instruction.status === "skipped";
-
-  // Animation styles for the content block
   const contentAnimationStyle: React.CSSProperties = {};
   if (animationState === "shake") {
     contentAnimationStyle.animation = `shake 400ms ${theme.animation.easing.default}`;
   } else if (animationState === "flash") {
     contentAnimationStyle.animation = `highlight-flash 600ms ease-out`;
   }
-
-  // Border pulse for running instructions
-  const contentBorderStyle: React.CSSProperties = isRunning
-    ? {
-        border: `1px solid ${theme.color.activityBorder}`,
-        animation: `border-pulse 2s ease-in-out infinite`,
-      }
-    : {
-        border: `1px solid ${isSelected ? theme.color.primary : theme.color.borderSubtle}`,
-      };
 
   return (
     <div style={{ position: "relative", paddingLeft: theme.layout.pipelineIndent }}>
@@ -106,7 +66,7 @@ function PipelineNode({
         />
       )}
 
-      {/* Status node circle */}
+      {/* Node circle — filled when output is present */}
       <div
         style={{
           position: "absolute",
@@ -115,10 +75,7 @@ function PipelineNode({
           width: parseInt(theme.layout.pipelineNodeSize),
           height: parseInt(theme.layout.pipelineNodeSize),
           borderRadius: theme.radius.full,
-          background: nodeColor,
-          opacity: isSkipped ? 0.5 : 1,
-          boxShadow: isRunning ? `0 0 8px 2px ${theme.color.glowPrimary}` : "none",
-          animation: isRunning ? `pulse-alive ${theme.animation.duration.pulse} ease-in-out infinite` : "none",
+          background: instruction.output ? theme.color.primary : theme.color.textFaint,
           transition: `background ${theme.animation.duration.normal} ${theme.animation.easing.default}`,
         }}
       />
@@ -141,9 +98,8 @@ function PipelineNode({
             padding: `${theme.spacing.md} ${theme.spacing.lg}`,
             cursor: "pointer",
             marginBottom: theme.spacing.sm,
+            border: `1px solid ${isSelected ? theme.color.primary : theme.color.borderSubtle}`,
             transition: `background ${theme.animation.duration.fast} ${theme.animation.easing.default}, border-color ${theme.animation.duration.fast}`,
-            opacity: isSkipped ? 0.5 : 1,
-            ...contentBorderStyle,
             ...contentAnimationStyle,
           }}
           onMouseEnter={(e) => {
@@ -153,33 +109,12 @@ function PipelineNode({
             if (!isSelected) e.currentTarget.style.background = theme.color.surfaceContainer;
           }}
         >
-          {/* Top row: position + status badge + delete */}
+          {/* Top row: delete */}
           <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.sm }}>
             <Stack direction="row" align="center" gap="sm">
-              <span
-                style={{
-                  fontFamily: theme.font.mono,
-                  fontSize: theme.font.size.xxs,
-                  color: theme.color.textFaint,
-                }}
-              >
-                #{instruction.position}
-              </span>
-              <Badge variant={instructionBadgeVariant(instruction.status) as "active"}>
-                {instructionStatusLabel[instruction.status]}
+              <Badge variant={instruction.output ? "complete" : "pending"}>
+                {instruction.output ? "Complete" : "Pending"}
               </Badge>
-              {instruction.parallel && (
-                <span
-                  style={{
-                    fontSize: theme.font.size.xxs,
-                    color: theme.color.tertiary,
-                    fontFamily: theme.font.mono,
-                    fontWeight: 600,
-                  }}
-                >
-                  parallel
-                </span>
-              )}
             </Stack>
             <div onClick={(e) => e.stopPropagation()}>
               <IconButton
@@ -250,21 +185,20 @@ function PipelineNode({
 
 function InstructionDetailPanel({
   instruction,
-  workbenchId,
+  workflowId,
+  phaseId,
   onClose,
 }: {
   instruction: Instruction;
-  workbenchId: string;
+  workflowId: string;
+  phaseId: string;
   onClose: () => void;
 }) {
   const { theme } = useTheme();
-  const { bindings, addBinding, removeBinding } = useInstructionBindings(workbenchId, instruction.id);
+  const { bindings, addBinding, removeBinding } = useInstructionBindings(workflowId, phaseId, instruction.id);
   const { showToast } = useToastContext();
   const [newArn, setNewArn] = useState("");
-  const [newKind, setNewKind] = useState<BindingKind>("input");
   const [addingBinding, setAddingBinding] = useState(false);
-
-  const colors = kindColor(theme);
 
   // Close on Escape key
   useEffect(() => {
@@ -280,7 +214,7 @@ function InstructionDetailPanel({
     if (!newArn.trim()) return;
     setAddingBinding(true);
     try {
-      await addBinding(newArn, newKind);
+      await addBinding(newArn);
       setNewArn("");
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to add binding");
@@ -289,23 +223,12 @@ function InstructionDetailPanel({
     }
   }
 
-  const statusColor = instructionStatusColor(theme, instruction.status);
-
   return (
     <SidePanelLayout onClose={onClose}>
       {/* Header */}
       <div style={{ padding: `${theme.spacing.xl} ${theme.spacing.xl} ${theme.spacing.lg}`, borderBottom: `1px solid ${theme.color.borderSubtle}` }}>
         <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" align="center" gap="xs" style={{ marginBottom: theme.spacing.sm }}>
-              <StatusDot color={statusColor} />
-              <span style={{ fontSize: theme.font.size.xs, color: theme.color.textMuted, fontWeight: 500 }}>
-                {instructionStatusLabel[instruction.status]}
-              </span>
-              <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint, fontFamily: theme.font.mono }}>
-                Position {instruction.position}
-              </span>
-            </Stack>
             <h2
               style={{
                 margin: 0,
@@ -329,7 +252,7 @@ function InstructionDetailPanel({
                   color: theme.color.textFaint,
                 }}
               >
-                {instruction.actor === "agent" ? "Agent" : "Human"}: {instruction.agent}
+                agent: {instruction.agent}
               </span>
             )}
           </div>
@@ -382,9 +305,6 @@ function InstructionDetailPanel({
                     <th style={{ textAlign: "left", padding: `${theme.spacing.xs} ${theme.spacing.sm}`, color: theme.color.textFaint, fontWeight: 600, fontSize: theme.font.size.xxs, letterSpacing: "0.05em", textTransform: "uppercase" }}>
                       ARN
                     </th>
-                    <th style={{ textAlign: "left", padding: `${theme.spacing.xs} ${theme.spacing.sm}`, color: theme.color.textFaint, fontWeight: 600, fontSize: theme.font.size.xxs, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                      Kind
-                    </th>
                     <th style={{ width: 28, padding: `${theme.spacing.xs} ${theme.spacing.sm}` }} />
                   </tr>
                 </thead>
@@ -403,20 +323,6 @@ function InstructionDetailPanel({
                         }}
                       >
                         {b.arn}
-                      </td>
-                      <td style={{ padding: `${theme.spacing.xs} ${theme.spacing.sm}` }}>
-                        <span
-                          style={{
-                            fontSize: "0.6rem",
-                            fontWeight: 600,
-                            color: colors[b.kind],
-                            background: theme.color.surfaceContainerHigh,
-                            borderRadius: theme.radius.sm,
-                            padding: "1px 5px",
-                          }}
-                        >
-                          {b.kind}
-                        </span>
                       </td>
                       <td style={{ padding: `${theme.spacing.xs} ${theme.spacing.sm}`, textAlign: "center" }}>
                         <IconButton
@@ -447,12 +353,6 @@ function InstructionDetailPanel({
                 style={{ fontSize: theme.font.size.xs, padding: "2px 6px" }}
               />
             </div>
-            <Select
-              value={newKind}
-              onChange={(e) => setNewKind(e.target.value as BindingKind)}
-              options={bindingKindOptions}
-              style={{ fontSize: theme.font.size.xxs, padding: "0.1rem 0.25rem" }}
-            />
             <Button type="submit" size="sm" disabled={addingBinding} style={{ fontSize: theme.font.size.xs, padding: "2px 8px" }}>
               {addingBinding ? "..." : "Bind"}
             </Button>
@@ -471,11 +371,7 @@ function InstructionDetailPanel({
             title="Metadata"
             rows={[
               { label: "ID", value: instruction.id },
-              { label: "Status", value: instructionStatusLabel[instruction.status] },
-              { label: "Position", value: `${instruction.position}` },
-              { label: "Actor", value: instruction.actor },
               { label: "Agent", value: instruction.agent ?? "\u2014" },
-              { label: "Parallel", value: instruction.parallel ? "Yes" : "No" },
               { label: "Created", value: formatDate(instruction.created_at) },
               { label: "Updated", value: formatDate(instruction.updated_at) },
             ]}
@@ -487,106 +383,164 @@ function InstructionDetailPanel({
 }
 
 // ---------------------------------------------------------------------------
-// StatusSummaryBar for instructions
+// PhaseSection
 // ---------------------------------------------------------------------------
 
-function InstructionStatusBar({ instructions }: { instructions: Instruction[] }) {
+function PhaseSection({
+  phase,
+  instructions,
+  workflowId,
+  selectedInstructionId,
+  onSelectInstruction,
+  onDeleteInstruction,
+  onAddInstruction,
+  onDeletePhase,
+}: {
+  phase: Phase;
+  instructions: Instruction[];
+  workflowId: string;
+  selectedInstructionId: string | null;
+  onSelectInstruction: (id: string) => void;
+  onDeleteInstruction: (phaseId: string, instructionId: string) => void;
+  onAddInstruction: (phaseId: string, prompt: string) => Promise<void>;
+  onDeletePhase: (phaseId: string) => void;
+}) {
   const { theme } = useTheme();
-  const counts: Record<InstructionStatus, number> = { pending: 0, running: 0, complete: 0, skipped: 0 };
-  for (const inst of instructions) {
-    if (inst.status in counts) counts[inst.status]++;
+  const [newPrompt, setNewPrompt] = useState("");
+  const [adding, setAdding] = useState(false);
+  const { showToast } = useToastContext();
+
+  async function handleAdd() {
+    if (!newPrompt.trim()) return;
+    setAdding(true);
+    try {
+      await onAddInstruction(phase.id, newPrompt);
+      setNewPrompt("");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add instruction");
+    } finally {
+      setAdding(false);
+    }
   }
 
-  const items: Array<{ status: InstructionStatus; label: string }> = [
-    { status: "complete", label: "complete" },
-    { status: "running", label: "running" },
-    { status: "pending", label: "pending" },
-    { status: "skipped", label: "skipped" },
-  ];
-
-  const total = instructions.length;
-  const completeCount = counts.complete;
-
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: theme.spacing.lg,
-        height: 40,
-        background: theme.color.surfaceContainerLow,
-        borderRadius: theme.radius.lg,
-        padding: `${theme.spacing.sm} ${theme.spacing.xl}`,
-        marginBottom: theme.spacing.xl,
-      }}
-    >
-      <span
-        style={{
-          fontFamily: theme.font.mono,
-          fontSize: theme.font.size.sm,
-          color: theme.color.text,
-          fontWeight: 700,
-        }}
-      >
-        {completeCount}/{total}
-      </span>
-      <div
-        style={{
-          width: 1,
-          height: 16,
-          background: theme.color.borderSubtle,
-        }}
-      />
-      {items.filter((item) => counts[item.status] > 0).map((item) => (
-        <Stack key={item.status} direction="row" align="center" gap="xs">
-          <StatusDot color={instructionStatusColor(theme, item.status)} size={6} />
-          <span
+    <div style={{ marginBottom: theme.spacing.xl }}>
+      <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
+        <Stack direction="row" align="center" gap="sm">
+          <Icon name="layers" size={16} style={{ color: theme.color.primary }} />
+          <h4
             style={{
-              fontFamily: theme.font.mono,
-              fontSize: theme.font.size.xs,
-              color: theme.color.textMuted,
+              margin: 0,
+              fontFamily: theme.font.headline,
+              fontSize: theme.font.size.md,
+              fontWeight: 700,
+              color: theme.color.text,
             }}
           >
-            {counts[item.status]} {item.label}
+            {phase.title}
+          </h4>
+          <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+            {instructions.length} instruction{instructions.length !== 1 ? "s" : ""}
           </span>
         </Stack>
-      ))}
+        <IconButton
+          icon="delete_outline"
+          size={14}
+          onClick={() => onDeletePhase(phase.id)}
+          aria-label="Delete phase"
+          style={{ color: theme.color.textFaint }}
+        />
+      </Stack>
+
+      <AddItemInput
+        placeholder="Add an instruction..."
+        value={newPrompt}
+        onChange={setNewPrompt}
+        onSubmit={handleAdd}
+        loading={adding}
+        style={{ marginBottom: theme.spacing.md }}
+      />
+
+      <div style={{ position: "relative" }}>
+        {instructions.map((inst, i) => (
+          <InstructionNode
+            key={inst.id}
+            instruction={inst}
+            isLast={i === instructions.length - 1}
+            isSelected={selectedInstructionId === inst.id}
+            onClick={() => onSelectInstruction(inst.id)}
+            onDelete={() => onDeleteInstruction(phase.id, inst.id)}
+          />
+        ))}
+        {instructions.length === 0 && (
+          <EmptyState icon="list_alt" message="No instructions yet. Add one above." />
+        )}
+      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// WorkbenchPage
+// WorkflowPage
 // ---------------------------------------------------------------------------
 
-export function WorkbenchPage({ id, onBack }: { id: string; onBack: () => void }) {
+export function WorkflowPage({ id, onBack }: { id: string; onBack: () => void }) {
   const { theme } = useTheme();
-  const { workbench, instructions, notFound, addInstruction, deleteInstruction } = useWorkbench(id);
+  const {
+    workflow,
+    phases,
+    instructionsByPhase,
+    notFound,
+    addPhase,
+    deletePhase,
+    addInstruction,
+    deleteInstruction,
+  } = useWorkflow(id);
   const { showToast } = useToastContext();
-  const [newPrompt, setNewPrompt] = useState("");
+  const [newPhaseTitle, setNewPhaseTitle] = useState("");
   const [selectedInstructionId, setSelectedInstructionId] = useState<string | null>(null);
-  const [addingInstruction, setAddingInstruction] = useState(false);
+  const [addingPhase, setAddingPhase] = useState(false);
 
-  const selectedInstruction = selectedInstructionId ? instructions.find((i) => i.id === selectedInstructionId) ?? null : null;
-
-  const handleClosePanel = useCallback(() => setSelectedInstructionId(null), []);
-
-  async function handleAddInstruction() {
-    if (!newPrompt.trim()) return;
-    setAddingInstruction(true);
-    try {
-      await addInstruction(newPrompt);
-      setNewPrompt("");
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to add instruction");
-    } finally {
-      setAddingInstruction(false);
+  // Find which phase the selected instruction belongs to
+  let selectedInstruction: Instruction | null = null;
+  let selectedPhaseId: string | null = null;
+  if (selectedInstructionId) {
+    for (const phase of phases) {
+      const instr = (instructionsByPhase[phase.id] ?? []).find((i) => i.id === selectedInstructionId);
+      if (instr) {
+        selectedInstruction = instr;
+        selectedPhaseId = phase.id;
+        break;
+      }
     }
   }
 
-  async function handleDeleteInstruction(instructionId: string) {
+  const handleClosePanel = useCallback(() => setSelectedInstructionId(null), []);
+
+  async function handleAddPhase() {
+    if (!newPhaseTitle.trim()) return;
+    setAddingPhase(true);
     try {
-      await deleteInstruction(instructionId);
+      await addPhase(newPhaseTitle);
+      setNewPhaseTitle("");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add phase");
+    } finally {
+      setAddingPhase(false);
+    }
+  }
+
+  async function handleDeletePhase(phaseId: string) {
+    try {
+      await deletePhase(phaseId);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to delete phase");
+    }
+  }
+
+  async function handleDeleteInstruction(phaseId: string, instructionId: string) {
+    try {
+      await deleteInstruction(phaseId, instructionId);
       if (selectedInstructionId === instructionId) setSelectedInstructionId(null);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to delete instruction");
@@ -599,7 +553,7 @@ export function WorkbenchPage({ id, onBack }: { id: string; onBack: () => void }
         <BackButton onClick={onBack} />
         <EmptyState
           icon="error_outline"
-          message="Workbench not found."
+          message="Workflow not found."
           variant="card"
           style={{ marginTop: theme.spacing.xl }}
         />
@@ -607,7 +561,7 @@ export function WorkbenchPage({ id, onBack }: { id: string; onBack: () => void }
     );
   }
 
-  if (!workbench) {
+  if (!workflow) {
     return (
       <div style={{ flex: 1, width: "100%", maxWidth: 900, padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`, boxSizing: "border-box" }}>
         <p style={{ color: theme.color.textMuted, fontSize: theme.font.size.sm }}>Loading...</p>
@@ -618,12 +572,12 @@ export function WorkbenchPage({ id, onBack }: { id: string; onBack: () => void }
   return (
     <DetailPageLayout expanded={!!selectedInstruction}>
       <div style={{ flex: 1, minWidth: 0, padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`, boxSizing: "border-box", overflowY: "auto" }}>
-        <BackButton onClick={onBack} label="All Workbenches" style={{ marginBottom: theme.spacing.lg }} />
+        <BackButton onClick={onBack} label="All Workflows" style={{ marginBottom: theme.spacing.lg }} />
 
         <div style={{ marginBottom: theme.spacing.xl }}>
           <Stack direction="row" align="center" gap="xs" style={{ marginBottom: theme.spacing.sm }}>
-            <Icon name="construction" size={18} style={{ color: theme.color.primary }} />
-            <span style={{ fontSize: theme.font.size.xs, color: theme.color.textMuted, fontFamily: theme.font.mono }}>{workbench.id}</span>
+            <Icon name="account_tree" size={18} style={{ color: theme.color.primary }} />
+            <span style={{ fontSize: theme.font.size.xs, color: theme.color.textMuted, fontFamily: theme.font.mono }}>{workflow.id}</span>
           </Stack>
           <h2
             style={{
@@ -635,13 +589,9 @@ export function WorkbenchPage({ id, onBack }: { id: string; onBack: () => void }
               color: theme.color.text,
             }}
           >
-            {workbench.goal}
+            {workflow.goal}
           </h2>
         </div>
-
-        {instructions.length > 0 && (
-          <InstructionStatusBar instructions={instructions} />
-        )}
 
         <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
           <h3
@@ -653,44 +603,46 @@ export function WorkbenchPage({ id, onBack }: { id: string; onBack: () => void }
               color: theme.color.text,
             }}
           >
-            Pipeline
+            Phases
           </h3>
           <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
-            {instructions.length} instruction{instructions.length !== 1 ? "s" : ""}
+            {phases.length} phase{phases.length !== 1 ? "s" : ""}
           </span>
         </Stack>
 
         <AddItemInput
-          placeholder="Add an instruction..."
-          value={newPrompt}
-          onChange={setNewPrompt}
-          onSubmit={handleAddInstruction}
-          loading={addingInstruction}
+          placeholder="Add a phase..."
+          value={newPhaseTitle}
+          onChange={setNewPhaseTitle}
+          onSubmit={handleAddPhase}
+          loading={addingPhase}
           style={{ marginBottom: theme.spacing.xl }}
         />
 
-        {/* Pipeline visualization */}
-        <div style={{ position: "relative" }}>
-          {instructions.map((inst, i) => (
-            <PipelineNode
-              key={inst.id}
-              instruction={inst}
-              isLast={i === instructions.length - 1}
-              isSelected={selectedInstructionId === inst.id}
-              onClick={() => setSelectedInstructionId(inst.id)}
-              onDelete={() => handleDeleteInstruction(inst.id)}
-            />
-          ))}
-          {instructions.length === 0 && (
-            <EmptyState icon="list_alt" message="No instructions yet. Add one above." />
-          )}
-        </div>
+        {phases.map((phase) => (
+          <PhaseSection
+            key={phase.id}
+            phase={phase}
+            instructions={instructionsByPhase[phase.id] ?? []}
+            workflowId={id}
+            selectedInstructionId={selectedInstructionId}
+            onSelectInstruction={setSelectedInstructionId}
+            onDeleteInstruction={handleDeleteInstruction}
+            onAddInstruction={addInstruction}
+            onDeletePhase={handleDeletePhase}
+          />
+        ))}
+
+        {phases.length === 0 && (
+          <EmptyState icon="layers" message="No phases yet. Add one above." />
+        )}
       </div>
 
-      {selectedInstruction && (
+      {selectedInstruction && selectedPhaseId && (
         <InstructionDetailPanel
           instruction={selectedInstruction}
-          workbenchId={id}
+          workflowId={id}
+          phaseId={selectedPhaseId}
           onClose={handleClosePanel}
         />
       )}

@@ -5,8 +5,8 @@ export type { SubscribeEvents, EventSubscriptionContextValue } from "./useEventS
 export { useProjects } from "./useProjects";
 export { useProject } from "./useProject";
 export { useTaskTags } from "./useTaskTags";
-export { useWorkbenches } from "./useWorkbenches";
-export { useWorkbench } from "./useWorkbench";
+export { useWorkflows } from "./useWorkflows";
+export { useWorkflow } from "./useWorkflow";
 export { useInstructionBindings } from "./useInstructionBindings";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";

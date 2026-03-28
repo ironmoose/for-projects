@@ -10,14 +10,5 @@ export type TaskType = (typeof TASK_TYPES)[number];
 export const TASK_EFFORTS = ["trivial", "low", "moderate", "high", "extreme"] as const;
 export type TaskEffort = (typeof TASK_EFFORTS)[number];
 
-export const BINDING_KINDS = ["input", "output", "context"] as const;
-export type BindingKind = (typeof BINDING_KINDS)[number];
-
-export const INSTRUCTION_ACTORS = ["agent", "human"] as const;
-export type InstructionActor = (typeof INSTRUCTION_ACTORS)[number];
-
-export const INSTRUCTION_STATUSES = ["pending", "running", "complete", "skipped"] as const;
-export type InstructionStatus = (typeof INSTRUCTION_STATUSES)[number];
-
-export const WORKBENCH_STATUSES = ["idle", "running", "paused", "complete"] as const;
-export type WorkbenchStatus = (typeof WORKBENCH_STATUSES)[number];
+export const WORKFLOW_STATUSES = ["idle", "running", "paused", "complete"] as const;
+export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number];

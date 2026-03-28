@@ -35,36 +35,38 @@ export interface Tag {
   created_at: string;
 }
 
-export interface Workbench {
+export interface Workflow {
   id: string;
   goal: string;
+  cursor: string | null;
+  status: "idle" | "running" | "paused" | "complete";
   created_at: string;
   updated_at: string;
 }
 
-export type InstructionStatus = "pending" | "running" | "complete" | "skipped";
+export interface Phase {
+  id: string;
+  workflow_id: string;
+  title: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Instruction {
   id: string;
-  workbench_id: string;
+  phase_id: string;
   prompt: string;
   output: string | null;
-  position: number;
-  status: InstructionStatus;
   agent: string | null;
-  actor: "agent" | "human";
-  parallel: boolean;
   created_at: string;
   updated_at: string;
 }
-
-export type BindingKind = "input" | "output" | "context";
 
 export interface InstructionBinding {
   id: string;
   instruction_id: string;
   arn: string;
-  kind: BindingKind;
   created_at: string;
   updated_at: string;
 }
@@ -86,36 +88,8 @@ export const taskStatusOptions = [
   { value: "done", label: "Done" },
 ];
 
-export const instructionStatusOptions = [
-  { value: "pending", label: "Pending" },
-  { value: "running", label: "Running" },
-  { value: "complete", label: "Complete" },
-  { value: "skipped", label: "Skipped" },
-];
-
-export const instructionStatusLabel: Record<InstructionStatus, string> = {
-  pending: "Pending",
-  running: "Running",
-  complete: "Complete",
-  skipped: "Skipped",
-};
-
-export const bindingKindOptions = [
-  { value: "input", label: "Input" },
-  { value: "output", label: "Output" },
-  { value: "context", label: "Context" },
-];
-
 export const statusLabel: Record<Task["status"], string> = {
   todo: "To Do",
   in_progress: "In Progress",
   done: "Done",
 };
-
-export function kindColor(theme: { color: { primary: string; success: string; tertiary: string } }): Record<BindingKind, string> {
-  return {
-    input: theme.color.primary,
-    output: theme.color.success,
-    context: theme.color.tertiary,
-  };
-}

@@ -13,14 +13,14 @@ import { useRealtimeEvents } from "./useRealtimeEvents";
 import { useHashRoute, useEventFanOut, EventSubscriptionContext, useActivityCount } from "./hooks";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
-import { WorkbenchesPage } from "./pages/WorkbenchesPage";
-import { WorkbenchPage } from "./pages/WorkbenchPage";
+import { WorkflowsPage } from "./pages/WorkflowsPage";
+import { WorkflowPage } from "./pages/WorkflowPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
-  { label: "Workbenches", path: "/workbenches" },
+  { label: "Workflows", path: "/workflows" },
   { label: "Themes", path: "/themes" },
 ];
 
@@ -37,8 +37,8 @@ export function App() {
   const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
   const projectId = projectIdMatch?.[1] ?? null;
 
-  const workbenchIdMatch = path.match(/^\/workbenches\/([^/]+)$/);
-  const workbenchId = workbenchIdMatch?.[1] ?? null;
+  const workflowIdMatch = path.match(/^\/workflows\/([^/]+)$/);
+  const workflowId = workflowIdMatch?.[1] ?? null;
 
   const galleryComponentMatch = path.match(/^\/gallery\/([^/]+)$/);
   const galleryComponent = galleryComponentMatch?.[1] ?? undefined;
@@ -47,8 +47,8 @@ export function App() {
     ? "/gallery"
     : path.startsWith("/themes")
     ? "/themes"
-    : path.startsWith("/workbenches")
-    ? "/workbenches"
+    : path.startsWith("/workflows")
+    ? "/workflows"
     : "/";
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
@@ -75,11 +75,11 @@ export function App() {
     if (projectId) {
       return <ProjectPage projectId={projectId} onBack={() => navigate("/")} />;
     }
-    if (workbenchId) {
-      return <WorkbenchPage id={workbenchId} onBack={() => navigate("/workbenches")} />;
+    if (workflowId) {
+      return <WorkflowPage id={workflowId} onBack={() => navigate("/workflows")} />;
     }
-    if (path.startsWith("/workbenches")) {
-      return <WorkbenchesPage onOpenWorkbench={(wbId) => navigate(`/workbenches/${wbId}`)} />;
+    if (path.startsWith("/workflows")) {
+      return <WorkflowsPage onOpenWorkflow={(wfId) => navigate(`/workflows/${wfId}`)} />;
     }
     return <DashboardPage onOpenProject={(pId) => navigate(`/projects/${pId}`)} />;
   }

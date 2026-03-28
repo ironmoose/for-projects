@@ -7,16 +7,14 @@ import {
   TASK_STATUSES,
   TASK_TYPES,
   TASK_EFFORTS,
+  WORKFLOW_STATUSES,
   type IProjectService,
   type ITaskService,
   type ITagService,
-  type IWorkbenchService,
+  type IWorkflowService,
+  type IPhaseService,
   type IInstructionService,
   type IInstructionBindingService,
-  BINDING_KINDS,
-  INSTRUCTION_ACTORS,
-  INSTRUCTION_STATUSES,
-  WORKBENCH_STATUSES,
   parseArn,
   ArnError,
 } from "../domain";
@@ -25,7 +23,8 @@ export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
   tagService: ITagService;
-  workbenchService: IWorkbenchService;
+  workflowService: IWorkflowService;
+  phaseService: IPhaseService;
   instructionService: IInstructionService;
   instructionBindingService: IInstructionBindingService;
 }
@@ -51,14 +50,14 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, tagService, workbenchService, instructionService, instructionBindingService } = ctx;
+  const { projectService, taskService, tagService, workflowService, phaseService, instructionService, instructionBindingService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
     version: "0.1.0",
   });
 
-  // ── Projects ──────────────────────────────────────────────
+  // -- Projects -------------------------------------------------------
 
   server.registerTool(
     "create_project",
@@ -87,7 +86,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ id, ...updates }) => handle(() => projectService.update(id, updates))
   );
 
-  // ── Tasks ─────────────────────────────────────────────────
+  // -- Tasks ----------------------------------------------------------
 
   server.registerTool(
     "create_task",
@@ -151,58 +150,93 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     })
   );
 
-  // ── Workbenches ───────────────────────────────────────────
+  // -- Workflows ------------------------------------------------------
 
   server.registerTool(
-    "create_workbench",
+    "create_workflow",
     {
-      description: "Create a new workbench with a goal",
+      description: "Create a new workflow with a goal",
       inputSchema: {
         goal: z.string().max(2000),
         cursor: z.string().max(26).nullable().optional(),
-        status: z.enum(WORKBENCH_STATUSES).optional(),
+        status: z.enum(WORKFLOW_STATUSES).optional(),
       },
     },
-    ({ goal, cursor, status }) => handle(() => workbenchService.create({ goal, cursor, status }))
+    ({ goal, cursor, status }) => handle(() => workflowService.create({ goal, cursor, status }))
   );
 
   server.registerTool(
-    "update_workbench",
+    "update_workflow",
     {
-      description: "Update an existing workbench",
+      description: "Update an existing workflow",
       inputSchema: {
         id: z.string().max(26),
         goal: z.string().max(2000).optional(),
         cursor: z.string().max(26).nullable().optional(),
-        status: z.enum(WORKBENCH_STATUSES).optional(),
+        status: z.enum(WORKFLOW_STATUSES).optional(),
       },
     },
-    ({ id, ...updates }) => handle(() => workbenchService.update(id, updates))
+    ({ id, ...updates }) => handle(() => workflowService.update(id, updates))
   );
 
-  // ── Instructions ─────────────────────────────────────────
+  // -- Phases ---------------------------------------------------------
+
+  server.registerTool(
+    "create_phase",
+    {
+      description: "Create a phase within a workflow",
+      inputSchema: {
+        workflow_id: z.string().max(26),
+        title: z.string().max(500),
+        position: z.number().int().min(0).optional(),
+      },
+    },
+    ({ workflow_id, ...input }) => handle(() => phaseService.create(workflow_id, input))
+  );
+
+  server.registerTool(
+    "update_phase",
+    {
+      description: "Update a phase's title",
+      inputSchema: {
+        workflow_id: z.string().max(26),
+        phase_id: z.string().max(26),
+        title: z.string().max(500).optional(),
+      },
+    },
+    ({ workflow_id, phase_id, ...updates }) => handle(() => phaseService.update(workflow_id, phase_id, updates))
+  );
+
+  server.registerTool(
+    "reorder_phases",
+    {
+      description: "Reorder phases within a workflow by providing the full ordered list of phase IDs",
+      inputSchema: {
+        workflow_id: z.string().max(26),
+        phase_ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ workflow_id, phase_ids }) => handle(() => phaseService.reorder(workflow_id, phase_ids))
+  );
+
+  // -- Instructions ---------------------------------------------------
 
   server.registerTool(
     "create_instruction",
     {
-      description: "Create an instruction in a workbench, optionally with bindings",
+      description: "Create an instruction in a phase, optionally with bindings",
       inputSchema: {
-        workbench_id: z.string().max(26),
+        phase_id: z.string().max(26),
         prompt: z.string().max(10000),
-        position: z.number().int().min(0).optional(),
         agent: z.string().max(200).nullable().optional(),
-        parallel: z.boolean().optional(),
-        actor: z.enum(INSTRUCTION_ACTORS).optional(),
-        status: z.enum(INSTRUCTION_STATUSES).optional(),
         bindings: z.array(z.object({
           arn: z.string().max(500),
-          kind: z.enum(BINDING_KINDS),
         })).max(20).optional(),
       },
     },
-    ({ workbench_id, bindings: bindingInputs, ...input }) =>
+    ({ phase_id, bindings: bindingInputs, ...input }) =>
       handle(() => {
-        const instruction = instructionService.create(workbench_id, input);
+        const instruction = instructionService.create(phase_id, input);
         if (bindingInputs) {
           for (const binding of bindingInputs) {
             instructionBindingService.create(instruction.id, binding);
@@ -218,24 +252,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     {
       description: "Update an instruction's prompt, output, status, or execution metadata. Supports adding/removing bindings inline.",
       inputSchema: {
-        workbench_id: z.string().max(26),
+        phase_id: z.string().max(26),
         instruction_id: z.string().max(26),
         prompt: z.string().max(10000).optional(),
         output: z.string().max(100000).nullable().optional(),
         agent: z.string().max(200).nullable().optional(),
-        parallel: z.boolean().optional(),
-        actor: z.enum(INSTRUCTION_ACTORS).optional(),
-        status: z.enum(INSTRUCTION_STATUSES).optional(),
         add_bindings: z.array(z.object({
           arn: z.string().max(500),
-          kind: z.enum(BINDING_KINDS),
         })).max(20).optional(),
         remove_bindings: z.array(z.string().max(26)).max(20).optional(),
       },
     },
-    ({ workbench_id, instruction_id, add_bindings, remove_bindings, ...updates }) =>
+    ({ phase_id, instruction_id, add_bindings, remove_bindings, ...updates }) =>
       handle(() => {
-        const instruction = instructionService.update(workbench_id, instruction_id, updates);
+        const instruction = instructionService.update(phase_id, instruction_id, updates);
         if (!instruction) return instruction;
         if (add_bindings) {
           for (const binding of add_bindings) {
@@ -252,20 +282,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       })
   );
 
-  server.registerTool(
-    "reorder_instructions",
-    {
-      description: "Reorder instructions within a workbench by providing the full ordered list of instruction IDs",
-      inputSchema: {
-        workbench_id: z.string().max(26),
-        instruction_ids: z.array(z.string().max(26)),
-      },
-    },
-    ({ workbench_id, instruction_ids }) =>
-      handle(() => instructionService.reorder(workbench_id, instruction_ids))
-  );
-
-  // ── Resolve ─────────────────────────────────────────────
+  // -- Resolve --------------------------------------------------------
 
   server.registerTool(
     "resolve",
@@ -291,8 +308,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
             case "task":
               data = taskService.findById(parsed.id);
               break;
-            case "workbench":
-              data = workbenchService.findById(parsed.id);
+            case "workflow":
+              data = workflowService.findById(parsed.id);
+              break;
+            case "phase":
+              data = phaseService.findByIdDirect(parsed.id);
               break;
             case "instruction":
               data = instructionService.findByIdDirect(parsed.id);
@@ -310,19 +330,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     })
   );
 
-  // ── Query ──────────────────────────────────────────────
+  // -- Query ----------------------------------------------------------
 
   server.registerTool(
     "query",
     {
       description: "Filtered list across entity types. Replaces all list_*/find_* read tools.",
       inputSchema: {
-        type: z.enum(["project", "task", "tag", "workbench", "instruction", "binding"]),
+        type: z.enum(["project", "task", "tag", "workflow", "phase", "instruction", "binding"]),
         limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
         // Context params
         project_id: z.string().max(26).optional(),
-        workbench_id: z.string().max(26).optional(),
+        workflow_id: z.string().max(26).optional(),
+        phase_id: z.string().max(26).optional(),
         instruction_id: z.string().max(26).optional(),
         // Filter params
         status: z.string().max(50).optional(),
@@ -336,7 +357,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         arn: z.string().max(500).optional(),
       },
     },
-    ({ type: entityType, limit, offset, project_id, workbench_id, instruction_id, status, tag, tag_prefix, task_type, effort, id, number, arn: arnFilter }) => handle(() => {
+    ({ type: entityType, limit, offset, project_id, workflow_id, phase_id, instruction_id, status, tag, tag_prefix, task_type, effort, id, number, arn: arnFilter }) => handle(() => {
       switch (entityType) {
         case "project": {
           if (id) return projectService.findById(id);
@@ -358,16 +379,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           if (tag_prefix) return tagService.findByPrefix(tag_prefix, limit, offset);
           return tagService.findAll(limit, offset);
         }
-        case "workbench": {
-          if (id) return workbenchService.findById(id);
-          const wFilter = status ? { status: status as Parameters<typeof workbenchService.findAll>[2] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
-          return workbenchService.findAll(limit, offset, wFilter as Parameters<typeof workbenchService.findAll>[2]);
+        case "workflow": {
+          if (id) return workflowService.findById(id);
+          const wFilter = status ? { status: status as Parameters<typeof workflowService.findAll>[2] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
+          return workflowService.findAll(limit, offset, wFilter as Parameters<typeof workflowService.findAll>[2]);
+        }
+        case "phase": {
+          if (!workflow_id) throw new ServiceError("workflow_id is required when querying phases", 400);
+          if (id) return phaseService.findById(workflow_id, id);
+          return phaseService.findByWorkflow(workflow_id, limit, offset);
         }
         case "instruction": {
-          if (!workbench_id) throw new ServiceError("workbench_id is required when querying instructions", 400);
-          if (id) return instructionService.findById(workbench_id, id);
-          const iFilter = status ? { status: status as Parameters<typeof instructionService.findByWorkbench>[3] extends infer F ? F extends { status?: infer S } ? S : never : never } : undefined;
-          return instructionService.findByWorkbench(workbench_id, limit, offset, iFilter as Parameters<typeof instructionService.findByWorkbench>[3]);
+          if (!phase_id) throw new ServiceError("phase_id is required when querying instructions", 400);
+          if (id) return instructionService.findById(phase_id, id);
+          return instructionService.findByPhase(phase_id, limit, offset);
         }
         case "binding": {
           if (instruction_id) return instructionBindingService.findByInstruction(instruction_id);
@@ -384,7 +409,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
 /**
  * Create a stateless HTTP handler that reuses a single McpServer instance.
  *
- * McpServer supports sequential connect → handle → close cycles (close() resets
+ * McpServer supports sequential connect -> handle -> close cycles (close() resets
  * the internal transport reference), but does NOT support concurrent connections.
  * A promise chain serializes requests so connect() is never called while a
  * previous transport is still active.

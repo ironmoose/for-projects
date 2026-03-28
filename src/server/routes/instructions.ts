@@ -10,10 +10,8 @@ import {
 } from "../../domain";
 
 /**
- * Instruction + binding routes, mounted at `/api/workbenches/:id/instructions`.
- *
- * The parent `:id` param (workbench ID) is provided by the mount path but isn't
- * in this Hono instance's type scope, so we extract it via a helper.
+ * Instruction + binding routes, mounted at
+ * `/api/workflows/:workflowId/phases/:phaseId/instructions`.
  */
 export function instructionRoutes(
   instructionService: IInstructionService,
@@ -21,33 +19,31 @@ export function instructionRoutes(
 ): Hono {
   const app = new Hono();
 
-  /** Extract the workbench ID injected by the parent route mount. */
-  const wbId = (c: { req: { param: (name: string) => string | undefined } }): string =>
-    c.req.param("id") as string;
+  /** Extract the phase ID injected by the parent route mount. */
+  const phId = (c: { req: { param: (name: string) => string | undefined } }): string =>
+    c.req.param("phaseId") as string;
 
-  // ── Instructions ───────────────────────────────────────────────────
+  // -- Instructions ---------------------------------------------------------
 
-  // GET /api/workbenches/:id/instructions
+  // GET .../instructions
   app.get("/", (c) => {
     try {
       const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
       const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
       const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
       const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-      const status = c.req.query("status") || undefined;
-      const filter = status ? { status: status as import("../../domain").InstructionStatus } : undefined;
-      return c.json(instructionService.findByWorkbench(wbId(c), limit, offset, filter));
+      return c.json(instructionService.findByPhase(phId(c), limit, offset));
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
       throw e;
     }
   });
 
-  // POST /api/workbenches/:id/instructions
+  // POST .../instructions
   app.post("/", async (c) => {
     try {
-      const { prompt, position, agent, parallel, actor, status } = await c.req.json<CreateInstructionInput>();
-      const instruction = instructionService.create(wbId(c), { prompt, position, agent, parallel, actor, status });
+      const { prompt, agent } = await c.req.json<CreateInstructionInput>();
+      const instruction = instructionService.create(phId(c), { prompt, agent });
       return c.json(instruction, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -55,25 +51,10 @@ export function instructionRoutes(
     }
   });
 
-  // POST /api/workbenches/:id/instructions/reorder
-  app.post("/reorder", async (c) => {
-    try {
-      const { instruction_ids } = await c.req.json<{ instruction_ids: string[] }>();
-      if (!Array.isArray(instruction_ids)) {
-        return c.json({ error: "instruction_ids must be an array" }, 400);
-      }
-      const instructions = instructionService.reorder(wbId(c), instruction_ids);
-      return c.json({ data: instructions });
-    } catch (e: unknown) {
-      if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
-      throw e;
-    }
-  });
-
-  // GET /api/workbenches/:id/instructions/:instructionId
+  // GET .../instructions/:instructionId
   app.get("/:instructionId", (c) => {
     try {
-      const instruction = instructionService.findById(wbId(c), c.req.param("instructionId"));
+      const instruction = instructionService.findById(phId(c), c.req.param("instructionId"));
       if (!instruction) return c.json({ error: "instruction not found" }, 404);
       return c.json(instruction);
     } catch (e: unknown) {
@@ -82,14 +63,14 @@ export function instructionRoutes(
     }
   });
 
-  // PATCH /api/workbenches/:id/instructions/:instructionId
+  // PATCH .../instructions/:instructionId
   app.patch("/:instructionId", async (c) => {
     try {
-      const { prompt, output, agent, parallel, actor, status } = await c.req.json<UpdateInstructionInput>();
+      const { prompt, output, agent } = await c.req.json<UpdateInstructionInput>();
       const instruction = instructionService.update(
-        wbId(c),
+        phId(c),
         c.req.param("instructionId"),
-        { prompt, output, agent, parallel, actor, status },
+        { prompt, output, agent },
       );
       if (!instruction) return c.json({ error: "instruction not found" }, 404);
       return c.json(instruction);
@@ -99,10 +80,10 @@ export function instructionRoutes(
     }
   });
 
-  // DELETE /api/workbenches/:id/instructions/:instructionId
+  // DELETE .../instructions/:instructionId
   app.delete("/:instructionId", (c) => {
     try {
-      const deleted = instructionService.delete(wbId(c), c.req.param("instructionId"));
+      const deleted = instructionService.delete(phId(c), c.req.param("instructionId"));
       if (!deleted) return c.json({ error: "instruction not found" }, 404);
       return c.json({ ok: true });
     } catch (e: unknown) {
@@ -111,9 +92,9 @@ export function instructionRoutes(
     }
   });
 
-  // ── Bindings ───────────────────────────────────────────────────────
+  // -- Bindings -------------------------------------------------------------
 
-  // GET /api/workbenches/:id/instructions/:instructionId/bindings
+  // GET .../instructions/:instructionId/bindings
   app.get("/:instructionId/bindings", (c) => {
     try {
       return c.json({ data: bindingService.findByInstruction(c.req.param("instructionId")) });
@@ -123,11 +104,11 @@ export function instructionRoutes(
     }
   });
 
-  // POST /api/workbenches/:id/instructions/:instructionId/bindings
+  // POST .../instructions/:instructionId/bindings
   app.post("/:instructionId/bindings", async (c) => {
     try {
-      const { arn, kind } = await c.req.json<CreateInstructionBindingInput>();
-      const binding = bindingService.create(c.req.param("instructionId"), { arn, kind });
+      const { arn } = await c.req.json<CreateInstructionBindingInput>();
+      const binding = bindingService.create(c.req.param("instructionId"), { arn });
       return c.json(binding, 201);
     } catch (e: unknown) {
       if (e instanceof ServiceError) return c.json({ error: e.message }, e.statusCode as ContentfulStatusCode);
@@ -135,7 +116,7 @@ export function instructionRoutes(
     }
   });
 
-  // DELETE /api/workbenches/:id/instructions/:instructionId/bindings/:bindingId
+  // DELETE .../instructions/:instructionId/bindings/:bindingId
   app.delete("/:instructionId/bindings/:bindingId", (c) => {
     try {
       const deleted = bindingService.delete(c.req.param("instructionId"), c.req.param("bindingId"));

@@ -10,26 +10,26 @@ import {
   EmptyState,
   HighlightOnChange,
 } from "../components";
-import { useWorkbenches } from "../hooks";
+import { useWorkflows } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError } from "../api";
 import { formatDate } from "../utils";
 
 // ---------------------------------------------------------------------------
-// WorkbenchTableRow
+// WorkflowTableRow
 // ---------------------------------------------------------------------------
 
-function WorkbenchTableRow({
-  workbench,
+function WorkflowTableRow({
+  workflow,
   onClick,
 }: {
-  workbench: { id: string; goal: string; created_at: string; updated_at: string };
+  workflow: { id: string; goal: string; created_at: string; updated_at: string };
   onClick: () => void;
 }) {
   const { theme } = useTheme();
 
   return (
-    <HighlightOnChange trackValue={workbench.updated_at}>
+    <HighlightOnChange trackValue={workflow.updated_at}>
       <div
         onClick={onClick}
         role="button"
@@ -54,7 +54,7 @@ function WorkbenchTableRow({
         onMouseEnter={(e) => { e.currentTarget.style.background = theme.color.surfaceContainerHigh; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = theme.color.surfaceContainer; }}
       >
-        <Icon name="construction" size={16} style={{ color: theme.color.primary, flexShrink: 0 }} />
+        <Icon name="account_tree" size={16} style={{ color: theme.color.primary, flexShrink: 0 }} />
 
         <span
           style={{
@@ -68,7 +68,7 @@ function WorkbenchTableRow({
             whiteSpace: "nowrap",
           }}
         >
-          {workbench.goal}
+          {workflow.goal}
         </span>
 
         <span
@@ -81,7 +81,7 @@ function WorkbenchTableRow({
             textAlign: "right" as const,
           }}
         >
-          {formatDate(workbench.updated_at)}
+          {formatDate(workflow.updated_at)}
         </span>
 
         <Icon name="chevron_right" size={16} style={{ color: theme.color.textFaint, flexShrink: 0 }} />
@@ -91,12 +91,12 @@ function WorkbenchTableRow({
 }
 
 // ---------------------------------------------------------------------------
-// WorkbenchesPage
+// WorkflowsPage
 // ---------------------------------------------------------------------------
 
-export function WorkbenchesPage({ onOpenWorkbench }: { onOpenWorkbench: (id: string) => void }) {
+export function WorkflowsPage({ onOpenWorkflow }: { onOpenWorkflow: (id: string) => void }) {
   const { theme } = useTheme();
-  const { workbenches, createWorkbench } = useWorkbenches();
+  const { workflows, createWorkflow } = useWorkflows();
   const { showToast } = useToastContext();
   const [goal, setGoal] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -106,11 +106,11 @@ export function WorkbenchesPage({ onOpenWorkbench }: { onOpenWorkbench: (id: str
     if (!goal.trim()) return;
     setCreating(true);
     try {
-      await createWorkbench(goal);
+      await createWorkflow(goal);
       setGoal("");
       setShowCreateForm(false);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to create workbench");
+      showToast(err instanceof ApiError ? err.message : "Failed to create workflow");
     } finally {
       setCreating(false);
     }
@@ -119,13 +119,13 @@ export function WorkbenchesPage({ onOpenWorkbench }: { onOpenWorkbench: (id: str
   return (
     <ListPageLayout>
       <PageHeader
-        title="Workbenches"
-        subtitle="Orchestrate instructions and bind them to resources."
+        title="Workflows"
+        subtitle="Orchestrate phases, instructions, and bind them to resources."
         trailing={
           <Button onClick={() => setShowCreateForm(!showCreateForm)}>
             <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
               <Icon name="add" size={16} />
-              New Workbench
+              New Workflow
             </span>
           </Button>
         }
@@ -141,7 +141,7 @@ export function WorkbenchesPage({ onOpenWorkbench }: { onOpenWorkbench: (id: str
         <div style={{ flex: "1 1 300px", minWidth: 0 }}>
           <Input
             label="Goal"
-            placeholder="What is this workbench for?"
+            placeholder="What is this workflow for?"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
             required
@@ -156,19 +156,19 @@ export function WorkbenchesPage({ onOpenWorkbench }: { onOpenWorkbench: (id: str
           border: `1px solid ${theme.color.borderSubtle}`,
         }}
       >
-        {workbenches.map((wb) => (
-          <WorkbenchTableRow
-            key={wb.id}
-            workbench={wb}
-            onClick={() => onOpenWorkbench(wb.id)}
+        {workflows.map((wf) => (
+          <WorkflowTableRow
+            key={wf.id}
+            workflow={wf}
+            onClick={() => onOpenWorkflow(wf.id)}
           />
         ))}
       </div>
 
-      {workbenches.length === 0 && (
+      {workflows.length === 0 && (
         <EmptyState
-          icon="construction"
-          message='No workbenches yet. Click "New Workbench" to get started.'
+          icon="account_tree"
+          message='No workflows yet. Click "New Workflow" to get started.'
           variant="card"
         />
       )}

@@ -1,4 +1,4 @@
-import type { Project, Task, Workbench, Instruction, InstructionBinding } from "./entities";
+import type { Project, Task, Workflow, Phase, Instruction, InstructionBinding } from "./entities";
 
 export type CreateProjectInput = Pick<Project, "name"> &
   Partial<Pick<Project, "description" | "status">>;
@@ -12,14 +12,19 @@ export type CreateTaskInput = Pick<Task, "title"> &
 
 export type UpdateTaskInput = Partial<Pick<Task, "title" | "description" | "status" | "type" | "effort" | "priority">>;
 
-export type CreateWorkbenchInput = Pick<Workbench, "goal"> &
-  Partial<Pick<Workbench, "cursor" | "status">>;
+export type CreateWorkflowInput = Pick<Workflow, "goal"> &
+  Partial<Pick<Workflow, "cursor" | "status">>;
 
-export type UpdateWorkbenchInput = Partial<Pick<Workbench, "goal" | "cursor" | "status">>;
+export type UpdateWorkflowInput = Partial<Pick<Workflow, "goal" | "cursor" | "status">>;
+
+export type CreatePhaseInput = Pick<Phase, "title"> &
+  Partial<Pick<Phase, "position">>;
+
+export type UpdatePhaseInput = Partial<Pick<Phase, "title">>;
 
 export type CreateInstructionInput = Pick<Instruction, "prompt"> &
-  Partial<Pick<Instruction, "position" | "agent" | "parallel" | "actor" | "status">>;
+  Partial<Pick<Instruction, "agent">>;
 
-export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt" | "output" | "agent" | "parallel" | "actor" | "status">>;
+export type UpdateInstructionInput = Partial<Pick<Instruction, "prompt" | "output" | "agent">>;
 
-export type CreateInstructionBindingInput = Pick<InstructionBinding, "arn" | "kind">;
+export type CreateInstructionBindingInput = Pick<InstructionBinding, "arn">;

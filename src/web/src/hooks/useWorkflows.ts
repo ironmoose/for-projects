@@ -1,50 +1,50 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch, ApiError } from "../api";
-import type { Workbench } from "../types";
+import type { Workflow } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
-export function useWorkbenches() {
-  const [workbenches, setWorkbenches] = useState<Workbench[]>([]);
+export function useWorkflows() {
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
   const { showToast } = useToastContext();
 
   const fetchRef = useRef<(() => void) | undefined>(undefined);
 
-  async function fetchWorkbenches() {
+  async function fetchWorkflows() {
     try {
-      const res = await apiFetch("/api/workbenches");
+      const res = await apiFetch("/api/workflows");
       const body = await res.json();
-      setWorkbenches(body.data);
+      setWorkflows(body.data);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to load workbenches");
+      showToast(err instanceof ApiError ? err.message : "Failed to load workflows");
     } finally {
       setLoading(false);
     }
   }
 
-  fetchRef.current = fetchWorkbenches;
+  fetchRef.current = fetchWorkflows;
 
   const throttledFetch = useThrottledCallback(() => {
     fetchRef.current?.();
   }, 200);
 
   useEffect(() => {
-    fetchWorkbenches();
+    fetchWorkflows();
     return subscribeEvents((event) => {
-      if (event.entity === "workbench") throttledFetch();
+      if (event.entity === "workflow") throttledFetch();
     });
   }, [subscribeEvents, throttledFetch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function createWorkbench(goal: string) {
-    await apiFetch("/api/workbenches", {
+  async function createWorkflow(goal: string) {
+    await apiFetch("/api/workflows", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ goal }),
     });
   }
 
-  return { workbenches, loading, createWorkbench };
+  return { workflows, loading, createWorkflow };
 }

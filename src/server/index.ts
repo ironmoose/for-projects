@@ -16,7 +16,8 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
 import { tagRoutes } from "./routes/tags";
-import { workbenchRoutes } from "./routes/workbenches";
+import { workflowRoutes } from "./routes/workflows";
+import { phaseRoutes } from "./routes/phases";
 import { instructionRoutes } from "./routes/instructions";
 import { bindingRoutes } from "./routes/bindings";
 import { createMcpHttpHandler } from "../mcp/server";
@@ -37,7 +38,7 @@ export class Server {
     const app = new Hono();
     const isAllowedOrigin = parseCorsOrigins(process.env.PM_CORS_ORIGINS);
 
-    // ── Global middleware ──────────────────────────────────
+    // -- Global middleware ------------------------------------------
     app.use("*", secureHeaders());
     app.use("*", compress());
     app.use("/api/*", bodyLimit({ maxSize: 1 * 1024 * 1024 }));
@@ -51,22 +52,26 @@ export class Server {
       })
     );
 
-    // ── API (with logging) ────────────────────────────────
+    // -- API (with logging) ----------------------------------------
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
     app.route("/api/projects/:projectId/tasks", taskRoutes(ctx.taskService, ctx.tagService));
     app.route("/api/projects", projectRoutes(ctx.projectService));
     app.route("/api/tags", tagRoutes(ctx.tagService));
-    app.route("/api/workbenches", workbenchRoutes(ctx.workbenchService));
-    app.route("/api/workbenches/:id/instructions", instructionRoutes(ctx.instructionService, ctx.instructionBindingService));
+    app.route("/api/workflows", workflowRoutes(ctx.workflowService));
+    app.route("/api/workflows/:workflowId/phases", phaseRoutes(ctx.phaseService));
+    app.route(
+      "/api/workflows/:workflowId/phases/:phaseId/instructions",
+      instructionRoutes(ctx.instructionService, ctx.instructionBindingService),
+    );
     app.route("/api/bindings", bindingRoutes(ctx.instructionBindingService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
-    // ── MCP ────────────────────────────────────────────────
+    // -- MCP --------------------------------------------------------
     app.use("/mcp", logger((str) => process.stderr.write(str + "\n")));
     const handleMcp = createMcpHttpHandler(ctx);
     app.all("/mcp", (c) => handleMcp(c.req.raw));
 
-    // ── Static web assets ─────────────────────────────────
+    // -- Static web assets -----------------------------------------
     const dist = join(import.meta.dir, "../web/dist");
     const indexPath = join(dist, "index.html");
     const indexHtml = existsSync(indexPath)
@@ -90,7 +95,7 @@ export class Server {
       return c.text("Not found — run `bun run build` first", 404);
     });
 
-    // ── Error handling ────────────────────────────────────
+    // -- Error handling --------------------------------------------
     app.onError((err, c) => {
       if (err instanceof SyntaxError) return c.json({ error: "invalid JSON body" }, 400);
       if (err instanceof ServiceError) return c.json({ error: err.message }, err.statusCode as ContentfulStatusCode);
@@ -98,7 +103,7 @@ export class Server {
       return c.json({ error: "internal server error" }, 500);
     });
 
-    // ── WebSocket client tracking ─────────────────────────
+    // -- WebSocket client tracking ---------------------------------
     const wsClients = new Set<ServerWebSocket<unknown>>();
 
     ctx.eventBus.subscribe((event: DomainEvent) => {

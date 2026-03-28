@@ -1,12 +1,14 @@
-import type { Project, Task, Tag, Workbench, Instruction, InstructionBinding } from "./entities";
-import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, InstructionStatus, WorkbenchStatus } from "./enums";
+import type { Project, Task, Tag, Workflow, Phase, Instruction, InstructionBinding } from "./entities";
+import type { ProjectStatus, TaskStatus, TaskType, TaskEffort, WorkflowStatus } from "./enums";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateTaskInput,
   UpdateTaskInput,
-  CreateWorkbenchInput,
-  UpdateWorkbenchInput,
+  CreateWorkflowInput,
+  UpdateWorkflowInput,
+  CreatePhaseInput,
+  UpdatePhaseInput,
   CreateInstructionInput,
   UpdateInstructionInput,
   CreateInstructionBindingInput,
@@ -46,30 +48,35 @@ export interface ITaskService {
   delete(projectId: string, id: string): boolean;
 }
 
-export interface WorkbenchFilter {
-  status?: WorkbenchStatus;
+export interface WorkflowFilter {
+  status?: WorkflowStatus;
 }
 
-export interface IWorkbenchService {
-  findAll(limit?: number, offset?: number, filter?: WorkbenchFilter): Paginated<Workbench>;
-  findById(id: string): Workbench | null;
-  create(input: CreateWorkbenchInput): Workbench;
-  update(id: string, input: UpdateWorkbenchInput): Workbench | null;
+export interface IWorkflowService {
+  findAll(limit?: number, offset?: number, filter?: WorkflowFilter): Paginated<Workflow>;
+  findById(id: string): Workflow | null;
+  create(input: CreateWorkflowInput): Workflow;
+  update(id: string, input: UpdateWorkflowInput): Workflow | null;
   delete(id: string): boolean;
 }
 
-export interface InstructionFilter {
-  status?: InstructionStatus;
+export interface IPhaseService {
+  findByWorkflow(workflowId: string, limit?: number, offset?: number): Paginated<Phase>;
+  findById(workflowId: string, phaseId: string): Phase | null;
+  findByIdDirect(phaseId: string): Phase | null;
+  create(workflowId: string, input: CreatePhaseInput): Phase;
+  update(workflowId: string, phaseId: string, input: UpdatePhaseInput): Phase | null;
+  delete(workflowId: string, phaseId: string): boolean;
+  reorder(workflowId: string, phaseIds: string[]): Phase[];
 }
 
 export interface IInstructionService {
-  findByWorkbench(workbenchId: string, limit?: number, offset?: number, filter?: InstructionFilter): Paginated<Instruction>;
-  findById(workbenchId: string, instructionId: string): Instruction | null;
+  findByPhase(phaseId: string, limit?: number, offset?: number): Paginated<Instruction>;
+  findById(phaseId: string, instructionId: string): Instruction | null;
   findByIdDirect(instructionId: string): Instruction | null;
-  create(workbenchId: string, input: CreateInstructionInput): Instruction;
-  update(workbenchId: string, instructionId: string, input: UpdateInstructionInput): Instruction | null;
-  delete(workbenchId: string, instructionId: string): boolean;
-  reorder(workbenchId: string, instructionIds: string[]): Instruction[];
+  create(phaseId: string, input: CreateInstructionInput): Instruction;
+  update(phaseId: string, instructionId: string, input: UpdateInstructionInput): Instruction | null;
+  delete(phaseId: string, instructionId: string): boolean;
 }
 
 export interface IInstructionBindingService {

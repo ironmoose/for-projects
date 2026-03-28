@@ -38,17 +38,15 @@ export function useEventDrivenAnimation(
       let duration = 600;
 
       if (entityType === "instruction" && event.action === "updated") {
-        const status = payload.status as string | undefined;
-        if (status === "running") {
-          state = "glow";
-          // Glow persists until next event, no auto-reset
-          setAnimationState(state);
-          return;
-        } else if (status === "complete") {
+        // Instructions no longer have status — key off output presence
+        const output = payload.output as string | null | undefined;
+        if (output != null && output.length > 0) {
+          // Output was written — flash to signal completion
           state = "flash";
           duration = 600;
-        } else if (status === "failed") {
-          state = "shake";
+        } else {
+          // Updated without output (prompt/agent change) — subtle flash
+          state = "flash";
           duration = 400;
         }
       }
