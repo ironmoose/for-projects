@@ -71,7 +71,7 @@ export class RunnerService implements IRunnerService {
     return { entity_type: updated.entity_type, entity_id: updated.entity_id, role: updated.role, status: updated.status };
   }
 
-  fail(entity_type: string, entity_id: string, role: string, output?: string): RunnerActionResult {
+  fail(entity_type: string, entity_id: string, role: string, output: string): RunnerActionResult {
     const existing = this.entityActionRepo.findByEntityAndRole(entity_type, entity_id, role);
     if (!existing) {
       throw new ServiceError("entity action not found", 404);
@@ -81,9 +81,7 @@ export class RunnerService implements IRunnerService {
     }
 
     const now = new Date().toISOString();
-    if (output !== undefined) {
-      this.entityActionRepo.updateOutput(entity_type, entity_id, role, output, now);
-    }
+    this.entityActionRepo.updateOutput(entity_type, entity_id, role, output, now);
     const updated = this.entityActionRepo.updateStatus(entity_type, entity_id, role, 'failed', now)!;
 
     this.eventBus?.emit({ entity: "entity_action", action: "status_changed", payload: updated });

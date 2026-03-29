@@ -196,12 +196,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     "fail_action",
     {
       description:
-        "Mark an in-progress action as failed, with an optional reason.",
+        "Mark an in-progress action as failed with a reason.",
       inputSchema: {
         entity_type: z.enum(["project", "task"]),
         entity_id: z.string().max(26),
         role: z.enum(["goal", "design", "requirements", "implementation", "validation"]),
-        output: z.string().max(50000).optional(),
+        output: z.string().max(50000),
       },
     },
     (input) =>
