@@ -46,7 +46,7 @@ describe("Action Routes", () => {
     const res = await req("/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "test action" }),
+      body: JSON.stringify({ name: "Test", prompt: "test action" }),
     });
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -58,7 +58,7 @@ describe("Action Routes", () => {
     const res = await req("/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "research", agent: "research" }),
+      body: JSON.stringify({ name: "Research", prompt: "research", agent: "research" }),
     });
     expect(res.status).toBe(201);
     expect((await res.json()).agent).toBe("research");
@@ -77,7 +77,7 @@ describe("Action Routes", () => {
     const res = await req("/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "x", agent: "invalid" }),
+      body: JSON.stringify({ name: "X", prompt: "x", agent: "invalid" }),
     });
     expect(res.status).toBe(400);
   });
@@ -94,7 +94,7 @@ describe("Action Routes", () => {
     const create = await req("/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "find me" }),
+      body: JSON.stringify({ name: "Find", prompt: "find me" }),
     });
     const action = await create.json();
     const res = await req(`/actions/${action.id}`);
@@ -111,7 +111,7 @@ describe("Action Routes", () => {
     const create = await req("/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "update me" }),
+      body: JSON.stringify({ name: "Update", prompt: "update me" }),
     });
     const action = await create.json();
     const res = await req(`/actions/${action.id}`, {
@@ -228,12 +228,15 @@ describe("Entity-Action Routes", () => {
     const aRes = await req("/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "EA route action" }),
+      body: JSON.stringify({ name: "EA", prompt: "EA route action" }),
     });
     actionId = (await aRes.json()).id;
   });
 
   it("POST /entity-actions creates link (201)", async () => {
+    // Canned actions auto-create "goal" link; unlink it first so we can re-link
+    await req(`/entity-actions/project/${projectId}/goal`, { method: "DELETE" });
+
     const res = await req("/entity-actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -287,8 +290,11 @@ describe("Entity-Action Routes", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toBeArray();
-    expect(body.length).toBeGreaterThanOrEqual(1);
-    expect(body[0].role).toBe("goal");
+    expect(body.length).toBeGreaterThanOrEqual(3);
+    const roles = body.map((ea: { role: string }) => ea.role).sort();
+    expect(roles).toContain("goal");
+    expect(roles).toContain("design");
+    expect(roles).toContain("requirements");
   });
 
   it("GET /entity-actions/project/:id/:role returns single", async () => {

@@ -15,6 +15,7 @@ export class ActionService implements IActionService {
   ) {}
 
   create(input: CreateActionInput): Action {
+    if (!input.name?.trim()) throw new ServiceError("name is required", 400);
     if (!input.prompt?.trim()) throw new ServiceError("prompt is required", 400);
     if (input.agent !== undefined && !VALID_AGENTS.includes(input.agent as typeof VALID_AGENTS[number])) {
       throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
@@ -22,7 +23,7 @@ export class ActionService implements IActionService {
     const id = ulid();
     const now = new Date().toISOString();
     this.actionRepo.create({
-      id, prompt: input.prompt, agent: input.agent ?? null,
+      id, name: input.name.trim(), prompt: input.prompt, agent: input.agent ?? null,
       created_at: now, updated_at: now,
     });
     const action = this.actionRepo.findById(id)!;
@@ -33,12 +34,13 @@ export class ActionService implements IActionService {
   update(id: string, input: UpdateActionInput): Action | null {
     const existing = this.actionRepo.findById(id);
     if (!existing) return null;
+    if (input.name !== undefined && !input.name.trim()) throw new ServiceError("name cannot be empty", 400);
     if (input.prompt !== undefined && !input.prompt.trim()) throw new ServiceError("prompt cannot be empty", 400);
     if (input.agent !== undefined && !VALID_AGENTS.includes(input.agent as typeof VALID_AGENTS[number])) {
       throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
     }
     const now = new Date().toISOString();
-    this.actionRepo.update(id, { prompt: input.prompt, agent: input.agent, updated_at: now });
+    this.actionRepo.update(id, { name: input.name?.trim(), prompt: input.prompt, agent: input.agent, updated_at: now });
     const updated = this.actionRepo.findById(id)!;
     this.eventBus?.emit({ entity: "action", action: "updated", payload: updated });
     return updated;

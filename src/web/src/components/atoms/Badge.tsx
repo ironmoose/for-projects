@@ -1,7 +1,7 @@
 import { useTheme } from "../theme/ThemeContext";
 
 type BadgeVariant =
-  | "active" | "paused" | "completed" | "archived" | "default"
+  | "active" | "archived" | "default"
   | "pending" | "running" | "complete" | "failed" | "skipped"
   | "todo" | "in_progress" | "done";
 
@@ -18,14 +18,6 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
     active: {
       background: `${theme.color.primary}22`,
       color: theme.color.primary,
-    },
-    completed: {
-      background: `${theme.color.success}22`,
-      color: theme.color.success,
-    },
-    paused: {
-      background: theme.color.surfaceContainerHighest,
-      color: theme.color.textMuted,
     },
     archived: {
       background: theme.color.surfaceContainerHigh,

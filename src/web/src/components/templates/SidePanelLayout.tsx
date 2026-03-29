@@ -20,7 +20,7 @@ export function SidePanelLayout({ children, onClose, style }: SidePanelLayoutPro
       style={{
         ...(isSmall
           ? { position: "fixed" as const, inset: 0, zIndex: 101 }
-          : { flex: "1 0 400px", maxWidth: 640, alignSelf: "stretch" }),
+          : { flex: "1 0 400px", maxWidth: 640, alignSelf: "stretch", minHeight: 0, overflow: "hidden" }),
         borderLeft: isSmall ? undefined : `1px solid ${theme.color.borderSubtle}`,
         background: isSmall ? theme.color.surface : theme.color.surfaceContainerLow,
         display: "flex",

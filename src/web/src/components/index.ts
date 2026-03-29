@@ -37,6 +37,7 @@ export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ActionDetailPanel } from "./organisms/ActionDetailPanel";
+export { CreateTaskOverlay } from "./organisms/CreateTaskOverlay";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

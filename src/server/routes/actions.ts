@@ -6,12 +6,14 @@ export function actionRoutes(service: IActionService): Hono {
 
   // POST /api/actions — create single action
   app.post("/", async (c) => {
-    const { prompt, agent } = await c.req.json<{
+    const { name, prompt, agent } = await c.req.json<{
+      name?: string;
       prompt?: string;
       agent?: string;
     }>();
+    if (!name) return c.json({ error: "name is required" }, 400);
     if (!prompt) return c.json({ error: "prompt is required" }, 400);
-    const action = service.create({ prompt, agent });
+    const action = service.create({ name, prompt, agent });
     return c.json(action, 201);
   });
 
@@ -44,11 +46,13 @@ export function actionRoutes(service: IActionService): Hono {
 
   // PATCH /api/actions/:id — update action fields
   app.patch("/:id", async (c) => {
-    const { prompt, agent } = await c.req.json<{
+    const { name, prompt, agent } = await c.req.json<{
+      name?: string;
       prompt?: string;
       agent?: string;
     }>();
     const updated = service.update(c.req.param("id"), {
+      name,
       prompt,
       agent,
     });

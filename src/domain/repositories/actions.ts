@@ -10,6 +10,7 @@ export class ActionRepository {
 
   create(action: {
     id: string;
+    name: string;
     prompt: string;
     agent: string | null;
     created_at: string;
@@ -17,10 +18,11 @@ export class ActionRepository {
   }): void {
     this.db
       .query(
-        "INSERT INTO actions (id, prompt, agent, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO actions (id, name, prompt, agent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
       )
       .run(
         action.id,
+        action.name,
         action.prompt,
         action.agent,
         action.created_at,
@@ -30,15 +32,16 @@ export class ActionRepository {
 
   update(
     id: string,
-    fields: { prompt?: string; agent?: string; updated_at: string }
+    fields: { name?: string; prompt?: string; agent?: string; updated_at: string }
   ): void {
     const existing = this.findById(id);
     if (!existing) return;
+    const name = fields.name ?? existing.name;
     const prompt = fields.prompt ?? existing.prompt;
     const agent = fields.agent !== undefined ? fields.agent : existing.agent;
     this.db
-      .query("UPDATE actions SET prompt = ?, agent = ?, updated_at = ? WHERE id = ?")
-      .run(prompt, agent, fields.updated_at, id);
+      .query("UPDATE actions SET name = ?, prompt = ?, agent = ?, updated_at = ? WHERE id = ?")
+      .run(name, prompt, agent, fields.updated_at, id);
   }
 
   findAll(limit: number, offset: number, filters?: { agent?: string }): Action[] {

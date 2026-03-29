@@ -4,6 +4,7 @@ export * from "./errors";
 export * from "./services";
 export * from "./events";
 export * from "./bootstrap";
+export * from "./action-templates";
 export { createDatabase, getDbPath } from "./db/connection";
 export { runMigrations } from "./db/migrator";
 export { ProjectRepository } from "./repositories/projects";

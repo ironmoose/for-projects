@@ -33,10 +33,10 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
 
   const eventBus = new EventBus();
 
-  const projectService = new ProjectService(projectRepo, eventBus);
-  const taskService = new TaskService(taskRepo, projectRepo, eventBus);
   const actionService = new ActionService(actionRepo, eventBus);
   const entityActionService = new EntityActionService(entityActionRepo, actionRepo, projectRepo, taskRepo, eventBus);
+  const projectService = new ProjectService(projectRepo, eventBus, actionService, entityActionService);
+  const taskService = new TaskService(taskRepo, projectRepo, eventBus, actionService, entityActionService);
   const runnerService = new RunnerService(entityActionRepo, actionRepo, projectRepo, taskRepo, eventBus);
 
   return { db, eventBus, projectService, taskService, actionService, entityActionService, runnerService };

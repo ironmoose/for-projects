@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
 import {
+  ActionCard,
   Badge,
+  Button,
   IconButton,
   Markdown,
   Select,
@@ -12,12 +14,11 @@ import {
   BackButton,
   SectionLabel,
   MetadataTable,
-  AddItemInput,
   ListItem,
   EmptyState,
   StatusDot,
+  CreateTaskOverlay,
 } from "../components";
-import { ActionSlot } from "../components/molecules/ActionSlot";
 import { CreateActionOverlay } from "../components/organisms/CreateActionOverlay";
 import { ActionDetailPanel } from "../components/organisms/ActionDetailPanel";
 import { useProject, useEntityActions } from "../hooks";
@@ -33,9 +34,15 @@ import { formatDate } from "../utils";
 
 function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: string; onClose: () => void }) {
   const { theme } = useTheme();
+  const TASK_ROLES = ["implementation", "validation"] as const;
   const { actionsMap: taskActionsMap } = useEntityActions("task", task.id);
-  const [taskOverlayField, setTaskOverlayField] = useState<"implementation" | "validation" | null>(null);
+  const [showTaskCreateOverlay, setShowTaskCreateOverlay] = useState(false);
   const [selectedTaskAction, setSelectedTaskAction] = useState<{ action: Action; entityAction: EntityAction } | null>(null);
+
+  const taskActionEntries = TASK_ROLES
+    .filter((r) => taskActionsMap[r] != null)
+    .map((r) => ({ role: r, ...taskActionsMap[r]! }));
+  const availableTaskRoles = TASK_ROLES.filter((r) => taskActionsMap[r] == null);
 
   const statusColor =
     task.status === "done" ? theme.color.success
@@ -122,22 +129,22 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
           </p>
         )}
 
-        {/* Action Slots */}
-        <div style={{ display: "flex", gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
-          {(["implementation", "validation"] as const).map((field) => {
-            const entry = taskActionsMap[field];
-            return (
-              <div key={field} style={{ flex: 1 }}>
-                <ActionSlot
-                  label={field.charAt(0).toUpperCase() + field.slice(1)}
-                  action={entry?.action ?? null}
-                  entityAction={entry?.entityAction}
-                  onCreateClick={() => setTaskOverlayField(field)}
-                  onActionClick={() => { if (entry) setSelectedTaskAction(entry); }}
-                />
-              </div>
-            );
-          })}
+        {/* Actions */}
+        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm, marginTop: theme.spacing.lg }}>
+          {taskActionEntries.map((entry) => (
+            <ActionCard
+              key={entry.role}
+              action={entry.action}
+              entityAction={entry.entityAction}
+              role={entry.role}
+              onClick={() => setSelectedTaskAction(entry)}
+            />
+          ))}
+          {availableTaskRoles.length > 0 && (
+            <Button variant="ghost" onClick={() => setShowTaskCreateOverlay(true)}>
+              + Add Action
+            </Button>
+          )}
         </div>
 
         {/* Metadata */}
@@ -159,15 +166,15 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
         </div>
       </div>
 
-      {taskOverlayField && (
+      {showTaskCreateOverlay && availableTaskRoles.length > 0 && (
         <CreateActionOverlay
           entityType="task"
           entityId={task.id}
-          field={taskOverlayField}
+          availableRoles={[...availableTaskRoles]}
           onCreated={() => {
             // useEntityActions will refetch via WebSocket events
           }}
-          onClose={() => setTaskOverlayField(null)}
+          onClose={() => setShowTaskCreateOverlay(false)}
         />
       )}
     </SidePanelLayout>
@@ -195,28 +202,15 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const { project, tasks, notFound, updateProjectStatus, addTask, updateTaskStatus } = useProject(projectId);
   const { actionsMap: projectActionsMap } = useEntityActions("project", project?.id);
   const { showToast } = useToastContext();
-  const [newTaskSummary, setNewTaskSummary] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [addingTask, setAddingTask] = useState(false);
-  const [overlayField, setOverlayField] = useState<"goal" | "design" | "requirements" | null>(null);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const PROJECT_ROLES = ["goal", "design", "requirements"] as const;
+  const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [selectedAction, setSelectedAction] = useState<{ action: Action; entityAction: EntityAction } | null>(null);
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
-
-  async function handleAddTask() {
-    if (!newTaskSummary.trim() || !project) return;
-    setAddingTask(true);
-    try {
-      await addTask(newTaskSummary);
-      setNewTaskSummary("");
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to add task");
-    } finally {
-      setAddingTask(false);
-    }
-  }
 
   if (notFound) {
     return (
@@ -239,6 +233,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       </div>
     );
   }
+
+  // Compute project action entries
+  const projectActionEntries = PROJECT_ROLES
+    .filter((r) => projectActionsMap[r] != null)
+    .map((r) => ({ role: r, ...projectActionsMap[r]! }));
+  const availableProjectRoles = PROJECT_ROLES.filter((r) => projectActionsMap[r] == null);
 
   // Sort: in_progress first, then todo, then done
   const statusOrder: Record<Task["status"], number> = { in_progress: 0, todo: 1, done: 2 };
@@ -280,50 +280,44 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         </Stack>
 
         {/* Actions */}
-        <div style={{ marginBottom: theme.spacing.xl }}>
-          <div style={{ display: "flex", gap: theme.spacing.md }}>
-            {(["goal", "design", "requirements"] as const).map((field) => {
-              const entry = projectActionsMap[field];
-              return (
-                <div key={field} style={{ flex: 1 }}>
-                  <ActionSlot
-                    label={field.charAt(0).toUpperCase() + field.slice(1)}
-                    action={entry?.action ?? null}
-                    entityAction={entry?.entityAction}
-                    onCreateClick={() => setOverlayField(field)}
-                    onActionClick={() => { if (entry) setSelectedAction(entry); }}
-                  />
-                </div>
-              );
-            })}
-          </div>
+        <div style={{ marginBottom: theme.spacing.xl, display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+          {projectActionEntries.map((entry) => (
+            <ActionCard
+              key={entry.role}
+              action={entry.action}
+              entityAction={entry.entityAction}
+              role={entry.role}
+              onClick={() => setSelectedAction(entry)}
+            />
+          ))}
+          {availableProjectRoles.length > 0 && (
+            <Button variant="ghost" onClick={() => setShowCreateOverlay(true)}>
+              + Add Action
+            </Button>
+          )}
         </div>
 
         <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
-          <h3
-            style={{
-              margin: 0,
-              fontFamily: theme.font.headline,
-              fontSize: theme.font.size.lg,
-              fontWeight: 700,
-              color: theme.color.text,
-            }}
-          >
-            Tasks
-          </h3>
-          <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
-            {tasks.length} task{tasks.length !== 1 ? "s" : ""}
-          </span>
+          <Stack direction="row" align="center" gap="sm">
+            <h3
+              style={{
+                margin: 0,
+                fontFamily: theme.font.headline,
+                fontSize: theme.font.size.lg,
+                fontWeight: 700,
+                color: theme.color.text,
+              }}
+            >
+              Tasks
+            </h3>
+            <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
+              {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+            </span>
+          </Stack>
+          <Button variant="primary" size="sm" onClick={() => setShowCreateTask(true)}>
+            Add Task
+          </Button>
         </Stack>
-
-        <AddItemInput
-          placeholder="Add a task..."
-          value={newTaskSummary}
-          onChange={setNewTaskSummary}
-          onSubmit={handleAddTask}
-          loading={addingTask}
-          style={{ marginBottom: theme.spacing.xl }}
-        />
 
         <Stack gap="xs">
           {sortedTasks.map((task) => (
@@ -361,7 +355,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             </ListItem>
           ))}
           {tasks.length === 0 && (
-            <EmptyState icon="task" message="No tasks yet. Add one above." />
+            <EmptyState icon="task" message="No tasks yet." />
           )}
         </Stack>
       </div>
@@ -385,15 +379,24 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         />
       )}
 
-      {overlayField && project && (
+      {showCreateOverlay && project && availableProjectRoles.length > 0 && (
         <CreateActionOverlay
           entityType="project"
           entityId={project.id}
-          field={overlayField}
+          availableRoles={[...availableProjectRoles]}
           onCreated={() => {
             // useEntityActions will refetch via WebSocket events
           }}
-          onClose={() => setOverlayField(null)}
+          onClose={() => setShowCreateOverlay(false)}
+        />
+      )}
+
+      {showCreateTask && (
+        <CreateTaskOverlay
+          onCreated={async (summary, context, status) => {
+            await addTask(summary, context, status);
+          }}
+          onClose={() => setShowCreateTask(false)}
         />
       )}
     </DetailPageLayout>

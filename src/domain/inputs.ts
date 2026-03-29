@@ -26,11 +26,13 @@ export interface UpdateTaskInput {
 }
 
 export interface CreateActionInput {
+  name: string;
   prompt: string;
   agent?: string;
 }
 
 export interface UpdateActionInput {
+  name?: string;
   prompt?: string;
   agent?: string;
 }

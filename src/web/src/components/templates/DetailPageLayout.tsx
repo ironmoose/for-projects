@@ -12,6 +12,9 @@ export function DetailPageLayout({ children, expanded, style }: DetailPageLayout
   return (
     <div
       style={{
+        height: "100%",
+        minHeight: 0,
+        overflow: "hidden",
         flex: 1,
         width: "100%",
         maxWidth: expanded ? 1800 : 900,

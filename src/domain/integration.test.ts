@@ -157,7 +157,7 @@ describe("Task CRUD", () => {
 
 describe("Action CRUD", () => {
   it("creates action with prompt only", () => {
-    const action = ctx.actionService.create({ prompt: "Test prompt" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Test prompt" });
     expect(action.id).toBeTruthy();
     expect(action.prompt).toBe("Test prompt");
     expect(action.agent).toBeNull();
@@ -165,20 +165,24 @@ describe("Action CRUD", () => {
   });
 
   it("creates action with prompt + agent", () => {
-    const action = ctx.actionService.create({ prompt: "Research task", agent: "research" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Research task", agent: "research" });
     expect(action.agent).toBe("research");
   });
 
   it("rejects invalid agent", () => {
-    expect(() => ctx.actionService.create({ prompt: "X", agent: "invalid" })).toThrow(ServiceError);
+    expect(() => ctx.actionService.create({ name: "Test", prompt: "X", agent: "invalid" })).toThrow(ServiceError);
   });
 
   it("rejects empty prompt", () => {
-    expect(() => ctx.actionService.create({ prompt: "" })).toThrow(ServiceError);
+    expect(() => ctx.actionService.create({ name: "Test", prompt: "" })).toThrow(ServiceError);
+  });
+
+  it("rejects empty name", () => {
+    expect(() => ctx.actionService.create({ name: "", prompt: "X" })).toThrow(ServiceError);
   });
 
   it("updates action prompt", async () => {
-    const action = ctx.actionService.create({ prompt: "Original" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Original" });
     await new Promise((r) => setTimeout(r, 5));
     const updated = ctx.actionService.update(action.id, { prompt: "Updated" });
     expect(updated!.prompt).toBe("Updated");
@@ -197,7 +201,7 @@ describe("Action CRUD", () => {
   });
 
   it("findAll with agent filter", () => {
-    const a = ctx.actionService.create({ prompt: "Agent test", agent: "design" });
+    const a = ctx.actionService.create({ name: "Test", prompt: "Agent test", agent: "design" });
     const result = ctx.actionService.findAll(100, 0, { agent: "design" });
     expect(result.data.some(x => x.id === a.id)).toBe(true);
   });
@@ -209,8 +213,11 @@ describe("Action CRUD", () => {
 
 describe("EntityAction link/unlink", () => {
   it("links an action to a project with a role", () => {
-    const action = ctx.actionService.create({ prompt: "Goal action" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Goal action" });
     const project = ctx.projectService.create({ name: "EA Project" });
+
+    // Canned actions auto-create a "goal" link; unlink it first
+    ctx.entityActionService.unlink("project", project.id, "goal");
 
     const ea = ctx.entityActionService.link({
       entity_type: "project",
@@ -231,7 +238,10 @@ describe("EntityAction link/unlink", () => {
   it("links an action to a task with a role", () => {
     const project = ctx.projectService.create({ name: "EA Task Project" });
     const task = ctx.taskService.create({ project_id: project.id, summary: "EA Task" });
-    const action = ctx.actionService.create({ prompt: "Impl action" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Impl action" });
+
+    // Canned actions auto-create an "implementation" link; unlink it first
+    ctx.entityActionService.unlink("task", task.id, "implementation");
 
     const ea = ctx.entityActionService.link({
       entity_type: "task",
@@ -246,7 +256,7 @@ describe("EntityAction link/unlink", () => {
   });
 
   it("rejects invalid entity_type", () => {
-    const action = ctx.actionService.create({ prompt: "Bad type" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Bad type" });
     expect(() =>
       ctx.entityActionService.link({
         entity_type: "widget" as "project",
@@ -259,7 +269,7 @@ describe("EntityAction link/unlink", () => {
 
   it("rejects implementation role for project (400)", () => {
     const project = ctx.projectService.create({ name: "Bad Role" });
-    const action = ctx.actionService.create({ prompt: "Bad role" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Bad role" });
     try {
       ctx.entityActionService.link({
         entity_type: "project",
@@ -277,7 +287,7 @@ describe("EntityAction link/unlink", () => {
   it("rejects goal role for task (400)", () => {
     const project = ctx.projectService.create({ name: "Task Bad Role" });
     const task = ctx.taskService.create({ project_id: project.id, summary: "No goal" });
-    const action = ctx.actionService.create({ prompt: "Bad role task" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Bad role task" });
     try {
       ctx.entityActionService.link({
         entity_type: "task",
@@ -293,7 +303,7 @@ describe("EntityAction link/unlink", () => {
   });
 
   it("rejects nonexistent entity", () => {
-    const action = ctx.actionService.create({ prompt: "No entity" });
+    const action = ctx.actionService.create({ name: "Test", prompt: "No entity" });
     expect(() =>
       ctx.entityActionService.link({
         entity_type: "project",
@@ -318,13 +328,9 @@ describe("EntityAction link/unlink", () => {
 
   it("rejects duplicate link (409)", () => {
     const project = ctx.projectService.create({ name: "Dup Link" });
-    const action = ctx.actionService.create({ prompt: "Dup" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "design",
-      action_id: action.id,
-    });
+    const action = ctx.actionService.create({ name: "Test", prompt: "Dup" });
+
+    // "design" is already auto-created by canned actions, so linking again should 409
     try {
       ctx.entityActionService.link({
         entity_type: "project",
@@ -341,14 +347,8 @@ describe("EntityAction link/unlink", () => {
 
   it("unlinks an entity action", () => {
     const project = ctx.projectService.create({ name: "Unlink EA" });
-    const action = ctx.actionService.create({ prompt: "Unlink" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "requirements",
-      action_id: action.id,
-    });
 
+    // "requirements" is auto-created by canned actions; unlink it directly
     const deleted = ctx.entityActionService.unlink("project", project.id, "requirements");
     expect(deleted).toBe(true);
 
@@ -362,29 +362,19 @@ describe("EntityAction link/unlink", () => {
 
   it("findByEntity returns all roles for an entity", () => {
     const project = ctx.projectService.create({ name: "Multi Role" });
-    const a1 = ctx.actionService.create({ prompt: "Goal" });
-    const a2 = ctx.actionService.create({ prompt: "Design" });
 
-    ctx.entityActionService.link({ entity_type: "project", entity_id: project.id, role: "goal", action_id: a1.id });
-    ctx.entityActionService.link({ entity_type: "project", entity_id: project.id, role: "design", action_id: a2.id });
-
+    // Canned actions auto-create goal, design, requirements for projects
     const eas = ctx.entityActionService.findByEntity("project", project.id);
-    expect(eas.length).toBe(2);
-    expect(eas.map(e => e.role).sort()).toEqual(["design", "goal"]);
+    expect(eas.length).toBe(3);
+    expect(eas.map(e => e.role).sort()).toEqual(["design", "goal", "requirements"]);
   });
 });
 
 describe("EntityAction status transitions", () => {
   it("transitions todo -> in_progress -> complete", () => {
     const project = ctx.projectService.create({ name: "Status Project" });
-    const action = ctx.actionService.create({ prompt: "Status" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "goal",
-      action_id: action.id,
-    });
 
+    // Canned actions auto-create "goal" link; use it directly
     const ip = ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress");
     expect(ip.status).toBe("in_progress");
 
@@ -394,14 +384,8 @@ describe("EntityAction status transitions", () => {
 
   it("transitions in_progress -> failed -> todo (retry)", () => {
     const project = ctx.projectService.create({ name: "Retry Project" });
-    const action = ctx.actionService.create({ prompt: "Retry" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "design",
-      action_id: action.id,
-    });
 
+    // Canned actions auto-create "design" link; use it directly
     ctx.entityActionService.updateStatus("project", project.id, "design", "in_progress");
     const failed = ctx.entityActionService.updateStatus("project", project.id, "design", "failed");
     expect(failed.status).toBe("failed");
@@ -412,14 +396,8 @@ describe("EntityAction status transitions", () => {
 
   it("rejects invalid transition todo → complete (400)", () => {
     const project = ctx.projectService.create({ name: "Invalid Trans" });
-    const action = ctx.actionService.create({ prompt: "No skip" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "requirements",
-      action_id: action.id,
-    });
 
+    // Canned actions auto-create "requirements" link; use it directly
     try {
       ctx.entityActionService.updateStatus("project", project.id, "requirements", "complete");
       expect(true).toBe(false);
@@ -431,14 +409,8 @@ describe("EntityAction status transitions", () => {
 
   it("rejects transition from complete", () => {
     const project = ctx.projectService.create({ name: "Complete Lock" });
-    const action = ctx.actionService.create({ prompt: "Done" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "goal",
-      action_id: action.id,
-    });
 
+    // Canned actions auto-create "goal" link; use it directly
     ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress");
     ctx.entityActionService.updateStatus("project", project.id, "goal", "complete");
 
@@ -454,28 +426,16 @@ describe("EntityAction status transitions", () => {
 describe("EntityAction output", () => {
   it("updates output on an entity action", () => {
     const project = ctx.projectService.create({ name: "Output Project" });
-    const action = ctx.actionService.create({ prompt: "Output" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "goal",
-      action_id: action.id,
-    });
 
+    // Canned actions auto-create "goal" link; use it directly
     const updated = ctx.entityActionService.updateOutput("project", project.id, "goal", "Result text");
     expect(updated.output).toBe("Result text");
   });
 
   it("nulls output", () => {
     const project = ctx.projectService.create({ name: "Null Output" });
-    const action = ctx.actionService.create({ prompt: "Null out" });
-    ctx.entityActionService.link({
-      entity_type: "project",
-      entity_id: project.id,
-      role: "design",
-      action_id: action.id,
-    });
 
+    // Canned actions auto-create "design" link; use it directly
     ctx.entityActionService.updateOutput("project", project.id, "design", "Something");
     const nulled = ctx.entityActionService.updateOutput("project", project.id, "design", null);
     expect(nulled.output).toBeNull();

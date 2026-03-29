@@ -14,6 +14,14 @@ const ROLE_ORDER: Record<string, ActionRole[]> = {
 
 const STALE_CLAIM_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
+const AGENT_PRIORITY: Record<string, number> = {
+  research: 0,
+  design: 1,
+  implementation: 2,
+  review: 3,
+};
+const DEFAULT_AGENT_PRIORITY = 99;
+
 export class RunnerService implements IRunnerService {
   constructor(
     private entityActionRepo: EntityActionRepository,
@@ -109,7 +117,15 @@ export class RunnerService implements IRunnerService {
   private findNextCandidate(): EntityAction | null {
     const todos = this.entityActionRepo.findAll(100, 0, { status: 'todo' });
 
-    for (const ea of todos) {
+    const sorted = [...todos].sort((a, b) => {
+      const actionA = this.actionRepo.findById(a.action_id);
+      const actionB = this.actionRepo.findById(b.action_id);
+      const priorityA = AGENT_PRIORITY[actionA?.agent ?? ''] ?? DEFAULT_AGENT_PRIORITY;
+      const priorityB = AGENT_PRIORITY[actionB?.agent ?? ''] ?? DEFAULT_AGENT_PRIORITY;
+      return priorityA - priorityB;
+    });
+
+    for (const ea of sorted) {
       if (this.dependenciesMet(ea)) return ea;
     }
 
@@ -174,12 +190,23 @@ export class RunnerService implements IRunnerService {
     }
 
     // --- Prior work: completed predecessor outputs ---
-    const priorWork = this.gatherPriorWork(ea);
-    if (priorWork.length > 0) {
+    const MAX_PRIOR_OUTPUT_CHARS = 8000;
+
+    const predecessorWork = this.gatherPredecessorWork(ea);
+    if (predecessorWork.length > 0) {
       sections.push('# Prior Work');
-      for (const pw of priorWork) {
+      for (const pw of predecessorWork) {
         sections.push(`## ${pw.role}`);
-        sections.push(pw.output);
+        sections.push(this.truncateOutput(pw.output, MAX_PRIOR_OUTPUT_CHARS));
+      }
+    }
+
+    const relatedWork = this.gatherRelatedWork(ea, predecessorWork.map(p => p.role));
+    if (relatedWork.length > 0) {
+      sections.push('# Related Work');
+      for (const rw of relatedWork) {
+        sections.push(`## ${rw.role}`);
+        sections.push(this.truncateOutput(rw.output, MAX_PRIOR_OUTPUT_CHARS));
       }
     }
 
@@ -190,7 +217,12 @@ export class RunnerService implements IRunnerService {
     return sections.join('\n\n');
   }
 
-  private gatherPriorWork(ea: EntityAction): { role: string; output: string }[] {
+  private truncateOutput(text: string, maxChars: number): string {
+    if (text.length <= maxChars) return text;
+    return text.slice(0, maxChars) + '\n\n[...truncated]';
+  }
+
+  private gatherPredecessorWork(ea: EntityAction): { role: string; output: string }[] {
     const roles = ROLE_ORDER[ea.entity_type];
     if (!roles) return [];
 
@@ -209,5 +241,15 @@ export class RunnerService implements IRunnerService {
     }
 
     return results;
+  }
+
+  private gatherRelatedWork(ea: EntityAction, excludeRoles: string[]): { role: string; output: string }[] {
+    const siblings = this.entityActionRepo.findByEntity(ea.entity_type, ea.entity_id);
+    const excludeSet = new Set([ea.role, ...excludeRoles]);
+
+    return siblings
+      .filter((s) => s.status === 'complete' && s.output && !excludeSet.has(s.role))
+      .sort((a, b) => a.updated_at.localeCompare(b.updated_at))
+      .map((s) => ({ role: s.role, output: s.output! }));
   }
 }

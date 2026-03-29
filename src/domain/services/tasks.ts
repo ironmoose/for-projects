@@ -1,10 +1,11 @@
 import type { Task } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
-import type { ITaskService, Paginated, TaskFilter } from "../services";
+import type { ITaskService, IActionService, IEntityActionService, Paginated, TaskFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
 import type { EventBus } from "../events";
+import { TASK_ACTION_TEMPLATES } from "../action-templates";
 
 const VALID_STATUSES = ["todo", "in_progress", "done"] as const;
 
@@ -13,6 +14,8 @@ export class TaskService implements ITaskService {
     private taskRepo: TaskRepository,
     private projectRepo: ProjectRepository,
     private eventBus?: EventBus,
+    private actionService?: IActionService,
+    private entityActionService?: IEntityActionService,
   ) {}
 
   findById(id: string): Task | null {
@@ -49,6 +52,19 @@ export class TaskService implements ITaskService {
     }
     const task = this.taskRepo.create(input);
     this.eventBus?.emit({ entity: "task", action: "created", payload: task });
+
+    if (this.actionService && this.entityActionService) {
+      for (const template of TASK_ACTION_TEMPLATES) {
+        const action = this.actionService.create({ name: template.name, prompt: template.prompt, agent: template.agent });
+        this.entityActionService.link({
+          entity_type: "task",
+          entity_id: task.id,
+          role: template.role,
+          action_id: action.id,
+        });
+      }
+    }
+
     return task;
   }
 

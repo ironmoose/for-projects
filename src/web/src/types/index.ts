@@ -6,7 +6,7 @@ export interface Project {
   id: string;
   name: string;
   description: string;
-  status: "active" | "paused" | "completed" | "archived";
+  status: "active" | "archived";
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +25,7 @@ export type ActionStatus = "todo" | "in_progress" | "complete" | "failed";
 
 export interface Action {
   id: string;
+  name: string;
   prompt: string;
   agent: string | null;
   created_at: string;
@@ -51,8 +52,6 @@ export interface EntityAction {
 
 export const statusOptions = [
   { value: "active", label: "Active" },
-  { value: "paused", label: "Paused" },
-  { value: "completed", label: "Completed" },
   { value: "archived", label: "Archived" },
 ];
 
@@ -88,3 +87,18 @@ export const actionValidTransitions: Record<ActionStatus, ActionStatus[]> = {
   complete: [],
   failed: ["todo"],
 };
+
+export interface EntityActionDashboardRow {
+  entity_type: string;
+  entity_id: string;
+  role: string;
+  action_id: string;
+  status: string;
+  output: string | null;
+  created_at: string;
+  updated_at: string;
+  entity_name: string;
+  action_prompt: string;
+  action_agent: string;
+  project_id: string | null;
+}

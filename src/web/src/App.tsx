@@ -15,8 +15,10 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
+import { ActionsPage } from "./pages/ActionsPage";
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
+  { label: "Actions", path: "/actions" },
   { label: "Themes", path: "/themes" },
 ];
 
@@ -38,6 +40,8 @@ export function App() {
 
   const activePath = path.startsWith("/gallery")
     ? "/gallery"
+    : path.startsWith("/actions")
+    ? "/actions"
     : path.startsWith("/themes")
     ? "/themes"
     : "/";
@@ -59,6 +63,9 @@ export function App() {
   function renderView() {
     if (path.startsWith("/gallery")) {
       return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;
+    }
+    if (path.startsWith("/actions")) {
+      return <ActionsPage onNavigate={navigate} />;
     }
     if (path.startsWith("/themes")) {
       return <ThemesPage />;
@@ -82,7 +89,7 @@ export function App() {
         <DisconnectionBanner connected={connected} />
         <main
           role="main"
-          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}
+          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, overflow: "hidden", minHeight: 0 }}
         >
           <ErrorBoundary>
             {renderView()}

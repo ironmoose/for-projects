@@ -44,7 +44,6 @@ function StatusSummaryBar({ projects }: { projects: Project[] }) {
     { status: "active", label: "active" },
     { status: "paused", label: "paused" },
     { status: "completed", label: "completed" },
-    { status: "archived", label: "archived" },
   ];
 
   return (
@@ -109,8 +108,6 @@ function ProjectTableRow({
   onClick: () => void;
 }) {
   const { theme } = useTheme();
-  const isDimmed = project.status === "archived";
-
   return (
     <HighlightOnChange trackValue={project.updated_at}>
       <div
@@ -133,7 +130,7 @@ function ProjectTableRow({
           borderBottom: `1px solid ${theme.color.borderSubtle}`,
           cursor: "pointer",
           transition: `background ${theme.animation.duration.fast} ${theme.animation.easing.default}`,
-          opacity: isDimmed ? 0.4 : project.status === "completed" ? 0.6 : project.status === "paused" ? 0.7 : 1,
+          opacity: project.status === "completed" ? 0.6 : project.status === "paused" ? 0.7 : 1,
         }}
         onMouseEnter={(e) => { e.currentTarget.style.background = theme.color.surfaceContainerHigh; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = theme.color.surfaceContainer; }}
@@ -223,6 +220,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
   // Sort: active first, then paused, then completed, then archived
   const statusOrder: Record<Project["status"], number> = { active: 0, paused: 1, completed: 2, archived: 3 };
   const sorted = [...projects].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+  const visible = sorted.filter((p) => p.status !== "archived");
 
   return (
     <ListPageLayout>
@@ -265,7 +263,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
         </div>
       </CreateForm>
 
-      {projects.length > 0 && <StatusSummaryBar projects={projects} />}
+      {visible.length > 0 && <StatusSummaryBar projects={visible} />}
 
       <div
         style={{
@@ -274,7 +272,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
           border: `1px solid ${theme.color.borderSubtle}`,
         }}
       >
-        {sorted.map((p) => (
+        {visible.map((p) => (
           <ProjectTableRow
             key={p.id}
             project={p}
@@ -283,7 +281,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
         ))}
       </div>
 
-      {projects.length === 0 && (
+      {visible.length === 0 && (
         <EmptyState
           icon="folder_open"
           message='No projects yet. Click "New Project" to get started.'

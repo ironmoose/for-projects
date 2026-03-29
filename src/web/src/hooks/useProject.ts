@@ -77,12 +77,12 @@ export function useProject(projectId: string) {
     }
   }
 
-  async function addTask(summary: string) {
+  async function addTask(summary: string, context?: string, status?: string) {
     if (!project) return;
     await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ summary }),
+      body: JSON.stringify({ summary, context, status }),
     });
   }
 

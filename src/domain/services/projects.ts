@@ -1,9 +1,10 @@
 import type { Project } from "../entities";
 import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
-import type { IProjectService, Paginated, ProjectFilter } from "../services";
+import type { IProjectService, IActionService, IEntityActionService, Paginated, ProjectFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
 import type { EventBus } from "../events";
+import { PROJECT_ACTION_TEMPLATES } from "../action-templates";
 
 const VALID_STATUSES = ["active", "archived"] as const;
 
@@ -11,6 +12,8 @@ export class ProjectService implements IProjectService {
   constructor(
     private repo: ProjectRepository,
     private eventBus?: EventBus,
+    private actionService?: IActionService,
+    private entityActionService?: IEntityActionService,
   ) {}
 
   findAll(limit = 50, offset = 0, filter?: ProjectFilter): Paginated<Project> {
@@ -39,6 +42,19 @@ export class ProjectService implements IProjectService {
     }
     const project = this.repo.create(input);
     this.eventBus?.emit({ entity: "project", action: "created", payload: project });
+
+    if (this.actionService && this.entityActionService) {
+      for (const template of PROJECT_ACTION_TEMPLATES) {
+        const action = this.actionService.create({ name: template.name, prompt: template.prompt, agent: template.agent });
+        this.entityActionService.link({
+          entity_type: "project",
+          entity_id: project.id,
+          role: template.role,
+          action_id: action.id,
+        });
+      }
+    }
+
     return project;
   }
 

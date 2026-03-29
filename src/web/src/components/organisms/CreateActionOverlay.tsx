@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Button } from "../atoms/Button";
 import { Select } from "../atoms/Select";
@@ -6,15 +6,17 @@ import { Overlay } from "../atoms/Overlay";
 import { createAction, linkAction } from "../../api";
 import type { Action } from "../../types";
 
+type RoleString = "goal" | "design" | "requirements" | "implementation" | "validation";
+
 interface CreateActionOverlayProps {
   entityType: "project" | "task";
   entityId: string;
-  field: "goal" | "design" | "requirements" | "implementation" | "validation";
+  availableRoles: RoleString[];
   onCreated: (action: Action) => void;
   onClose: () => void;
 }
 
-const FIELD_LABELS: Record<CreateActionOverlayProps["field"], string> = {
+const ROLE_LABELS: Record<RoleString, string> = {
   goal: "Goal",
   design: "Design",
   requirements: "Requirements",
@@ -22,7 +24,7 @@ const FIELD_LABELS: Record<CreateActionOverlayProps["field"], string> = {
   validation: "Validation",
 };
 
-const FIELD_PLACEHOLDERS: Record<CreateActionOverlayProps["field"], string> = {
+const ROLE_PLACEHOLDERS: Record<RoleString, string> = {
   goal: "Describe the project goal...",
   design: "Describe the desired design...",
   requirements: "Describe the requirements to gather...",
@@ -30,7 +32,7 @@ const FIELD_PLACEHOLDERS: Record<CreateActionOverlayProps["field"], string> = {
   validation: "Describe the validation criteria...",
 };
 
-const FIELD_DEFAULT_AGENT: Record<CreateActionOverlayProps["field"], string> = {
+const ROLE_DEFAULT_AGENT: Record<RoleString, string> = {
   goal: "research",
   design: "design",
   requirements: "research",
@@ -49,23 +51,30 @@ const AGENT_OPTIONS = [
 export function CreateActionOverlay({
   entityType,
   entityId,
-  field,
+  availableRoles,
   onCreated,
   onClose,
 }: CreateActionOverlayProps) {
   const { theme } = useTheme();
+  const [selectedRole, setSelectedRole] = useState<RoleString>(availableRoles[0]);
+  const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [agent, setAgent] = useState(FIELD_DEFAULT_AGENT[field]);
+  const [agent, setAgent] = useState(ROLE_DEFAULT_AGENT[availableRoles[0]]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setAgent(ROLE_DEFAULT_AGENT[selectedRole]);
+  }, [selectedRole]);
+
   const handleSubmit = async () => {
-    if (!prompt.trim()) return;
+    if (!name.trim() || !prompt.trim()) return;
     setLoading(true);
     setError(null);
 
     try {
       const action = await createAction({
+        name: name.trim(),
         prompt: prompt.trim(),
         agent: agent || undefined,
       });
@@ -73,7 +82,7 @@ export function CreateActionOverlay({
       await linkAction({
         entity_type: entityType,
         entity_id: entityId,
-        role: field,
+        role: selectedRole,
         action_id: action.id,
       });
 
@@ -126,8 +135,67 @@ export function CreateActionOverlay({
               color: theme.color.text,
             }}
           >
-            Create {FIELD_LABELS[field]} Action
+            Create {ROLE_LABELS[selectedRole]} Action
           </h2>
+
+          {/* Role select */}
+          {availableRoles.length > 1 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+              <label
+                htmlFor="action-role"
+                style={{
+                  fontSize: theme.font.size.xs,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase" as const,
+                  color: theme.color.textFaint,
+                  fontFamily: theme.font.body,
+                }}
+              >
+                Role
+              </label>
+              <Select
+                id="action-role"
+                options={availableRoles.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as RoleString)}
+              />
+            </div>
+          )}
+
+          {/* Name input */}
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <label
+              htmlFor="action-name"
+              style={{
+                fontSize: theme.font.size.xs,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase" as const,
+                color: theme.color.textFaint,
+                fontFamily: theme.font.body,
+              }}
+            >
+              Name
+            </label>
+            <input
+              id="action-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Action name..."
+              style={{
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                border: `1px solid ${theme.color.borderSubtle}`,
+                borderRadius: theme.radius.lg,
+                fontFamily: theme.font.body,
+                fontSize: theme.font.size.md,
+                outline: "none",
+                background: theme.color.surfaceContainerHigh,
+                color: theme.color.text,
+                transition: "border-color 0.15s",
+              }}
+            />
+          </div>
 
           {/* Prompt textarea */}
           <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
@@ -148,7 +216,7 @@ export function CreateActionOverlay({
               id="action-prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder={FIELD_PLACEHOLDERS[field]}
+              placeholder={ROLE_PLACEHOLDERS[selectedRole]}
               rows={4}
               style={{
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
@@ -211,7 +279,7 @@ export function CreateActionOverlay({
               variant="primary"
               onClick={handleSubmit}
               loading={loading}
-              disabled={!prompt.trim()}
+              disabled={!name.trim() || !prompt.trim()}
             >
               Create
             </Button>

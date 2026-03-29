@@ -1,4 +1,4 @@
-import type { Action, EntityAction, Project, Task } from "./types";
+import type { Action, EntityAction, EntityActionDashboardRow, Project, Task } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -141,6 +141,16 @@ export async function updateEntityActionStatus(entityType: string, entityId: str
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
   });
+  return res.json();
+}
+
+export async function fetchActionsDashboard(params?: { status?: string; limit?: number; offset?: number }): Promise<{ data: EntityActionDashboardRow[]; total: number }> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  const res = await apiFetch(`/api/entity-actions/dashboard${qs ? `?${qs}` : ""}`);
   return res.json();
 }
 

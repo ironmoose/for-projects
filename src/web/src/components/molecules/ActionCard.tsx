@@ -17,11 +17,13 @@ interface ActionCardProps {
   onClick?: () => void;
   isSelected?: boolean;
   compact?: boolean;
+  role?: string;
 }
 
-export function ActionCard({ action, entityAction, onClick, isSelected, compact }: ActionCardProps) {
+export function ActionCard({ action, entityAction, onClick, isSelected, compact, role }: ActionCardProps) {
   const { theme } = useTheme();
   const meta = action.agent ? AGENT_META[action.agent] : undefined;
+  const primaryLabel = action.name || (role ? role.charAt(0).toUpperCase() + role.slice(1) : (meta?.label ?? "Action"));
 
   return (
     <Card
@@ -87,8 +89,19 @@ export function ActionCard({ action, entityAction, onClick, isSelected, compact 
               whiteSpace: "nowrap",
             }}
           >
-            {meta?.label ?? "Action"}
+            {primaryLabel}
           </div>
+          {role && meta?.label && (
+            <div
+              style={{
+                fontSize: theme.font.size.xxs,
+                color: theme.color.textMuted,
+                marginTop: 2,
+              }}
+            >
+              {meta.label}
+            </div>
+          )}
           {!compact && (
             <div
               style={{

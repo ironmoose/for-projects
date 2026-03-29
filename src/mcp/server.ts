@@ -108,30 +108,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       handle(() => taskService.update(id, updates))
   );
 
-  // -- Actions --------------------------------------------------------
-
-  server.registerTool("create_action", {
-    description: "Create a new action",
-    inputSchema: {
-      prompt: z.string().max(10000),
-      agent: z.enum(["research", "design", "implementation", "review"]).optional(),
-    },
-  }, (input) => handle(() => actionService.create(input)));
-
-  server.registerTool("update_action", {
-    description: "Update an existing action",
-    inputSchema: {
-      id: z.string().max(26),
-      prompt: z.string().max(10000).optional(),
-      agent: z.enum(["research", "design", "implementation", "review"]).optional(),
-    },
-  }, ({ id, ...updates }) => handle(() => {
-    const result = actionService.update(id, updates);
-    if (!result) throw new ServiceError("action not found", 404);
-    return result;
-  }));
-
-  // -- Entity Actions --------------------------------------------------
+  // -- Entity Actions (link/unlink existing actions) -------------------
 
   server.registerTool(
     "link_action",
