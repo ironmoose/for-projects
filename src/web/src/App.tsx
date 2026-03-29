@@ -15,11 +15,8 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
-import { ActionsDashboardPage } from "./pages/ActionsDashboardPage";
-
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
-  { label: "Actions", path: "/actions" },
   { label: "Themes", path: "/themes" },
 ];
 
@@ -43,8 +40,6 @@ export function App() {
     ? "/gallery"
     : path.startsWith("/themes")
     ? "/themes"
-    : path.startsWith("/actions")
-    ? "/actions"
     : "/";
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
@@ -67,9 +62,6 @@ export function App() {
     }
     if (path.startsWith("/themes")) {
       return <ThemesPage />;
-    }
-    if (path.startsWith("/actions")) {
-      return <ActionsDashboardPage />;
     }
     if (projectId) {
       return <ProjectPage projectId={projectId} onBack={() => navigate("/")} />;

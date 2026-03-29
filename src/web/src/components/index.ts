@@ -29,7 +29,6 @@ export { HighlightOnChange } from "./molecules/HighlightOnChange";
 export { AnimatedList } from "./molecules/AnimatedList";
 export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 export { ActionCard } from "./molecules/ActionCard";
-export { TierProgressBar } from "./molecules/TierProgressBar";
 
 // Organisms
 export { TopBar } from "./organisms/TopBar";
@@ -38,8 +37,6 @@ export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ActionDetailPanel } from "./organisms/ActionDetailPanel";
-export { TaskActionsSection } from "./organisms/TaskActionsSection";
-export { ProjectActionPlan } from "./organisms/ProjectActionPlan";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

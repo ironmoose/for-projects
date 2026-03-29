@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Badge,
   Button,
@@ -18,13 +18,14 @@ import {
   ListItem,
   EmptyState,
   StatusDot,
-  TaskActionsSection,
-  ProjectActionPlan,
 } from "../components";
+import { ActionSlot } from "../components/molecules/ActionSlot";
+import { CreateActionOverlay } from "../components/organisms/CreateActionOverlay";
+import { ActionDetailPanel } from "../components/organisms/ActionDetailPanel";
 import { useProject } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError } from "../api";
-import type { Task } from "../types";
+import { ApiError, fetchAction } from "../api";
+import type { Task, Action } from "../types";
 import { statusOptions, taskStatusOptions, statusLabel } from "../types";
 import { formatDate } from "../utils";
 
@@ -32,13 +33,37 @@ import { formatDate } from "../utils";
 // TaskDetailPanel
 // ---------------------------------------------------------------------------
 
-function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void }) {
+function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: string; onClose: () => void }) {
   const { theme } = useTheme();
+  const [taskActions, setTaskActions] = useState<{ implementation: Action | null; validation: Action | null }>({ implementation: null, validation: null });
+  const [taskOverlayField, setTaskOverlayField] = useState<"implementation" | "validation" | null>(null);
+  const [selectedTaskAction, setSelectedTaskAction] = useState<Action | null>(null);
+
+  useEffect(() => {
+    if (!task) return;
+    const load = async () => {
+      const [impl, val] = await Promise.all([
+        task.implementation_action_id ? fetchAction(task.implementation_action_id) : Promise.resolve(null),
+        task.validation_action_id ? fetchAction(task.validation_action_id) : Promise.resolve(null),
+      ]);
+      setTaskActions({ implementation: impl, validation: val });
+    };
+    load();
+  }, [task?.implementation_action_id, task?.validation_action_id]);
 
   const statusColor =
     task.status === "done" ? theme.color.success
     : task.status === "in_progress" ? theme.color.tertiary
     : theme.color.textFaint;
+
+  if (selectedTaskAction) {
+    return (
+      <ActionDetailPanel
+        action={selectedTaskAction}
+        onClose={() => setSelectedTaskAction(null)}
+      />
+    );
+  }
 
   return (
     <SidePanelLayout onClose={onClose}>
@@ -107,15 +132,19 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
           </p>
         )}
 
-        {/* Task Actions */}
-        <TaskActionsSection
-          taskId={task.id}
-          style={{
-            marginTop: theme.spacing.xl,
-            paddingTop: theme.spacing.lg,
-            borderTop: `1px solid ${theme.color.borderSubtle}`,
-          }}
-        />
+        {/* Action Slots */}
+        <div style={{ display: "flex", gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
+          {(["implementation", "validation"] as const).map((field) => (
+            <div key={field} style={{ flex: 1 }}>
+              <ActionSlot
+                label={field.charAt(0).toUpperCase() + field.slice(1)}
+                action={taskActions[field]}
+                onCreateClick={() => setTaskOverlayField(field)}
+                onActionClick={(a) => setSelectedTaskAction(a)}
+              />
+            </div>
+          ))}
+        </div>
 
         {/* Metadata */}
         <div
@@ -135,6 +164,19 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
           />
         </div>
       </div>
+
+      {taskOverlayField && (
+        <CreateActionOverlay
+          entityType="task"
+          entityId={task.id}
+          projectId={projectId}
+          field={taskOverlayField}
+          onCreated={(action) => {
+            setTaskActions((prev) => ({ ...prev, [taskOverlayField]: action }));
+          }}
+          onClose={() => setTaskOverlayField(null)}
+        />
+      )}
     </SidePanelLayout>
   );
 }
@@ -162,8 +204,24 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [newTaskSummary, setNewTaskSummary] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [addingTask, setAddingTask] = useState(false);
+  const [actionSlots, setActionSlots] = useState<{ goal: Action | null; design: Action | null; requirements: Action | null }>({ goal: null, design: null, requirements: null });
+  const [overlayField, setOverlayField] = useState<"goal" | "design" | "requirements" | null>(null);
+  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
+
+  useEffect(() => {
+    if (!project) return;
+    const load = async () => {
+      const [goal, design, requirements] = await Promise.all([
+        project.goal_action_id ? fetchAction(project.goal_action_id) : Promise.resolve(null),
+        project.design_action_id ? fetchAction(project.design_action_id) : Promise.resolve(null),
+        project.requirements_action_id ? fetchAction(project.requirements_action_id) : Promise.resolve(null),
+      ]);
+      setActionSlots({ goal, design, requirements });
+    };
+    load();
+  }, [project?.goal_action_id, project?.design_action_id, project?.requirements_action_id]);
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
 
@@ -207,7 +265,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const sortedTasks = [...tasks].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
 
   return (
-    <DetailPageLayout expanded={!!selectedTask}>
+    <DetailPageLayout expanded={!!selectedTask || !!selectedAction}>
       <div style={{ flex: 1, minWidth: 0, padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`, boxSizing: "border-box", overflowY: "auto" }}>
         <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: theme.spacing.lg }} />
 
@@ -241,11 +299,21 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           />
         </Stack>
 
-        <ProjectActionPlan
-          projectId={projectId}
-          defaultExpanded={false}
-          style={{ marginBottom: theme.spacing.xl }}
-        />
+        {/* Actions */}
+        <div style={{ marginBottom: theme.spacing.xl }}>
+          <div style={{ display: "flex", gap: theme.spacing.md }}>
+            {(["goal", "design", "requirements"] as const).map((field) => (
+              <div key={field} style={{ flex: 1 }}>
+                <ActionSlot
+                  label={field.charAt(0).toUpperCase() + field.slice(1)}
+                  action={actionSlots[field]}
+                  onCreateClick={() => setOverlayField(field)}
+                  onActionClick={(a) => setSelectedAction(a)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
 
         <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
           <h3
@@ -317,7 +385,27 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       {selectedTask && (
         <TaskDetailPanel
           task={selectedTask}
+          projectId={projectId}
           onClose={handleClosePanel}
+        />
+      )}
+
+      {selectedAction && !selectedTask && (
+        <ActionDetailPanel
+          action={selectedAction}
+          onClose={() => setSelectedAction(null)}
+        />
+      )}
+
+      {overlayField && project && (
+        <CreateActionOverlay
+          entityType="project"
+          entityId={project.id}
+          field={overlayField}
+          onCreated={(action) => {
+            setActionSlots((prev) => ({ ...prev, [overlayField]: action }));
+          }}
+          onClose={() => setOverlayField(null)}
         />
       )}
     </DetailPageLayout>

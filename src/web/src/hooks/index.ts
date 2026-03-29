@@ -10,7 +10,3 @@ export { useVisualEvent } from "./useVisualEvent";
 export { useEventDrivenAnimation } from "./useEventDrivenAnimation";
 export type { AnimationState } from "./useEventDrivenAnimation";
 export { useActivityCount } from "./useActivityCount";
-export { useActionsDashboard } from "./useActionsDashboard";
-export { useActionPlan } from "./useActionPlan";
-export { useTaskActions } from "./useTaskActions";
-export { useProjectActions } from "./useProjectActions";

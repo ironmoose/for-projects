@@ -27,9 +27,9 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
 
   const eventBus = new EventBus();
 
-  const projectService = new ProjectService(projectRepo, eventBus);
-  const taskService = new TaskService(taskRepo, projectRepo, eventBus);
-  const actionService = new ActionService(actionRepo, projectRepo, taskRepo, eventBus);
+  const projectService = new ProjectService(projectRepo, actionRepo, eventBus);
+  const taskService = new TaskService(taskRepo, projectRepo, actionRepo, eventBus);
+  const actionService = new ActionService(actionRepo, eventBus);
 
   return { db, eventBus, projectService, taskService, actionService };
 }

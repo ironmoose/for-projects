@@ -1,3 +1,5 @@
+import type { Action, Project, Task } from "./types";
+
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 // ---------------------------------------------------------------------------
@@ -44,15 +46,29 @@ export async function apiFetch(
 // Actions API
 // ---------------------------------------------------------------------------
 
-export async function fetchActionsDashboard() {
-  const res = await apiFetch("/api/actions/dashboard");
+export async function createAction(input: { prompt: string; agent?: string }): Promise<Action> {
+  const res = await apiFetch("/api/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
   return res.json();
 }
 
-export async function fetchActionPlan(target: string) {
-  const res = await apiFetch(`/api/actions/${encodeURIComponent(target)}/plan`);
-  const body = await res.json();
-  return body.data;
+export async function fetchAction(id: string): Promise<Action> {
+  const res = await apiFetch(`/api/actions/${encodeURIComponent(id)}`);
+  return res.json();
+}
+
+export async function fetchActions(params?: { status?: string; agent?: string; limit?: number; offset?: number }): Promise<{ data: Action[]; total: number }> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.agent) searchParams.set("agent", params.agent);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  const res = await apiFetch(`/api/actions${qs ? `?${qs}` : ""}`);
+  return res.json();
 }
 
 export async function updateActionStatus(id: string, status: string) {
@@ -64,11 +80,37 @@ export async function updateActionStatus(id: string, status: string) {
   return res.json();
 }
 
-export async function fetchActionsByTarget(target: string, params?: { status?: string; limit?: number; offset?: number }) {
-  const searchParams = new URLSearchParams({ target });
-  if (params?.status) searchParams.set("status", params.status);
-  if (params?.limit) searchParams.set("limit", String(params.limit));
-  if (params?.offset) searchParams.set("offset", String(params.offset));
-  const res = await apiFetch(`/api/actions?${searchParams}`);
+export async function updateAction(id: string, input: { prompt?: string; agent?: string; output?: string }): Promise<Action> {
+  const res = await apiFetch(`/api/actions/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Projects API
+// ---------------------------------------------------------------------------
+
+export async function updateProject(id: string, input: Record<string, unknown>): Promise<Project> {
+  const res = await apiFetch(`/api/projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Tasks API
+// ---------------------------------------------------------------------------
+
+export async function updateTask(projectId: string, id: string, input: Record<string, unknown>): Promise<Task> {
+  const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
   return res.json();
 }

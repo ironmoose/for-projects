@@ -4,6 +4,7 @@ import type {
   UpdateProjectInput,
   CreateTaskInput,
   UpdateTaskInput,
+  CreateActionInput,
   UpdateActionInput,
 } from "./inputs";
 
@@ -34,14 +35,15 @@ export interface ITaskService {
   update(id: string, input: UpdateTaskInput): Task | null;
 }
 
+export interface ActionFilter {
+  status?: string;
+  agent?: string;
+}
+
 export interface IActionService {
-  findByTarget(target: string, limit?: number, offset?: number, status?: string): Paginated<Action>;
+  findAll(limit?: number, offset?: number, filter?: ActionFilter): Paginated<Action>;
   findById(id: string): Action | null;
-  createMany(target: string, actions: { rank: number; prompt?: string; agent?: string }[]): Action[];
-  updateMany(target: string, updates: UpdateActionInput[]): Action[];
-  deleteMany(target: string, ids: string[]): number;
+  create(input: CreateActionInput): Action;
+  update(id: string, input: UpdateActionInput): Action | null;
   updateStatus(id: string, status: ActionStatus): Action | null;
-  getExecutableActions(target: string): Action[];
-  getActionPlan(target: string): Array<{ rank: number; actions: Action[] }>;
-  getDashboardData(): { executable: Action[]; inProgress: Action[]; recentlyTerminal: Action[] };
 }

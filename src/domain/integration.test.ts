@@ -152,134 +152,79 @@ describe("Task CRUD", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Action bulk CRUD
+// Action CRUD
 // ---------------------------------------------------------------------------
 
-describe("Action bulk CRUD", () => {
-  let projectId: string;
-  let target: string;
-
-  beforeAll(() => {
-    const project = ctx.projectService.create({ name: "Action Project" });
-    projectId = project.id;
-    target = `tab:project:${projectId}`;
+describe("Action CRUD", () => {
+  it("creates action with prompt only", () => {
+    const action = ctx.actionService.create({ prompt: "Test prompt" });
+    expect(action.id).toBeTruthy();
+    expect(action.prompt).toBe("Test prompt");
+    expect(action.status).toBe("todo");
+    expect(action.output).toBeNull();
+    expect(action.agent).toBeNull();
+    expect(action.created_at).toBeTruthy();
   });
 
-  it("createMany: creates 3 actions with ranks 1, 2, 3", () => {
-    const actions = ctx.actionService.createMany(target, [
-      { rank: 1, prompt: "First" },
-      { rank: 2, prompt: "Second" },
-      { rank: 3, prompt: "Third" },
-    ]);
-
-    expect(actions.length).toBe(3);
-    expect(actions[0].rank).toBe(1);
-    expect(actions[0].prompt).toBe("First");
-    expect(actions[0].status).toBe("todo");
-    expect(actions[1].rank).toBe(2);
-    expect(actions[2].rank).toBe(3);
-    expect(actions[0].target).toBe(target);
+  it("creates action with prompt + agent", () => {
+    const action = ctx.actionService.create({ prompt: "Research task", agent: "research" });
+    expect(action.agent).toBe("research");
   });
 
-  it("createMany: requires prompt", () => {
-    const p = ctx.projectService.create({ name: "No Prompt Project" });
-    const t = `tab:project:${p.id}`;
-
-    expect(() =>
-      ctx.actionService.createMany(t, [{ rank: 1 }])
-    ).toThrow(ServiceError);
+  it("rejects invalid agent", () => {
+    expect(() => ctx.actionService.create({ prompt: "X", agent: "invalid" })).toThrow(ServiceError);
   });
 
-  it("createMany: throws on nonexistent target", () => {
-    expect(() =>
-      ctx.actionService.createMany("tab:project:nonexistent-id", [
-        { rank: 1, prompt: "A" },
-      ])
-    ).toThrow(ServiceError);
+  it("rejects empty prompt", () => {
+    expect(() => ctx.actionService.create({ prompt: "" })).toThrow(ServiceError);
   });
 
-  it("createMany: throws on malformed ARN", () => {
-    expect(() =>
-      ctx.actionService.createMany("bad:target:123", [
-        { rank: 1, prompt: "A" },
-      ])
-    ).toThrow(ServiceError);
+  it("updates action prompt", async () => {
+    const action = ctx.actionService.create({ prompt: "Original" });
+    await new Promise((r) => setTimeout(r, 5));
+    const updated = ctx.actionService.update(action.id, { prompt: "Updated" });
+    expect(updated!.prompt).toBe("Updated");
+    expect(updated!.updated_at).not.toBe(action.updated_at);
   });
 
-  it("updateMany: updates prompt and agent on multiple actions", () => {
-    const p = ctx.projectService.create({ name: "Update Many Project" });
-    const t = `tab:project:${p.id}`;
-    const actions = ctx.actionService.createMany(t, [
-      { rank: 1, prompt: "Original 1" },
-      { rank: 2, prompt: "Original 2" },
-    ]);
-
-    const updated = ctx.actionService.updateMany(t, [
-      { id: actions[0].id, prompt: "Updated 1", agent: "research" },
-      { id: actions[1].id, prompt: "Updated 2", agent: "design" },
-    ]);
-
-    expect(updated.length).toBe(2);
-    expect(updated[0].prompt).toBe("Updated 1");
-    expect(updated[0].agent).toBe("research");
-    expect(updated[1].prompt).toBe("Updated 2");
-    expect(updated[1].agent).toBe("design");
+  it("updates action output", () => {
+    const action = ctx.actionService.create({ prompt: "Generate" });
+    const updated = ctx.actionService.update(action.id, { output: "Result text" });
+    expect(updated!.output).toBe("Result text");
   });
 
-  it("updateMany: action IDs must belong to specified target", () => {
-    const p1 = ctx.projectService.create({ name: "Target 1" });
-    const p2 = ctx.projectService.create({ name: "Target 2" });
-    const t1 = `tab:project:${p1.id}`;
-    const t2 = `tab:project:${p2.id}`;
-
-    const [a1] = ctx.actionService.createMany(t1, [{ rank: 1, prompt: "A" }]);
-
-    expect(() =>
-      ctx.actionService.updateMany(t2, [{ id: a1.id, prompt: "Hijack" }])
-    ).toThrow(ServiceError);
+  it("update non-existent returns null", () => {
+    const result = ctx.actionService.update("nonexistent", { prompt: "X" });
+    expect(result).toBeNull();
   });
 
-  it("deleteMany: deletes 2 of 3 actions (hard delete)", () => {
-    const p = ctx.projectService.create({ name: "Delete Many Project" });
-    const t = `tab:project:${p.id}`;
-    const actions = ctx.actionService.createMany(t, [
-      { rank: 1, prompt: "A" },
-      { rank: 2, prompt: "B" },
-      { rank: 3, prompt: "C" },
-    ]);
-
-    const deleted = ctx.actionService.deleteMany(t, [actions[0].id, actions[1].id]);
-    expect(deleted).toBe(2);
-
-    // Verify hard delete
-    expect(ctx.actionService.findById(actions[0].id)).toBeNull();
-    expect(ctx.actionService.findById(actions[1].id)).toBeNull();
-    expect(ctx.actionService.findById(actions[2].id)).not.toBeNull();
+  it("findAll returns paginated results", () => {
+    const result = ctx.actionService.findAll(10, 0);
+    expect(result.data).toBeArray();
+    expect(typeof result.total).toBe("number");
   });
 
-  it("deleteMany: action IDs must belong to specified target", () => {
-    const p1 = ctx.projectService.create({ name: "Delete Target 1" });
-    const p2 = ctx.projectService.create({ name: "Delete Target 2" });
-    const t1 = `tab:project:${p1.id}`;
-    const t2 = `tab:project:${p2.id}`;
+  it("findAll with status filter", () => {
+    const a = ctx.actionService.create({ prompt: "Filter test" });
+    ctx.actionService.updateStatus(a.id, "in_progress");
+    const result = ctx.actionService.findAll(100, 0, { status: "in_progress" });
+    expect(result.data.some(x => x.id === a.id)).toBe(true);
+  });
 
-    const [a1] = ctx.actionService.createMany(t1, [{ rank: 1, prompt: "A" }]);
-
-    expect(() =>
-      ctx.actionService.deleteMany(t2, [a1.id])
-    ).toThrow(ServiceError);
+  it("findAll with agent filter", () => {
+    const a = ctx.actionService.create({ prompt: "Agent test", agent: "design" });
+    const result = ctx.actionService.findAll(100, 0, { agent: "design" });
+    expect(result.data.some(x => x.id === a.id)).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Status transitions
+// Action status transitions
 // ---------------------------------------------------------------------------
 
 describe("Action status transitions", () => {
   it("transitions todo -> in_progress -> complete", () => {
-    const p = ctx.projectService.create({ name: "Status Project" });
-    const t = `tab:project:${p.id}`;
-    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Do it" }]);
+    const action = ctx.actionService.create({ prompt: "Do it" });
 
     expect(action.status).toBe("todo");
 
@@ -291,9 +236,7 @@ describe("Action status transitions", () => {
   });
 
   it("transitions in_progress -> failed -> todo (retry)", () => {
-    const p = ctx.projectService.create({ name: "Retry Project" });
-    const t = `tab:project:${p.id}`;
-    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Retry me" }]);
+    const action = ctx.actionService.create({ prompt: "Retry me" });
 
     ctx.actionService.updateStatus(action.id, "in_progress");
     const failed = ctx.actionService.updateStatus(action.id, "failed");
@@ -304,9 +247,7 @@ describe("Action status transitions", () => {
   });
 
   it("rejects invalid transitions", () => {
-    const p = ctx.projectService.create({ name: "Invalid Transition Project" });
-    const t = `tab:project:${p.id}`;
-    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "No skip" }]);
+    const action = ctx.actionService.create({ prompt: "No skip" });
 
     // todo -> complete (not allowed, must go through in_progress)
     expect(() => ctx.actionService.updateStatus(action.id, "complete")).toThrow(ServiceError);
@@ -316,9 +257,7 @@ describe("Action status transitions", () => {
   });
 
   it("rejects transition from complete", () => {
-    const p = ctx.projectService.create({ name: "Complete Terminal Project" });
-    const t = `tab:project:${p.id}`;
-    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Done" }]);
+    const action = ctx.actionService.create({ prompt: "Done" });
 
     ctx.actionService.updateStatus(action.id, "in_progress");
     ctx.actionService.updateStatus(action.id, "complete");
@@ -329,224 +268,65 @@ describe("Action status transitions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Executable actions & tier logic
+// Project with action references
 // ---------------------------------------------------------------------------
 
-describe("Executable actions and tiers", () => {
-  it("getExecutableActions returns lowest non-complete tier", () => {
-    const p = ctx.projectService.create({ name: "Tier Project" });
-    const t = `tab:project:${p.id}`;
-
-    const actions = ctx.actionService.createMany(t, [
-      { rank: 1, prompt: "Tier 1 - A" },
-      { rank: 1, prompt: "Tier 1 - B" },
-      { rank: 2, prompt: "Tier 2 - A" },
-    ]);
-
-    const executable = ctx.actionService.getExecutableActions(t);
-    expect(executable.length).toBe(2);
-    expect(executable.every((a) => a.rank === 1)).toBe(true);
+describe("Project with action references", () => {
+  it("creates project with goal_action_id", () => {
+    const action = ctx.actionService.create({ prompt: "Goal" });
+    const project = ctx.projectService.create({ name: "With Goal", goal_action_id: action.id });
+    expect(project.goal_action_id).toBe(action.id);
   });
 
-  it("getExecutableActions advances to next tier when current is complete", () => {
-    const p = ctx.projectService.create({ name: "Advance Tier Project" });
-    const t = `tab:project:${p.id}`;
-
-    const actions = ctx.actionService.createMany(t, [
-      { rank: 1, prompt: "Tier 1" },
-      { rank: 2, prompt: "Tier 2" },
-    ]);
-
-    // Complete tier 1
-    ctx.actionService.updateStatus(actions[0].id, "in_progress");
-    ctx.actionService.updateStatus(actions[0].id, "complete");
-
-    const executable = ctx.actionService.getExecutableActions(t);
-    expect(executable.length).toBe(1);
-    expect(executable[0].rank).toBe(2);
+  it("rejects invalid goal_action_id", () => {
+    expect(() => ctx.projectService.create({ name: "Bad", goal_action_id: "nonexistent" })).toThrow(ServiceError);
   });
 
-  it("getExecutableActions returns empty when all complete", () => {
-    const p = ctx.projectService.create({ name: "All Complete Project" });
-    const t = `tab:project:${p.id}`;
-
-    const [action] = ctx.actionService.createMany(t, [{ rank: 1, prompt: "Only one" }]);
-    ctx.actionService.updateStatus(action.id, "in_progress");
-    ctx.actionService.updateStatus(action.id, "complete");
-
-    const executable = ctx.actionService.getExecutableActions(t);
-    expect(executable.length).toBe(0);
+  it("updates project design_action_id", () => {
+    const action = ctx.actionService.create({ prompt: "Design" });
+    const project = ctx.projectService.create({ name: "Update Test" });
+    const updated = ctx.projectService.update(project.id, { design_action_id: action.id });
+    expect(updated!.design_action_id).toBe(action.id);
   });
 
-  it("getActionPlan returns grouped by rank", () => {
-    const p = ctx.projectService.create({ name: "Plan Project" });
-    const t = `tab:project:${p.id}`;
-
-    ctx.actionService.createMany(t, [
-      { rank: 1, prompt: "A" },
-      { rank: 1, prompt: "B" },
-      { rank: 2, prompt: "C" },
-      { rank: 3, prompt: "D" },
-    ]);
-
-    const plan = ctx.actionService.getActionPlan(t);
-    expect(plan.length).toBe(3);
-    expect(plan[0].rank).toBe(1);
-    expect(plan[0].actions.length).toBe(2);
-    expect(plan[1].rank).toBe(2);
-    expect(plan[1].actions.length).toBe(1);
-    expect(plan[2].rank).toBe(3);
-    expect(plan[2].actions.length).toBe(1);
+  it("nulls out requirements_action_id (unlink)", () => {
+    const action = ctx.actionService.create({ prompt: "Req" });
+    const project = ctx.projectService.create({ name: "Unlink Test", requirements_action_id: action.id });
+    const updated = ctx.projectService.update(project.id, { requirements_action_id: null });
+    expect(updated!.requirements_action_id).toBeNull();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Reorder pattern
+// Task with action references
 // ---------------------------------------------------------------------------
 
-describe("Reorder pattern", () => {
-  it("delete and recreate actions to reorder", () => {
-    const project = ctx.projectService.create({ name: "Reorder Project" });
-    const target = `tab:project:${project.id}`;
-
-    // Create 3 actions with ranks 1, 2, 3
-    const original = ctx.actionService.createMany(target, [
-      { rank: 1, prompt: "Step A" },
-      { rank: 2, prompt: "Step B" },
-      { rank: 3, prompt: "Step C" },
-    ]);
-
-    // Delete ranks 2 and 3
-    ctx.actionService.deleteMany(target, [original[1].id, original[2].id]);
-
-    // Recreate with new prompts at ranks 2 and 3
-    const newActions = ctx.actionService.createMany(target, [
-      { rank: 2, prompt: "Step D" },
-      { rank: 3, prompt: "Step E" },
-    ]);
-
-    // Verify final order and content
-    const all = ctx.actionService.findByTarget(target);
-    expect(all.data.length).toBe(3);
-    expect(all.data[0].rank).toBe(1);
-    expect(all.data[0].prompt).toBe("Step A");
-    expect(all.data[1].rank).toBe(2);
-    expect(all.data[1].prompt).toBe("Step D");
-    expect(all.data[2].rank).toBe(3);
-    expect(all.data[2].prompt).toBe("Step E");
+describe("Task with action references", () => {
+  it("creates task with implementation_action_id", () => {
+    const project = ctx.projectService.create({ name: "Task Ref Project" });
+    const action = ctx.actionService.create({ prompt: "Implement" });
+    const task = ctx.taskService.create({ project_id: project.id, summary: "With action", implementation_action_id: action.id });
+    expect(task.implementation_action_id).toBe(action.id);
   });
-});
 
-// ---------------------------------------------------------------------------
-// Dashboard data
-// ---------------------------------------------------------------------------
-
-describe("Action Service - getDashboardData", () => {
-  it("returns executable, inProgress, and recentlyTerminal actions", () => {
-    const project = ctx.projectService.create({ name: "Dashboard Test Project" });
-    const target = `tab:project:${project.id}`;
-    const actions = ctx.actionService.createMany(target, [
-      { rank: 0, prompt: "tier 0 action 1" },
-      { rank: 0, prompt: "tier 0 action 2" },
-      { rank: 1, prompt: "tier 1 action" },
-    ]);
-
-    // Advance one to in_progress
-    ctx.actionService.updateStatus(actions[0].id, "in_progress");
-    // Complete one
-    ctx.actionService.updateStatus(actions[1].id, "in_progress");
-    ctx.actionService.updateStatus(actions[1].id, "complete");
-
-    const dashboard = ctx.actionService.getDashboardData();
-
-    // Use find/some assertions to avoid state leakage
-    expect(dashboard.inProgress.some((a) => a.id === actions[0].id)).toBe(true);
-    expect(dashboard.recentlyTerminal.some((a) => a.id === actions[1].id)).toBe(true);
+  it("rejects invalid action_id", () => {
+    const project = ctx.projectService.create({ name: "Bad Ref Project" });
+    expect(() => ctx.taskService.create({ project_id: project.id, summary: "Bad", implementation_action_id: "nonexistent" })).toThrow(ServiceError);
   });
-});
 
-// ---------------------------------------------------------------------------
-// findByTarget with status filter
-// ---------------------------------------------------------------------------
-
-describe("Action Service - findByTarget with status filter", () => {
-  it("returns only actions matching the status filter", () => {
-    const project = ctx.projectService.create({ name: "Filter Test Project" });
-    const target = `tab:project:${project.id}`;
-    const actions = ctx.actionService.createMany(target, [
-      { rank: 0, prompt: "action 1" },
-      { rank: 0, prompt: "action 2" },
-    ]);
-    ctx.actionService.updateStatus(actions[0].id, "in_progress");
-
-    const todoOnly = ctx.actionService.findByTarget(target, 50, 0, "todo");
-    expect(todoOnly.data.length).toBe(1);
-    expect(todoOnly.data[0].id).toBe(actions[1].id);
-
-    const inProgressOnly = ctx.actionService.findByTarget(target, 50, 0, "in_progress");
-    expect(inProgressOnly.data.length).toBe(1);
-    expect(inProgressOnly.data[0].id).toBe(actions[0].id);
+  it("updates task validation_action_id", () => {
+    const project = ctx.projectService.create({ name: "Update Ref Project" });
+    const task = ctx.taskService.create({ project_id: project.id, summary: "Update test" });
+    const action = ctx.actionService.create({ prompt: "Validate" });
+    const updated = ctx.taskService.update(task.id, { validation_action_id: action.id });
+    expect(updated!.validation_action_id).toBe(action.id);
   });
-});
 
-// ---------------------------------------------------------------------------
-// findRecentlyTerminal
-// ---------------------------------------------------------------------------
-
-describe("Action Repository - findRecentlyTerminal", () => {
-  it("returns terminal actions from recent completions", () => {
-    const project = ctx.projectService.create({ name: "Terminal Test Project" });
-    const target = `tab:project:${project.id}`;
-    const actions = ctx.actionService.createMany(target, [
-      { rank: 0, prompt: "first to complete" },
-      { rank: 0, prompt: "second to complete" },
-      { rank: 0, prompt: "third to complete" },
-    ]);
-
-    // Complete all of them
-    for (const action of actions) {
-      ctx.actionService.updateStatus(action.id, "in_progress");
-      ctx.actionService.updateStatus(action.id, "complete");
-    }
-
-    const dashboard = ctx.actionService.getDashboardData();
-    const terminal = dashboard.recentlyTerminal;
-
-    // All three should appear in terminal
-    expect(terminal.some((a) => a.id === actions[0].id)).toBe(true);
-    expect(terminal.some((a) => a.id === actions[1].id)).toBe(true);
-    expect(terminal.some((a) => a.id === actions[2].id)).toBe(true);
-
-    // All should have terminal status
-    const found = terminal.filter((a) =>
-      actions.some((orig) => orig.id === a.id)
-    );
-    expect(found.every((a) => a.status === "complete")).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// isTierComplete edge cases
-// ---------------------------------------------------------------------------
-
-describe("Action Repository - isTierComplete edge cases", () => {
-  it("handles tier with mix of complete and failed (tier IS complete)", () => {
-    const project = ctx.projectService.create({ name: "Mixed Terminal Project" });
-    const target = `tab:project:${project.id}`;
-    const actions = ctx.actionService.createMany(target, [
-      { rank: 0, prompt: "will complete" },
-      { rank: 0, prompt: "will fail" },
-      { rank: 1, prompt: "next tier" },
-    ]);
-
-    ctx.actionService.updateStatus(actions[0].id, "in_progress");
-    ctx.actionService.updateStatus(actions[0].id, "complete");
-    ctx.actionService.updateStatus(actions[1].id, "in_progress");
-    ctx.actionService.updateStatus(actions[1].id, "failed");
-
-    // Tier 0 is complete (both terminal)
-    // Tier 1 should now be executable
-    const executable = ctx.actionService.getExecutableActions(target);
-    expect(executable.some((a) => a.id === actions[2].id)).toBe(true);
+  it("nulls out action_id (unlink)", () => {
+    const project = ctx.projectService.create({ name: "Unlink Ref Project" });
+    const action = ctx.actionService.create({ prompt: "To unlink" });
+    const task = ctx.taskService.create({ project_id: project.id, summary: "Unlink", validation_action_id: action.id });
+    const updated = ctx.taskService.update(task.id, { validation_action_id: null });
+    expect(updated!.validation_action_id).toBeNull();
   });
 });

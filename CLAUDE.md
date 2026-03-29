@@ -29,3 +29,9 @@ Single process, single port (default 3000):
 - `/api/*` — REST API
 - `/mcp` — MCP endpoint
 - `/*` — static web assets + SPA fallback
+
+
+## Testing
+
+ALWAYS attempt to test changes to the api and domain modules by using the dev server hosted at http://localhost:3000. 
+NEVER attempt to run the dev server or docker support established in this repository.

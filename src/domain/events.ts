@@ -3,8 +3,7 @@ import type { Project, Task, Action } from "./entities";
 export type DomainEvent =
   | { entity: "project"; action: "created" | "updated"; payload: Project }
   | { entity: "task"; action: "created" | "updated"; payload: Task }
-  | { entity: "action"; action: "created" | "updated" | "deleted" | "status_changed"; payload: Action[] | { id: string }[] }
-  | { entity: "action"; action: "tier_complete"; payload: { target: string; rank: number } };
+  | { entity: "action"; action: "created" | "updated" | "status_changed"; payload: Action };
 
 type Listener = (event: DomainEvent) => void;
 

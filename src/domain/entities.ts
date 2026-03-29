@@ -5,6 +5,9 @@ export interface Project {
   status: string;
   created_at: string;
   updated_at: string;
+  goal_action_id: string | null;
+  design_action_id: string | null;
+  requirements_action_id: string | null;
 }
 
 export interface Task {
@@ -15,18 +18,18 @@ export interface Task {
   status: string;
   created_at: string;
   updated_at: string;
+  implementation_action_id: string | null;
+  validation_action_id: string | null;
 }
 
 export type ActionStatus = 'todo' | 'in_progress' | 'complete' | 'failed';
 
 export interface Action {
   id: string;
-  target: string;
-  /** Tier number for ordered execution. Lower ranks execute first. All actions at a rank must reach terminal status before the next rank becomes executable. */
-  rank: number;
   prompt: string;
   agent: string | null;
   status: ActionStatus;
+  output: string | null;
   created_at: string;
   updated_at: string;
 }

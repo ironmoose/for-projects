@@ -6,8 +6,6 @@ import {
   type IProjectService,
   type ITaskService,
   type IActionService,
-  type ActionStatus,
-  type Action,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -54,6 +52,9 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         name: z.string().max(255),
         description: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
+        goal_action_id: z.string().max(26).optional(),
+        design_action_id: z.string().max(26).optional(),
+        requirements_action_id: z.string().max(26).optional(),
       },
     },
     (input) => handle(() => projectService.create(input))
@@ -68,6 +69,9 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         name: z.string().max(255).optional(),
         description: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
+        goal_action_id: z.string().max(26).optional(),
+        design_action_id: z.string().max(26).optional(),
+        requirements_action_id: z.string().max(26).optional(),
       },
     },
     ({ id, ...updates }) => handle(() => projectService.update(id, updates))
@@ -84,6 +88,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         summary: z.string().max(500),
         context: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
+        implementation_action_id: z.string().max(26).optional(),
+        validation_action_id: z.string().max(26).optional(),
       },
     },
     ({ project_id, ...input }) =>
@@ -100,6 +106,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         summary: z.string().max(500).optional(),
         context: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
+        implementation_action_id: z.string().max(26).optional(),
+        validation_action_id: z.string().max(26).optional(),
       },
     },
     ({ project_id: _project_id, id, ...updates }) =>
@@ -108,68 +116,35 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
 
   // -- Actions --------------------------------------------------------
 
-  server.registerTool(
-    "manage_actions",
-    {
-      description:
-        "Manage actions on a target (ARN string, e.g. tab:project:<id> or tab:task:<id>). " +
-        "Supports create, update, delete, and status_updates operations in a single call. " +
-        "Operations execute in order: delete → status_update → update → create. " +
-        "Use status_updates to transition action status (enforces valid transitions).",
-      inputSchema: {
-        target: z.string().max(500),
-        create: z.array(z.object({
-          rank: z.number().int().min(0),
-          prompt: z.string().max(10000).optional(),
-          agent: z.string().max(200).optional(),
-        })).optional(),
-        update: z.array(z.object({
-          id: z.string().max(26),
-          prompt: z.string().max(10000).optional(),
-          agent: z.string().max(200).optional(),
-        })).optional(),
-        delete: z.array(z.string().max(26)).optional(),
-        status_updates: z.array(z.object({
-          id: z.string().max(26),
-          status: z.enum(["todo", "in_progress", "complete", "failed"]),
-        })).optional(),
-      },
+  server.registerTool("create_action", {
+    description: "Create a new action",
+    inputSchema: {
+      prompt: z.string().max(10000),
+      agent: z.enum(["research", "design", "implementation", "review"]).optional(),
     },
-    ({ target, create: createOps, update: updateOps, delete: deleteOps, status_updates }) =>
-      handle(() => {
-        let deleted = 0;
-        let statusUpdated: Action[] = [];
-        let updated: ReturnType<typeof actionService.updateMany> = [];
-        let created: ReturnType<typeof actionService.createMany> = [];
+  }, (input) => handle(() => actionService.create(input)));
 
-        // Execute in order: delete → status_update → update → create
-        if (deleteOps && deleteOps.length > 0) {
-          deleted = actionService.deleteMany(target, deleteOps);
-        }
-        if (status_updates && status_updates.length > 0) {
-          for (const su of status_updates) {
-            try {
-              const result = actionService.updateStatus(su.id, su.status as ActionStatus);
-              if (result) statusUpdated.push(result);
-            } catch (e) {
-              const msg = e instanceof Error ? e.message : String(e);
-              throw new ServiceError(
-                `status update failed for action ${su.id}: ${msg} (${statusUpdated.length} prior status updates succeeded)`,
-                e instanceof ServiceError ? e.statusCode : 400
-              );
-            }
-          }
-        }
-        if (updateOps && updateOps.length > 0) {
-          updated = actionService.updateMany(target, updateOps);
-        }
-        if (createOps && createOps.length > 0) {
-          created = actionService.createMany(target, createOps);
-        }
+  server.registerTool("update_action", {
+    description: "Update an existing action",
+    inputSchema: {
+      id: z.string().max(26),
+      prompt: z.string().max(10000).optional(),
+      agent: z.enum(["research", "design", "implementation", "review"]).optional(),
+      output: z.string().max(50000).optional(),
+    },
+  }, ({ id, ...updates }) => handle(() => {
+    const result = actionService.update(id, updates);
+    if (!result) throw new ServiceError("action not found", 404);
+    return result;
+  }));
 
-        return { created, updated, deleted, statusUpdated };
-      })
-  );
+  server.registerTool("update_action_status", {
+    description: "Transition an action's status",
+    inputSchema: {
+      id: z.string().max(26),
+      status: z.enum(["todo", "in_progress", "complete", "failed"]),
+    },
+  }, ({ id, status }) => handle(() => actionService.updateStatus(id, status)));
 
   // -- Query ----------------------------------------------------------
 
@@ -177,9 +152,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     "query",
     {
       description:
-        "Filtered list/lookup across entity types. Supports project, task, action. " +
-        "For actions, use scope='plan' to get actions grouped by rank, or scope='executable' " +
-        "to get only currently executable actions. Use status to filter by action status.",
+        "Filtered list/lookup across entity types. Supports project, task, action.",
       inputSchema: {
         type: z.enum(["project", "task", "action"]),
         limit: z.number().int().min(1).max(500).optional(),
@@ -189,11 +162,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         // Context / filter params
         project_id: z.string().max(26).optional(),
         status: z.string().max(50).optional(),
-        target: z.string().max(500).optional(),
-        scope: z.enum(["all", "plan", "executable"]).optional(),
+        agent: z.string().max(200).optional(),
       },
     },
-    ({ type: entityType, limit, offset, id, project_id, status, target, scope }) =>
+    ({ type: entityType, limit, offset, id, project_id, status, agent }) =>
       handle(() => {
         switch (entityType) {
           case "project": {
@@ -213,17 +185,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
               if (!action) throw new ServiceError("action not found", 404);
               return action;
             }
-            if (!target) throw new ServiceError("target is required when querying actions", 400);
-
-            const effectiveScope = scope ?? "all";
-            switch (effectiveScope) {
-              case "plan":
-                return { data: actionService.getActionPlan(target) };
-              case "executable":
-                return { data: actionService.getExecutableActions(target) };
-              default:
-                return actionService.findByTarget(target, limit ?? 50, offset ?? 0, status);
-            }
+            const filter: Record<string, string> = {};
+            if (status) filter.status = status;
+            if (agent) filter.agent = agent;
+            return actionService.findAll(limit, offset, Object.keys(filter).length ? filter : undefined);
           }
         }
       })

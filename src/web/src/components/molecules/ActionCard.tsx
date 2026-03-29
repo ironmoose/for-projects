@@ -96,11 +96,23 @@ export function ActionCard({ action, onClick, isSelected, compact }: ActionCardP
                 marginTop: 2,
               }}
             >
-              T{action.rank} · {formatDate(action.updated_at)}
+              {formatDate(action.updated_at)}
             </div>
           )}
         </div>
       </div>
+      {!compact && action.output && (
+        <div style={{
+          marginTop: theme.spacing.sm,
+          fontSize: theme.font.size.xxs,
+          color: theme.color.textMuted,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}>
+          {action.output.slice(0, 100)}
+        </div>
+      )}
     </Card>
   );
 }

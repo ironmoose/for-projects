@@ -23,8 +23,8 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // POST /api/projects
   app.post("/", async (c) => {
-    const { name, description, status } = await c.req.json<CreateProjectInput>();
-    const project = service.create({ name, description, status });
+    const { name, description, status, goal_action_id, design_action_id, requirements_action_id } = await c.req.json<CreateProjectInput>();
+    const project = service.create({ name, description, status, goal_action_id, design_action_id, requirements_action_id });
     return c.json(project, 201);
   });
 
@@ -37,8 +37,8 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // PATCH /api/projects/:id
   app.patch("/:id", async (c) => {
-    const { name, description, status } = await c.req.json<UpdateProjectInput>();
-    const project = service.update(c.req.param("id"), { name, description, status });
+    const { name, description, status, goal_action_id, design_action_id, requirements_action_id } = await c.req.json<UpdateProjectInput>();
+    const project = service.update(c.req.param("id"), { name, description, status, goal_action_id, design_action_id, requirements_action_id });
     if (!project) return c.json({ error: "project not found" }, 404);
     return c.json(project);
   });

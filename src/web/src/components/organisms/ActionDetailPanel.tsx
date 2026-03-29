@@ -43,16 +43,6 @@ export function ActionDetailPanel({ action, onClose, onStatusChange }: ActionDet
         <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
           <Stack direction="row" align="center" gap="sm" style={{ flex: 1, minWidth: 0, flexWrap: "wrap" }}>
             <Badge variant={action.status}>{actionStatusLabel[action.status]}</Badge>
-            <span
-              style={{
-                fontSize: theme.font.size.xs,
-                color: theme.color.textFaint,
-                fontFamily: theme.font.mono,
-                fontWeight: 600,
-              }}
-            >
-              T{action.rank}
-            </span>
             {action.agent && (
               <span
                 style={{
@@ -80,6 +70,20 @@ export function ActionDetailPanel({ action, onClose, onStatusChange }: ActionDet
       >
         {/* Prompt text */}
         <Markdown>{action.prompt}</Markdown>
+
+        {/* Output */}
+        <div style={{ marginTop: theme.spacing.xl, paddingTop: theme.spacing.lg, borderTop: `1px solid ${theme.color.borderSubtle}` }}>
+          <span style={{ fontSize: theme.font.size.xs, fontWeight: 700, color: theme.color.textMuted, display: "block", marginBottom: theme.spacing.sm }}>
+            Output
+          </span>
+          {action.output ? (
+            <Markdown>{action.output}</Markdown>
+          ) : (
+            <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
+              No output yet
+            </p>
+          )}
+        </div>
 
         {/* Status transition controls */}
         {transitions.length > 0 && onStatusChange && (
@@ -129,9 +133,7 @@ export function ActionDetailPanel({ action, onClose, onStatusChange }: ActionDet
             title="Metadata"
             rows={[
               { label: "ID", value: action.id },
-              { label: "Target", value: action.target },
-              { label: "Rank", value: String(action.rank) },
-              { label: "Created", value: formatDate(action.created_at) },
+{ label: "Created", value: formatDate(action.created_at) },
               { label: "Updated", value: formatDate(action.updated_at) },
             ]}
           />
