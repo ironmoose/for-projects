@@ -25,8 +25,8 @@ export function taskRoutes(service: ITaskService): Hono {
   // POST /api/projects/:projectId/tasks
   app.post("/:projectId/tasks", async (c) => {
     const projectId = c.req.param("projectId")!;
-    const { summary, context, status, implementation_action_id, validation_action_id } = await c.req.json<Omit<CreateTaskInput, "project_id">>();
-    const task = service.create({ project_id: projectId, summary, context, status, implementation_action_id, validation_action_id });
+    const { summary, context, status } = await c.req.json<Omit<CreateTaskInput, "project_id">>();
+    const task = service.create({ project_id: projectId, summary, context, status });
     return c.json(task, 201);
   });
 
@@ -39,8 +39,8 @@ export function taskRoutes(service: ITaskService): Hono {
 
   // PATCH /api/projects/:projectId/tasks/:id
   app.patch("/:projectId/tasks/:id", async (c) => {
-    const { summary, context, status, implementation_action_id, validation_action_id } = await c.req.json<UpdateTaskInput>();
-    const task = service.update(c.req.param("id")!, { summary, context, status, implementation_action_id, validation_action_id });
+    const { summary, context, status } = await c.req.json<UpdateTaskInput>();
+    const task = service.update(c.req.param("id")!, { summary, context, status });
     if (!task) return c.json({ error: "task not found" }, 404);
     return c.json(task);
   });

@@ -1,21 +1,15 @@
-import type { ActionStatus } from "./entities";
+import type { ActionStatus, EntityType, ActionRole } from "./entities";
 
 export interface CreateProjectInput {
   name: string;
   description?: string;
   status?: string;
-  goal_action_id?: string | null;
-  design_action_id?: string | null;
-  requirements_action_id?: string | null;
 }
 
 export interface UpdateProjectInput {
   name?: string;
   description?: string;
   status?: string;
-  goal_action_id?: string | null;
-  design_action_id?: string | null;
-  requirements_action_id?: string | null;
 }
 
 export interface CreateTaskInput {
@@ -23,26 +17,33 @@ export interface CreateTaskInput {
   summary: string;
   context?: string;
   status?: string;
-  implementation_action_id?: string | null;
-  validation_action_id?: string | null;
 }
 
 export interface UpdateTaskInput {
   summary?: string;
   context?: string;
   status?: string;
-  implementation_action_id?: string | null;
-  validation_action_id?: string | null;
 }
 
 export interface CreateActionInput {
   prompt: string;
   agent?: string;
-  status?: ActionStatus;
 }
 
 export interface UpdateActionInput {
   prompt?: string;
   agent?: string;
+}
+
+export interface CreateEntityActionInput {
+  entity_type: EntityType;
+  entity_id: string;
+  role: ActionRole;
+  action_id: string;
+  status?: ActionStatus;
+}
+
+export interface UpdateEntityActionInput {
+  status?: ActionStatus;
   output?: string | null;
 }

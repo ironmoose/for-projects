@@ -5,7 +5,6 @@ import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
 import type { EventBus } from "../events";
-import type { ActionRepository } from "../repositories/actions";
 
 const VALID_STATUSES = ["todo", "in_progress", "done"] as const;
 
@@ -13,20 +12,8 @@ export class TaskService implements ITaskService {
   constructor(
     private taskRepo: TaskRepository,
     private projectRepo: ProjectRepository,
-    private actionRepo: ActionRepository,
     private eventBus?: EventBus,
   ) {}
-
-  private validateActionIds(input: { implementation_action_id?: string | null; validation_action_id?: string | null }): void {
-    const fields = ['implementation_action_id', 'validation_action_id'] as const;
-    for (const field of fields) {
-      const value = input[field];
-      if (value !== undefined && value !== null) {
-        const action = this.actionRepo.findById(value);
-        if (!action) throw new ServiceError(`Action not found: ${value}`, 404);
-      }
-    }
-  }
 
   findById(id: string): Task | null {
     return this.taskRepo.findById(id);
@@ -60,7 +47,6 @@ export class TaskService implements ITaskService {
     if (input.status !== undefined && !VALID_STATUSES.includes(input.status as typeof VALID_STATUSES[number])) {
       throw new ServiceError(`status must be one of: ${VALID_STATUSES.join(", ")}`, 400);
     }
-    this.validateActionIds(input);
     const task = this.taskRepo.create(input);
     this.eventBus?.emit({ entity: "task", action: "created", payload: task });
     return task;
@@ -79,7 +65,6 @@ export class TaskService implements ITaskService {
     if (input.status !== undefined && !VALID_STATUSES.includes(input.status as typeof VALID_STATUSES[number])) {
       throw new ServiceError(`status must be one of: ${VALID_STATUSES.join(", ")}`, 400);
     }
-    this.validateActionIds(input);
     const task = this.taskRepo.update(id, input);
     if (task) {
       this.eventBus?.emit({ entity: "task", action: "updated", payload: task });

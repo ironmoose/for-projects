@@ -1,9 +1,10 @@
-import type { Project, Task, Action } from "./entities";
+import type { Project, Task, Action, EntityAction } from "./entities";
 
 export type DomainEvent =
   | { entity: "project"; action: "created" | "updated"; payload: Project }
   | { entity: "task"; action: "created" | "updated"; payload: Task }
-  | { entity: "action"; action: "created" | "updated" | "status_changed"; payload: Action };
+  | { entity: "action"; action: "created" | "updated"; payload: Action }
+  | { entity: "entity_action"; action: "linked" | "unlinked" | "status_changed" | "updated"; payload: EntityAction | { entity_type: string; entity_id: string; role: string } };
 
 type Listener = (event: DomainEvent) => void;
 

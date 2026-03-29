@@ -6,12 +6,14 @@ import {
   type IProjectService,
   type ITaskService,
   type IActionService,
+  type IEntityActionService,
 } from "../domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
   actionService: IActionService;
+  entityActionService: IEntityActionService;
 }
 
 function handle<T>(fn: () => T) {
@@ -35,7 +37,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, actionService } = ctx;
+  const { projectService, taskService, actionService, entityActionService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -52,9 +54,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         name: z.string().max(255),
         description: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
-        goal_action_id: z.string().max(26).optional(),
-        design_action_id: z.string().max(26).optional(),
-        requirements_action_id: z.string().max(26).optional(),
       },
     },
     (input) => handle(() => projectService.create(input))
@@ -69,9 +68,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         name: z.string().max(255).optional(),
         description: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
-        goal_action_id: z.string().max(26).optional(),
-        design_action_id: z.string().max(26).optional(),
-        requirements_action_id: z.string().max(26).optional(),
       },
     },
     ({ id, ...updates }) => handle(() => projectService.update(id, updates))
@@ -88,8 +84,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         summary: z.string().max(500),
         context: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
-        implementation_action_id: z.string().max(26).optional(),
-        validation_action_id: z.string().max(26).optional(),
       },
     },
     ({ project_id, ...input }) =>
@@ -106,8 +100,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         summary: z.string().max(500).optional(),
         context: z.string().max(10000).optional(),
         status: z.string().max(50).optional(),
-        implementation_action_id: z.string().max(26).optional(),
-        validation_action_id: z.string().max(26).optional(),
       },
     },
     ({ project_id: _project_id, id, ...updates }) =>
@@ -130,7 +122,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       id: z.string().max(26),
       prompt: z.string().max(10000).optional(),
       agent: z.enum(["research", "design", "implementation", "review"]).optional(),
-      output: z.string().max(50000).optional(),
     },
   }, ({ id, ...updates }) => handle(() => {
     const result = actionService.update(id, updates);
@@ -138,13 +129,74 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     return result;
   }));
 
-  server.registerTool("update_action_status", {
-    description: "Transition an action's status",
-    inputSchema: {
-      id: z.string().max(26),
-      status: z.enum(["todo", "in_progress", "complete", "failed"]),
+  // -- Entity Actions --------------------------------------------------
+
+  server.registerTool(
+    "link_action",
+    {
+      description:
+        "Link an action to a project or task with a specific role. Projects support roles: goal, design, requirements. Tasks support: implementation, validation.",
+      inputSchema: {
+        entity_type: z.enum(["project", "task"]),
+        entity_id: z.string().max(26),
+        role: z.enum(["goal", "design", "requirements", "implementation", "validation"]),
+        action_id: z.string().max(26),
+        status: z.enum(["todo", "in_progress", "complete", "failed"]).optional(),
+      },
     },
-  }, ({ id, status }) => handle(() => actionService.updateStatus(id, status)));
+    (input) => handle(() => entityActionService.link(input))
+  );
+
+  server.registerTool(
+    "unlink_action",
+    {
+      description:
+        "Remove the action linked to a specific role on a project or task.",
+      inputSchema: {
+        entity_type: z.enum(["project", "task"]),
+        entity_id: z.string().max(26),
+        role: z.enum(["goal", "design", "requirements", "implementation", "validation"]),
+      },
+    },
+    (input) =>
+      handle(() => entityActionService.unlink(input.entity_type, input.entity_id, input.role))
+  );
+
+  server.registerTool(
+    "update_action_status",
+    {
+      description:
+        "Transition the status of an action linked to an entity. Valid transitions: todo→in_progress, in_progress→complete|failed, failed→todo.",
+      inputSchema: {
+        entity_type: z.enum(["project", "task"]),
+        entity_id: z.string().max(26),
+        role: z.enum(["goal", "design", "requirements", "implementation", "validation"]),
+        status: z.enum(["todo", "in_progress", "complete", "failed"]),
+      },
+    },
+    (input) =>
+      handle(() =>
+        entityActionService.updateStatus(input.entity_type, input.entity_id, input.role, input.status)
+      )
+  );
+
+  server.registerTool(
+    "update_action_output",
+    {
+      description:
+        "Set or update the output of an action linked to an entity.",
+      inputSchema: {
+        entity_type: z.enum(["project", "task"]),
+        entity_id: z.string().max(26),
+        role: z.enum(["goal", "design", "requirements", "implementation", "validation"]),
+        output: z.string().max(50000),
+      },
+    },
+    (input) =>
+      handle(() =>
+        entityActionService.updateOutput(input.entity_type, input.entity_id, input.role, input.output)
+      )
+  );
 
   // -- Query ----------------------------------------------------------
 
@@ -152,9 +204,9 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     "query",
     {
       description:
-        "Filtered list/lookup across entity types. Supports project, task, action.",
+        "Filtered list/lookup across entity types. Supports project, task, action, entity_action.",
       inputSchema: {
-        type: z.enum(["project", "task", "action"]),
+        type: z.enum(["project", "task", "action", "entity_action"]),
         limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
         // Single-entity lookup
@@ -163,9 +215,13 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         project_id: z.string().max(26).optional(),
         status: z.string().max(50).optional(),
         agent: z.string().max(200).optional(),
+        // Entity-action filters
+        entity_type: z.enum(["project", "task"]).optional(),
+        entity_id: z.string().max(26).optional(),
+        role: z.enum(["goal", "design", "requirements", "implementation", "validation"]).optional(),
       },
     },
-    ({ type: entityType, limit, offset, id, project_id, status, agent }) =>
+    ({ type: entityType, limit, offset, id, project_id, status, agent, entity_type, entity_id, role }) =>
       handle(() => {
         switch (entityType) {
           case "project": {
@@ -186,9 +242,17 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
               return action;
             }
             const filter: Record<string, string> = {};
-            if (status) filter.status = status;
             if (agent) filter.agent = agent;
             return actionService.findAll(limit, offset, Object.keys(filter).length ? filter : undefined);
+          }
+          case "entity_action": {
+            if (!entity_type || !entity_id) {
+              throw new ServiceError("entity_type and entity_id are required when querying entity_action", 400);
+            }
+            if (role) {
+              return entityActionService.findByEntityAndRole(entity_type, entity_id, role);
+            }
+            return entityActionService.findByEntity(entity_type, entity_id);
           }
         }
       })

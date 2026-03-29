@@ -1,4 +1,4 @@
-import type { Project, Task, Action, ActionStatus } from "./entities";
+import type { Project, Task, Action, ActionStatus, EntityAction } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -6,6 +6,7 @@ import type {
   UpdateTaskInput,
   CreateActionInput,
   UpdateActionInput,
+  CreateEntityActionInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -36,7 +37,6 @@ export interface ITaskService {
 }
 
 export interface ActionFilter {
-  status?: string;
   agent?: string;
 }
 
@@ -45,5 +45,13 @@ export interface IActionService {
   findById(id: string): Action | null;
   create(input: CreateActionInput): Action;
   update(id: string, input: UpdateActionInput): Action | null;
-  updateStatus(id: string, status: ActionStatus): Action | null;
+}
+
+export interface IEntityActionService {
+  link(input: CreateEntityActionInput): EntityAction;
+  unlink(entity_type: string, entity_id: string, role: string): boolean;
+  updateStatus(entity_type: string, entity_id: string, role: string, status: ActionStatus): EntityAction;
+  updateOutput(entity_type: string, entity_id: string, role: string, output: string | null): EntityAction;
+  findByEntity(entity_type: string, entity_id: string): EntityAction[];
+  findByEntityAndRole(entity_type: string, entity_id: string, role: string): EntityAction | null;
 }

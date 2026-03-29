@@ -58,7 +58,7 @@ export function useProject(projectId: string) {
     fetchProject();
 
     return subscribeEvents((event) => {
-      if (event.entity === "project" || event.entity === "task") {
+      if (event.entity === "project" || event.entity === "task" || event.entity === "entity_action") {
         throttledFetch();
       }
     });

@@ -1,7 +1,7 @@
 import { Card } from "./Card";
 import { Icon } from "../atoms/Icon";
 import { useTheme } from "../theme/ThemeContext";
-import type { Action } from "../../types";
+import type { Action, EntityAction } from "../../types";
 import { formatDate } from "../../utils";
 
 const AGENT_META: Record<string, { icon: string; label: string }> = {
@@ -13,12 +13,13 @@ const AGENT_META: Record<string, { icon: string; label: string }> = {
 
 interface ActionCardProps {
   action: Action;
+  entityAction?: EntityAction | null;
   onClick?: () => void;
   isSelected?: boolean;
   compact?: boolean;
 }
 
-export function ActionCard({ action, onClick, isSelected, compact }: ActionCardProps) {
+export function ActionCard({ action, entityAction, onClick, isSelected, compact }: ActionCardProps) {
   const { theme } = useTheme();
   const meta = action.agent ? AGENT_META[action.agent] : undefined;
 
@@ -101,7 +102,7 @@ export function ActionCard({ action, onClick, isSelected, compact }: ActionCardP
           )}
         </div>
       </div>
-      {!compact && action.output && (
+      {!compact && entityAction?.output && (
         <div style={{
           marginTop: theme.spacing.sm,
           fontSize: theme.font.size.xxs,
@@ -110,7 +111,7 @@ export function ActionCard({ action, onClick, isSelected, compact }: ActionCardP
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
         }}>
-          {action.output.slice(0, 100)}
+          {entityAction.output.slice(0, 100)}
         </div>
       )}
     </Card>

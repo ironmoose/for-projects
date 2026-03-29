@@ -2,24 +2,25 @@ import { useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Badge } from "../atoms/Badge";
 import { StatusDot } from "../atoms/StatusDot";
-import type { Action } from "../../types";
+import type { Action, ActionStatus, EntityAction } from "../../types";
 import { actionStatusLabel } from "../../types";
 
 interface ActionSlotProps {
   label: string;
   action: Action | null;
+  entityAction?: EntityAction | null;
   onCreateClick: () => void;
   onActionClick: (action: Action) => void;
 }
 
-const statusBadgeVariant: Record<Action["status"], "todo" | "in_progress" | "complete" | "failed"> = {
+const statusBadgeVariant: Record<ActionStatus, "todo" | "in_progress" | "complete" | "failed"> = {
   todo: "todo",
   in_progress: "in_progress",
   complete: "complete",
   failed: "failed",
 };
 
-export function ActionSlot({ label, action, onCreateClick, onActionClick }: ActionSlotProps) {
+export function ActionSlot({ label, action, entityAction, onCreateClick, onActionClick }: ActionSlotProps) {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
 
@@ -123,9 +124,11 @@ export function ActionSlot({ label, action, onCreateClick, onActionClick }: Acti
           flexWrap: "wrap",
         }}
       >
-        <Badge variant={statusBadgeVariant[action.status]}>
-          {actionStatusLabel[action.status]}
-        </Badge>
+        {entityAction && (
+          <Badge variant={statusBadgeVariant[entityAction.status]}>
+            {actionStatusLabel[entityAction.status]}
+          </Badge>
+        )}
         {action.agent && (
           <span
             style={{
@@ -137,7 +140,7 @@ export function ActionSlot({ label, action, onCreateClick, onActionClick }: Acti
             {action.agent}
           </span>
         )}
-        {action.output && (
+        {entityAction?.output && (
           <StatusDot
             color={theme.color.success}
             size={6}

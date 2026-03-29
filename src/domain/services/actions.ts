@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import type { Action, ActionStatus } from "../entities";
+import type { Action } from "../entities";
 import type { CreateActionInput, UpdateActionInput } from "../inputs";
 import type { ActionFilter, IActionService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -7,13 +7,6 @@ import type { ActionRepository } from "../repositories/actions";
 import type { EventBus } from "../events";
 
 const VALID_AGENTS = ["research", "design", "implementation", "review"] as const;
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  'todo': ['in_progress'],
-  'in_progress': ['complete', 'failed'],
-  'complete': [],
-  'failed': ['todo'],
-};
 
 export class ActionService implements IActionService {
   constructor(
@@ -30,7 +23,7 @@ export class ActionService implements IActionService {
     const now = new Date().toISOString();
     this.actionRepo.create({
       id, prompt: input.prompt, agent: input.agent ?? null,
-      status: input.status ?? "todo", output: null, created_at: now, updated_at: now,
+      created_at: now, updated_at: now,
     });
     const action = this.actionRepo.findById(id)!;
     this.eventBus?.emit({ entity: "action", action: "created", payload: action });
@@ -45,38 +38,16 @@ export class ActionService implements IActionService {
       throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
     }
     const now = new Date().toISOString();
-    this.actionRepo.update(id, { prompt: input.prompt, agent: input.agent, output: input.output, updated_at: now });
+    this.actionRepo.update(id, { prompt: input.prompt, agent: input.agent, updated_at: now });
     const updated = this.actionRepo.findById(id)!;
     this.eventBus?.emit({ entity: "action", action: "updated", payload: updated });
     return updated;
   }
 
-  updateStatus(id: string, status: ActionStatus): Action | null {
-    const existing = this.actionRepo.findById(id);
-    if (!existing) {
-      throw new ServiceError(`action not found: ${id}`, 404);
-    }
-
-    const allowed = VALID_TRANSITIONS[existing.status];
-    if (!allowed || !allowed.includes(status)) {
-      throw new ServiceError(
-        `invalid status transition: ${existing.status} → ${status}`,
-        400
-      );
-    }
-
-    const updated = this.actionRepo.updateStatus(id, status);
-    if (updated) {
-      this.eventBus?.emit({ entity: "action", action: "status_changed", payload: updated });
-    }
-
-    return updated;
-  }
-
   findAll(limit = 50, offset = 0, filter?: ActionFilter): Paginated<Action> {
     return {
-      data: this.actionRepo.findAll(limit, offset, { status: filter?.status, agent: filter?.agent }),
-      total: this.actionRepo.count({ status: filter?.status, agent: filter?.agent }),
+      data: this.actionRepo.findAll(limit, offset, { agent: filter?.agent }),
+      total: this.actionRepo.count({ agent: filter?.agent }),
     };
   }
 

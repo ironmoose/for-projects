@@ -36,17 +36,14 @@ export class ProjectRepository {
 
     this.db
       .query(
-        `INSERT INTO projects (id, name, description, status, goal_action_id, design_action_id, requirements_action_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO projects (id, name, description, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
         input.name,
         input.description ?? "",
         input.status ?? "active",
-        input.goal_action_id ?? null,
-        input.design_action_id ?? null,
-        input.requirements_action_id ?? null,
         now,
         now
       );
@@ -61,18 +58,15 @@ export class ProjectRepository {
     const name = input.name ?? existing.name;
     const description = input.description ?? existing.description;
     const status = input.status ?? existing.status;
-    const goal_action_id = input.goal_action_id !== undefined ? input.goal_action_id : existing.goal_action_id;
-    const design_action_id = input.design_action_id !== undefined ? input.design_action_id : existing.design_action_id;
-    const requirements_action_id = input.requirements_action_id !== undefined ? input.requirements_action_id : existing.requirements_action_id;
     const now = new Date().toISOString();
 
     this.db
       .query(
         `UPDATE projects
-         SET name = ?, description = ?, status = ?, goal_action_id = ?, design_action_id = ?, requirements_action_id = ?, updated_at = ?
+         SET name = ?, description = ?, status = ?, updated_at = ?
          WHERE id = ?`
       )
-      .run(name, description, status, goal_action_id, design_action_id, requirements_action_id, now, id);
+      .run(name, description, status, now, id);
 
     return this.findById(id)!;
   }

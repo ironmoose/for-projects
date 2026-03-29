@@ -1,4 +1,4 @@
-import type { Action, Project, Task } from "./types";
+import type { Action, EntityAction, Project, Task } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -71,16 +71,7 @@ export async function fetchActions(params?: { status?: string; agent?: string; l
   return res.json();
 }
 
-export async function updateActionStatus(id: string, status: string) {
-  const res = await apiFetch(`/api/actions/${encodeURIComponent(id)}/status`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
-  return res.json();
-}
-
-export async function updateAction(id: string, input: { prompt?: string; agent?: string; output?: string }): Promise<Action> {
+export async function updateAction(id: string, input: { prompt?: string; agent?: string }): Promise<Action> {
   const res = await apiFetch(`/api/actions/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -111,6 +102,53 @@ export async function updateTask(projectId: string, id: string, input: Record<st
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  });
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Entity Actions API
+// ---------------------------------------------------------------------------
+
+export async function linkAction(input: { entity_type: string; entity_id: string; role: string; action_id: string; status?: string }): Promise<EntityAction> {
+  const res = await apiFetch("/api/entity-actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return res.json();
+}
+
+export async function unlinkAction(entityType: string, entityId: string, role: string): Promise<void> {
+  await apiFetch(`/api/entity-actions/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}/${encodeURIComponent(role)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function fetchEntityActions(entityType: string, entityId: string): Promise<EntityAction[]> {
+  const res = await apiFetch(`/api/entity-actions/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`);
+  return res.json();
+}
+
+export async function fetchEntityAction(entityType: string, entityId: string, role: string): Promise<EntityAction> {
+  const res = await apiFetch(`/api/entity-actions/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}/${encodeURIComponent(role)}`);
+  return res.json();
+}
+
+export async function updateEntityActionStatus(entityType: string, entityId: string, role: string, status: string): Promise<EntityAction> {
+  const res = await apiFetch(`/api/entity-actions/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}/${encodeURIComponent(role)}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  return res.json();
+}
+
+export async function updateEntityActionOutput(entityType: string, entityId: string, role: string, output: string): Promise<EntityAction> {
+  const res = await apiFetch(`/api/entity-actions/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}/${encodeURIComponent(role)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ output }),
   });
   return res.json();
 }

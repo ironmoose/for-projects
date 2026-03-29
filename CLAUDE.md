@@ -4,9 +4,7 @@ Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 
 ## Quick reference
 
-- `bun run dev` — start dev server (hot reload) + Vite HMR
 - `bun run build` — build frontend assets
-- `bun run start` — start production server
 - `bun test` — run tests
 
 ## Conventions
@@ -18,6 +16,7 @@ Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 - No ORMs — raw SQL via `bun:sqlite`
 - Validation happens in services; routes parse HTTP and return errors
 - Dependencies wired explicitly in `bootstrap.ts` — no globals or service locators
+- No DEFAULT values in the schema
 
 ## Architecture
 

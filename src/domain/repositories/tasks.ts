@@ -38,8 +38,8 @@ export class TaskRepository {
 
     this.db
       .query(
-        `INSERT INTO tasks (id, project_id, summary, context, status, implementation_action_id, validation_action_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO tasks (id, project_id, summary, context, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
@@ -47,8 +47,6 @@ export class TaskRepository {
         input.summary,
         input.context ?? "",
         input.status ?? "todo",
-        input.implementation_action_id ?? null,
-        input.validation_action_id ?? null,
         now,
         now
       );
@@ -63,15 +61,13 @@ export class TaskRepository {
     const summary = input.summary ?? existing.summary;
     const context = input.context ?? existing.context;
     const status = input.status ?? existing.status;
-    const implementation_action_id = input.implementation_action_id !== undefined ? input.implementation_action_id : existing.implementation_action_id;
-    const validation_action_id = input.validation_action_id !== undefined ? input.validation_action_id : existing.validation_action_id;
     const now = new Date().toISOString();
 
     this.db
       .query(
-        `UPDATE tasks SET summary = ?, context = ?, status = ?, implementation_action_id = ?, validation_action_id = ?, updated_at = ? WHERE id = ?`
+        `UPDATE tasks SET summary = ?, context = ?, status = ?, updated_at = ? WHERE id = ?`
       )
-      .run(summary, context, status, implementation_action_id, validation_action_id, now, id);
+      .run(summary, context, status, now, id);
 
     return this.findById(id)!;
   }

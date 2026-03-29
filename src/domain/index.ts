@@ -9,6 +9,8 @@ export { runMigrations } from "./db/migrator";
 export { ProjectRepository } from "./repositories/projects";
 export { TaskRepository } from "./repositories/tasks";
 export { ActionRepository } from "./repositories/actions";
+export { EntityActionRepository } from "./repositories/entity-actions";
 export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
 export { ActionService } from "./services/actions";
+export { EntityActionService } from "./services/entity-actions";

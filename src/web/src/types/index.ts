@@ -9,9 +9,6 @@ export interface Project {
   status: "active" | "paused" | "completed" | "archived";
   created_at: string;
   updated_at: string;
-  goal_action_id: string | null;
-  design_action_id: string | null;
-  requirements_action_id: string | null;
 }
 
 export interface Task {
@@ -22,8 +19,6 @@ export interface Task {
   status: "todo" | "in_progress" | "done";
   created_at: string;
   updated_at: string;
-  implementation_action_id: string | null;
-  validation_action_id: string | null;
 }
 
 export type ActionStatus = "todo" | "in_progress" | "complete" | "failed";
@@ -32,6 +27,18 @@ export interface Action {
   id: string;
   prompt: string;
   agent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EntityType = "project" | "task";
+export type ActionRole = "goal" | "design" | "requirements" | "implementation" | "validation";
+
+export interface EntityAction {
+  entity_type: EntityType;
+  entity_id: string;
+  role: ActionRole;
+  action_id: string;
   status: ActionStatus;
   output: string | null;
   created_at: string;

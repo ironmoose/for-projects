@@ -3,13 +3,12 @@ import { useTheme } from "../theme/ThemeContext";
 import { Button } from "../atoms/Button";
 import { Select } from "../atoms/Select";
 import { Overlay } from "../atoms/Overlay";
-import { createAction, updateProject, updateTask } from "../../api";
+import { createAction, linkAction } from "../../api";
 import type { Action } from "../../types";
 
 interface CreateActionOverlayProps {
   entityType: "project" | "task";
   entityId: string;
-  projectId?: string;
   field: "goal" | "design" | "requirements" | "implementation" | "validation";
   onCreated: (action: Action) => void;
   onClose: () => void;
@@ -50,7 +49,6 @@ const AGENT_OPTIONS = [
 export function CreateActionOverlay({
   entityType,
   entityId,
-  projectId,
   field,
   onCreated,
   onClose,
@@ -72,13 +70,12 @@ export function CreateActionOverlay({
         agent: agent || undefined,
       });
 
-      const patch = { [`${field}_action_id`]: action.id };
-
-      if (entityType === "project") {
-        await updateProject(entityId, patch);
-      } else {
-        await updateTask(projectId!, entityId, patch);
-      }
+      await linkAction({
+        entity_type: entityType,
+        entity_id: entityId,
+        role: field,
+        action_id: action.id,
+      });
 
       onCreated(action);
       onClose();

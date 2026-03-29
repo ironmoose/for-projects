@@ -160,8 +160,6 @@ describe("Action CRUD", () => {
     const action = ctx.actionService.create({ prompt: "Test prompt" });
     expect(action.id).toBeTruthy();
     expect(action.prompt).toBe("Test prompt");
-    expect(action.status).toBe("todo");
-    expect(action.output).toBeNull();
     expect(action.agent).toBeNull();
     expect(action.created_at).toBeTruthy();
   });
@@ -187,12 +185,6 @@ describe("Action CRUD", () => {
     expect(updated!.updated_at).not.toBe(action.updated_at);
   });
 
-  it("updates action output", () => {
-    const action = ctx.actionService.create({ prompt: "Generate" });
-    const updated = ctx.actionService.update(action.id, { output: "Result text" });
-    expect(updated!.output).toBe("Result text");
-  });
-
   it("update non-existent returns null", () => {
     const result = ctx.actionService.update("nonexistent", { prompt: "X" });
     expect(result).toBeNull();
@@ -204,13 +196,6 @@ describe("Action CRUD", () => {
     expect(typeof result.total).toBe("number");
   });
 
-  it("findAll with status filter", () => {
-    const a = ctx.actionService.create({ prompt: "Filter test" });
-    ctx.actionService.updateStatus(a.id, "in_progress");
-    const result = ctx.actionService.findAll(100, 0, { status: "in_progress" });
-    expect(result.data.some(x => x.id === a.id)).toBe(true);
-  });
-
   it("findAll with agent filter", () => {
     const a = ctx.actionService.create({ prompt: "Agent test", agent: "design" });
     const result = ctx.actionService.findAll(100, 0, { agent: "design" });
@@ -219,114 +204,284 @@ describe("Action CRUD", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Action status transitions
+// Entity Action — link, unlink, status transitions, output
 // ---------------------------------------------------------------------------
 
-describe("Action status transitions", () => {
+describe("EntityAction link/unlink", () => {
+  it("links an action to a project with a role", () => {
+    const action = ctx.actionService.create({ prompt: "Goal action" });
+    const project = ctx.projectService.create({ name: "EA Project" });
+
+    const ea = ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "goal",
+      action_id: action.id,
+    });
+
+    expect(ea.entity_type).toBe("project");
+    expect(ea.entity_id).toBe(project.id);
+    expect(ea.role).toBe("goal");
+    expect(ea.action_id).toBe(action.id);
+    expect(ea.status).toBe("todo");
+    expect(ea.output).toBeNull();
+    expect(ea.created_at).toBeTruthy();
+  });
+
+  it("links an action to a task with a role", () => {
+    const project = ctx.projectService.create({ name: "EA Task Project" });
+    const task = ctx.taskService.create({ project_id: project.id, summary: "EA Task" });
+    const action = ctx.actionService.create({ prompt: "Impl action" });
+
+    const ea = ctx.entityActionService.link({
+      entity_type: "task",
+      entity_id: task.id,
+      role: "implementation",
+      action_id: action.id,
+    });
+
+    expect(ea.entity_type).toBe("task");
+    expect(ea.role).toBe("implementation");
+    expect(ea.action_id).toBe(action.id);
+  });
+
+  it("rejects invalid entity_type", () => {
+    const action = ctx.actionService.create({ prompt: "Bad type" });
+    expect(() =>
+      ctx.entityActionService.link({
+        entity_type: "widget" as "project",
+        entity_id: "x",
+        role: "goal",
+        action_id: action.id,
+      })
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects implementation role for project (400)", () => {
+    const project = ctx.projectService.create({ name: "Bad Role" });
+    const action = ctx.actionService.create({ prompt: "Bad role" });
+    try {
+      ctx.entityActionService.link({
+        entity_type: "project",
+        entity_id: project.id,
+        role: "implementation" as "goal",
+        action_id: action.id,
+      });
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ServiceError);
+      expect((err as ServiceError).statusCode).toBe(400);
+    }
+  });
+
+  it("rejects goal role for task (400)", () => {
+    const project = ctx.projectService.create({ name: "Task Bad Role" });
+    const task = ctx.taskService.create({ project_id: project.id, summary: "No goal" });
+    const action = ctx.actionService.create({ prompt: "Bad role task" });
+    try {
+      ctx.entityActionService.link({
+        entity_type: "task",
+        entity_id: task.id,
+        role: "goal" as "implementation",
+        action_id: action.id,
+      });
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ServiceError);
+      expect((err as ServiceError).statusCode).toBe(400);
+    }
+  });
+
+  it("rejects nonexistent entity", () => {
+    const action = ctx.actionService.create({ prompt: "No entity" });
+    expect(() =>
+      ctx.entityActionService.link({
+        entity_type: "project",
+        entity_id: "nonexistent",
+        role: "goal",
+        action_id: action.id,
+      })
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects nonexistent action", () => {
+    const project = ctx.projectService.create({ name: "No Action" });
+    expect(() =>
+      ctx.entityActionService.link({
+        entity_type: "project",
+        entity_id: project.id,
+        role: "goal",
+        action_id: "nonexistent",
+      })
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects duplicate link (409)", () => {
+    const project = ctx.projectService.create({ name: "Dup Link" });
+    const action = ctx.actionService.create({ prompt: "Dup" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "design",
+      action_id: action.id,
+    });
+    try {
+      ctx.entityActionService.link({
+        entity_type: "project",
+        entity_id: project.id,
+        role: "design",
+        action_id: action.id,
+      });
+      expect(true).toBe(false); // should not reach
+    } catch (err) {
+      expect(err).toBeInstanceOf(ServiceError);
+      expect((err as ServiceError).statusCode).toBe(409);
+    }
+  });
+
+  it("unlinks an entity action", () => {
+    const project = ctx.projectService.create({ name: "Unlink EA" });
+    const action = ctx.actionService.create({ prompt: "Unlink" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "requirements",
+      action_id: action.id,
+    });
+
+    const deleted = ctx.entityActionService.unlink("project", project.id, "requirements");
+    expect(deleted).toBe(true);
+
+    const found = ctx.entityActionService.findByEntityAndRole("project", project.id, "requirements");
+    expect(found).toBeNull();
+  });
+
+  it("unlink returns false when nothing to delete", () => {
+    expect(ctx.entityActionService.unlink("project", "nonexistent", "goal")).toBe(false);
+  });
+
+  it("findByEntity returns all roles for an entity", () => {
+    const project = ctx.projectService.create({ name: "Multi Role" });
+    const a1 = ctx.actionService.create({ prompt: "Goal" });
+    const a2 = ctx.actionService.create({ prompt: "Design" });
+
+    ctx.entityActionService.link({ entity_type: "project", entity_id: project.id, role: "goal", action_id: a1.id });
+    ctx.entityActionService.link({ entity_type: "project", entity_id: project.id, role: "design", action_id: a2.id });
+
+    const eas = ctx.entityActionService.findByEntity("project", project.id);
+    expect(eas.length).toBe(2);
+    expect(eas.map(e => e.role).sort()).toEqual(["design", "goal"]);
+  });
+});
+
+describe("EntityAction status transitions", () => {
   it("transitions todo -> in_progress -> complete", () => {
-    const action = ctx.actionService.create({ prompt: "Do it" });
+    const project = ctx.projectService.create({ name: "Status Project" });
+    const action = ctx.actionService.create({ prompt: "Status" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "goal",
+      action_id: action.id,
+    });
 
-    expect(action.status).toBe("todo");
+    const ip = ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress");
+    expect(ip.status).toBe("in_progress");
 
-    const inProgress = ctx.actionService.updateStatus(action.id, "in_progress");
-    expect(inProgress!.status).toBe("in_progress");
-
-    const complete = ctx.actionService.updateStatus(action.id, "complete");
-    expect(complete!.status).toBe("complete");
+    const complete = ctx.entityActionService.updateStatus("project", project.id, "goal", "complete");
+    expect(complete.status).toBe("complete");
   });
 
   it("transitions in_progress -> failed -> todo (retry)", () => {
-    const action = ctx.actionService.create({ prompt: "Retry me" });
+    const project = ctx.projectService.create({ name: "Retry Project" });
+    const action = ctx.actionService.create({ prompt: "Retry" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "design",
+      action_id: action.id,
+    });
 
-    ctx.actionService.updateStatus(action.id, "in_progress");
-    const failed = ctx.actionService.updateStatus(action.id, "failed");
-    expect(failed!.status).toBe("failed");
+    ctx.entityActionService.updateStatus("project", project.id, "design", "in_progress");
+    const failed = ctx.entityActionService.updateStatus("project", project.id, "design", "failed");
+    expect(failed.status).toBe("failed");
 
-    const retried = ctx.actionService.updateStatus(action.id, "todo");
-    expect(retried!.status).toBe("todo");
+    const retried = ctx.entityActionService.updateStatus("project", project.id, "design", "todo");
+    expect(retried.status).toBe("todo");
   });
 
-  it("rejects invalid transitions", () => {
+  it("rejects invalid transition todo → complete (400)", () => {
+    const project = ctx.projectService.create({ name: "Invalid Trans" });
     const action = ctx.actionService.create({ prompt: "No skip" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "requirements",
+      action_id: action.id,
+    });
 
-    // todo -> complete (not allowed, must go through in_progress)
-    expect(() => ctx.actionService.updateStatus(action.id, "complete")).toThrow(ServiceError);
-
-    // todo -> failed (not allowed)
-    expect(() => ctx.actionService.updateStatus(action.id, "failed")).toThrow(ServiceError);
+    try {
+      ctx.entityActionService.updateStatus("project", project.id, "requirements", "complete");
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ServiceError);
+      expect((err as ServiceError).statusCode).toBe(400);
+    }
   });
 
   it("rejects transition from complete", () => {
+    const project = ctx.projectService.create({ name: "Complete Lock" });
     const action = ctx.actionService.create({ prompt: "Done" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "goal",
+      action_id: action.id,
+    });
 
-    ctx.actionService.updateStatus(action.id, "in_progress");
-    ctx.actionService.updateStatus(action.id, "complete");
+    ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress");
+    ctx.entityActionService.updateStatus("project", project.id, "goal", "complete");
 
-    expect(() => ctx.actionService.updateStatus(action.id, "todo")).toThrow(ServiceError);
-    expect(() => ctx.actionService.updateStatus(action.id, "in_progress")).toThrow(ServiceError);
+    expect(() => ctx.entityActionService.updateStatus("project", project.id, "goal", "todo")).toThrow(ServiceError);
+    expect(() => ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress")).toThrow(ServiceError);
+  });
+
+  it("throws 404 for nonexistent entity action", () => {
+    expect(() => ctx.entityActionService.updateStatus("project", "nope", "goal", "in_progress")).toThrow(ServiceError);
   });
 });
 
-// ---------------------------------------------------------------------------
-// Project with action references
-// ---------------------------------------------------------------------------
+describe("EntityAction output", () => {
+  it("updates output on an entity action", () => {
+    const project = ctx.projectService.create({ name: "Output Project" });
+    const action = ctx.actionService.create({ prompt: "Output" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "goal",
+      action_id: action.id,
+    });
 
-describe("Project with action references", () => {
-  it("creates project with goal_action_id", () => {
-    const action = ctx.actionService.create({ prompt: "Goal" });
-    const project = ctx.projectService.create({ name: "With Goal", goal_action_id: action.id });
-    expect(project.goal_action_id).toBe(action.id);
+    const updated = ctx.entityActionService.updateOutput("project", project.id, "goal", "Result text");
+    expect(updated.output).toBe("Result text");
   });
 
-  it("rejects invalid goal_action_id", () => {
-    expect(() => ctx.projectService.create({ name: "Bad", goal_action_id: "nonexistent" })).toThrow(ServiceError);
+  it("nulls output", () => {
+    const project = ctx.projectService.create({ name: "Null Output" });
+    const action = ctx.actionService.create({ prompt: "Null out" });
+    ctx.entityActionService.link({
+      entity_type: "project",
+      entity_id: project.id,
+      role: "design",
+      action_id: action.id,
+    });
+
+    ctx.entityActionService.updateOutput("project", project.id, "design", "Something");
+    const nulled = ctx.entityActionService.updateOutput("project", project.id, "design", null);
+    expect(nulled.output).toBeNull();
   });
 
-  it("updates project design_action_id", () => {
-    const action = ctx.actionService.create({ prompt: "Design" });
-    const project = ctx.projectService.create({ name: "Update Test" });
-    const updated = ctx.projectService.update(project.id, { design_action_id: action.id });
-    expect(updated!.design_action_id).toBe(action.id);
-  });
-
-  it("nulls out requirements_action_id (unlink)", () => {
-    const action = ctx.actionService.create({ prompt: "Req" });
-    const project = ctx.projectService.create({ name: "Unlink Test", requirements_action_id: action.id });
-    const updated = ctx.projectService.update(project.id, { requirements_action_id: null });
-    expect(updated!.requirements_action_id).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Task with action references
-// ---------------------------------------------------------------------------
-
-describe("Task with action references", () => {
-  it("creates task with implementation_action_id", () => {
-    const project = ctx.projectService.create({ name: "Task Ref Project" });
-    const action = ctx.actionService.create({ prompt: "Implement" });
-    const task = ctx.taskService.create({ project_id: project.id, summary: "With action", implementation_action_id: action.id });
-    expect(task.implementation_action_id).toBe(action.id);
-  });
-
-  it("rejects invalid action_id", () => {
-    const project = ctx.projectService.create({ name: "Bad Ref Project" });
-    expect(() => ctx.taskService.create({ project_id: project.id, summary: "Bad", implementation_action_id: "nonexistent" })).toThrow(ServiceError);
-  });
-
-  it("updates task validation_action_id", () => {
-    const project = ctx.projectService.create({ name: "Update Ref Project" });
-    const task = ctx.taskService.create({ project_id: project.id, summary: "Update test" });
-    const action = ctx.actionService.create({ prompt: "Validate" });
-    const updated = ctx.taskService.update(task.id, { validation_action_id: action.id });
-    expect(updated!.validation_action_id).toBe(action.id);
-  });
-
-  it("nulls out action_id (unlink)", () => {
-    const project = ctx.projectService.create({ name: "Unlink Ref Project" });
-    const action = ctx.actionService.create({ prompt: "To unlink" });
-    const task = ctx.taskService.create({ project_id: project.id, summary: "Unlink", validation_action_id: action.id });
-    const updated = ctx.taskService.update(task.id, { validation_action_id: null });
-    expect(updated!.validation_action_id).toBeNull();
+  it("throws 404 for nonexistent entity action", () => {
+    expect(() => ctx.entityActionService.updateOutput("project", "nope", "goal", "x")).toThrow(ServiceError);
   });
 });

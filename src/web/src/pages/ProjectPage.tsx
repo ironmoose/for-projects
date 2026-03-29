@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Badge,
-  Button,
-  Icon,
   IconButton,
   Markdown,
   Select,
@@ -22,10 +20,10 @@ import {
 import { ActionSlot } from "../components/molecules/ActionSlot";
 import { CreateActionOverlay } from "../components/organisms/CreateActionOverlay";
 import { ActionDetailPanel } from "../components/organisms/ActionDetailPanel";
-import { useProject } from "../hooks";
+import { useProject, useEntityActions } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchAction } from "../api";
-import type { Task, Action } from "../types";
+import { ApiError, updateEntityActionStatus } from "../api";
+import type { Task, Action, ActionStatus, EntityAction } from "../types";
 import { statusOptions, taskStatusOptions, statusLabel } from "../types";
 import { formatDate } from "../utils";
 
@@ -35,21 +33,9 @@ import { formatDate } from "../utils";
 
 function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: string; onClose: () => void }) {
   const { theme } = useTheme();
-  const [taskActions, setTaskActions] = useState<{ implementation: Action | null; validation: Action | null }>({ implementation: null, validation: null });
+  const { actionsMap: taskActionsMap } = useEntityActions("task", task.id);
   const [taskOverlayField, setTaskOverlayField] = useState<"implementation" | "validation" | null>(null);
-  const [selectedTaskAction, setSelectedTaskAction] = useState<Action | null>(null);
-
-  useEffect(() => {
-    if (!task) return;
-    const load = async () => {
-      const [impl, val] = await Promise.all([
-        task.implementation_action_id ? fetchAction(task.implementation_action_id) : Promise.resolve(null),
-        task.validation_action_id ? fetchAction(task.validation_action_id) : Promise.resolve(null),
-      ]);
-      setTaskActions({ implementation: impl, validation: val });
-    };
-    load();
-  }, [task?.implementation_action_id, task?.validation_action_id]);
+  const [selectedTaskAction, setSelectedTaskAction] = useState<{ action: Action; entityAction: EntityAction } | null>(null);
 
   const statusColor =
     task.status === "done" ? theme.color.success
@@ -59,8 +45,12 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
   if (selectedTaskAction) {
     return (
       <ActionDetailPanel
-        action={selectedTaskAction}
+        action={selectedTaskAction.action}
+        entityAction={selectedTaskAction.entityAction}
         onClose={() => setSelectedTaskAction(null)}
+        onStatusChange={async (status: ActionStatus) => {
+          await updateEntityActionStatus("task", task.id, selectedTaskAction.entityAction.role, status);
+        }}
       />
     );
   }
@@ -134,16 +124,20 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
 
         {/* Action Slots */}
         <div style={{ display: "flex", gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
-          {(["implementation", "validation"] as const).map((field) => (
-            <div key={field} style={{ flex: 1 }}>
-              <ActionSlot
-                label={field.charAt(0).toUpperCase() + field.slice(1)}
-                action={taskActions[field]}
-                onCreateClick={() => setTaskOverlayField(field)}
-                onActionClick={(a) => setSelectedTaskAction(a)}
-              />
-            </div>
-          ))}
+          {(["implementation", "validation"] as const).map((field) => {
+            const entry = taskActionsMap[field];
+            return (
+              <div key={field} style={{ flex: 1 }}>
+                <ActionSlot
+                  label={field.charAt(0).toUpperCase() + field.slice(1)}
+                  action={entry?.action ?? null}
+                  entityAction={entry?.entityAction}
+                  onCreateClick={() => setTaskOverlayField(field)}
+                  onActionClick={() => { if (entry) setSelectedTaskAction(entry); }}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* Metadata */}
@@ -169,10 +163,9 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
         <CreateActionOverlay
           entityType="task"
           entityId={task.id}
-          projectId={projectId}
           field={taskOverlayField}
-          onCreated={(action) => {
-            setTaskActions((prev) => ({ ...prev, [taskOverlayField]: action }));
+          onCreated={() => {
+            // useEntityActions will refetch via WebSocket events
           }}
           onClose={() => setTaskOverlayField(null)}
         />
@@ -200,28 +193,15 @@ function taskAccentColor(theme: ReturnType<typeof useTheme>["theme"], status: Ta
 export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const { theme } = useTheme();
   const { project, tasks, notFound, updateProjectStatus, addTask, updateTaskStatus } = useProject(projectId);
+  const { actionsMap: projectActionsMap } = useEntityActions("project", project?.id);
   const { showToast } = useToastContext();
   const [newTaskSummary, setNewTaskSummary] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [addingTask, setAddingTask] = useState(false);
-  const [actionSlots, setActionSlots] = useState<{ goal: Action | null; design: Action | null; requirements: Action | null }>({ goal: null, design: null, requirements: null });
   const [overlayField, setOverlayField] = useState<"goal" | "design" | "requirements" | null>(null);
-  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
+  const [selectedAction, setSelectedAction] = useState<{ action: Action; entityAction: EntityAction } | null>(null);
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
-
-  useEffect(() => {
-    if (!project) return;
-    const load = async () => {
-      const [goal, design, requirements] = await Promise.all([
-        project.goal_action_id ? fetchAction(project.goal_action_id) : Promise.resolve(null),
-        project.design_action_id ? fetchAction(project.design_action_id) : Promise.resolve(null),
-        project.requirements_action_id ? fetchAction(project.requirements_action_id) : Promise.resolve(null),
-      ]);
-      setActionSlots({ goal, design, requirements });
-    };
-    load();
-  }, [project?.goal_action_id, project?.design_action_id, project?.requirements_action_id]);
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
 
@@ -302,16 +282,20 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         {/* Actions */}
         <div style={{ marginBottom: theme.spacing.xl }}>
           <div style={{ display: "flex", gap: theme.spacing.md }}>
-            {(["goal", "design", "requirements"] as const).map((field) => (
-              <div key={field} style={{ flex: 1 }}>
-                <ActionSlot
-                  label={field.charAt(0).toUpperCase() + field.slice(1)}
-                  action={actionSlots[field]}
-                  onCreateClick={() => setOverlayField(field)}
-                  onActionClick={(a) => setSelectedAction(a)}
-                />
-              </div>
-            ))}
+            {(["goal", "design", "requirements"] as const).map((field) => {
+              const entry = projectActionsMap[field];
+              return (
+                <div key={field} style={{ flex: 1 }}>
+                  <ActionSlot
+                    label={field.charAt(0).toUpperCase() + field.slice(1)}
+                    action={entry?.action ?? null}
+                    entityAction={entry?.entityAction}
+                    onCreateClick={() => setOverlayField(field)}
+                    onActionClick={() => { if (entry) setSelectedAction(entry); }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -392,8 +376,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
       {selectedAction && !selectedTask && (
         <ActionDetailPanel
-          action={selectedAction}
+          action={selectedAction.action}
+          entityAction={selectedAction.entityAction}
           onClose={() => setSelectedAction(null)}
+          onStatusChange={async (status: ActionStatus) => {
+            await updateEntityActionStatus("project", project!.id, selectedAction.entityAction.role, status);
+          }}
         />
       )}
 
@@ -402,8 +390,8 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           entityType="project"
           entityId={project.id}
           field={overlayField}
-          onCreated={(action) => {
-            setActionSlots((prev) => ({ ...prev, [overlayField]: action }));
+          onCreated={() => {
+            // useEntityActions will refetch via WebSocket events
           }}
           onClose={() => setOverlayField(null)}
         />

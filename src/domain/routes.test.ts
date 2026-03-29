@@ -8,6 +8,7 @@ import { ServiceError } from "./errors";
 import { actionRoutes } from "../server/routes/actions";
 import { projectRoutes } from "../server/routes/projects";
 import { taskRoutes } from "../server/routes/tasks";
+import { entityActionRoutes } from "../server/routes/entity-actions";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 let ctx: AppContext;
@@ -22,6 +23,7 @@ beforeAll(async () => {
   app.route("/actions", actionRoutes(ctx.actionService));
   app.route("/projects", projectRoutes(ctx.projectService));
   app.route("/projects", taskRoutes(ctx.taskService));
+  app.route("/entity-actions", entityActionRoutes(ctx.entityActionService));
   app.onError((err, c) => {
     if (err instanceof SyntaxError) return c.json({ error: "invalid JSON body" }, 400);
     if (err instanceof ServiceError) return c.json({ error: err.message }, err.statusCode as ContentfulStatusCode);
@@ -50,8 +52,6 @@ describe("Action Routes", () => {
     const body = await res.json();
     expect(body.id).toBeTruthy();
     expect(body.prompt).toBe("test action");
-    expect(body.status).toBe("todo");
-    expect(body.output).toBeNull();
   });
 
   it("POST /actions — with agent", async () => {
@@ -90,11 +90,6 @@ describe("Action Routes", () => {
     expect(typeof body.total).toBe("number");
   });
 
-  it("GET /actions?status=todo — filters", async () => {
-    const res = await req("/actions?status=todo");
-    expect(res.status).toBe(200);
-  });
-
   it("GET /actions/:id — returns action", async () => {
     const create = await req("/actions", {
       method: "POST",
@@ -112,7 +107,7 @@ describe("Action Routes", () => {
     expect(res.status).toBe(404);
   });
 
-  it("PATCH /actions/:id — updates output", async () => {
+  it("PATCH /actions/:id — updates prompt", async () => {
     const create = await req("/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,92 +117,59 @@ describe("Action Routes", () => {
     const res = await req(`/actions/${action.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ output: "result" }),
+      body: JSON.stringify({ prompt: "updated" }),
     });
     expect(res.status).toBe(200);
-    expect((await res.json()).output).toBe("result");
-  });
-
-  it("PATCH /actions/:id/status — valid transition", async () => {
-    const create = await req("/actions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "status test" }),
-    });
-    const action = await create.json();
-    const res = await req(`/actions/${action.id}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "in_progress" }),
-    });
-    expect(res.status).toBe(200);
-    expect((await res.json()).status).toBe("in_progress");
-  });
-
-  it("PATCH /actions/:id/status — invalid transition returns 400", async () => {
-    const create = await req("/actions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "bad transition" }),
-    });
-    const action = await create.json();
-    const res = await req(`/actions/${action.id}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "complete" }),
-    });
-    expect(res.status).toBe(400);
+    expect((await res.json()).prompt).toBe("updated");
   });
 });
 
-describe("Project Routes with action_ids", () => {
-  it("POST /projects with goal_action_id", async () => {
-    const action = ctx.actionService.create({ prompt: "Goal" });
+describe("Project Routes", () => {
+  it("POST /projects creates project", async () => {
     const res = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "With Goal", goal_action_id: action.id }),
+      body: JSON.stringify({ name: "Route Project" }),
     });
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.goal_action_id).toBe(action.id);
+    expect(body.name).toBe("Route Project");
+    expect(body.status).toBe("active");
   });
 
-  it("GET /projects/:id includes action_id fields", async () => {
-    const action = ctx.actionService.create({ prompt: "Check fields" });
+  it("GET /projects/:id returns project", async () => {
     const create = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Check", design_action_id: action.id }),
+      body: JSON.stringify({ name: "Get Project" }),
     });
     const project = await create.json();
     const res = await req(`/projects/${project.id}`);
     const body = await res.json();
-    expect(body).toHaveProperty("goal_action_id");
-    expect(body).toHaveProperty("design_action_id");
-    expect(body).toHaveProperty("requirements_action_id");
-    expect(body.design_action_id).toBe(action.id);
+    expect(body.id).toBe(project.id);
+    expect(body.name).toBe("Get Project");
   });
 
-  it("PATCH /projects/:id sets action_id", async () => {
+  it("PATCH /projects/:id updates fields", async () => {
     const create = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Patch Test" }),
+      body: JSON.stringify({ name: "Patch Project" }),
     });
     const project = await create.json();
-    const action = ctx.actionService.create({ prompt: "Requirements" });
     const res = await req(`/projects/${project.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requirements_action_id: action.id }),
+      body: JSON.stringify({ name: "Patched", status: "archived" }),
     });
     expect(res.status).toBe(200);
-    expect((await res.json()).requirements_action_id).toBe(action.id);
+    const body = await res.json();
+    expect(body.name).toBe("Patched");
+    expect(body.status).toBe("archived");
   });
 });
 
-describe("Task Routes with action_ids", () => {
+describe("Task Routes", () => {
   let projectId: string;
 
   beforeAll(async () => {
@@ -215,44 +177,158 @@ describe("Task Routes with action_ids", () => {
     projectId = p.id;
   });
 
-  it("POST creates task with implementation_action_id", async () => {
-    const action = ctx.actionService.create({ prompt: "Implement" });
+  it("POST creates task", async () => {
     const res = await req(`/projects/${projectId}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ summary: "With action", implementation_action_id: action.id }),
+      body: JSON.stringify({ summary: "Route Task" }),
     });
     expect(res.status).toBe(201);
-    expect((await res.json()).implementation_action_id).toBe(action.id);
+    expect((await res.json()).summary).toBe("Route Task");
   });
 
-  it("PATCH sets validation_action_id", async () => {
+  it("GET lists tasks by project", async () => {
+    const res = await req(`/projects/${projectId}/tasks`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+  });
+
+  it("PATCH updates task", async () => {
     const create = await req(`/projects/${projectId}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ summary: "Patch task" }),
     });
     const task = await create.json();
-    const action = ctx.actionService.create({ prompt: "Validate" });
     const res = await req(`/projects/${projectId}/tasks/${task.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ validation_action_id: action.id }),
+      body: JSON.stringify({ summary: "Patched", status: "in_progress" }),
     });
     expect(res.status).toBe(200);
-    expect((await res.json()).validation_action_id).toBe(action.id);
+    const body = await res.json();
+    expect(body.summary).toBe("Patched");
+    expect(body.status).toBe("in_progress");
   });
+});
 
-  it("GET includes action_id fields", async () => {
-    const create = await req(`/projects/${projectId}/tasks`, {
+describe("Entity-Action Routes", () => {
+  let projectId: string;
+  let actionId: string;
+
+  beforeAll(async () => {
+    const pRes = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ summary: "Check fields" }),
+      body: JSON.stringify({ name: "EA Route Project" }),
     });
-    const task = await create.json();
-    const res = await req(`/projects/${projectId}/tasks/${task.id}`);
+    projectId = (await pRes.json()).id;
+
+    const aRes = await req("/actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: "EA route action" }),
+    });
+    actionId = (await aRes.json()).id;
+  });
+
+  it("POST /entity-actions creates link (201)", async () => {
+    const res = await req("/entity-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entity_type: "project",
+        entity_id: projectId,
+        role: "goal",
+        action_id: actionId,
+      }),
+    });
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body).toHaveProperty("implementation_action_id");
-    expect(body).toHaveProperty("validation_action_id");
+    expect(body.entity_type).toBe("project");
+    expect(body.entity_id).toBe(projectId);
+    expect(body.role).toBe("goal");
+    expect(body.action_id).toBe(actionId);
+    expect(body.status).toBe("todo");
+    expect(body.output).toBeNull();
+  });
+
+  it("POST /entity-actions duplicate role returns 409", async () => {
+    const res = await req("/entity-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entity_type: "project",
+        entity_id: projectId,
+        role: "goal",
+        action_id: actionId,
+      }),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it("POST /entity-actions invalid role for entity type returns 400", async () => {
+    const res = await req("/entity-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entity_type: "project",
+        entity_id: projectId,
+        role: "implementation",
+        action_id: actionId,
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("GET /entity-actions/project/:id returns list", async () => {
+    const res = await req(`/entity-actions/project/${projectId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toBeArray();
+    expect(body.length).toBeGreaterThanOrEqual(1);
+    expect(body[0].role).toBe("goal");
+  });
+
+  it("GET /entity-actions/project/:id/:role returns single", async () => {
+    const res = await req(`/entity-actions/project/${projectId}/goal`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.role).toBe("goal");
+    expect(body.action_id).toBe(actionId);
+  });
+
+  it("PATCH .../goal/status transitions status", async () => {
+    const res = await req(`/entity-actions/project/${projectId}/goal/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "in_progress" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("in_progress");
+  });
+
+  it("PATCH .../goal updates output", async () => {
+    const res = await req(`/entity-actions/project/${projectId}/goal`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ output: "Some output text" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.output).toBe("Some output text");
+  });
+
+  it("DELETE .../goal returns 204", async () => {
+    const res = await req(`/entity-actions/project/${projectId}/goal`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(204);
+
+    // Verify it's gone
+    const check = await req(`/entity-actions/project/${projectId}/goal`);
+    expect(check.status).toBe(404);
   });
 });

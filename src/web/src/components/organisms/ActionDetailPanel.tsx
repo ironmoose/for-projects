@@ -6,19 +6,21 @@ import { IconButton } from "../atoms/IconButton";
 import { Markdown } from "../molecules/Markdown";
 import { MetadataTable } from "../molecules/MetadataTable";
 import { Stack } from "../molecules/Stack";
-import type { Action, ActionStatus } from "../../types";
+import type { Action, ActionStatus, EntityAction } from "../../types";
 import { actionStatusLabel, actionValidTransitions } from "../../types";
 import { formatDate } from "../../utils";
 
 interface ActionDetailPanelProps {
   action: Action;
+  entityAction?: EntityAction | null;
   onClose: () => void;
   onStatusChange?: (status: ActionStatus) => Promise<void>;
 }
 
-export function ActionDetailPanel({ action, onClose, onStatusChange }: ActionDetailPanelProps) {
+export function ActionDetailPanel({ action, entityAction, onClose, onStatusChange }: ActionDetailPanelProps) {
   const { theme } = useTheme();
-  const transitions = actionValidTransitions[action.status];
+  const currentStatus: ActionStatus = entityAction?.status ?? "todo";
+  const transitions = actionValidTransitions[currentStatus];
   const [updating, setUpdating] = useState(false);
 
   const handleStatusChange = async (status: ActionStatus) => {
@@ -42,7 +44,7 @@ export function ActionDetailPanel({ action, onClose, onStatusChange }: ActionDet
       >
         <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
           <Stack direction="row" align="center" gap="sm" style={{ flex: 1, minWidth: 0, flexWrap: "wrap" }}>
-            <Badge variant={action.status}>{actionStatusLabel[action.status]}</Badge>
+            <Badge variant={currentStatus}>{actionStatusLabel[currentStatus]}</Badge>
             {action.agent && (
               <span
                 style={{
@@ -76,8 +78,8 @@ export function ActionDetailPanel({ action, onClose, onStatusChange }: ActionDet
           <span style={{ fontSize: theme.font.size.xs, fontWeight: 700, color: theme.color.textMuted, display: "block", marginBottom: theme.spacing.sm }}>
             Output
           </span>
-          {action.output ? (
-            <Markdown>{action.output}</Markdown>
+          {entityAction?.output ? (
+            <Markdown>{entityAction.output}</Markdown>
           ) : (
             <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
               No output yet
