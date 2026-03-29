@@ -1,4 +1,4 @@
-import type { Project, Task, Action, ActionStatus, EntityAction } from "./entities";
+import type { Project, Task, Action, ActionStatus, EntityAction, StartedActionResult, RunnerActionResult } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -47,6 +47,13 @@ export interface IActionService {
   update(id: string, input: UpdateActionInput): Action | null;
 }
 
+export interface EntityActionFilter {
+  entity_type?: string;
+  entity_id?: string;
+  role?: string;
+  status?: string;
+}
+
 export interface IEntityActionService {
   link(input: CreateEntityActionInput): EntityAction;
   unlink(entity_type: string, entity_id: string, role: string): boolean;
@@ -54,4 +61,11 @@ export interface IEntityActionService {
   updateOutput(entity_type: string, entity_id: string, role: string, output: string | null): EntityAction;
   findByEntity(entity_type: string, entity_id: string): EntityAction[];
   findByEntityAndRole(entity_type: string, entity_id: string, role: string): EntityAction | null;
+  findAll(limit?: number, offset?: number, filter?: EntityActionFilter): Paginated<EntityAction>;
+}
+
+export interface IRunnerService {
+  start(): StartedActionResult;
+  complete(entity_type: string, entity_id: string, role: string, output: string): RunnerActionResult;
+  fail(entity_type: string, entity_id: string, role: string, output?: string): RunnerActionResult;
 }

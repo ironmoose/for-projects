@@ -7,6 +7,7 @@ import {
   type ITaskService,
   type IActionService,
   type IEntityActionService,
+  type IRunnerService,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -14,6 +15,7 @@ export interface McpServiceContext {
   taskService: ITaskService;
   actionService: IActionService;
   entityActionService: IEntityActionService;
+  runnerService: IRunnerService;
 }
 
 function handle<T>(fn: () => T) {
@@ -37,7 +39,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, actionService, entityActionService } = ctx;
+  const { projectService, taskService, actionService, entityActionService, runnerService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -162,29 +164,23 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       handle(() => entityActionService.unlink(input.entity_type, input.entity_id, input.role))
   );
 
+  // -- Runner ---------------------------------------------------------
+
   server.registerTool(
-    "update_action_status",
+    "start_action",
     {
       description:
-        "Transition the status of an action linked to an entity. Valid transitions: todo→in_progress, in_progress→complete|failed, failed→todo.",
-      inputSchema: {
-        entity_type: z.enum(["project", "task"]),
-        entity_id: z.string().max(26),
-        role: z.enum(["goal", "design", "requirements", "implementation", "validation"]),
-        status: z.enum(["todo", "in_progress", "complete", "failed"]),
-      },
+        "Pick up the next eligible action and begin work. The server selects the highest-priority action whose dependencies are satisfied, transitions it to in_progress, and returns the action prompt and full entity context.",
+      inputSchema: {},
     },
-    (input) =>
-      handle(() =>
-        entityActionService.updateStatus(input.entity_type, input.entity_id, input.role, input.status)
-      )
+    () => handle(() => runnerService.start())
   );
 
   server.registerTool(
-    "update_action_output",
+    "complete_action",
     {
       description:
-        "Set or update the output of an action linked to an entity.",
+        "Mark an in-progress action as complete and submit its output.",
       inputSchema: {
         entity_type: z.enum(["project", "task"]),
         entity_id: z.string().max(26),
@@ -193,9 +189,23 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     (input) =>
-      handle(() =>
-        entityActionService.updateOutput(input.entity_type, input.entity_id, input.role, input.output)
-      )
+      handle(() => runnerService.complete(input.entity_type, input.entity_id, input.role, input.output))
+  );
+
+  server.registerTool(
+    "fail_action",
+    {
+      description:
+        "Mark an in-progress action as failed, with an optional reason.",
+      inputSchema: {
+        entity_type: z.enum(["project", "task"]),
+        entity_id: z.string().max(26),
+        role: z.enum(["goal", "design", "requirements", "implementation", "validation"]),
+        output: z.string().max(50000).optional(),
+      },
+    },
+    (input) =>
+      handle(() => runnerService.fail(input.entity_type, input.entity_id, input.role, input.output))
   );
 
   // -- Query ----------------------------------------------------------

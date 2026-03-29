@@ -14,3 +14,4 @@ export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
 export { ActionService } from "./services/actions";
 export { EntityActionService } from "./services/entity-actions";
+export { RunnerService } from "./services/runner";

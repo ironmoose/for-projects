@@ -1,6 +1,6 @@
 import type { EntityAction, ActionStatus } from "../entities";
 import type { CreateEntityActionInput } from "../inputs";
-import type { IEntityActionService } from "../services";
+import type { IEntityActionService, Paginated, EntityActionFilter } from "../services";
 import { ServiceError } from "../errors";
 import type { EntityActionRepository } from "../repositories/entity-actions";
 import type { ActionRepository } from "../repositories/actions";
@@ -130,5 +130,13 @@ export class EntityActionService implements IEntityActionService {
 
   findByEntityAndRole(entity_type: string, entity_id: string, role: string): EntityAction | null {
     return this.entityActionRepo.findByEntityAndRole(entity_type, entity_id, role);
+  }
+
+  findAll(limit?: number, offset?: number, filter?: EntityActionFilter): Paginated<EntityAction> {
+    const l = limit ?? 50;
+    const o = offset ?? 0;
+    const data = this.entityActionRepo.findAll(l, o, filter);
+    const total = this.entityActionRepo.count(filter);
+    return { data, total };
   }
 }

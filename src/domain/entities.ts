@@ -40,3 +40,17 @@ export interface EntityAction {
   created_at: string;
   updated_at: string;
 }
+
+export interface StartedActionResult {
+  entity_type: EntityType;
+  entity_id: string;
+  role: ActionRole;
+  prompt: string;
+}
+
+export interface RunnerActionResult {
+  entity_type: EntityType;
+  entity_id: string;
+  role: ActionRole;
+  status: ActionStatus;
+}

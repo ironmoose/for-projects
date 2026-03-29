@@ -9,6 +9,7 @@ import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
 import { ActionService } from "./services/actions";
 import { EntityActionService } from "./services/entity-actions";
+import { RunnerService } from "./services/runner";
 import { EventBus } from "./events";
 
 export interface AppContext {
@@ -18,6 +19,7 @@ export interface AppContext {
   taskService: TaskService;
   actionService: ActionService;
   entityActionService: EntityActionService;
+  runnerService: RunnerService;
 }
 
 export async function bootstrap(dbPath?: string): Promise<AppContext> {
@@ -35,6 +37,7 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
   const taskService = new TaskService(taskRepo, projectRepo, eventBus);
   const actionService = new ActionService(actionRepo, eventBus);
   const entityActionService = new EntityActionService(entityActionRepo, actionRepo, projectRepo, taskRepo, eventBus);
+  const runnerService = new RunnerService(entityActionRepo, actionRepo, projectRepo, taskRepo, eventBus);
 
-  return { db, eventBus, projectService, taskService, actionService, entityActionService };
+  return { db, eventBus, projectService, taskService, actionService, entityActionService, runnerService };
 }
