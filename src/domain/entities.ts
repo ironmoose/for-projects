@@ -17,52 +17,51 @@ export interface Task {
   updated_at: string;
 }
 
-export type ActionKind = 'plan' | 'goal' | 'requirements' | 'design';
-
-export type AgentType = 'tab:orchestrator' | 'tab:executor';
-
-export interface Action {
+export interface Agent {
   id: string;
-  kind: ActionKind;
+  identifier: string;
   prompt: string;
-  agent: AgentType;
+  agent: string;
+  enabled: number;
   created_at: string;
   updated_at: string;
 }
 
-export type ActionLogStatus = 'running' | 'done' | 'failed';
+export type RunStatus = 'running' | 'done' | 'failed' | 'todo' | 'cancelled';
 
 export type EntityType = 'project' | 'task';
 
-export interface ActionLogEntry {
+export interface Run {
   id: string;
-  action_id: string;
+  agent: string;
   entity_type: EntityType;
   entity_id: string;
-  status: ActionLogStatus;
+  status: RunStatus;
   output: string | null;
   started_at: string;
   finished_at: string | null;
 }
 
-export interface ActionLogStats {
-  by_status: { status: ActionLogStatus; count: number }[];
-  by_kind: { kind: ActionKind; count: number }[];
+export interface RunStats {
+  by_status: { status: RunStatus; count: number }[];
+  by_agent: { agent: string; count: number }[];
   total: number;
 }
 
-export interface ActionLogDailyStats {
+export interface RunDailyStats {
   date: string;
   status: string;
-  kind: string;
+  agent: string;
   count: number;
   avg_duration_ms: number | null;
 }
 
-export interface ActionLogSummaryStats {
+export interface RunSummaryStats {
   total: number;
   done: number;
   failed: number;
   running: number;
+  todo: number;
+  cancelled: number;
   avg_duration_ms: number | null;
 }
