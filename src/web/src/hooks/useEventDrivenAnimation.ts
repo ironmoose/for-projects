@@ -10,7 +10,7 @@ export type AnimationState = "idle" | "flash" | "glow" | "shake";
  * Returns the current animation state and the last event received.
  */
 export function useEventDrivenAnimation(
-  entityType: DomainEvent["entity"],
+  entityType: string,
   entityId: string | null,
 ): {
   animationState: AnimationState;
@@ -32,12 +32,10 @@ export function useEventDrivenAnimation(
         timerRef.current = null;
       }
 
-      const payload = event.payload as Record<string, unknown>;
-
       let state: AnimationState = "flash";
       let duration = 600;
 
-      if (event.action === "updated") {
+      if (event.type === "updated") {
         state = "flash";
         duration = 400;
       }
@@ -48,7 +46,7 @@ export function useEventDrivenAnimation(
         timerRef.current = null;
       }, duration);
     },
-    [entityType, reduced],
+    [reduced],
   );
 
   useVisualEvent(entityType, entityId, handleEvent);

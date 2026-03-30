@@ -40,7 +40,7 @@ export function useEventFanOut() {
  * Automatically unsubscribes on unmount.
  */
 export function useEntitySubscription(
-  entities: DomainEvent["entity"][],
+  entityTypes: string[],
   callback: () => void,
 ): void {
   const { subscribeEvents } = useEventSubscription();
@@ -49,9 +49,9 @@ export function useEntitySubscription(
 
   useEffect(() => {
     return subscribeEvents((event) => {
-      if (entities.includes(event.entity)) {
+      if (entityTypes.includes(event.entity_type)) {
         callbackRef.current();
       }
     });
-  }, [subscribeEvents, ...entities]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscribeEvents, ...entityTypes]); // eslint-disable-line react-hooks/exhaustive-deps
 }

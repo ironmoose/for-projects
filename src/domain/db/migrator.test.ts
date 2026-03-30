@@ -50,7 +50,7 @@ describe("migrator", () => {
     await runMigrations(db);
 
     const tables = getAllUserTables(db);
-    expect(tables.length).toBeGreaterThanOrEqual(3);
+    expect(tables).toEqual(["action_log", "actions", "projects", "tasks"]);
   });
 
   it("running migrations twice is idempotent", async () => {
@@ -61,8 +61,8 @@ describe("migrator", () => {
     const projectId = ulid();
     const now = new Date().toISOString();
     db.run(
-      "INSERT INTO projects (id, name, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [projectId, "Test", "desc", "active", now, now]
+      "INSERT INTO projects (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
+      [projectId, "Test", now, now]
     );
 
     const countBefore = (
@@ -86,6 +86,7 @@ describe("migrator", () => {
     expect(tables).toContain("projects");
     expect(tables).toContain("tasks");
     expect(tables).toContain("actions");
+    expect(tables).toContain("action_log");
   });
 
   it("foreign key: task with bad project_id fails", async () => {
@@ -95,8 +96,8 @@ describe("migrator", () => {
     const now = new Date().toISOString();
     expect(() =>
       db.run(
-        "INSERT INTO tasks (id, project_id, summary, context, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [ulid(), "nonexistent-project", "Bad task", "", "todo", now, now]
+        "INSERT INTO tasks (id, project_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+        [ulid(), "nonexistent-project", "Bad task", now, now]
       )
     ).toThrow();
   });

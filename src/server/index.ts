@@ -16,7 +16,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
 import { actionRoutes } from "./routes/actions";
-import { entityActionRoutes } from "./routes/entity-actions";
+import { actionLogRoutes } from "./routes/action-log";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
 
@@ -51,10 +51,10 @@ export class Server {
 
     // -- API (with logging) ----------------------------------------
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
-    app.route("/api/projects", taskRoutes(ctx.taskService));
     app.route("/api/projects", projectRoutes(ctx.projectService));
+    app.route("/api/tasks", taskRoutes(ctx.taskService));
     app.route("/api/actions", actionRoutes(ctx.actionService));
-    app.route("/api/entity-actions", entityActionRoutes(ctx.entityActionService));
+    app.route("/api/action-log", actionLogRoutes(ctx.actionLogService));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
     // -- MCP --------------------------------------------------------
@@ -112,8 +112,6 @@ export class Server {
       }
     });
 
-    logListening("tab-for-projects", host, port);
-
     Bun.serve({
       port,
       hostname: host,
@@ -137,6 +135,8 @@ export class Server {
         },
       },
     });
+
+    logListening("tab-for-projects", host, port);
   }
 }
 

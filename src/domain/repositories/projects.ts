@@ -1,73 +1,78 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
 import type { Project } from "../entities";
-import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
+
+export interface ProjectRow {
+  id: string;
+  title: string;
+  goal: string | null;
+  requirements: string | null;
+  design: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export class ProjectRepository {
   constructor(private db: Database) {}
 
-  findAll(limit: number, offset: number, status?: string): Project[] {
-    if (status) {
-      return this.db
-        .query("SELECT * FROM projects WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?")
-        .all(status, limit, offset) as Project[];
-    }
+  findById(id: string): Project | null {
+    return this.db.query("SELECT * FROM projects WHERE id = ?").get(id) as Project | null;
+  }
+
+  findMany(filter?: { limit?: number; offset?: number }): Project[] {
+    const limit = filter?.limit ?? 50;
+    const offset = filter?.offset ?? 0;
     return this.db
       .query("SELECT * FROM projects ORDER BY created_at DESC LIMIT ? OFFSET ?")
       .all(limit, offset) as Project[];
   }
 
-  count(status?: string): number {
-    if (status) {
-      return (this.db.query("SELECT COUNT(*) as total FROM projects WHERE status = ?").get(status) as { total: number }).total;
-    }
+  count(): number {
     return (this.db.query("SELECT COUNT(*) as total FROM projects").get() as { total: number }).total;
   }
 
-  findById(id: string): Project | null {
-    return (
-      this.db.query("SELECT * FROM projects WHERE id = ?").get(id) as Project | null
+  insertMany(rows: Omit<ProjectRow, "id" | "created_at" | "updated_at">[]): Project[] {
+    const stmt = this.db.query(
+      "INSERT INTO projects (id, title, goal, requirements, design, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
+    const now = new Date().toISOString();
+    const ids: string[] = [];
+
+    for (const row of rows) {
+      const id = ulid();
+      ids.push(id);
+      stmt.run(id, row.title, row.goal ?? null, row.requirements ?? null, row.design ?? null, now, now);
+    }
+
+    return ids.map((id) => this.findById(id)!);
   }
 
-  create(input: CreateProjectInput): Project {
-    const id = ulid();
+  updateMany(rows: { id: string; title?: string; goal?: string | null; requirements?: string | null; design?: string | null }[]): Project[] {
     const now = new Date().toISOString();
+    const results: Project[] = [];
 
-    this.db
-      .query(
-        `INSERT INTO projects (id, name, description, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        id,
-        input.name,
-        input.description ?? "",
-        input.status ?? "active",
-        now,
-        now
-      );
+    for (const row of rows) {
+      const existing = this.findById(row.id);
+      if (!existing) continue;
 
-    return this.findById(id)!;
+      const title = row.title !== undefined ? row.title : existing.title;
+      const goal = row.goal !== undefined ? row.goal : existing.goal;
+      const requirements = row.requirements !== undefined ? row.requirements : existing.requirements;
+      const design = row.design !== undefined ? row.design : existing.design;
+
+      this.db
+        .query("UPDATE projects SET title = ?, goal = ?, requirements = ?, design = ?, updated_at = ? WHERE id = ?")
+        .run(title, goal, requirements, design, now, row.id);
+
+      results.push(this.findById(row.id)!);
+    }
+
+    return results;
   }
 
-  update(id: string, input: UpdateProjectInput): Project | null {
-    const existing = this.findById(id);
-    if (!existing) return null;
-
-    const name = input.name ?? existing.name;
-    const description = input.description ?? existing.description;
-    const status = input.status ?? existing.status;
-    const now = new Date().toISOString();
-
-    this.db
-      .query(
-        `UPDATE projects
-         SET name = ?, description = ?, status = ?, updated_at = ?
-         WHERE id = ?`
-      )
-      .run(name, description, status, now, id);
-
-    return this.findById(id)!;
+  deleteMany(ids: string[]): void {
+    if (ids.length === 0) return;
+    const placeholders = ids.map(() => "?").join(", ");
+    this.db.query(`DELETE FROM projects WHERE id IN (${placeholders})`).run(...ids);
   }
 }

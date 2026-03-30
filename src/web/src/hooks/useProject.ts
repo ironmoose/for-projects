@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { apiFetch, ApiError } from "../api";
+import { ApiError, fetchProject as apiFetchProject, fetchTasks, createTasks, updateProjects } from "../api";
 import type { Project, Task } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
@@ -16,22 +16,20 @@ export function useProject(projectId: string) {
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
 
-  async function fetchTasks(pid: string) {
+  async function loadTasks(pid: string) {
     try {
-      const res = await apiFetch(`/api/projects/${encodeURIComponent(pid)}/tasks`);
-      const body = await res.json();
+      const body = await fetchTasks({ project_id: pid });
       setTasks(body.data);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to load tasks");
     }
   }
 
-  async function fetchProject() {
+  async function loadProject() {
     try {
-      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectIdRef.current)}`);
-      const p: Project = await res.json();
+      const p = await apiFetchProject(projectIdRef.current);
       setProject(p);
-      fetchTasks(p.id);
+      loadTasks(p.id);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
@@ -43,11 +41,11 @@ export function useProject(projectId: string) {
     }
   }
 
-  const fetchProjectRef = useRef(fetchProject);
-  fetchProjectRef.current = fetchProject;
+  const loadProjectRef = useRef(loadProject);
+  loadProjectRef.current = loadProject;
 
-  const throttledFetch = useThrottledCallback(() => {
-    fetchProjectRef.current();
+  const throttledLoad = useThrottledCallback(() => {
+    loadProjectRef.current();
   }, 200);
 
   useEffect(() => {
@@ -55,49 +53,28 @@ export function useProject(projectId: string) {
     setProject(null);
     setTasks([]);
     setLoading(true);
-    fetchProject();
+    loadProject();
 
     return subscribeEvents((event) => {
-      if (event.entity === "project" || event.entity === "task" || event.entity === "entity_action") {
-        throttledFetch();
+      if (event.entity_type === "project" || event.entity_type === "task" || event.entity_type === "action_log") {
+        throttledLoad();
       }
     });
-  }, [projectId, subscribeEvents, throttledFetch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId, subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function updateProjectStatus(status: Project["status"]) {
+  async function updateProject(input: { title?: string; goal?: string | null; requirements?: string | null; design?: string | null }) {
     if (!project) return;
     try {
-      await apiFetch(`/api/projects/${encodeURIComponent(project.id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
+      await updateProjects([{ id: project.id, ...input }]);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to update project status");
+      showToast(err instanceof ApiError ? err.message : "Failed to update project");
     }
   }
 
-  async function addTask(summary: string, context?: string, status?: string) {
+  async function addTask(title: string) {
     if (!project) return;
-    await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ summary, context, status }),
-    });
+    await createTasks([{ project_id: project.id, title }]);
   }
 
-  async function updateTaskStatus(taskId: string, status: Task["status"]) {
-    if (!project) return;
-    try {
-      await apiFetch(`/api/projects/${encodeURIComponent(project.id)}/tasks/${taskId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to update task");
-    }
-  }
-
-  return { project, tasks, notFound, loading, updateProjectStatus, addTask, updateTaskStatus };
+  return { project, tasks, notFound, loading, updateProject, addTask };
 }

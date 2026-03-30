@@ -1,35 +1,41 @@
-CREATE TABLE IF NOT EXISTS projects (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    status TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+CREATE TABLE projects (
+    id           TEXT PRIMARY KEY,
+    title        TEXT NOT NULL,
+    goal         TEXT,
+    requirements TEXT,
+    design       TEXT,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
+CREATE TABLE tasks (
+    id         TEXT PRIMARY KEY,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    summary TEXT NOT NULL,
-    context TEXT,
-    status TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    plan       TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_tasks_project_id ON tasks(project_id);
+
+CREATE TABLE actions (
+    id         TEXT PRIMARY KEY,
+    kind       TEXT NOT NULL UNIQUE CHECK (kind IN ('plan', 'goal', 'requirements', 'design')),
+    prompt     TEXT NOT NULL,
+    agent      TEXT NOT NULL CHECK (agent IN ('tab:orchestrator', 'tab:executor')),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS actions (
-    id TEXT PRIMARY KEY,
-    target TEXT NOT NULL,
-    rank INTEGER NOT NULL,
-    prompt TEXT NOT NULL,
-    agent TEXT,
-    status TEXT NOT NULL DEFAULT 'todo',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+CREATE TABLE action_log (
+    id          TEXT PRIMARY KEY,
+    action_id   TEXT NOT NULL REFERENCES actions(id),
+    entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'task')),
+    entity_id   TEXT NOT NULL,
+    status      TEXT NOT NULL CHECK (status IN ('running', 'done', 'failed')),
+    output      TEXT,
+    started_at  TEXT NOT NULL,
+    finished_at TEXT
 );
-
-CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-CREATE INDEX IF NOT EXISTS idx_actions_target ON actions(target);
-CREATE INDEX IF NOT EXISTS idx_actions_status ON actions(status);
-CREATE INDEX IF NOT EXISTS idx_actions_target_rank_status ON actions(target, rank, status);
+CREATE INDEX idx_action_log_entity ON action_log(entity_type, entity_id);
+CREATE INDEX idx_action_log_action ON action_log(action_id);

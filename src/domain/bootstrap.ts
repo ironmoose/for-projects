@@ -4,12 +4,11 @@ import { runMigrations } from "./db/migrator";
 import { ProjectRepository } from "./repositories/projects";
 import { TaskRepository } from "./repositories/tasks";
 import { ActionRepository } from "./repositories/actions";
-import { EntityActionRepository } from "./repositories/entity-actions";
+import { ActionLogRepository } from "./repositories/action-log";
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
 import { ActionService } from "./services/actions";
-import { EntityActionService } from "./services/entity-actions";
-import { RunnerService } from "./services/runner";
+import { ActionLogService } from "./services/action-log";
 import { EventBus } from "./events";
 
 export interface AppContext {
@@ -18,8 +17,7 @@ export interface AppContext {
   projectService: ProjectService;
   taskService: TaskService;
   actionService: ActionService;
-  entityActionService: EntityActionService;
-  runnerService: RunnerService;
+  actionLogService: ActionLogService;
 }
 
 export async function bootstrap(dbPath?: string): Promise<AppContext> {
@@ -29,15 +27,14 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
   const projectRepo = new ProjectRepository(db);
   const taskRepo = new TaskRepository(db);
   const actionRepo = new ActionRepository(db);
-  const entityActionRepo = new EntityActionRepository(db);
+  const actionLogRepo = new ActionLogRepository(db);
 
   const eventBus = new EventBus();
 
+  const projectService = new ProjectService(projectRepo, eventBus);
+  const taskService = new TaskService(taskRepo, projectRepo, eventBus);
   const actionService = new ActionService(actionRepo, eventBus);
-  const entityActionService = new EntityActionService(entityActionRepo, actionRepo, projectRepo, taskRepo, eventBus);
-  const projectService = new ProjectService(projectRepo, eventBus, actionService, entityActionService);
-  const taskService = new TaskService(taskRepo, projectRepo, eventBus, actionService, entityActionService);
-  const runnerService = new RunnerService(entityActionRepo, actionRepo, projectRepo, taskRepo, eventBus);
+  const actionLogService = new ActionLogService(actionLogRepo, actionRepo, eventBus);
 
-  return { db, eventBus, projectService, taskService, actionService, entityActionService, runnerService };
+  return { db, eventBus, projectService, taskService, actionService, actionLogService };
 }

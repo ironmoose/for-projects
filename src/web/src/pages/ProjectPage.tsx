@@ -1,11 +1,7 @@
 import { useCallback, useState } from "react";
 import {
-  ActionCard,
-  Badge,
-  Button,
   IconButton,
   Markdown,
-  Select,
   Stack,
   useTheme,
   DetailPageLayout,
@@ -14,53 +10,23 @@ import {
   BackButton,
   SectionLabel,
   MetadataTable,
+  AddItemInput,
   ListItem,
   EmptyState,
-  StatusDot,
-  CreateTaskOverlay,
 } from "../components";
-import { CreateActionOverlay } from "../components/organisms/CreateActionOverlay";
-import { ActionDetailPanel } from "../components/organisms/ActionDetailPanel";
-import { useProject, useEntityActions } from "../hooks";
+import { PresenceCharm } from "../components/molecules/PresenceCharm";
+import { useProject } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, updateEntityActionStatus } from "../api";
-import type { Task, Action, ActionStatus, EntityAction } from "../types";
-import { statusOptions, taskStatusOptions, statusLabel } from "../types";
+import { ApiError } from "../api";
+import type { Task } from "../types";
 import { formatDate } from "../utils";
 
 // ---------------------------------------------------------------------------
 // TaskDetailPanel
 // ---------------------------------------------------------------------------
 
-function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: string; onClose: () => void }) {
+function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void }) {
   const { theme } = useTheme();
-  const TASK_ROLES = ["implementation", "validation"] as const;
-  const { actionsMap: taskActionsMap } = useEntityActions("task", task.id);
-  const [showTaskCreateOverlay, setShowTaskCreateOverlay] = useState(false);
-  const [selectedTaskAction, setSelectedTaskAction] = useState<{ action: Action; entityAction: EntityAction } | null>(null);
-
-  const taskActionEntries = TASK_ROLES
-    .filter((r) => taskActionsMap[r] != null)
-    .map((r) => ({ role: r, ...taskActionsMap[r]! }));
-  const availableTaskRoles = TASK_ROLES.filter((r) => taskActionsMap[r] == null);
-
-  const statusColor =
-    task.status === "done" ? theme.color.success
-    : task.status === "in_progress" ? theme.color.tertiary
-    : theme.color.textFaint;
-
-  if (selectedTaskAction) {
-    return (
-      <ActionDetailPanel
-        action={selectedTaskAction.action}
-        entityAction={selectedTaskAction.entityAction}
-        onClose={() => setSelectedTaskAction(null)}
-        onStatusChange={async (status: ActionStatus) => {
-          await updateEntityActionStatus("task", task.id, selectedTaskAction.entityAction.role, status);
-        }}
-      />
-    );
-  }
 
   return (
     <SidePanelLayout onClose={onClose}>
@@ -73,19 +39,6 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
       >
         <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" align="center" gap="xs" style={{ marginBottom: theme.spacing.sm }}>
-              <StatusDot color={statusColor} />
-              <span
-                style={{
-                  fontSize: theme.font.size.xs,
-                  color: theme.color.textMuted,
-                  fontWeight: 500,
-                }}
-              >
-                {statusLabel[task.status]}
-              </span>
-            </Stack>
-
             <h2
               style={{
                 margin: 0,
@@ -97,7 +50,7 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
                 lineHeight: 1.3,
               }}
             >
-              {task.summary}
+              {task.title}
             </h2>
           </div>
           <IconButton icon="close" size={18} onClick={onClose} aria-label="Close detail panel" />
@@ -114,8 +67,9 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
           flexDirection: "column",
         }}
       >
-        {task.context ? (
-          <Markdown>{task.context}</Markdown>
+        <SectionLabel>Plan</SectionLabel>
+        {task.plan ? (
+          <Markdown>{task.plan}</Markdown>
         ) : (
           <p
             style={{
@@ -125,27 +79,9 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
               fontStyle: "italic",
             }}
           >
-            No context
+            No plan yet
           </p>
         )}
-
-        {/* Actions */}
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm, marginTop: theme.spacing.lg }}>
-          {taskActionEntries.map((entry) => (
-            <ActionCard
-              key={entry.role}
-              action={entry.action}
-              entityAction={entry.entityAction}
-              role={entry.role}
-              onClick={() => setSelectedTaskAction(entry)}
-            />
-          ))}
-          {availableTaskRoles.length > 0 && (
-            <Button variant="ghost" onClick={() => setShowTaskCreateOverlay(true)}>
-              + Add Action
-            </Button>
-          )}
-        </div>
 
         {/* Metadata */}
         <div
@@ -165,32 +101,8 @@ function TaskDetailPanel({ task, projectId, onClose }: { task: Task; projectId: 
           />
         </div>
       </div>
-
-      {showTaskCreateOverlay && availableTaskRoles.length > 0 && (
-        <CreateActionOverlay
-          entityType="task"
-          entityId={task.id}
-          availableRoles={[...availableTaskRoles]}
-          onCreated={() => {
-            // useEntityActions will refetch via WebSocket events
-          }}
-          onClose={() => setShowTaskCreateOverlay(false)}
-        />
-      )}
     </SidePanelLayout>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Task accent color
-// ---------------------------------------------------------------------------
-
-function taskAccentColor(theme: ReturnType<typeof useTheme>["theme"], status: Task["status"]): string {
-  switch (status) {
-    case "in_progress": return theme.color.tertiary;
-    case "done": return theme.color.success;
-    case "todo": return theme.color.textFaint;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -199,18 +111,28 @@ function taskAccentColor(theme: ReturnType<typeof useTheme>["theme"], status: Ta
 
 export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const { theme } = useTheme();
-  const { project, tasks, notFound, updateProjectStatus, addTask, updateTaskStatus } = useProject(projectId);
-  const { actionsMap: projectActionsMap } = useEntityActions("project", project?.id);
+  const { project, tasks, notFound, updateProject, addTask } = useProject(projectId);
   const { showToast } = useToastContext();
+  const [newTaskTitle, setNewTaskTitle] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [showCreateTask, setShowCreateTask] = useState(false);
-  const PROJECT_ROLES = ["goal", "design", "requirements"] as const;
-  const [showCreateOverlay, setShowCreateOverlay] = useState(false);
-  const [selectedAction, setSelectedAction] = useState<{ action: Action; entityAction: EntityAction } | null>(null);
+  const [addingTask, setAddingTask] = useState(false);
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
+
+  async function handleAddTask() {
+    if (!newTaskTitle.trim() || !project) return;
+    setAddingTask(true);
+    try {
+      await addTask(newTaskTitle);
+      setNewTaskTitle("");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add task");
+    } finally {
+      setAddingTask(false);
+    }
+  }
 
   if (notFound) {
     return (
@@ -234,26 +156,13 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     );
   }
 
-  // Compute project action entries
-  const projectActionEntries = PROJECT_ROLES
-    .filter((r) => projectActionsMap[r] != null)
-    .map((r) => ({ role: r, ...projectActionsMap[r]! }));
-  const availableProjectRoles = PROJECT_ROLES.filter((r) => projectActionsMap[r] == null);
-
-  // Sort: in_progress first, then todo, then done
-  const statusOrder: Record<Task["status"], number> = { in_progress: 0, todo: 1, done: 2 };
-  const sortedTasks = [...tasks].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
-
   return (
-    <DetailPageLayout expanded={!!selectedTask || !!selectedAction}>
+    <DetailPageLayout expanded={!!selectedTask}>
       <div style={{ flex: 1, minWidth: 0, padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`, boxSizing: "border-box", overflowY: "auto" }}>
         <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: theme.spacing.lg }} />
 
         <Stack direction="row" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.xl }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" align="center" gap="sm" style={{ marginBottom: theme.spacing.sm }}>
-              <Badge variant={project.status}>{project.status}</Badge>
-            </Stack>
             <h2
               style={{
                 margin: 0,
@@ -264,68 +173,62 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 color: theme.color.text,
               }}
             >
-              {project.name}
+              {project.title}
             </h2>
-            {project.description && (
-              <div style={{ marginTop: theme.spacing.sm }}>
-                <Markdown>{project.description}</Markdown>
-              </div>
+          </div>
+        </Stack>
+
+        {/* Markdown sections: goal, requirements, design */}
+        {([
+          { key: "goal" as const, label: "Goal" },
+          { key: "requirements" as const, label: "Requirements" },
+          { key: "design" as const, label: "Design" },
+        ]).map(({ key, label }) => (
+          <div key={key} style={{ marginBottom: theme.spacing.xl }}>
+            <SectionLabel>{label}</SectionLabel>
+            {project[key] ? (
+              <Markdown>{project[key]}</Markdown>
+            ) : (
+              <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
+                Not set
+              </p>
             )}
           </div>
-          <Select
-            value={project.status}
-            onChange={(e) => updateProjectStatus(e.target.value as typeof project.status)}
-            options={statusOptions}
-          />
-        </Stack>
+        ))}
 
-        {/* Actions */}
-        <div style={{ marginBottom: theme.spacing.xl, display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-          {projectActionEntries.map((entry) => (
-            <ActionCard
-              key={entry.role}
-              action={entry.action}
-              entityAction={entry.entityAction}
-              role={entry.role}
-              onClick={() => setSelectedAction(entry)}
-            />
-          ))}
-          {availableProjectRoles.length > 0 && (
-            <Button variant="ghost" onClick={() => setShowCreateOverlay(true)}>
-              + Add Action
-            </Button>
-          )}
-        </div>
-
+        {/* Tasks */}
         <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
-          <Stack direction="row" align="center" gap="sm">
-            <h3
-              style={{
-                margin: 0,
-                fontFamily: theme.font.headline,
-                fontSize: theme.font.size.lg,
-                fontWeight: 700,
-                color: theme.color.text,
-              }}
-            >
-              Tasks
-            </h3>
-            <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
-              {tasks.length} task{tasks.length !== 1 ? "s" : ""}
-            </span>
-          </Stack>
-          <Button variant="primary" size="sm" onClick={() => setShowCreateTask(true)}>
-            Add Task
-          </Button>
+          <h3
+            style={{
+              margin: 0,
+              fontFamily: theme.font.headline,
+              fontSize: theme.font.size.lg,
+              fontWeight: 700,
+              color: theme.color.text,
+            }}
+          >
+            Tasks
+          </h3>
+          <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
+            {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+          </span>
         </Stack>
+
+        <AddItemInput
+          placeholder="Add a task..."
+          value={newTaskTitle}
+          onChange={setNewTaskTitle}
+          onSubmit={handleAddTask}
+          loading={addingTask}
+          style={{ marginBottom: theme.spacing.xl }}
+        />
 
         <Stack gap="xs">
-          {sortedTasks.map((task) => (
+          {tasks.map((task) => (
             <ListItem
               key={task.id}
               onClick={() => setSelectedTaskId(task.id)}
               selected={selectedTaskId === task.id}
-              style={{ borderLeft: `3px solid ${taskAccentColor(theme, task.status)}` }}
             >
               <Stack direction="row" justify="space-between" align="center" gap="xs">
                 <span
@@ -333,29 +236,20 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                     flex: 1,
                     minWidth: 0,
                     fontSize: theme.font.size.sm,
-                    color: task.status === "done" ? theme.color.textFaint : theme.color.text,
-                    textDecoration: task.status === "done" ? "line-through" : undefined,
-                    opacity: task.status === "done" ? 0.5 : 1,
+                    color: theme.color.text,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {task.summary}
+                  {task.title}
                 </span>
-                <Stack direction="row" gap="xs" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                  <Select
-                    value={task.status}
-                    onChange={(e) => updateTaskStatus(task.id, e.target.value as Task["status"])}
-                    options={taskStatusOptions}
-                    style={{ fontSize: theme.font.size.xxs, padding: "0.1rem 0.25rem" }}
-                  />
-                </Stack>
+                <PresenceCharm active={task.plan != null} label="Has plan" color={theme.color.success} />
               </Stack>
             </ListItem>
           ))}
           {tasks.length === 0 && (
-            <EmptyState icon="task" message="No tasks yet." />
+            <EmptyState icon="task" message="No tasks yet. Add one above." />
           )}
         </Stack>
       </div>
@@ -363,40 +257,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       {selectedTask && (
         <TaskDetailPanel
           task={selectedTask}
-          projectId={projectId}
           onClose={handleClosePanel}
-        />
-      )}
-
-      {selectedAction && !selectedTask && (
-        <ActionDetailPanel
-          action={selectedAction.action}
-          entityAction={selectedAction.entityAction}
-          onClose={() => setSelectedAction(null)}
-          onStatusChange={async (status: ActionStatus) => {
-            await updateEntityActionStatus("project", project!.id, selectedAction.entityAction.role, status);
-          }}
-        />
-      )}
-
-      {showCreateOverlay && project && availableProjectRoles.length > 0 && (
-        <CreateActionOverlay
-          entityType="project"
-          entityId={project.id}
-          availableRoles={[...availableProjectRoles]}
-          onCreated={() => {
-            // useEntityActions will refetch via WebSocket events
-          }}
-          onClose={() => setShowCreateOverlay(false)}
-        />
-      )}
-
-      {showCreateTask && (
-        <CreateTaskOverlay
-          onCreated={async (summary, context, status) => {
-            await addTask(summary, context, status);
-          }}
-          onClose={() => setShowCreateTask(false)}
         />
       )}
     </DetailPageLayout>

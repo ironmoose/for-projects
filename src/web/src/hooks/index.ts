@@ -4,12 +4,9 @@ export { useEventSubscription, useEventFanOut, useEntitySubscription, EventSubsc
 export type { SubscribeEvents, EventSubscriptionContextValue } from "./useEventSubscription";
 export { useProjects } from "./useProjects";
 export { useProject } from "./useProject";
+export { useActionLog } from "./useActionLog";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";
 export { useEventDrivenAnimation } from "./useEventDrivenAnimation";
 export type { AnimationState } from "./useEventDrivenAnimation";
-export { useActivityCount } from "./useActivityCount";
-export { useEntityActions } from "./useEntityActions";
-export type { EntityActionEntry, EntityActionsMap } from "./useEntityActions";
-export { useActionsDashboard } from "./useActionsDashboard";

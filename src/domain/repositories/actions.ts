@@ -1,5 +1,15 @@
 import type { Database } from "bun:sqlite";
-import type { Action } from "../entities";
+import { ulid } from "ulid";
+import type { Action, ActionKind, AgentType } from "../entities";
+
+export interface ActionRow {
+  id: string;
+  kind: ActionKind;
+  prompt: string;
+  agent: AgentType;
+  created_at: string;
+  updated_at: string;
+}
 
 export class ActionRepository {
   constructor(private db: Database) {}
@@ -8,49 +18,23 @@ export class ActionRepository {
     return this.db.query("SELECT * FROM actions WHERE id = ?").get(id) as Action | null;
   }
 
-  create(action: {
-    id: string;
-    name: string;
-    prompt: string;
-    agent: string | null;
-    created_at: string;
-    updated_at: string;
-  }): void {
-    this.db
-      .query(
-        "INSERT INTO actions (id, name, prompt, agent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-      .run(
-        action.id,
-        action.name,
-        action.prompt,
-        action.agent,
-        action.created_at,
-        action.updated_at
-      );
+  findByKind(kind: ActionKind): Action | null {
+    return this.db.query("SELECT * FROM actions WHERE kind = ?").get(kind) as Action | null;
   }
 
-  update(
-    id: string,
-    fields: { name?: string; prompt?: string; agent?: string; updated_at: string }
-  ): void {
-    const existing = this.findById(id);
-    if (!existing) return;
-    const name = fields.name ?? existing.name;
-    const prompt = fields.prompt ?? existing.prompt;
-    const agent = fields.agent !== undefined ? fields.agent : existing.agent;
-    this.db
-      .query("UPDATE actions SET name = ?, prompt = ?, agent = ?, updated_at = ? WHERE id = ?")
-      .run(name, prompt, agent, fields.updated_at, id);
-  }
-
-  findAll(limit: number, offset: number, filters?: { agent?: string }): Action[] {
+  findMany(filter?: { limit?: number; offset?: number; kind?: ActionKind; agent?: AgentType }): Action[] {
+    const limit = filter?.limit ?? 50;
+    const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
     const params: (string | number)[] = [];
 
-    if (filters?.agent) {
+    if (filter?.kind) {
+      conditions.push("kind = ?");
+      params.push(filter.kind);
+    }
+    if (filter?.agent) {
       conditions.push("agent = ?");
-      params.push(filters.agent);
+      params.push(filter.agent);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
@@ -61,13 +45,17 @@ export class ActionRepository {
       .all(...params) as Action[];
   }
 
-  count(filters?: { agent?: string }): number {
+  count(filter?: { kind?: ActionKind; agent?: AgentType }): number {
     const conditions: string[] = [];
-    const params: (string | number)[] = [];
+    const params: string[] = [];
 
-    if (filters?.agent) {
+    if (filter?.kind) {
+      conditions.push("kind = ?");
+      params.push(filter.kind);
+    }
+    if (filter?.agent) {
       conditions.push("agent = ?");
-      params.push(filters.agent);
+      params.push(filter.agent);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
@@ -77,5 +65,49 @@ export class ActionRepository {
         .query(`SELECT COUNT(*) as total FROM actions ${where}`)
         .get(...params) as { total: number }
     ).total;
+  }
+
+  insertMany(rows: Omit<ActionRow, "id" | "created_at" | "updated_at">[]): Action[] {
+    const stmt = this.db.query(
+      "INSERT INTO actions (id, kind, prompt, agent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    const now = new Date().toISOString();
+    const ids: string[] = [];
+
+    for (const row of rows) {
+      const id = ulid();
+      ids.push(id);
+      stmt.run(id, row.kind, row.prompt, row.agent, now, now);
+    }
+
+    return ids.map((id) => this.findById(id)!);
+  }
+
+  updateMany(rows: { id: string; kind?: ActionKind; prompt?: string; agent?: AgentType }[]): Action[] {
+    const now = new Date().toISOString();
+    const results: Action[] = [];
+
+    for (const row of rows) {
+      const existing = this.findById(row.id);
+      if (!existing) continue;
+
+      const kind = row.kind !== undefined ? row.kind : existing.kind;
+      const prompt = row.prompt !== undefined ? row.prompt : existing.prompt;
+      const agent = row.agent !== undefined ? row.agent : existing.agent;
+
+      this.db
+        .query("UPDATE actions SET kind = ?, prompt = ?, agent = ?, updated_at = ? WHERE id = ?")
+        .run(kind, prompt, agent, now, row.id);
+
+      results.push(this.findById(row.id)!);
+    }
+
+    return results;
+  }
+
+  deleteMany(ids: string[]): void {
+    if (ids.length === 0) return;
+    const placeholders = ids.map(() => "?").join(", ");
+    this.db.query(`DELETE FROM actions WHERE id IN (${placeholders})`).run(...ids);
   }
 }

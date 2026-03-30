@@ -1,63 +1,49 @@
 import { Hono } from "hono";
-import type { IActionService } from "../../domain";
+import type {
+  IActionService,
+  CreateActionInput,
+  UpdateActionInput,
+} from "../../domain";
 
 export function actionRoutes(service: IActionService): Hono {
   const app = new Hono();
 
-  // POST /api/actions — create single action
-  app.post("/", async (c) => {
-    const { name, prompt, agent } = await c.req.json<{
-      name?: string;
-      prompt?: string;
-      agent?: string;
-    }>();
-    if (!name) return c.json({ error: "name is required" }, 400);
-    if (!prompt) return c.json({ error: "prompt is required" }, 400);
-    const action = service.create({ name, prompt, agent });
-    return c.json(action, 201);
-  });
-
-  // GET /api/actions — list actions (paginated, optional filters)
+  // GET /api/actions
   app.get("/", (c) => {
     const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
-    const limit =
-      Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
+    const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
-    const offset =
-      Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-    const agent = c.req.query("agent");
-    const filter: Record<string, string> = {};
-    if (agent) filter.agent = agent;
-    return c.json(
-      service.findAll(
-        limit,
-        offset,
-        Object.keys(filter).length ? filter : undefined,
-      ),
-    );
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+    const kind = c.req.query("kind");
+    const filter: { kind?: string; limit: number; offset: number } = { limit, offset };
+    if (kind) filter.kind = kind;
+    return c.json(service.list(filter));
   });
 
-  // GET /api/actions/:id — single action
+  // POST /api/actions
+  app.post("/", async (c) => {
+    const body = await c.req.json<CreateActionInput[]>();
+    const actions = service.create(body);
+    return c.json(actions, 201);
+  });
+
+  // GET /api/actions/:id
   app.get("/:id", (c) => {
-    const action = service.findById(c.req.param("id"));
-    if (!action) return c.json({ error: "action not found" }, 404);
-    return c.json(action);
+    return c.json(service.get(c.req.param("id")));
   });
 
-  // PATCH /api/actions/:id — update action fields
-  app.patch("/:id", async (c) => {
-    const { name, prompt, agent } = await c.req.json<{
-      name?: string;
-      prompt?: string;
-      agent?: string;
-    }>();
-    const updated = service.update(c.req.param("id"), {
-      name,
-      prompt,
-      agent,
-    });
-    if (!updated) return c.json({ error: "action not found" }, 404);
-    return c.json(updated);
+  // PATCH /api/actions
+  app.patch("/", async (c) => {
+    const body = await c.req.json<UpdateActionInput[]>();
+    const actions = service.update(body);
+    return c.json(actions);
+  });
+
+  // DELETE /api/actions
+  app.delete("/", async (c) => {
+    const { ids } = await c.req.json<{ ids: string[] }>();
+    service.remove(ids);
+    return c.body(null, 204);
   });
 
   return app;

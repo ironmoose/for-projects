@@ -1,80 +1,88 @@
 import type { Project } from "../entities";
 import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
-import type { IProjectService, IActionService, IEntityActionService, Paginated, ProjectFilter } from "../services";
+import type { IProjectService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
 import type { EventBus } from "../events";
-import { PROJECT_ACTION_TEMPLATES } from "../action-templates";
-
-const VALID_STATUSES = ["active", "archived"] as const;
 
 export class ProjectService implements IProjectService {
   constructor(
     private repo: ProjectRepository,
-    private eventBus?: EventBus,
-    private actionService?: IActionService,
-    private entityActionService?: IEntityActionService,
+    private eventBus: EventBus,
   ) {}
 
-  findAll(limit = 50, offset = 0, filter?: ProjectFilter): Paginated<Project> {
+  list(filter?: { limit?: number; offset?: number }): Paginated<Project> {
     return {
-      data: this.repo.findAll(limit, offset, filter?.status),
-      total: this.repo.count(filter?.status),
+      data: this.repo.findMany(filter),
+      total: this.repo.count(),
     };
   }
 
-  findById(id: string): Project | null {
-    return this.repo.findById(id);
+  get(id: string): Project {
+    const project = this.repo.findById(id);
+    if (!project) throw new ServiceError("project not found", 404);
+    return project;
   }
 
-  create(input: CreateProjectInput): Project {
-    if (!input.name?.trim()) {
-      throw new ServiceError("name is required", 400);
-    }
-    if (input.name.length > 255) {
-      throw new ServiceError("name must be 255 characters or fewer", 400);
-    }
-    if (input.description !== undefined && input.description.length > 10000) {
-      throw new ServiceError("description must be 10000 characters or fewer", 400);
-    }
-    if (input.status !== undefined && !VALID_STATUSES.includes(input.status as typeof VALID_STATUSES[number])) {
-      throw new ServiceError(`status must be one of: ${VALID_STATUSES.join(", ")}`, 400);
-    }
-    const project = this.repo.create(input);
-    this.eventBus?.emit({ entity: "project", action: "created", payload: project });
-
-    if (this.actionService && this.entityActionService) {
-      for (const template of PROJECT_ACTION_TEMPLATES) {
-        const action = this.actionService.create({ name: template.name, prompt: template.prompt, agent: template.agent });
-        this.entityActionService.link({
-          entity_type: "project",
-          entity_id: project.id,
-          role: template.role,
-          action_id: action.id,
-        });
+  create(inputs: CreateProjectInput[]): Project[] {
+    for (const input of inputs) {
+      if (!input.title?.trim()) {
+        throw new ServiceError("title is required", 400);
+      }
+      if (input.title.length > 255) {
+        throw new ServiceError("title must be 255 characters or fewer", 400);
+      }
+      if (input.goal !== undefined && input.goal.length > 50000) {
+        throw new ServiceError("goal must be 50000 characters or fewer", 400);
+      }
+      if (input.requirements !== undefined && input.requirements.length > 50000) {
+        throw new ServiceError("requirements must be 50000 characters or fewer", 400);
+      }
+      if (input.design !== undefined && input.design.length > 50000) {
+        throw new ServiceError("design must be 50000 characters or fewer", 400);
       }
     }
 
-    return project;
+    const rows = inputs.map((input) => ({
+      title: input.title,
+      goal: input.goal ?? null,
+      requirements: input.requirements ?? null,
+      design: input.design ?? null,
+    }));
+
+    const projects = this.repo.insertMany(rows);
+    this.eventBus.emit({ type: "created", entity_type: "project", payload: projects });
+    return projects;
   }
 
-  update(id: string, input: UpdateProjectInput): Project | null {
-    if (input.name !== undefined && !input.name.trim()) {
-      throw new ServiceError("name cannot be empty", 400);
+  update(inputs: UpdateProjectInput[]): Project[] {
+    for (const input of inputs) {
+      if (input.title !== undefined && !input.title.trim()) {
+        throw new ServiceError("title cannot be empty", 400);
+      }
+      if (input.title !== undefined && input.title.length > 255) {
+        throw new ServiceError("title must be 255 characters or fewer", 400);
+      }
+      if (input.goal !== undefined && input.goal !== null && input.goal.length > 50000) {
+        throw new ServiceError("goal must be 50000 characters or fewer", 400);
+      }
+      if (input.requirements !== undefined && input.requirements !== null && input.requirements.length > 50000) {
+        throw new ServiceError("requirements must be 50000 characters or fewer", 400);
+      }
+      if (input.design !== undefined && input.design !== null && input.design.length > 50000) {
+        throw new ServiceError("design must be 50000 characters or fewer", 400);
+      }
+      const existing = this.repo.findById(input.id);
+      if (!existing) throw new ServiceError(`project not found: ${input.id}`, 404);
     }
-    if (input.name !== undefined && input.name.length > 255) {
-      throw new ServiceError("name must be 255 characters or fewer", 400);
-    }
-    if (input.description !== undefined && input.description.length > 10000) {
-      throw new ServiceError("description must be 10000 characters or fewer", 400);
-    }
-    if (input.status !== undefined && !VALID_STATUSES.includes(input.status as typeof VALID_STATUSES[number])) {
-      throw new ServiceError(`status must be one of: ${VALID_STATUSES.join(", ")}`, 400);
-    }
-    const project = this.repo.update(id, input);
-    if (project) {
-      this.eventBus?.emit({ entity: "project", action: "updated", payload: project });
-    }
-    return project;
+
+    const projects = this.repo.updateMany(inputs);
+    this.eventBus.emit({ type: "updated", entity_type: "project", payload: projects });
+    return projects;
+  }
+
+  remove(ids: string[]): void {
+    this.repo.deleteMany(ids);
+    this.eventBus.emit({ type: "deleted", entity_type: "project", ids });
   }
 }

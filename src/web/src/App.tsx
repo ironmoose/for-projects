@@ -10,12 +10,13 @@ import {
 } from "./components";
 import type { NavItem } from "./components";
 import { useRealtimeEvents } from "./useRealtimeEvents";
-import { useHashRoute, useEventFanOut, EventSubscriptionContext, useActivityCount } from "./hooks";
+import { useHashRoute, useEventFanOut, EventSubscriptionContext } from "./hooks";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
+import { ActionsPage } from "./pages/ActionsPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
-import { ActionsPage } from "./pages/ActionsPage";
+
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
   { label: "Actions", path: "/actions" },
@@ -40,10 +41,10 @@ export function App() {
 
   const activePath = path.startsWith("/gallery")
     ? "/gallery"
-    : path.startsWith("/actions")
-    ? "/actions"
     : path.startsWith("/themes")
     ? "/themes"
+    : path.startsWith("/actions")
+    ? "/actions"
     : "/";
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
@@ -64,11 +65,11 @@ export function App() {
     if (path.startsWith("/gallery")) {
       return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;
     }
-    if (path.startsWith("/actions")) {
-      return <ActionsPage onNavigate={navigate} />;
-    }
     if (path.startsWith("/themes")) {
       return <ThemesPage />;
+    }
+    if (path.startsWith("/actions")) {
+      return <ActionsPage />;
     }
     if (projectId) {
       return <ProjectPage projectId={projectId} onBack={() => navigate("/")} />;
@@ -89,7 +90,7 @@ export function App() {
         <DisconnectionBanner connected={connected} />
         <main
           role="main"
-          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, overflow: "hidden", minHeight: 0 }}
+          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}
         >
           <ErrorBoundary>
             {renderView()}
@@ -100,13 +101,12 @@ export function App() {
   );
 }
 
-/** Renders inside EventSubscriptionContext so useActivityCount can access it. */
+/** Renders inside EventSubscriptionContext so hooks can access it. */
 function TrailingIndicators({ connected }: { connected: boolean }) {
   const { theme } = useTheme();
-  const activityCount = useActivityCount();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-      <ActivityIndicator count={activityCount} />
+      <ActivityIndicator count={0} />
       <ConnectionStatus connected={connected} />
     </div>
   );

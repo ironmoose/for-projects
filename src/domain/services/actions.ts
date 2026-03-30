@@ -1,59 +1,89 @@
-import { ulid } from "ulid";
-import type { Action } from "../entities";
+import type { Action, ActionKind, AgentType } from "../entities";
 import type { CreateActionInput, UpdateActionInput } from "../inputs";
-import type { ActionFilter, IActionService, Paginated } from "../services";
+import type { IActionService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { ActionRepository } from "../repositories/actions";
 import type { EventBus } from "../events";
 
-const VALID_AGENTS = ["research", "design", "implementation", "review"] as const;
+const VALID_KINDS: ActionKind[] = ['plan', 'goal', 'requirements', 'design'];
+const VALID_AGENTS: AgentType[] = ['tab:orchestrator', 'tab:executor'];
 
 export class ActionService implements IActionService {
   constructor(
     private actionRepo: ActionRepository,
-    private eventBus?: EventBus,
+    private eventBus: EventBus,
   ) {}
 
-  create(input: CreateActionInput): Action {
-    if (!input.name?.trim()) throw new ServiceError("name is required", 400);
-    if (!input.prompt?.trim()) throw new ServiceError("prompt is required", 400);
-    if (input.agent !== undefined && !VALID_AGENTS.includes(input.agent as typeof VALID_AGENTS[number])) {
-      throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
-    }
-    const id = ulid();
-    const now = new Date().toISOString();
-    this.actionRepo.create({
-      id, name: input.name.trim(), prompt: input.prompt, agent: input.agent ?? null,
-      created_at: now, updated_at: now,
-    });
-    const action = this.actionRepo.findById(id)!;
-    this.eventBus?.emit({ entity: "action", action: "created", payload: action });
-    return action;
-  }
-
-  update(id: string, input: UpdateActionInput): Action | null {
-    const existing = this.actionRepo.findById(id);
-    if (!existing) return null;
-    if (input.name !== undefined && !input.name.trim()) throw new ServiceError("name cannot be empty", 400);
-    if (input.prompt !== undefined && !input.prompt.trim()) throw new ServiceError("prompt cannot be empty", 400);
-    if (input.agent !== undefined && !VALID_AGENTS.includes(input.agent as typeof VALID_AGENTS[number])) {
-      throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
-    }
-    const now = new Date().toISOString();
-    this.actionRepo.update(id, { name: input.name?.trim(), prompt: input.prompt, agent: input.agent, updated_at: now });
-    const updated = this.actionRepo.findById(id)!;
-    this.eventBus?.emit({ entity: "action", action: "updated", payload: updated });
-    return updated;
-  }
-
-  findAll(limit = 50, offset = 0, filter?: ActionFilter): Paginated<Action> {
+  list(filter?: { limit?: number; offset?: number; kind?: ActionKind }): Paginated<Action> {
     return {
-      data: this.actionRepo.findAll(limit, offset, { agent: filter?.agent }),
-      total: this.actionRepo.count({ agent: filter?.agent }),
+      data: this.actionRepo.findMany(filter),
+      total: this.actionRepo.count(filter),
     };
   }
 
-  findById(id: string): Action | null {
-    return this.actionRepo.findById(id);
+  get(id: string): Action {
+    const action = this.actionRepo.findById(id);
+    if (!action) throw new ServiceError("action not found", 404);
+    return action;
+  }
+
+  create(inputs: CreateActionInput[]): Action[] {
+    for (const input of inputs) {
+      if (!VALID_KINDS.includes(input.kind)) {
+        throw new ServiceError(`kind must be one of: ${VALID_KINDS.join(", ")}`, 400);
+      }
+      if (!input.prompt?.trim()) {
+        throw new ServiceError("prompt is required", 400);
+      }
+      if (!VALID_AGENTS.includes(input.agent)) {
+        throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
+      }
+      const existing = this.actionRepo.findByKind(input.kind);
+      if (existing) {
+        throw new ServiceError(`action with kind '${input.kind}' already exists`, 409);
+      }
+    }
+
+    const rows = inputs.map((input) => ({
+      kind: input.kind,
+      prompt: input.prompt,
+      agent: input.agent,
+    }));
+
+    const actions = this.actionRepo.insertMany(rows);
+    this.eventBus.emit({ type: "created", entity_type: "action", payload: actions });
+    return actions;
+  }
+
+  update(inputs: UpdateActionInput[]): Action[] {
+    for (const input of inputs) {
+      const existing = this.actionRepo.findById(input.id);
+      if (!existing) throw new ServiceError(`action not found: ${input.id}`, 404);
+
+      if (input.kind !== undefined && !VALID_KINDS.includes(input.kind)) {
+        throw new ServiceError(`kind must be one of: ${VALID_KINDS.join(", ")}`, 400);
+      }
+      if (input.prompt !== undefined && !input.prompt.trim()) {
+        throw new ServiceError("prompt cannot be empty", 400);
+      }
+      if (input.agent !== undefined && !VALID_AGENTS.includes(input.agent)) {
+        throw new ServiceError(`agent must be one of: ${VALID_AGENTS.join(", ")}`, 400);
+      }
+      if (input.kind !== undefined && input.kind !== existing.kind) {
+        const conflict = this.actionRepo.findByKind(input.kind);
+        if (conflict) {
+          throw new ServiceError(`action with kind '${input.kind}' already exists`, 409);
+        }
+      }
+    }
+
+    const actions = this.actionRepo.updateMany(inputs);
+    this.eventBus.emit({ type: "updated", entity_type: "action", payload: actions });
+    return actions;
+  }
+
+  remove(ids: string[]): void {
+    this.actionRepo.deleteMany(ids);
+    this.eventBus.emit({ type: "deleted", entity_type: "action", ids });
   }
 }

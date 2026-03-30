@@ -1,4 +1,4 @@
-import type { Project, Task, Action, ActionStatus, EntityAction, StartedActionResult, RunnerActionResult } from "./entities";
+import type { Project, Task, Action, ActionLogEntry, ActionKind, AgentType, ActionLogStatus, EntityType } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -6,7 +6,8 @@ import type {
   UpdateTaskInput,
   CreateActionInput,
   UpdateActionInput,
-  CreateEntityActionInput,
+  CreateActionLogInput,
+  UpdateActionLogInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -14,58 +15,40 @@ export interface Paginated<T> {
   total: number;
 }
 
-export interface ProjectFilter {
-  status?: string;
-}
-
-export interface TaskFilter {
-  status?: string;
-}
-
 export interface IProjectService {
-  findAll(limit?: number, offset?: number, filter?: ProjectFilter): Paginated<Project>;
-  findById(id: string): Project | null;
-  create(input: CreateProjectInput): Project;
-  update(id: string, input: UpdateProjectInput): Project | null;
+  list(filter?: { limit?: number; offset?: number }): Paginated<Project>;
+  get(id: string): Project;
+  create(inputs: CreateProjectInput[]): Project[];
+  update(inputs: UpdateProjectInput[]): Project[];
+  remove(ids: string[]): void;
 }
 
 export interface ITaskService {
-  findById(id: string): Task | null;
-  findByProjectId(projectId: string, limit?: number, offset?: number, filter?: TaskFilter): Paginated<Task>;
-  create(input: CreateTaskInput): Task;
-  update(id: string, input: UpdateTaskInput): Task | null;
-}
-
-export interface ActionFilter {
-  agent?: string;
+  list(filter?: { limit?: number; offset?: number; project_id?: string }): Paginated<Task>;
+  get(id: string): Task;
+  create(inputs: CreateTaskInput[]): Task[];
+  update(inputs: UpdateTaskInput[]): Task[];
+  remove(ids: string[]): void;
 }
 
 export interface IActionService {
-  findAll(limit?: number, offset?: number, filter?: ActionFilter): Paginated<Action>;
-  findById(id: string): Action | null;
-  create(input: CreateActionInput): Action;
-  update(id: string, input: UpdateActionInput): Action | null;
+  list(filter?: { limit?: number; offset?: number; kind?: ActionKind }): Paginated<Action>;
+  get(id: string): Action;
+  create(inputs: CreateActionInput[]): Action[];
+  update(inputs: UpdateActionInput[]): Action[];
+  remove(ids: string[]): void;
 }
 
-export interface EntityActionFilter {
-  entity_type?: string;
-  entity_id?: string;
-  role?: string;
-  status?: string;
-}
-
-export interface IEntityActionService {
-  link(input: CreateEntityActionInput): EntityAction;
-  unlink(entity_type: string, entity_id: string, role: string): boolean;
-  updateStatus(entity_type: string, entity_id: string, role: string, status: ActionStatus): EntityAction;
-  updateOutput(entity_type: string, entity_id: string, role: string, output: string | null): EntityAction;
-  findByEntity(entity_type: string, entity_id: string): EntityAction[];
-  findByEntityAndRole(entity_type: string, entity_id: string, role: string): EntityAction | null;
-  findAll(limit?: number, offset?: number, filter?: EntityActionFilter): Paginated<EntityAction>;
-}
-
-export interface IRunnerService {
-  start(): StartedActionResult;
-  complete(entity_type: string, entity_id: string, role: string, output: string): RunnerActionResult;
-  fail(entity_type: string, entity_id: string, role: string, output?: string): RunnerActionResult;
+export interface IActionLogService {
+  list(filter?: {
+    limit?: number;
+    offset?: number;
+    entity_type?: EntityType;
+    entity_id?: string;
+    action_id?: string;
+    status?: ActionLogStatus;
+  }): Paginated<ActionLogEntry>;
+  get(id: string): ActionLogEntry;
+  create(inputs: CreateActionLogInput[]): ActionLogEntry[];
+  update(inputs: UpdateActionLogInput[]): ActionLogEntry[];
 }

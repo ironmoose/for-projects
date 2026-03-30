@@ -28,7 +28,7 @@ export { BackButton } from "./molecules/BackButton";
 export { HighlightOnChange } from "./molecules/HighlightOnChange";
 export { AnimatedList } from "./molecules/AnimatedList";
 export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
-export { ActionCard } from "./molecules/ActionCard";
+export { PresenceCharm } from "./molecules/PresenceCharm";
 
 // Organisms
 export { TopBar } from "./organisms/TopBar";
@@ -36,8 +36,6 @@ export type { NavItem } from "./organisms/TopBar";
 export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
-export { ActionDetailPanel } from "./organisms/ActionDetailPanel";
-export { CreateTaskOverlay } from "./organisms/CreateTaskOverlay";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

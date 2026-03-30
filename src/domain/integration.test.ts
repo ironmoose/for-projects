@@ -24,60 +24,64 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe("Project CRUD", () => {
-  it("creates a project with name + description", () => {
-    const project = ctx.projectService.create({
-      name: "My Project",
-      description: "A fine project",
-    });
+  it("creates a project with title", () => {
+    const [project] = ctx.projectService.create([{ title: "My Project" }]);
 
     expect(project.id).toBeTruthy();
     expect(project.id.length).toBeGreaterThan(10); // ULID
-    expect(project.name).toBe("My Project");
-    expect(project.description).toBe("A fine project");
-    expect(project.status).toBe("active");
+    expect(project.title).toBe("My Project");
+    expect(project.goal).toBeNull();
+    expect(project.requirements).toBeNull();
+    expect(project.design).toBeNull();
     expect(project.created_at).toBeTruthy();
     expect(project.updated_at).toBeTruthy();
-    // ISO 8601
     expect(() => new Date(project.created_at)).not.toThrow();
   });
 
-  it("updates project name, description, status", () => {
-    const project = ctx.projectService.create({ name: "Original" });
-    const updated = ctx.projectService.update(project.id, {
-      name: "Renamed",
-      description: "New desc",
-      status: "archived",
-    });
+  it("creates a project with optional fields", () => {
+    const [project] = ctx.projectService.create([{
+      title: "Full Project",
+      goal: "Ship it",
+      requirements: "Must be fast",
+      design: "Monolith",
+    }]);
 
-    expect(updated).not.toBeNull();
-    expect(updated!.name).toBe("Renamed");
-    expect(updated!.description).toBe("New desc");
-    expect(updated!.status).toBe("archived");
+    expect(project.title).toBe("Full Project");
+    expect(project.goal).toBe("Ship it");
+    expect(project.requirements).toBe("Must be fast");
+    expect(project.design).toBe("Monolith");
   });
 
-  it("lists projects filtered by status", () => {
-    // Create fresh projects with unique names
-    const active = ctx.projectService.create({ name: "Filter Active" });
-    const archived = ctx.projectService.create({ name: "Filter Archived" });
-    ctx.projectService.update(archived.id, { status: "archived" });
+  it("updates project title and optional fields", () => {
+    const [project] = ctx.projectService.create([{ title: "Original" }]);
+    const [updated] = ctx.projectService.update([{
+      id: project.id,
+      title: "Renamed",
+      goal: "New goal",
+    }]);
 
-    const activeResults = ctx.projectService.findAll(100, 0, { status: "active" });
-    const archivedResults = ctx.projectService.findAll(100, 0, { status: "archived" });
-
-    expect(activeResults.data.some((p) => p.id === active.id)).toBe(true);
-    expect(activeResults.data.some((p) => p.id === archived.id)).toBe(false);
-    expect(archivedResults.data.some((p) => p.id === archived.id)).toBe(true);
+    expect(updated.title).toBe("Renamed");
+    expect(updated.goal).toBe("New goal");
   });
 
-  it("archives a project by setting status to archived", () => {
-    const project = ctx.projectService.create({ name: "To Archive" });
-    expect(project.status).toBe("active");
+  it("lists projects", () => {
+    const result = ctx.projectService.list({ limit: 100, offset: 0 });
+    expect(result.data).toBeArray();
+    expect(result.total).toBeGreaterThanOrEqual(1);
+  });
 
-    const archived = ctx.projectService.update(project.id, { status: "archived" });
-    expect(archived!.status).toBe("archived");
+  it("rejects empty title", () => {
+    expect(() => ctx.projectService.create([{ title: "" }])).toThrow(ServiceError);
+  });
 
-    const fetched = ctx.projectService.findById(project.id);
-    expect(fetched!.status).toBe("archived");
+  it("rejects title over 255 chars", () => {
+    expect(() => ctx.projectService.create([{ title: "x".repeat(256) }])).toThrow(ServiceError);
+  });
+
+  it("throws 404 when updating nonexistent project", () => {
+    expect(() =>
+      ctx.projectService.update([{ id: "nonexistent", title: "X" }])
+    ).toThrow(ServiceError);
   });
 });
 
@@ -86,67 +90,70 @@ describe("Project CRUD", () => {
 // ---------------------------------------------------------------------------
 
 describe("Task CRUD", () => {
-  it("creates a task with summary + context under a project", () => {
-    const project = ctx.projectService.create({ name: "Task Project" });
-    const task = ctx.taskService.create({
+  it("creates a task with title under a project", () => {
+    const [project] = ctx.projectService.create([{ title: "Task Project" }]);
+    const [task] = ctx.taskService.create([{
       project_id: project.id,
-      summary: "Do the thing",
-      context: "Some context",
-    });
+      title: "Do the thing",
+    }]);
 
     expect(task.id).toBeTruthy();
     expect(task.project_id).toBe(project.id);
-    expect(task.summary).toBe("Do the thing");
-    expect(task.context).toBe("Some context");
-    expect(task.status).toBe("todo");
+    expect(task.title).toBe("Do the thing");
+    expect(task.plan).toBeNull();
     expect(task.created_at).toBeTruthy();
     expect(task.updated_at).toBeTruthy();
   });
 
-  it("updates task summary, context, status", () => {
-    const project = ctx.projectService.create({ name: "Task Update Project" });
-    const task = ctx.taskService.create({
+  it("creates a task with plan", () => {
+    const [project] = ctx.projectService.create([{ title: "Plan Project" }]);
+    const [task] = ctx.taskService.create([{
       project_id: project.id,
-      summary: "Original summary",
-    });
+      title: "Planned task",
+      plan: "Step 1, step 2",
+    }]);
 
-    // Update summary
-    const u1 = ctx.taskService.update(task.id, { summary: "New summary" });
-    expect(u1!.summary).toBe("New summary");
-
-    // Update context
-    const u2 = ctx.taskService.update(task.id, { context: "New context" });
-    expect(u2!.context).toBe("New context");
-
-    // Transition through statuses
-    const u3 = ctx.taskService.update(task.id, { status: "in_progress" });
-    expect(u3!.status).toBe("in_progress");
-
-    const u4 = ctx.taskService.update(task.id, { status: "done" });
-    expect(u4!.status).toBe("done");
+    expect(task.plan).toBe("Step 1, step 2");
   });
 
-  it("lists tasks filtered by project_id and status", () => {
-    const project = ctx.projectService.create({ name: "Task Filter Project" });
-    const t1 = ctx.taskService.create({ project_id: project.id, summary: "Task 1" });
-    const t2 = ctx.taskService.create({ project_id: project.id, summary: "Task 2" });
-    ctx.taskService.update(t2.id, { status: "done" });
+  it("updates task title and plan", () => {
+    const [project] = ctx.projectService.create([{ title: "Update Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Original",
+    }]);
 
-    const todoTasks = ctx.taskService.findByProjectId(project.id, 100, 0, { status: "todo" });
-    expect(todoTasks.data.length).toBe(1);
-    expect(todoTasks.data[0].id).toBe(t1.id);
+    const [u1] = ctx.taskService.update([{ id: task.id, title: "New title" }]);
+    expect(u1.title).toBe("New title");
 
-    const doneTasks = ctx.taskService.findByProjectId(project.id, 100, 0, { status: "done" });
-    expect(doneTasks.data.length).toBe(1);
-    expect(doneTasks.data[0].id).toBe(t2.id);
+    const [u2] = ctx.taskService.update([{ id: task.id, plan: "New plan" }]);
+    expect(u2.plan).toBe("New plan");
+  });
+
+  it("lists tasks filtered by project_id", () => {
+    const [project] = ctx.projectService.create([{ title: "Filter Project" }]);
+    ctx.taskService.create([
+      { project_id: project.id, title: "Task 1" },
+      { project_id: project.id, title: "Task 2" },
+    ]);
+
+    const result = ctx.taskService.list({ project_id: project.id, limit: 100, offset: 0 });
+    expect(result.data.length).toBe(2);
   });
 
   it("throws when creating task with nonexistent project_id", () => {
     expect(() =>
-      ctx.taskService.create({
+      ctx.taskService.create([{
         project_id: "nonexistent-id",
-        summary: "Orphan task",
-      })
+        title: "Orphan task",
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects empty title", () => {
+    const [project] = ctx.projectService.create([{ title: "Empty Title" }]);
+    expect(() =>
+      ctx.taskService.create([{ project_id: project.id, title: "" }])
     ).toThrow(ServiceError);
   });
 });
@@ -156,292 +163,177 @@ describe("Task CRUD", () => {
 // ---------------------------------------------------------------------------
 
 describe("Action CRUD", () => {
-  it("creates action with prompt only", () => {
-    const action = ctx.actionService.create({ name: "Test", prompt: "Test prompt" });
+  it("creates action with kind, prompt, and agent", () => {
+    const [action] = ctx.actionService.create([{
+      kind: "plan",
+      prompt: "Plan the work",
+      agent: "tab:orchestrator",
+    }]);
+
     expect(action.id).toBeTruthy();
-    expect(action.prompt).toBe("Test prompt");
-    expect(action.agent).toBeNull();
+    expect(action.kind).toBe("plan");
+    expect(action.prompt).toBe("Plan the work");
+    expect(action.agent).toBe("tab:orchestrator");
     expect(action.created_at).toBeTruthy();
   });
 
-  it("creates action with prompt + agent", () => {
-    const action = ctx.actionService.create({ name: "Test", prompt: "Research task", agent: "research" });
-    expect(action.agent).toBe("research");
+  it("rejects invalid kind", () => {
+    expect(() =>
+      ctx.actionService.create([{
+        kind: "invalid" as "plan",
+        prompt: "X",
+        agent: "tab:orchestrator",
+      }])
+    ).toThrow(ServiceError);
   });
 
   it("rejects invalid agent", () => {
-    expect(() => ctx.actionService.create({ name: "Test", prompt: "X", agent: "invalid" })).toThrow(ServiceError);
+    expect(() =>
+      ctx.actionService.create([{
+        kind: "goal",
+        prompt: "X",
+        agent: "invalid" as "tab:orchestrator",
+      }])
+    ).toThrow(ServiceError);
   });
 
   it("rejects empty prompt", () => {
-    expect(() => ctx.actionService.create({ name: "Test", prompt: "" })).toThrow(ServiceError);
+    expect(() =>
+      ctx.actionService.create([{
+        kind: "goal",
+        prompt: "",
+        agent: "tab:executor",
+      }])
+    ).toThrow(ServiceError);
   });
 
-  it("rejects empty name", () => {
-    expect(() => ctx.actionService.create({ name: "", prompt: "X" })).toThrow(ServiceError);
+  it("rejects duplicate kind", () => {
+    // "plan" was already created above
+    expect(() =>
+      ctx.actionService.create([{
+        kind: "plan",
+        prompt: "Duplicate",
+        agent: "tab:orchestrator",
+      }])
+    ).toThrow(ServiceError);
   });
 
   it("updates action prompt", async () => {
-    const action = ctx.actionService.create({ name: "Test", prompt: "Original" });
+    const [action] = ctx.actionService.create([{
+      kind: "goal",
+      prompt: "Original",
+      agent: "tab:executor",
+    }]);
     await new Promise((r) => setTimeout(r, 5));
-    const updated = ctx.actionService.update(action.id, { prompt: "Updated" });
-    expect(updated!.prompt).toBe("Updated");
-    expect(updated!.updated_at).not.toBe(action.updated_at);
+    const [updated] = ctx.actionService.update([{ id: action.id, prompt: "Updated" }]);
+    expect(updated.prompt).toBe("Updated");
+    expect(updated.updated_at).not.toBe(action.updated_at);
   });
 
-  it("update non-existent returns null", () => {
-    const result = ctx.actionService.update("nonexistent", { prompt: "X" });
-    expect(result).toBeNull();
+  it("throws 404 updating non-existent action", () => {
+    expect(() =>
+      ctx.actionService.update([{ id: "nonexistent", prompt: "X" }])
+    ).toThrow(ServiceError);
   });
 
-  it("findAll returns paginated results", () => {
-    const result = ctx.actionService.findAll(10, 0);
+  it("list returns paginated results", () => {
+    const result = ctx.actionService.list({ limit: 10, offset: 0 });
     expect(result.data).toBeArray();
     expect(typeof result.total).toBe("number");
   });
 
-  it("findAll with agent filter", () => {
-    const a = ctx.actionService.create({ name: "Test", prompt: "Agent test", agent: "design" });
-    const result = ctx.actionService.findAll(100, 0, { agent: "design" });
-    expect(result.data.some(x => x.id === a.id)).toBe(true);
+  it("list with kind filter", () => {
+    const result = ctx.actionService.list({ limit: 100, offset: 0, kind: "plan" });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.every((a) => a.kind === "plan")).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Entity Action — link, unlink, status transitions, output
+// Action Log
 // ---------------------------------------------------------------------------
 
-describe("EntityAction link/unlink", () => {
-  it("links an action to a project with a role", () => {
-    const action = ctx.actionService.create({ name: "Test", prompt: "Goal action" });
-    const project = ctx.projectService.create({ name: "EA Project" });
+describe("Action Log", () => {
+  it("creates an action log entry", () => {
+    const [project] = ctx.projectService.create([{ title: "Log Project" }]);
+    const [action] = ctx.actionService.create([{
+      kind: "requirements",
+      prompt: "Gather reqs",
+      agent: "tab:orchestrator",
+    }]);
 
-    // Canned actions auto-create a "goal" link; unlink it first
-    ctx.entityActionService.unlink("project", project.id, "goal");
-
-    const ea = ctx.entityActionService.link({
+    const [entry] = ctx.actionLogService.create([{
+      action_id: action.id,
       entity_type: "project",
       entity_id: project.id,
-      role: "goal",
-      action_id: action.id,
-    });
+    }]);
 
-    expect(ea.entity_type).toBe("project");
-    expect(ea.entity_id).toBe(project.id);
-    expect(ea.role).toBe("goal");
-    expect(ea.action_id).toBe(action.id);
-    expect(ea.status).toBe("todo");
-    expect(ea.output).toBeNull();
-    expect(ea.created_at).toBeTruthy();
+    expect(entry.id).toBeTruthy();
+    expect(entry.action_id).toBe(action.id);
+    expect(entry.entity_type).toBe("project");
+    expect(entry.entity_id).toBe(project.id);
+    expect(entry.status).toBe("running");
+    expect(entry.output).toBeNull();
+    expect(entry.started_at).toBeTruthy();
+    expect(entry.finished_at).toBeNull();
   });
 
-  it("links an action to a task with a role", () => {
-    const project = ctx.projectService.create({ name: "EA Task Project" });
-    const task = ctx.taskService.create({ project_id: project.id, summary: "EA Task" });
-    const action = ctx.actionService.create({ name: "Test", prompt: "Impl action" });
-
-    // Canned actions auto-create an "implementation" link; unlink it first
-    ctx.entityActionService.unlink("task", task.id, "implementation");
-
-    const ea = ctx.entityActionService.link({
-      entity_type: "task",
-      entity_id: task.id,
-      role: "implementation",
+  it("updates status and output", () => {
+    const [project] = ctx.projectService.create([{ title: "Update Log" }]);
+    const [action] = ctx.actionService.create([{
+      kind: "design",
+      prompt: "Design it",
+      agent: "tab:executor",
+    }]);
+    const [entry] = ctx.actionLogService.create([{
       action_id: action.id,
-    });
+      entity_type: "project",
+      entity_id: project.id,
+    }]);
 
-    expect(ea.entity_type).toBe("task");
-    expect(ea.role).toBe("implementation");
-    expect(ea.action_id).toBe(action.id);
+    const now = new Date().toISOString();
+    const [updated] = ctx.actionLogService.update([{
+      id: entry.id,
+      status: "done",
+      output: "Result text",
+      finished_at: now,
+    }]);
+
+    expect(updated.status).toBe("done");
+    expect(updated.output).toBe("Result text");
+    expect(updated.finished_at).toBe(now);
+  });
+
+  it("rejects nonexistent action_id", () => {
+    expect(() =>
+      ctx.actionLogService.create([{
+        action_id: "nonexistent",
+        entity_type: "project",
+        entity_id: "some-id",
+      }])
+    ).toThrow(ServiceError);
   });
 
   it("rejects invalid entity_type", () => {
-    const action = ctx.actionService.create({ name: "Test", prompt: "Bad type" });
+    const { data: [action] } = ctx.actionService.list({ limit: 1, offset: 0 });
     expect(() =>
-      ctx.entityActionService.link({
+      ctx.actionLogService.create([{
+        action_id: action.id,
         entity_type: "widget" as "project",
         entity_id: "x",
-        role: "goal",
-        action_id: action.id,
-      })
+      }])
     ).toThrow(ServiceError);
   });
 
-  it("rejects implementation role for project (400)", () => {
-    const project = ctx.projectService.create({ name: "Bad Role" });
-    const action = ctx.actionService.create({ name: "Test", prompt: "Bad role" });
-    try {
-      ctx.entityActionService.link({
-        entity_type: "project",
-        entity_id: project.id,
-        role: "implementation" as "goal",
-        action_id: action.id,
-      });
-      expect(true).toBe(false);
-    } catch (err) {
-      expect(err).toBeInstanceOf(ServiceError);
-      expect((err as ServiceError).statusCode).toBe(400);
-    }
-  });
-
-  it("rejects goal role for task (400)", () => {
-    const project = ctx.projectService.create({ name: "Task Bad Role" });
-    const task = ctx.taskService.create({ project_id: project.id, summary: "No goal" });
-    const action = ctx.actionService.create({ name: "Test", prompt: "Bad role task" });
-    try {
-      ctx.entityActionService.link({
-        entity_type: "task",
-        entity_id: task.id,
-        role: "goal" as "implementation",
-        action_id: action.id,
-      });
-      expect(true).toBe(false);
-    } catch (err) {
-      expect(err).toBeInstanceOf(ServiceError);
-      expect((err as ServiceError).statusCode).toBe(400);
-    }
-  });
-
-  it("rejects nonexistent entity", () => {
-    const action = ctx.actionService.create({ name: "Test", prompt: "No entity" });
+  it("throws 404 updating nonexistent entry", () => {
     expect(() =>
-      ctx.entityActionService.link({
-        entity_type: "project",
-        entity_id: "nonexistent",
-        role: "goal",
-        action_id: action.id,
-      })
+      ctx.actionLogService.update([{ id: "nonexistent", status: "done" }])
     ).toThrow(ServiceError);
   });
 
-  it("rejects nonexistent action", () => {
-    const project = ctx.projectService.create({ name: "No Action" });
-    expect(() =>
-      ctx.entityActionService.link({
-        entity_type: "project",
-        entity_id: project.id,
-        role: "goal",
-        action_id: "nonexistent",
-      })
-    ).toThrow(ServiceError);
-  });
-
-  it("rejects duplicate link (409)", () => {
-    const project = ctx.projectService.create({ name: "Dup Link" });
-    const action = ctx.actionService.create({ name: "Test", prompt: "Dup" });
-
-    // "design" is already auto-created by canned actions, so linking again should 409
-    try {
-      ctx.entityActionService.link({
-        entity_type: "project",
-        entity_id: project.id,
-        role: "design",
-        action_id: action.id,
-      });
-      expect(true).toBe(false); // should not reach
-    } catch (err) {
-      expect(err).toBeInstanceOf(ServiceError);
-      expect((err as ServiceError).statusCode).toBe(409);
-    }
-  });
-
-  it("unlinks an entity action", () => {
-    const project = ctx.projectService.create({ name: "Unlink EA" });
-
-    // "requirements" is auto-created by canned actions; unlink it directly
-    const deleted = ctx.entityActionService.unlink("project", project.id, "requirements");
-    expect(deleted).toBe(true);
-
-    const found = ctx.entityActionService.findByEntityAndRole("project", project.id, "requirements");
-    expect(found).toBeNull();
-  });
-
-  it("unlink returns false when nothing to delete", () => {
-    expect(ctx.entityActionService.unlink("project", "nonexistent", "goal")).toBe(false);
-  });
-
-  it("findByEntity returns all roles for an entity", () => {
-    const project = ctx.projectService.create({ name: "Multi Role" });
-
-    // Canned actions auto-create goal, design, requirements for projects
-    const eas = ctx.entityActionService.findByEntity("project", project.id);
-    expect(eas.length).toBe(3);
-    expect(eas.map(e => e.role).sort()).toEqual(["design", "goal", "requirements"]);
-  });
-});
-
-describe("EntityAction status transitions", () => {
-  it("transitions todo -> in_progress -> complete", () => {
-    const project = ctx.projectService.create({ name: "Status Project" });
-
-    // Canned actions auto-create "goal" link; use it directly
-    const ip = ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress");
-    expect(ip.status).toBe("in_progress");
-
-    const complete = ctx.entityActionService.updateStatus("project", project.id, "goal", "complete");
-    expect(complete.status).toBe("complete");
-  });
-
-  it("transitions in_progress -> failed -> todo (retry)", () => {
-    const project = ctx.projectService.create({ name: "Retry Project" });
-
-    // Canned actions auto-create "design" link; use it directly
-    ctx.entityActionService.updateStatus("project", project.id, "design", "in_progress");
-    const failed = ctx.entityActionService.updateStatus("project", project.id, "design", "failed");
-    expect(failed.status).toBe("failed");
-
-    const retried = ctx.entityActionService.updateStatus("project", project.id, "design", "todo");
-    expect(retried.status).toBe("todo");
-  });
-
-  it("rejects invalid transition todo → complete (400)", () => {
-    const project = ctx.projectService.create({ name: "Invalid Trans" });
-
-    // Canned actions auto-create "requirements" link; use it directly
-    try {
-      ctx.entityActionService.updateStatus("project", project.id, "requirements", "complete");
-      expect(true).toBe(false);
-    } catch (err) {
-      expect(err).toBeInstanceOf(ServiceError);
-      expect((err as ServiceError).statusCode).toBe(400);
-    }
-  });
-
-  it("rejects transition from complete", () => {
-    const project = ctx.projectService.create({ name: "Complete Lock" });
-
-    // Canned actions auto-create "goal" link; use it directly
-    ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress");
-    ctx.entityActionService.updateStatus("project", project.id, "goal", "complete");
-
-    expect(() => ctx.entityActionService.updateStatus("project", project.id, "goal", "todo")).toThrow(ServiceError);
-    expect(() => ctx.entityActionService.updateStatus("project", project.id, "goal", "in_progress")).toThrow(ServiceError);
-  });
-
-  it("throws 404 for nonexistent entity action", () => {
-    expect(() => ctx.entityActionService.updateStatus("project", "nope", "goal", "in_progress")).toThrow(ServiceError);
-  });
-});
-
-describe("EntityAction output", () => {
-  it("updates output on an entity action", () => {
-    const project = ctx.projectService.create({ name: "Output Project" });
-
-    // Canned actions auto-create "goal" link; use it directly
-    const updated = ctx.entityActionService.updateOutput("project", project.id, "goal", "Result text");
-    expect(updated.output).toBe("Result text");
-  });
-
-  it("nulls output", () => {
-    const project = ctx.projectService.create({ name: "Null Output" });
-
-    // Canned actions auto-create "design" link; use it directly
-    ctx.entityActionService.updateOutput("project", project.id, "design", "Something");
-    const nulled = ctx.entityActionService.updateOutput("project", project.id, "design", null);
-    expect(nulled.output).toBeNull();
-  });
-
-  it("throws 404 for nonexistent entity action", () => {
-    expect(() => ctx.entityActionService.updateOutput("project", "nope", "goal", "x")).toThrow(ServiceError);
+  it("list filters by entity_type and entity_id", () => {
+    const result = ctx.actionLogService.list({ limit: 100, offset: 0, entity_type: "project" });
+    expect(result.data).toBeArray();
+    expect(result.data.every((e) => e.entity_type === "project")).toBe(true);
   });
 });

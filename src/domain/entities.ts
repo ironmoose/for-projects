@@ -1,8 +1,9 @@
 export interface Project {
   id: string;
-  name: string;
-  description: string;
-  status: string;
+  title: string;
+  goal: string | null;
+  requirements: string | null;
+  design: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -10,63 +11,36 @@ export interface Project {
 export interface Task {
   id: string;
   project_id: string;
-  summary: string;
-  context: string;
-  status: string;
+  title: string;
+  plan: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type ActionStatus = 'todo' | 'in_progress' | 'complete' | 'failed';
+export type ActionKind = 'plan' | 'goal' | 'requirements' | 'design';
+
+export type AgentType = 'tab:orchestrator' | 'tab:executor';
 
 export interface Action {
   id: string;
-  name: string;
+  kind: ActionKind;
   prompt: string;
-  agent: string | null;
+  agent: AgentType;
   created_at: string;
   updated_at: string;
 }
+
+export type ActionLogStatus = 'running' | 'done' | 'failed';
 
 export type EntityType = 'project' | 'task';
-export type ActionRole = 'goal' | 'design' | 'requirements' | 'implementation' | 'validation';
 
-export interface EntityAction {
-  entity_type: EntityType;
-  entity_id: string;
-  role: ActionRole;
+export interface ActionLogEntry {
+  id: string;
   action_id: string;
-  status: ActionStatus;
-  output: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface StartedActionResult {
   entity_type: EntityType;
   entity_id: string;
-  role: ActionRole;
-  prompt: string;
-}
-
-export interface RunnerActionResult {
-  entity_type: EntityType;
-  entity_id: string;
-  role: ActionRole;
-  status: ActionStatus;
-}
-
-export interface EntityActionDashboardRow {
-  entity_type: string;
-  entity_id: string;
-  role: string;
-  action_id: string;
-  status: string;
+  status: ActionLogStatus;
   output: string | null;
-  created_at: string;
-  updated_at: string;
-  entity_name: string;
-  action_prompt: string;
-  action_agent: string;
-  project_id: string | null;
+  started_at: string;
+  finished_at: string | null;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { apiFetch, ApiError } from "../api";
+import { ApiError, createProjects, deleteProjects, fetchProjects, updateProjects } from "../api";
 import type { Project } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
@@ -11,12 +11,11 @@ export function useProjects() {
   const { subscribeEvents } = useEventSubscription();
   const { showToast } = useToastContext();
 
-  const fetchProjectsRef = useRef<(() => void) | undefined>(undefined);
+  const loadRef = useRef<(() => void) | undefined>(undefined);
 
-  async function fetchProjects() {
+  async function load() {
     try {
-      const res = await apiFetch("/api/projects");
-      const body = await res.json();
+      const body = await fetchProjects();
       setProjects(body.data);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to load projects");
@@ -25,26 +24,30 @@ export function useProjects() {
     }
   }
 
-  fetchProjectsRef.current = fetchProjects;
+  loadRef.current = load;
 
-  const throttledFetch = useThrottledCallback(() => {
-    fetchProjectsRef.current?.();
+  const throttledLoad = useThrottledCallback(() => {
+    loadRef.current?.();
   }, 200);
 
   useEffect(() => {
-    fetchProjects();
+    load();
     return subscribeEvents((event) => {
-      if (event.entity === "project") throttledFetch();
+      if (event.entity_type === "project") throttledLoad();
     });
-  }, [subscribeEvents, throttledFetch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function createProject(name: string, description: string) {
-    await apiFetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description }),
-    });
+  async function create(title: string) {
+    await createProjects([{ title }]);
   }
 
-  return { projects, loading, createProject };
+  async function update(id: string, input: { title?: string; goal?: string | null; requirements?: string | null; design?: string | null }) {
+    await updateProjects([{ id, ...input }]);
+  }
+
+  async function remove(ids: string[]) {
+    await deleteProjects(ids);
+  }
+
+  return { projects, loading, create, update, remove };
 }

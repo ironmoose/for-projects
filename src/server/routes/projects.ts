@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type {
   IProjectService,
-  ProjectFilter,
   CreateProjectInput,
   UpdateProjectInput,
 } from "../../domain";
@@ -15,32 +14,33 @@ export function projectRoutes(service: IProjectService): Hono {
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-    const filter: ProjectFilter = {};
-    const status = c.req.query("status");
-    if (status) filter.status = status;
-    return c.json(service.findAll(limit, offset, filter));
+    return c.json(service.list({ limit, offset }));
   });
 
   // POST /api/projects
   app.post("/", async (c) => {
-    const { name, description, status } = await c.req.json<CreateProjectInput>();
-    const project = service.create({ name, description, status });
-    return c.json(project, 201);
+    const body = await c.req.json<CreateProjectInput[]>();
+    const projects = service.create(body);
+    return c.json(projects, 201);
   });
 
   // GET /api/projects/:id
   app.get("/:id", (c) => {
-    const project = service.findById(c.req.param("id"));
-    if (!project) return c.json({ error: "project not found" }, 404);
-    return c.json(project);
+    return c.json(service.get(c.req.param("id")));
   });
 
-  // PATCH /api/projects/:id
-  app.patch("/:id", async (c) => {
-    const { name, description, status } = await c.req.json<UpdateProjectInput>();
-    const project = service.update(c.req.param("id"), { name, description, status });
-    if (!project) return c.json({ error: "project not found" }, 404);
-    return c.json(project);
+  // PATCH /api/projects
+  app.patch("/", async (c) => {
+    const body = await c.req.json<UpdateProjectInput[]>();
+    const projects = service.update(body);
+    return c.json(projects);
+  });
+
+  // DELETE /api/projects
+  app.delete("/", async (c) => {
+    const { ids } = await c.req.json<{ ids: string[] }>();
+    service.remove(ids);
+    return c.body(null, 204);
   });
 
   return app;

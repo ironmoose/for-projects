@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 export interface DomainEvent {
-  entity: "project" | "task" | "action" | "entity_action";
-  action: "created" | "updated" | "deleted" | "status_changed" | "tier_complete" | "linked" | "unlinked";
-  payload: Record<string, unknown>;
+  type: "created" | "updated" | "deleted";
+  entity_type: string;
+  payload?: unknown;
+  ids?: string[];
 }
 
 export function useRealtimeEvents(onEvent: (event: DomainEvent) => void): { connected: boolean } {

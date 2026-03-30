@@ -7,7 +7,7 @@ import type { DomainEvent } from "../useRealtimeEvents";
  * The callback receives the full DomainEvent for the component to inspect.
  */
 export function useVisualEvent(
-  entityType: DomainEvent["entity"],
+  entityType: string,
   entityId: string | null,
   callback: (event: DomainEvent) => void,
 ): void {
@@ -17,8 +17,8 @@ export function useVisualEvent(
 
   useEffect(() => {
     return subscribeEvents((event) => {
-      if (event.entity !== entityType) return;
-      if (entityId != null && (event.payload as Record<string, unknown>).id !== entityId) return;
+      if (event.entity_type !== entityType) return;
+      if (entityId != null && (event.payload as Record<string, unknown> | undefined)?.id !== entityId) return;
       callbackRef.current(event);
     });
   }, [subscribeEvents, entityType, entityId]);
