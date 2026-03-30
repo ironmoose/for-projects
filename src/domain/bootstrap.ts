@@ -3,12 +3,12 @@ import { createDatabase } from "./db/connection";
 import { runMigrations } from "./db/migrator";
 import { ProjectRepository } from "./repositories/projects";
 import { TaskRepository } from "./repositories/tasks";
-import { ActionRepository } from "./repositories/actions";
-import { ActionLogRepository } from "./repositories/action-log";
+import { AgentRepository } from "./repositories/agents";
+import { RunRepository } from "./repositories/runs";
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
-import { ActionService } from "./services/actions";
-import { ActionLogService } from "./services/action-log";
+import { AgentService } from "./services/agents";
+import { RunService } from "./services/runs";
 import { EventBus } from "./events";
 
 export interface AppContext {
@@ -16,8 +16,8 @@ export interface AppContext {
   eventBus: EventBus;
   projectService: ProjectService;
   taskService: TaskService;
-  actionService: ActionService;
-  actionLogService: ActionLogService;
+  agentService: AgentService;
+  runService: RunService;
 }
 
 export async function bootstrap(dbPath?: string): Promise<AppContext> {
@@ -26,15 +26,15 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
 
   const projectRepo = new ProjectRepository(db);
   const taskRepo = new TaskRepository(db);
-  const actionRepo = new ActionRepository(db);
-  const actionLogRepo = new ActionLogRepository(db);
+  const agentRepo = new AgentRepository(db);
+  const runRepo = new RunRepository(db);
 
   const eventBus = new EventBus();
 
   const projectService = new ProjectService(projectRepo, eventBus);
   const taskService = new TaskService(taskRepo, projectRepo, eventBus);
-  const actionService = new ActionService(actionRepo, eventBus);
-  const actionLogService = new ActionLogService(actionLogRepo, actionRepo, eventBus);
+  const agentService = new AgentService(agentRepo, eventBus);
+  const runService = new RunService(runRepo, agentRepo, eventBus);
 
-  return { db, eventBus, projectService, taskService, actionService, actionLogService };
+  return { db, eventBus, projectService, taskService, agentService, runService };
 }
