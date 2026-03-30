@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
+  Card,
   Icon,
   Input,
   useTheme,
@@ -8,91 +9,85 @@ import {
   PageHeader,
   CreateForm,
   EmptyState,
-  HighlightOnChange,
 } from "../components";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError } from "../api";
+import { ApiError, fetchTasks } from "../api";
 import type { Project } from "../types";
 import { formatDate } from "../utils";
 
 // ---------------------------------------------------------------------------
-// ProjectTableRow
+// ProjectCard
 // ---------------------------------------------------------------------------
 
-function ProjectTableRow({
+function ProjectCard({
   project,
+  taskCount,
   onClick,
 }: {
   project: Project;
+  taskCount: number;
   onClick: () => void;
 }) {
   const { theme } = useTheme();
 
   return (
-    <HighlightOnChange trackValue={project.updated_at}>
-      <div
-        onClick={onClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClick();
-          }
+    <Card
+      hover
+      variant="default"
+      padding="lg"
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      style={{
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        gap: theme.spacing.md,
+      }}
+    >
+      <span
+        style={{
+          fontSize: theme.font.size.sm,
+          fontWeight: 600,
+          color: theme.color.text,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
+      >
+        {project.title}
+      </span>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <PresenceCharm active={project.goal != null} label="Goal" color={theme.color.success} />
+        <PresenceCharm active={project.requirements != null} label="Requirements" color={theme.color.info ?? theme.color.primary} />
+        <PresenceCharm active={project.design != null} label="Design" color={theme.color.tertiary} />
+      </div>
+
+      <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: theme.spacing.md,
-          height: theme.layout.tableRowHeight,
-          padding: `0 ${theme.spacing.lg}`,
-          background: theme.color.surfaceContainer,
-          borderBottom: `1px solid ${theme.color.borderSubtle}`,
-          cursor: "pointer",
-          transition: `background ${theme.animation.duration.fast} ${theme.animation.easing.default}`,
+          justifyContent: "space-between",
+          marginTop: "auto",
+          fontSize: theme.font.size.xxs,
+          color: theme.color.textFaint,
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = theme.color.surfaceContainerHigh; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = theme.color.surfaceContainer; }}
       >
-        <span
-          style={{
-            flex: "1 1 auto",
-            minWidth: 0,
-            fontSize: theme.font.size.sm,
-            fontWeight: 600,
-            color: theme.color.text,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {project.title}
-        </span>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          <PresenceCharm active={project.goal != null} label="Goal" color={theme.color.success} />
-          <PresenceCharm active={project.requirements != null} label="Requirements" color={theme.color.info ?? theme.color.primary} />
-          <PresenceCharm active={project.design != null} label="Design" color={theme.color.tertiary} />
-        </div>
-
-        <span
-          style={{
-            flexShrink: 0,
-            fontSize: theme.font.size.xxs,
-            color: theme.color.textFaint,
-            fontFamily: theme.font.mono,
-            minWidth: 100,
-            textAlign: "right" as const,
-          }}
-        >
+        <span>{taskCount} {taskCount === 1 ? "task" : "tasks"}</span>
+        <span style={{ fontFamily: theme.font.mono }}>
           {formatDate(project.updated_at)}
         </span>
-
-        <Icon name="chevron_right" size={16} style={{ color: theme.color.textFaint, flexShrink: 0 }} />
       </div>
-    </HighlightOnChange>
+    </Card>
   );
 }
 
@@ -121,6 +116,19 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
       setCreating(false);
     }
   }
+
+  const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+    fetchTasks({ limit: 200 }).then((body) => {
+      const counts: Record<string, number> = {};
+      for (const t of body.data) {
+        counts[t.project_id] = (counts[t.project_id] ?? 0) + 1;
+      }
+      setTaskCounts(counts);
+    }).catch(() => {});
+  }, [projects]);
 
   const sorted = [...projects].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 
@@ -159,15 +167,16 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
 
       <div
         style={{
-          borderRadius: theme.radius.lg,
-          overflow: "hidden",
-          border: `1px solid ${theme.color.borderSubtle}`,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: theme.spacing.lg,
         }}
       >
         {sorted.map((p) => (
-          <ProjectTableRow
+          <ProjectCard
             key={p.id}
             project={p}
+            taskCount={taskCounts[p.id] ?? 0}
             onClick={() => onOpenProject(p.id)}
           />
         ))}
