@@ -1,17 +1,19 @@
 import { Input, Select, Button, useTheme } from "..";
-import type { ActionLogFilters } from "../../hooks/useActionLogSearch";
+import type { RunFilters } from "../../hooks/useRunSearch";
 
-interface ActionLogFilterBarProps {
-  filters: ActionLogFilters;
-  onFilterChange: <K extends keyof ActionLogFilters>(key: K, value: ActionLogFilters[K]) => void;
+interface RunFilterBarProps {
+  filters: RunFilters;
+  onFilterChange: <K extends keyof RunFilters>(key: K, value: RunFilters[K]) => void;
   onClear: () => void;
 }
 
 const statusOptions = [
   { value: "", label: "All statuses" },
+  { value: "todo", label: "Todo" },
   { value: "running", label: "Running" },
   { value: "done", label: "Done" },
   { value: "failed", label: "Failed" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 const entityTypeOptions = [
@@ -20,21 +22,13 @@ const entityTypeOptions = [
   { value: "task", label: "Task" },
 ];
 
-const actionKindOptions = [
-  { value: "", label: "All kinds" },
-  { value: "plan", label: "Plan" },
-  { value: "goal", label: "Goal" },
-  { value: "requirements", label: "Requirements" },
-  { value: "design", label: "Design" },
-];
-
-export function ActionLogFilterBar({ filters, onFilterChange, onClear }: ActionLogFilterBarProps) {
+export function RunFilterBar({ filters, onFilterChange, onClear }: RunFilterBarProps) {
   const { theme } = useTheme();
 
   const hasFilters =
     filters.status !== "" ||
     filters.entity_type !== "" ||
-    filters.action_kind !== "" ||
+    filters.agent_identifier !== "" ||
     filters.search !== "" ||
     filters.started_after !== "" ||
     filters.started_before !== "";
@@ -66,11 +60,13 @@ export function ActionLogFilterBar({ filters, onFilterChange, onClear }: ActionL
         onChange={(e) => onFilterChange("entity_type", e.target.value)}
         options={entityTypeOptions}
       />
-      <Select
-        value={filters.action_kind}
-        onChange={(e) => onFilterChange("action_kind", e.target.value)}
-        options={actionKindOptions}
-      />
+      <div style={{ flex: "0 1 180px", minWidth: 0 }}>
+        <Input
+          placeholder="Agent identifier..."
+          value={filters.agent_identifier}
+          onChange={(e) => onFilterChange("agent_identifier", e.target.value)}
+        />
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
         <label
           style={{

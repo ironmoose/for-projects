@@ -15,7 +15,7 @@ import {
   ActivitySection,
   useTheme,
 } from "../components";
-import { useActionLogStats } from "../hooks";
+import { useRunStats } from "../hooks";
 import { useActivityFeed } from "../hooks/useActivityFeed";
 
 const statusMeta: Record<string, { themeKey: "success" | "warning" | "danger" }> = {
@@ -24,9 +24,9 @@ const statusMeta: Record<string, { themeKey: "success" | "warning" | "danger" }>
   failed: { themeKey: "danger" },
 };
 
-export function ActionsDashboardPage() {
+export function AgentsDashboardPage() {
   const { theme } = useTheme();
-  const { stats, loading } = useActionLogStats();
+  const { stats, loading } = useRunStats();
   const activity = useActivityFeed();
 
   // Derive by_status from summary
@@ -34,22 +34,24 @@ export function ActionsDashboardPage() {
     if (!stats?.summary) return [];
     const s = stats.summary;
     return [
+      { status: "todo", count: s.todo },
       { status: "running", count: s.running },
       { status: "done", count: s.done },
       { status: "failed", count: s.failed },
+      { status: "cancelled", count: s.cancelled },
     ].filter((r) => r.count > 0);
   }, [stats]);
 
-  // Derive by_kind from daily data
-  const byKind = useMemo(() => {
+  // Derive by_agent from daily data
+  const byAgent = useMemo(() => {
     if (!stats?.daily) return [];
     const counts: Record<string, number> = {};
     for (const d of stats.daily) {
-      counts[d.kind] = (counts[d.kind] ?? 0) + d.count;
+      counts[d.agent] = (counts[d.agent] ?? 0) + d.count;
     }
     return Object.entries(counts)
-      .map(([kind, count]) => ({ kind, count }))
-      .sort((a, b) => a.kind.localeCompare(b.kind));
+      .map(([agent, count]) => ({ agent, count }))
+      .sort((a, b) => a.agent.localeCompare(b.agent));
   }, [stats]);
 
   const total = stats?.summary?.total ?? 0;
@@ -58,8 +60,8 @@ export function ActionsDashboardPage() {
   return (
     <ListPageLayout>
       <PageHeader
-        title="Actions Dashboard"
-        subtitle="Overview of action log activity."
+        title="Agents Dashboard"
+        subtitle="Overview of agent run activity."
         style={{ marginBottom: theme.spacing.xl }}
       />
 
@@ -92,7 +94,7 @@ export function ActionsDashboardPage() {
           </div>
           {/* Row 2 */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.lg }}>
-            <ChartCard title="By Kind" style={{ flex: "1 1 340px", minWidth: 0 }}>
+            <ChartCard title="By Agent" style={{ flex: "1 1 340px", minWidth: 0 }}>
               <KindBreakdownChart data={stats.daily} width={380} height={140} />
             </ChartCard>
             <ChartCard title="Avg Duration / Day" style={{ flex: "1 1 340px", minWidth: 0 }}>
@@ -103,7 +105,7 @@ export function ActionsDashboardPage() {
       ) : (
         <EmptyState
           icon="bar_chart"
-          message="No action log data yet. Run some actions to see charts."
+          message="No run data yet. Run some agents to see charts."
           variant="card"
           style={{ marginBottom: theme.spacing.xl }}
         />
@@ -136,7 +138,7 @@ export function ActionsDashboardPage() {
         <div style={{ display: "flex", gap: theme.spacing.md, flexWrap: "wrap" }}>
           {loading ? (
             <>
-              {["running", "done", "failed"].map((s) => (
+              {["todo", "running", "done", "failed", "cancelled"].map((s) => (
                 <Card key={s} style={{ flex: "1 1 140px", minWidth: 140 }}>
                   <Skeleton width={80} height={16} />
                   <div style={{ marginTop: theme.spacing.sm }}>
@@ -174,15 +176,15 @@ export function ActionsDashboardPage() {
         </div>
       </div>
 
-      {/* By Kind */}
+      {/* By Agent */}
       <div>
         <div style={{ fontSize: theme.font.size.sm, fontWeight: 600, color: theme.color.textMuted, marginBottom: theme.spacing.sm }}>
-          By Kind
+          By Agent
         </div>
         <div style={{ display: "flex", gap: theme.spacing.md, flexWrap: "wrap" }}>
           {loading ? (
             <>
-              {["plan", "goal", "requirements", "design"].map((k) => (
+              {["agent-1", "agent-2"].map((k) => (
                 <Card key={k} style={{ flex: "1 1 140px", minWidth: 140 }}>
                   <Skeleton width={80} height={16} />
                   <div style={{ marginTop: theme.spacing.sm }}>
@@ -193,17 +195,17 @@ export function ActionsDashboardPage() {
             </>
           ) : (
             <>
-              {byKind.map(({ kind, count }) => (
-                <Card key={kind} style={{ flex: "1 1 140px", minWidth: 140 }}>
+              {byAgent.map(({ agent, count }) => (
+                <Card key={agent} style={{ flex: "1 1 140px", minWidth: 140 }}>
                   <div style={{ marginBottom: theme.spacing.xs }}>
-                    <Badge variant="default">{kind}</Badge>
+                    <Badge variant="default">{agent}</Badge>
                   </div>
                   <div style={{ fontSize: theme.font.size.xl, fontWeight: 600, color: theme.color.text }}>
                     {count}
                   </div>
                 </Card>
               ))}
-              {byKind.length === 0 && (
+              {byAgent.length === 0 && (
                 <Card style={{ flex: "1 1 140px", minWidth: 140 }}>
                   <span style={{ fontSize: theme.font.size.sm, color: theme.color.textMuted }}>No data</span>
                 </Card>

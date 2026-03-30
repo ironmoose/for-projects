@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { ApiError, fetchActionLogStats } from "../api";
-import type { ActionLogStatsResponse } from "../types";
+import { ApiError, fetchRunStats } from "../api";
+import type { RunStatsResponse } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
-export function useActionLogStats(days = 30) {
-  const [data, setData] = useState<ActionLogStatsResponse | null>(null);
+export function useRunStats(days = 30) {
+  const [data, setData] = useState<RunStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
   const { showToast } = useToastContext();
@@ -17,10 +17,10 @@ export function useActionLogStats(days = 30) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const body = await fetchActionLogStats({ days: daysRef.current });
+      const body = await fetchRunStats({ days: daysRef.current });
       setData(body);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to load action log stats");
+      showToast(err instanceof ApiError ? err.message : "Failed to load run stats");
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ export function useActionLogStats(days = 30) {
   useEffect(() => {
     load();
     return subscribeEvents((event) => {
-      if (event.entity_type === "action_log") {
+      if (event.entity_type === "run") {
         throttledLoad();
       }
     });

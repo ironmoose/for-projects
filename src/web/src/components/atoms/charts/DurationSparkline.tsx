@@ -1,8 +1,8 @@
 import { useTheme } from "../../theme/ThemeContext";
-import type { ActionLogDailyStats } from "../../../types";
+import type { RunDailyStats } from "../../../types";
 
 interface DurationSparklineProps {
-  data: ActionLogDailyStats[];
+  data: RunDailyStats[];
   width?: number;
   height?: number;
 }

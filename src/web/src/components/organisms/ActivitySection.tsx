@@ -1,4 +1,4 @@
-import type { ActionLogEntry } from "../../types";
+import type { Run } from "../../types";
 import { relativeTime, formatDate } from "../../utils";
 import { useTheme } from "../theme/ThemeContext";
 import { SectionLabel } from "../atoms/SectionLabel";
@@ -9,8 +9,8 @@ import { AnimatedList } from "../molecules/AnimatedList";
 import { EmptyState } from "../molecules/EmptyState";
 
 interface ActivitySectionProps {
-  running: ActionLogEntry[];
-  recent: ActionLogEntry[];
+  running: Run[];
+  recent: Run[];
   loading: boolean;
   timeframeMinutes: number;
   onTimeframeChange: (minutes: number) => void;
@@ -24,11 +24,14 @@ const timeframeOptions = [
   { value: "10080", label: "Last 7 days" },
 ];
 
-function statusToBadgeVariant(status: string): "running" | "complete" | "failed" | "default" {
+function statusToBadgeVariant(status: string): "running" | "complete" | "failed" | "todo" | "default" {
   switch (status) {
     case "running": return "running";
     case "complete": return "complete";
+    case "done": return "done";
     case "failed": return "failed";
+    case "todo": return "todo";
+    case "cancelled": return "default";
     default: return "default";
   }
 }
@@ -123,7 +126,11 @@ export function ActivitySection({ running, recent, loading, timeframeMinutes, on
             <AnimatedList
               items={recent}
               renderItem={(entry) => {
-                const dotColor = entry.status === "failed" ? theme.color.danger : theme.color.success;
+                const dotColor =
+                  entry.status === "failed" ? theme.color.danger
+                  : entry.status === "cancelled" ? theme.color.textFaint
+                  : entry.status === "todo" ? theme.color.textMuted
+                  : theme.color.success;
                 const badgeVariant = statusToBadgeVariant(entry.status);
                 return (
                   <div

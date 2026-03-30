@@ -1,13 +1,15 @@
 import { Badge, useTheme } from "..";
-import type { ActionLogEntry } from "../../types";
+import type { Run } from "../../types";
 import { formatDate } from "../../utils";
 
-type BadgeVariant = "running" | "done" | "failed" | "default";
+type BadgeVariant = "running" | "done" | "failed" | "todo" | "cancelled" | "default";
 
 function statusVariant(status: string): BadgeVariant {
   if (status === "running") return "running";
   if (status === "done") return "done";
   if (status === "failed") return "failed";
+  if (status === "todo") return "todo";
+  if (status === "cancelled") return "default";
   return "default";
 }
 
@@ -20,11 +22,11 @@ function snippetOutput(output: string | null, maxLen = 80): string {
   return output.length > maxLen ? `${output.slice(0, maxLen)}...` : output;
 }
 
-interface ActionLogTableProps {
-  entries: ActionLogEntry[];
+interface RunTableProps {
+  entries: Run[];
 }
 
-export function ActionLogTable({ entries }: ActionLogTableProps) {
+export function RunTable({ entries }: RunTableProps) {
   const { theme } = useTheme();
 
   return (
@@ -52,6 +54,7 @@ export function ActionLogTable({ entries }: ActionLogTableProps) {
         }}
       >
         <span style={{ width: 80, flexShrink: 0 }}>Status</span>
+        <span style={{ width: 110, flexShrink: 0 }}>Agent</span>
         <span style={{ width: 80, flexShrink: 0 }}>Entity</span>
         <span style={{ width: 110, flexShrink: 0 }}>Entity ID</span>
         <span style={{ flex: 1, minWidth: 0 }}>Output</span>
@@ -76,6 +79,20 @@ export function ActionLogTable({ entries }: ActionLogTableProps) {
         >
           <span style={{ width: 80, flexShrink: 0 }}>
             <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
+          </span>
+          <span
+            style={{
+              width: 110,
+              flexShrink: 0,
+              fontSize: theme.font.size.xs,
+              color: theme.color.textMuted,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={entry.agent}
+          >
+            {entry.agent}
           </span>
           <span style={{ width: 80, flexShrink: 0, color: theme.color.textMuted }}>
             {entry.entity_type}

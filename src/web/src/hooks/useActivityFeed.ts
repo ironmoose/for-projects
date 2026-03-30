@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchActionLog } from "../api";
-import type { ActionLogEntry } from "../types";
+import { fetchRuns } from "../api";
+import type { Run } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useThrottledCallback } from "./useThrottledCallback";
 
@@ -21,8 +21,8 @@ function readStoredMinutes(): number {
 }
 
 export function useActivityFeed() {
-  const [running, setRunning] = useState<ActionLogEntry[]>([]);
-  const [recent, setRecent] = useState<ActionLogEntry[]>([]);
+  const [running, setRunning] = useState<Run[]>([]);
+  const [recent, setRecent] = useState<Run[]>([]);
   const [loading, setLoading] = useState(false);
   const [timeframeMinutes, setTimeframeMinutesState] = useState(readStoredMinutes);
   const { subscribeEvents } = useEventSubscription();
@@ -35,8 +35,8 @@ export function useActivityFeed() {
     try {
       const sinceISO = new Date(Date.now() - timeframeRef.current * 60_000).toISOString();
       const [runningResult, recentResult] = await Promise.all([
-        fetchActionLog({ status: "running", limit: 50 }),
-        fetchActionLog({ finished_after: sinceISO, limit: 50 }),
+        fetchRuns({ status: "running", limit: 50 }),
+        fetchRuns({ finished_after: sinceISO, limit: 50 }),
       ]);
       setRunning(runningResult.data);
       setRecent(recentResult.data);
@@ -57,7 +57,7 @@ export function useActivityFeed() {
   useEffect(() => {
     load();
     return subscribeEvents((event) => {
-      if (event.entity_type === "action_log") {
+      if (event.entity_type === "run") {
         throttledLoad();
       }
     });

@@ -3,12 +3,12 @@ import {
   PageHeader,
   EmptyState,
 } from "../components";
-import { ActionLogFilterBar } from "../components/organisms/ActionLogFilterBar";
-import { ActionLogTable } from "../components/organisms/ActionLogTable";
+import { RunFilterBar } from "../components/organisms/RunFilterBar";
+import { RunTable } from "../components/organisms/RunTable";
 import { Pagination } from "../components/molecules/Pagination";
-import { useActionLogSearch } from "../hooks/useActionLogSearch";
+import { useRunSearch } from "../hooks/useRunSearch";
 
-export function ActionLogPage() {
+export function RunsPage() {
   const {
     entries,
     total,
@@ -19,24 +19,24 @@ export function ActionLogPage() {
     setPage,
     updateFilter,
     clearFilters,
-  } = useActionLogSearch();
+  } = useRunSearch();
 
   return (
     <ListPageLayout>
       <PageHeader
-        title="Action Log"
-        subtitle="Browse and filter action execution history."
+        title="Runs"
+        subtitle="Browse and filter agent run history."
         style={{ marginBottom: "1.5rem" }}
       />
 
-      <ActionLogFilterBar
+      <RunFilterBar
         filters={filters}
         onFilterChange={updateFilter}
         onClear={clearFilters}
       />
 
       {entries.length > 0 && (
-        <ActionLogTable entries={entries} />
+        <RunTable entries={entries} />
       )}
 
       {entries.length > 0 && (
@@ -51,7 +51,7 @@ export function ActionLogPage() {
       {!loading && entries.length === 0 && (
         <EmptyState
           icon="list"
-          message="No action log entries match your filters."
+          message="No run entries match your filters."
           variant="card"
         />
       )}

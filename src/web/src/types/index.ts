@@ -21,18 +21,19 @@ export interface Task {
   updated_at: string;
 }
 
-export interface Action {
+export interface Agent {
   id: string;
-  kind: string;
+  identifier: string;
   prompt: string;
   agent: string;
+  enabled: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface ActionLogEntry {
+export interface Run {
   id: string;
-  action_id: string;
+  agent: string;
   entity_type: string;
   entity_id: string;
   status: string;
@@ -41,29 +42,31 @@ export interface ActionLogEntry {
   finished_at: string | null;
 }
 
-export interface ActionLogStats {
+export interface RunStats {
   by_status: { status: string; count: number }[];
-  by_kind: { kind: string; count: number }[];
+  by_agent: { agent: string; count: number }[];
   total: number;
 }
 
-export interface ActionLogDailyStats {
+export interface RunDailyStats {
   date: string;
   status: string;
-  kind: string;
+  agent: string;
   count: number;
   avg_duration_ms: number | null;
 }
 
-export interface ActionLogSummaryStats {
+export interface RunSummaryStats {
   total: number;
+  todo: number;
   done: number;
   failed: number;
   running: number;
+  cancelled: number;
   avg_duration_ms: number | null;
 }
 
-export interface ActionLogStatsResponse {
-  daily: ActionLogDailyStats[];
-  summary: ActionLogSummaryStats;
+export interface RunStatsResponse {
+  daily: RunDailyStats[];
+  summary: RunSummaryStats;
 }

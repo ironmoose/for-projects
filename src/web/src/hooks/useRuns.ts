@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ApiError, fetchActionLog } from "../api";
-import type { ActionLogEntry } from "../types";
+import { ApiError, fetchRuns } from "../api";
+import type { Run } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
-export function useActionLog(entityType: string, entityId: string | undefined) {
-  const [entries, setEntries] = useState<ActionLogEntry[]>([]);
+export function useRuns(entityType: string, entityId: string | undefined) {
+  const [entries, setEntries] = useState<Run[]>([]);
   const [loading, setLoading] = useState(false);
   const { subscribeEvents } = useEventSubscription();
   const { showToast } = useToastContext();
@@ -22,12 +22,12 @@ export function useActionLog(entityType: string, entityId: string | undefined) {
     }
     setLoading(true);
     try {
-      const body = await fetchActionLog({ entity_type: entityType, entity_id: id });
+      const body = await fetchRuns({ entity_type: entityType, entity_id: id });
       if (entityIdRef.current === id) {
         setEntries(body.data);
       }
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to load action log");
+      showToast(err instanceof ApiError ? err.message : "Failed to load runs");
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export function useActionLog(entityType: string, entityId: string | undefined) {
   useEffect(() => {
     load();
     return subscribeEvents((event) => {
-      if (event.entity_type === "action_log") {
+      if (event.entity_type === "run") {
         throttledLoad();
       }
     });

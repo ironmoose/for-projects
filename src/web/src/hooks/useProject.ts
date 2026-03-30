@@ -56,7 +56,7 @@ export function useProject(projectId: string) {
     loadProject();
 
     return subscribeEvents((event) => {
-      if (event.entity_type === "project" || event.entity_type === "task" || event.entity_type === "action_log") {
+      if (event.entity_type === "project" || event.entity_type === "task" || event.entity_type === "run") {
         throttledLoad();
       }
     });
