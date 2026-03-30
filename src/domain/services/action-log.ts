@@ -1,4 +1,4 @@
-import type { ActionLogEntry, ActionLogStatus, EntityType } from "../entities";
+import type { ActionLogEntry, ActionLogStatus, ActionKind, EntityType } from "../entities";
 import type { CreateActionLogInput, UpdateActionLogInput } from "../inputs";
 import type { IActionLogService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -7,6 +7,8 @@ import type { ActionRepository } from "../repositories/actions";
 import type { EventBus } from "../events";
 
 const VALID_ENTITY_TYPES: EntityType[] = ['project', 'task'];
+const VALID_ACTION_KINDS: ActionKind[] = ['plan', 'goal', 'requirements', 'design'];
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 
 export class ActionLogService implements IActionLogService {
   constructor(
@@ -23,7 +25,24 @@ export class ActionLogService implements IActionLogService {
     entity_id?: string;
     action_id?: string;
     status?: ActionLogStatus;
+    search?: string;
+    started_after?: string;
+    started_before?: string;
+    action_kind?: string;
   }): Paginated<ActionLogEntry> {
+    if (filter?.search !== undefined && filter.search.length > 200) {
+      throw new ServiceError("search must be at most 200 characters", 400);
+    }
+    if (filter?.started_after !== undefined && !ISO_DATE_RE.test(filter.started_after)) {
+      throw new ServiceError("started_after must be a valid ISO 8601 date", 400);
+    }
+    if (filter?.started_before !== undefined && !ISO_DATE_RE.test(filter.started_before)) {
+      throw new ServiceError("started_before must be a valid ISO 8601 date", 400);
+    }
+    if (filter?.action_kind !== undefined && !VALID_ACTION_KINDS.includes(filter.action_kind as ActionKind)) {
+      throw new ServiceError(`action_kind must be one of: ${VALID_ACTION_KINDS.join(", ")}`, 400);
+    }
+
     return {
       data: this.actionLogRepo.findMany(filter),
       total: this.actionLogRepo.count(filter),

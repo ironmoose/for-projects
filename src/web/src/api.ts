@@ -147,7 +147,7 @@ export async function deleteActions(ids: string[]): Promise<void> {
 // Action Log API
 // ---------------------------------------------------------------------------
 
-export async function fetchActionLog(params?: { entity_type?: string; entity_id?: string; action_id?: string; status?: string; limit?: number; offset?: number }): Promise<{ data: ActionLogEntry[]; total: number }> {
+export async function fetchActionLog(params?: { entity_type?: string; entity_id?: string; action_id?: string; status?: string; search?: string; started_after?: string; started_before?: string; action_kind?: string; limit?: number; offset?: number }): Promise<{ data: ActionLogEntry[]; total: number }> {
   const res = await apiFetch(`/api/action-log${qs(params)}`);
   return res.json();
 }

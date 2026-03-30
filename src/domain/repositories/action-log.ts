@@ -28,38 +28,60 @@ export class ActionLogRepository {
     entity_id?: string;
     action_id?: string;
     status?: ActionLogStatus;
+    search?: string;
+    started_after?: string;
+    started_before?: string;
+    action_kind?: string;
   }): ActionLogEntry[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
     const params: (string | number)[] = [];
+    const needsJoin = !!filter?.action_kind;
 
     if (filter?.id) {
-      conditions.push("id = ?");
+      conditions.push("action_log.id = ?");
       params.push(filter.id);
     }
     if (filter?.entity_type) {
-      conditions.push("entity_type = ?");
+      conditions.push("action_log.entity_type = ?");
       params.push(filter.entity_type);
     }
     if (filter?.entity_id) {
-      conditions.push("entity_id = ?");
+      conditions.push("action_log.entity_id = ?");
       params.push(filter.entity_id);
     }
     if (filter?.action_id) {
-      conditions.push("action_id = ?");
+      conditions.push("action_log.action_id = ?");
       params.push(filter.action_id);
     }
     if (filter?.status) {
-      conditions.push("status = ?");
+      conditions.push("action_log.status = ?");
       params.push(filter.status);
     }
+    if (filter?.search) {
+      conditions.push("action_log.output LIKE ?");
+      params.push(`%${filter.search}%`);
+    }
+    if (filter?.started_after) {
+      conditions.push("action_log.started_at >= ?");
+      params.push(filter.started_after);
+    }
+    if (filter?.started_before) {
+      conditions.push("action_log.started_at <= ?");
+      params.push(filter.started_before);
+    }
+    if (filter?.action_kind) {
+      conditions.push("actions.kind = ?");
+      params.push(filter.action_kind);
+    }
 
+    const join = needsJoin ? "JOIN actions ON actions.id = action_log.action_id " : "";
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
     params.push(limit, offset);
 
     return this.db
-      .query(`SELECT * FROM action_log ${where}ORDER BY started_at DESC LIMIT ? OFFSET ?`)
+      .query(`SELECT action_log.* FROM action_log ${join}${where}ORDER BY action_log.started_at DESC LIMIT ? OFFSET ?`)
       .all(...params) as ActionLogEntry[];
   }
 
@@ -69,36 +91,58 @@ export class ActionLogRepository {
     entity_id?: string;
     action_id?: string;
     status?: ActionLogStatus;
+    search?: string;
+    started_after?: string;
+    started_before?: string;
+    action_kind?: string;
   }): number {
     const conditions: string[] = [];
     const params: string[] = [];
+    const needsJoin = !!filter?.action_kind;
 
     if (filter?.id) {
-      conditions.push("id = ?");
+      conditions.push("action_log.id = ?");
       params.push(filter.id);
     }
     if (filter?.entity_type) {
-      conditions.push("entity_type = ?");
+      conditions.push("action_log.entity_type = ?");
       params.push(filter.entity_type);
     }
     if (filter?.entity_id) {
-      conditions.push("entity_id = ?");
+      conditions.push("action_log.entity_id = ?");
       params.push(filter.entity_id);
     }
     if (filter?.action_id) {
-      conditions.push("action_id = ?");
+      conditions.push("action_log.action_id = ?");
       params.push(filter.action_id);
     }
     if (filter?.status) {
-      conditions.push("status = ?");
+      conditions.push("action_log.status = ?");
       params.push(filter.status);
     }
+    if (filter?.search) {
+      conditions.push("action_log.output LIKE ?");
+      params.push(`%${filter.search}%`);
+    }
+    if (filter?.started_after) {
+      conditions.push("action_log.started_at >= ?");
+      params.push(filter.started_after);
+    }
+    if (filter?.started_before) {
+      conditions.push("action_log.started_at <= ?");
+      params.push(filter.started_before);
+    }
+    if (filter?.action_kind) {
+      conditions.push("actions.kind = ?");
+      params.push(filter.action_kind);
+    }
 
+    const join = needsJoin ? "JOIN actions ON actions.id = action_log.action_id " : "";
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
 
     return (
       this.db
-        .query(`SELECT COUNT(*) as total FROM action_log ${where}`)
+        .query(`SELECT COUNT(*) as total FROM action_log ${join}${where}`)
         .get(...params) as { total: number }
     ).total;
   }
