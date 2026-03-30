@@ -33,7 +33,29 @@ export function DurationSparkline({ data, width = 400, height = 120 }: DurationS
   }
   points.sort((a, b) => a.date.localeCompare(b.date));
 
-  if (points.length === 0) return null;
+  if (points.length === 0) {
+    return (
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block" }}
+      >
+        <text
+          x={width / 2}
+          y={height / 2}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill={theme.color.textFaint}
+          fontSize={12}
+          fontFamily={theme.font.body}
+        >
+          No completed actions yet
+        </text>
+      </svg>
+    );
+  }
 
   const padding = { top: 16, right: 12, bottom: 28, left: 48 };
   const chartW = width - padding.left - padding.right;

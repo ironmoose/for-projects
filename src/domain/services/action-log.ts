@@ -74,7 +74,7 @@ export class ActionLogService implements IActionLogService {
       entity_id: input.entity_id,
       status: 'running' as const,
       output: null,
-      started_at: now,
+      started_at: input.started_at ?? now,
       finished_at: null,
     }));
 
@@ -92,6 +92,11 @@ export class ActionLogService implements IActionLogService {
     const entries = this.actionLogRepo.updateMany(inputs);
     this.eventBus.emit({ type: "updated", entity_type: "action_log", payload: entries });
     return entries;
+  }
+
+  remove(ids: string[]): void {
+    this.actionLogRepo.deleteMany(ids);
+    this.eventBus.emit({ type: "deleted", entity_type: "action_log", payload: ids });
   }
 
   stats(days?: number): { daily: ActionLogDailyStats[]; summary: ActionLogSummaryStats } {

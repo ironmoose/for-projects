@@ -58,4 +58,5 @@ export interface IActionLogService {
   create(inputs: CreateActionLogInput[]): ActionLogEntry[];
   update(inputs: UpdateActionLogInput[]): ActionLogEntry[];
   stats(days?: number): { daily: ActionLogDailyStats[]; summary: ActionLogSummaryStats };
+  remove(ids: string[]): void;
 }

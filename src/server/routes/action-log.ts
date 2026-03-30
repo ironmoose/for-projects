@@ -74,5 +74,12 @@ export function actionLogRoutes(service: IActionLogService): Hono {
     return c.json(entries);
   });
 
+  // DELETE /api/action-log
+  app.delete("/", async (c) => {
+    const { ids } = await c.req.json<{ ids: string[] }>();
+    service.remove(ids);
+    return c.body(null, 204);
+  });
+
   return app;
 }

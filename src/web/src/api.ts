@@ -89,7 +89,7 @@ export async function updateProjects(inputs: Array<{ id: string; title?: string;
 }
 
 export async function deleteProjects(ids: string[]): Promise<void> {
-  await apiFetch("/api/projects", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ids) });
+  await apiFetch("/api/projects", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
 // ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ export async function updateTasks(inputs: Array<{ id: string; title?: string; pl
 }
 
 export async function deleteTasks(ids: string[]): Promise<void> {
-  await apiFetch("/api/tasks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ids) });
+  await apiFetch("/api/tasks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +140,7 @@ export async function updateActions(inputs: Array<{ id: string; kind?: string; p
 }
 
 export async function deleteActions(ids: string[]): Promise<void> {
-  await apiFetch("/api/actions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ids) });
+  await apiFetch("/api/actions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
 // ---------------------------------------------------------------------------

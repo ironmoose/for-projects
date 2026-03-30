@@ -42,5 +42,5 @@ export function useActionLogStats(days = 30) {
     });
   }, [days, subscribeEvents, throttledLoad, load]);
 
-  return { data, loading, refetch: load };
+  return { stats: data, loading, refetch: load };
 }

@@ -37,6 +37,51 @@ section "Health Check"
 get "$API/health" > /dev/null
 echo "  ✓ GET /api/health"
 
+# ─── Cleanup ──────────────────────────────────────────────────────────────────
+# Wipe existing data so the script is idempotent on re-runs
+
+section "Cleanup — removing existing data"
+
+# Delete action_log entries first (depends on actions)
+AL_IDS=$(curl -sf "$API/action-log?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
+if [ -n "$AL_IDS" ]; then
+  JSON_IDS=$(echo "$AL_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
+  del "$API/action-log" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
+  echo "  ✓ Deleted action_log entries"
+else
+  echo "  ✓ No action_log entries to delete"
+fi
+
+# Delete actions
+ACT_IDS=$(curl -sf "$API/actions?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
+if [ -n "$ACT_IDS" ]; then
+  JSON_IDS=$(echo "$ACT_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
+  del "$API/actions" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
+  echo "  ✓ Deleted actions"
+else
+  echo "  ✓ No actions to delete"
+fi
+
+# Delete tasks
+TASK_IDS=$(curl -sf "$API/tasks?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
+if [ -n "$TASK_IDS" ]; then
+  JSON_IDS=$(echo "$TASK_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
+  del "$API/tasks" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
+  echo "  ✓ Deleted tasks"
+else
+  echo "  ✓ No tasks to delete"
+fi
+
+# Delete projects
+PROJ_IDS=$(curl -sf "$API/projects?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
+if [ -n "$PROJ_IDS" ]; then
+  JSON_IDS=$(echo "$PROJ_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
+  del "$API/projects" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
+  echo "  ✓ Deleted projects"
+else
+  echo "  ✓ No projects to delete"
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # PROJECTS — bulk create with rich markdown in goal, requirements, design
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -279,135 +324,137 @@ echo "  ✓ Action (design):       $A_DESIGN_ID"
 echo "  ✓ Action (plan):         $A_PLAN_ID"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ACTION LOG — simulate orchestration running actions on entities
+# ACTION LOG — simulate orchestration with realistic timestamps spread over 14 days
 # ═══════════════════════════════════════════════════════════════════════════════
 
-section "Creating Action Log — Goal actions on all projects"
+# Helper: generate ISO timestamp N days ago
+days_ago() {
+  local days=$1
+  if [[ "$(uname)" == "Darwin" ]]; then
+    date -u -v-${days}d +%Y-%m-%dT%H:%M:%S.000Z
+  else
+    date -u -d "$days days ago" +%Y-%m-%dT%H:%M:%S.000Z
+  fi
+}
 
-# Run goal action on all 5 projects — 3 done, 1 running, 1 failed
-for PID in "$P1_ID" "$P2_ID" "$P3_ID"; do
+# Helper: generate ISO timestamp N days ago + M seconds later
+days_ago_plus() {
+  local days=$1
+  local secs=$2
+  if [[ "$(uname)" == "Darwin" ]]; then
+    date -u -v-${days}d -v+${secs}S +%Y-%m-%dT%H:%M:%S.000Z
+  else
+    date -u -d "$days days ago + $secs seconds" +%Y-%m-%dT%H:%M:%S.000Z
+  fi
+}
+
+# Helper: create action log entry with backdated started_at, then complete it
+create_and_finish() {
+  local action_id=$1 entity_type=$2 entity_id=$3 days_back=$4 duration_secs=$5 status=${6:-done} output=${7:-}
+  local started=$(days_ago "$days_back")
+  local finished=$(days_ago_plus "$days_back" "$duration_secs")
+
   LOG=$(post "$API/action-log" "[{
-    \"action_id\": \"$A_GOAL_ID\",
-    \"entity_type\": \"project\",
-    \"entity_id\": \"$PID\"
+    \"action_id\": \"$action_id\",
+    \"entity_type\": \"$entity_type\",
+    \"entity_id\": \"$entity_id\",
+    \"started_at\": \"$started\"
   }]")
   LOG_ID=$(jid "$LOG")
-  # Complete it
-  patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"done\", \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}]" > /dev/null
-  echo "  ✓ Goal action on project $PID: running → done"
+
+  if [ -n "$output" ]; then
+    patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"$status\", \"output\": \"$output\", \"finished_at\": \"$finished\"}]" > /dev/null
+  else
+    patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"$status\", \"finished_at\": \"$finished\"}]" > /dev/null
+  fi
+  echo "  ✓ $entity_type/$entity_id: $action_id ($status, ${duration_secs}s, ${days_back}d ago)"
+}
+
+# Helper: create action log entry that stays running
+create_running() {
+  local action_id=$1 entity_type=$2 entity_id=$3
+  post "$API/action-log" "[{
+    \"action_id\": \"$action_id\",
+    \"entity_type\": \"$entity_type\",
+    \"entity_id\": \"$entity_id\"
+  }]" > /dev/null
+  echo "  ✓ $entity_type/$entity_id: $action_id (running)"
+}
+
+section "Creating Action Log — Goal actions on all projects (spread over days 12-8)"
+
+# P1 goal: 12 days ago, took 25s
+create_and_finish "$A_GOAL_ID" "project" "$P1_ID" 12 25
+# P2 goal: 11 days ago, took 42s
+create_and_finish "$A_GOAL_ID" "project" "$P2_ID" 11 42
+# P3 goal: 10 days ago, took 18s
+create_and_finish "$A_GOAL_ID" "project" "$P3_ID" 10 18
+# P4 goal: still running (recent)
+create_running "$A_GOAL_ID" "project" "$P4_ID"
+# P5 goal: failed 9 days ago (took 8s), retried 9 days ago (took 35s)
+create_and_finish "$A_GOAL_ID" "project" "$P5_ID" 9 8 "failed" "Error: context window exceeded. Project description too long for single-pass goal extraction."
+create_and_finish "$A_GOAL_ID" "project" "$P5_ID" 9 35
+
+section "Creating Action Log — Requirements actions on projects 1-3 (days 8-6)"
+
+# P1 reqs: 8 days ago, took 65s
+create_and_finish "$A_REQS_ID" "project" "$P1_ID" 8 65
+# P2 reqs: 7 days ago, took 48s
+create_and_finish "$A_REQS_ID" "project" "$P2_ID" 7 48
+# P3 reqs: 6 days ago, took 90s
+create_and_finish "$A_REQS_ID" "project" "$P3_ID" 6 90
+
+section "Creating Action Log — Design actions (days 5-3)"
+
+# P1 design: 5 days ago, took 120s
+create_and_finish "$A_DESIGN_ID" "project" "$P1_ID" 5 120
+# P2 design: 4 days ago, took 85s
+create_and_finish "$A_DESIGN_ID" "project" "$P2_ID" 4 85
+# P3 design: failed 3 days ago (took 15s)
+create_and_finish "$A_DESIGN_ID" "project" "$P3_ID" 3 15 "failed" "Design rejected: tail sampling strategy does not account for cross-service trace correlation."
+
+section "Creating Action Log — Plan actions on tasks (days 4-0)"
+
+# P1 tasks: done over days 4-2, varying durations
+DURATIONS_P1=(30 55 45 22 70)
+for i in "${!P1_TASK_IDS[@]}"; do
+  TID="${P1_TASK_IDS[$i]}"
+  DAYS_BACK=$((4 - i))
+  if [ "$DAYS_BACK" -lt 1 ]; then DAYS_BACK=1; fi
+  create_and_finish "$A_PLAN_ID" "task" "$TID" "$DAYS_BACK" "${DURATIONS_P1[$i]}"
 done
 
-# P4 goal still running
-LOG_P4_GOAL=$(post "$API/action-log" "[{
-  \"action_id\": \"$A_GOAL_ID\",
-  \"entity_type\": \"project\",
-  \"entity_id\": \"$P4_ID\"
-}]")
-LOG_P4_GOAL_ID=$(jid "$LOG_P4_GOAL")
-echo "  ✓ Goal action on project $P4_ID: running"
-
-# P5 goal failed and retried
-LOG_P5_FAIL=$(post "$API/action-log" "[{
-  \"action_id\": \"$A_GOAL_ID\",
-  \"entity_type\": \"project\",
-  \"entity_id\": \"$P5_ID\"
-}]")
-LOG_P5_FAIL_ID=$(jid "$LOG_P5_FAIL")
-patch "$API/action-log" "[{
-  \"id\": \"$LOG_P5_FAIL_ID\",
-  \"status\": \"failed\",
-  \"output\": \"Error: context window exceeded. Project description too long for single-pass goal extraction.\",
-  \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"
-}]" > /dev/null
-echo "  ✓ Goal action on project $P5_ID: running → failed"
-
-# Retry P5 goal
-LOG_P5_RETRY=$(post "$API/action-log" "[{
-  \"action_id\": \"$A_GOAL_ID\",
-  \"entity_type\": \"project\",
-  \"entity_id\": \"$P5_ID\"
-}]")
-LOG_P5_RETRY_ID=$(jid "$LOG_P5_RETRY")
-patch "$API/action-log" "[{\"id\": \"$LOG_P5_RETRY_ID\", \"status\": \"done\", \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}]" > /dev/null
-echo "  ✓ Goal action on project $P5_ID: retry → done"
-
-section "Creating Action Log — Requirements actions on projects 1-3"
-
-for PID in "$P1_ID" "$P2_ID" "$P3_ID"; do
-  LOG=$(post "$API/action-log" "[{
-    \"action_id\": \"$A_REQS_ID\",
-    \"entity_type\": \"project\",
-    \"entity_id\": \"$PID\"
-  }]")
-  LOG_ID=$(jid "$LOG")
-  patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"done\", \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}]" > /dev/null
-  echo "  ✓ Requirements action on project $PID: done"
-done
-
-section "Creating Action Log — Design actions on projects 1-2"
-
-for PID in "$P1_ID" "$P2_ID"; do
-  LOG=$(post "$API/action-log" "[{
-    \"action_id\": \"$A_DESIGN_ID\",
-    \"entity_type\": \"project\",
-    \"entity_id\": \"$PID\"
-  }]")
-  LOG_ID=$(jid "$LOG")
-  patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"done\", \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}]" > /dev/null
-  echo "  ✓ Design action on project $PID: done"
-done
-
-# P3 design failed (constraints not met)
-LOG_P3_DESIGN=$(post "$API/action-log" "[{
-  \"action_id\": \"$A_DESIGN_ID\",
-  \"entity_type\": \"project\",
-  \"entity_id\": \"$P3_ID\"
-}]")
-LOG_P3_DESIGN_ID=$(jid "$LOG_P3_DESIGN")
-patch "$API/action-log" "[{
-  \"id\": \"$LOG_P3_DESIGN_ID\",
-  \"status\": \"failed\",
-  \"output\": \"Design rejected: tail sampling strategy does not account for cross-service trace correlation. Spans from downstream services may be orphaned.\",
-  \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"
-}]" > /dev/null
-echo "  ✓ Design action on project $P3_ID: failed (constraints not met)"
-
-section "Creating Action Log — Plan actions on tasks"
-
-# Plan actions on P1 tasks (all done)
-for TID in "${P1_TASK_IDS[@]}"; do
-  LOG=$(post "$API/action-log" "[{
-    \"action_id\": \"$A_PLAN_ID\",
-    \"entity_type\": \"task\",
-    \"entity_id\": \"$TID\"
-  }]")
-  LOG_ID=$(jid "$LOG")
-  patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"done\", \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}]" > /dev/null
-  echo "  ✓ Plan action on task $TID: done"
-done
-
-# Plan actions on P2 tasks — first 2 done, last 2 running
+# P2 tasks: first 2 done (days 3-2), last 2 still running
 for i in 0 1; do
   TID="${P2_TASK_IDS[$i]}"
-  LOG=$(post "$API/action-log" "[{
-    \"action_id\": \"$A_PLAN_ID\",
-    \"entity_type\": \"task\",
-    \"entity_id\": \"$TID\"
-  }]")
-  LOG_ID=$(jid "$LOG")
-  patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"done\", \"finished_at\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}]" > /dev/null
-  echo "  ✓ Plan action on task $TID: done"
+  DAYS_BACK=$((3 - i))
+  DURATION=$((40 + i * 20))
+  create_and_finish "$A_PLAN_ID" "task" "$TID" "$DAYS_BACK" "$DURATION"
 done
-
 for i in 2 3; do
   TID="${P2_TASK_IDS[$i]}"
-  LOG=$(post "$API/action-log" "[{
-    \"action_id\": \"$A_PLAN_ID\",
-    \"entity_type\": \"task\",
-    \"entity_id\": \"$TID\"
-  }]")
-  echo "  ✓ Plan action on task $TID: running"
+  create_running "$A_PLAN_ID" "task" "$TID"
 done
+
+section "Creating Action Log — Extra historical entries for chart density"
+
+# Scatter additional goal/req runs across days 14-7 for richer chart data
+create_and_finish "$A_GOAL_ID" "project" "$P1_ID" 14 32
+create_and_finish "$A_REQS_ID" "project" "$P1_ID" 13 55
+create_and_finish "$A_GOAL_ID" "project" "$P2_ID" 13 28
+create_and_finish "$A_DESIGN_ID" "project" "$P1_ID" 12 95
+create_and_finish "$A_REQS_ID" "project" "$P2_ID" 11 72
+create_and_finish "$A_GOAL_ID" "project" "$P3_ID" 10 38 "failed" "Timeout after 38s — upstream model overloaded."
+create_and_finish "$A_GOAL_ID" "project" "$P3_ID" 10 22
+create_and_finish "$A_PLAN_ID" "task" "${P1_TASK_IDS[0]}" 9 40
+create_and_finish "$A_PLAN_ID" "task" "${P1_TASK_IDS[1]}" 8 65
+create_and_finish "$A_DESIGN_ID" "project" "$P2_ID" 7 110
+create_and_finish "$A_REQS_ID" "project" "$P3_ID" 6 80
+create_and_finish "$A_PLAN_ID" "task" "${P1_TASK_IDS[2]}" 5 50
+create_and_finish "$A_PLAN_ID" "task" "${P2_TASK_IDS[0]}" 4 35
+create_and_finish "$A_GOAL_ID" "project" "$P4_ID" 3 20 "failed" "Rate limited — retry after cooldown."
+create_and_finish "$A_REQS_ID" "project" "$P4_ID" 2 58
+create_and_finish "$A_PLAN_ID" "task" "${P2_TASK_IDS[1]}" 1 45
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # UPDATES — project and task modifications
@@ -540,8 +587,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Traffic simulation complete."
 echo "  Total API requests: $COUNT"
 echo ""
-echo "  Created: 5 projects, 21 tasks, 4 actions, ~15 action log entries"
+echo "  Created: 5 projects, 21 tasks, 4 actions, ~35 action log entries"
 echo "  Updates: 2 project updates, 2 task updates"
-echo "  Action log lifecycle: done, failed, retry patterns"
+echo "  Action log lifecycle: done, failed, retry patterns across 14 days"
 echo "  Read queries: pagination, filters, individual lookups"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

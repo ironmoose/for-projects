@@ -44,6 +44,7 @@ export interface CreateActionLogInput {
   action_id: string;
   entity_type: EntityType;
   entity_id: string;
+  started_at?: string;
 }
 
 export interface UpdateActionLogInput {

@@ -239,4 +239,10 @@ FROM action_log`,
 
     return results;
   }
+
+  deleteMany(ids: string[]): void {
+    if (ids.length === 0) return;
+    const placeholders = ids.map(() => "?").join(", ");
+    this.db.query(`DELETE FROM action_log WHERE id IN (${placeholders})`).run(...ids);
+  }
 }
