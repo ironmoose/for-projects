@@ -209,78 +209,112 @@ describe("update_task", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Actions
+// Agents
 // ---------------------------------------------------------------------------
 
-describe("list_actions", () => {
-  it("kind filter returns only matching actions", async () => {
-    // Create two actions with different kinds
-    await callTool("create_actions", {
+describe("create_agents", () => {
+  it("creates with identifier, agent, prompt", async () => {
+    const result = await callTool("create_agents", {
       items: [
-        { kind: "plan", agent: "tab:orchestrator", prompt: "Plan prompt", entity_type: "project", entity_id: "fake1" },
-        { kind: "goal", agent: "tab:executor", prompt: "Goal prompt", entity_type: "project", entity_id: "fake2" },
+        { identifier: "plan", agent: "tab:orchestrator", prompt: "Plan prompt" },
+        { identifier: "goal", agent: "tab:executor", prompt: "Goal prompt" },
       ],
     });
 
-    const list = parseResult(await callTool("list_actions", { kind: "plan" }));
+    const agents = parseResult(result);
+    expect(agents).toHaveLength(2);
+    expect(agents[0].identifier).toBe("plan");
+    expect(agents[0].agent).toBe("tab:orchestrator");
+    expect(agents[0].prompt).toBe("Plan prompt");
+    expect(agents[0].enabled).toBe(1);
+    expect(agents[1].identifier).toBe("goal");
+    expect(agents[1].agent).toBe("tab:executor");
+    expect(agents[1].id).toBeTruthy();
+  });
+});
+
+describe("list_agents", () => {
+  it("filters by identifier", async () => {
+    const list = parseResult(await callTool("list_agents", { identifier: "plan" }));
     expect(list.data.length).toBeGreaterThanOrEqual(1);
-    expect(list.data.every((a: { kind: string }) => a.kind === "plan")).toBe(true);
+    expect(list.data.every((a: { identifier: string }) => a.identifier === "plan")).toBe(true);
   });
-});
 
-describe("create_actions", () => {
-  it("creates multiple actions in one call", async () => {
-    // Use remaining kinds that haven't been created yet
-    const result = await callTool("create_actions", {
-      items: [
-        { kind: "requirements", agent: "tab:orchestrator", prompt: "Req prompt", entity_type: "project", entity_id: "fake3" },
-        { kind: "design", agent: "tab:executor", prompt: "Design prompt", entity_type: "task", entity_id: "fake4" },
-      ],
+  it("filters by enabled", async () => {
+    // Create a disabled agent
+    const created = parseResult(await callTool("create_agents", {
+      items: [{ identifier: "disabled-mcp", agent: "tab:orchestrator", prompt: "Disabled" }],
+    }));
+    await callTool("update_agents", {
+      items: [{ id: created[0].id, enabled: 0 }],
     });
 
-    const actions = parseResult(result);
-    expect(actions).toHaveLength(2);
-    expect(actions[0].kind).toBe("requirements");
-    expect(actions[1].kind).toBe("design");
-    expect(actions[0].id).toBeTruthy();
-    expect(actions[1].id).toBeTruthy();
+    const enabledList = parseResult(await callTool("list_agents", { enabled: 1 }));
+    expect(enabledList.data.every((a: { enabled: number }) => a.enabled === 1)).toBe(true);
+
+    const disabledList = parseResult(await callTool("list_agents", { enabled: 0 }));
+    expect(disabledList.data.length).toBeGreaterThanOrEqual(1);
+    expect(disabledList.data.every((a: { enabled: number }) => a.enabled === 0)).toBe(true);
   });
 });
 
-describe("update_actions", () => {
-  it("updates prompt on existing action", async () => {
-    // Find an existing action to update
-    const list = parseResult(await callTool("list_actions", { kind: "plan" }));
-    const action = list.data[0];
+describe("update_agents", () => {
+  it("updates prompt on existing agent", async () => {
+    const list = parseResult(await callTool("list_agents", { identifier: "plan" }));
+    const agent = list.data[0];
 
-    const result = await callTool("update_actions", {
-      items: [{ id: action.id, prompt: "Updated plan prompt" }],
+    const result = await callTool("update_agents", {
+      items: [{ id: agent.id, prompt: "Updated plan prompt" }],
     });
 
     const updated = parseResult(result);
     expect(updated).toHaveLength(1);
     expect(updated[0].prompt).toBe("Updated plan prompt");
-    expect(updated[0].kind).toBe("plan"); // unchanged
+    expect(updated[0].identifier).toBe("plan"); // unchanged
+  });
+
+  it("updates identifier", async () => {
+    const created = parseResult(await callTool("create_agents", {
+      items: [{ identifier: "rename-mcp", agent: "tab:orchestrator", prompt: "Test" }],
+    }));
+
+    const result = await callTool("update_agents", {
+      items: [{ id: created[0].id, identifier: "renamed-mcp" }],
+    });
+
+    const updated = parseResult(result);
+    expect(updated[0].identifier).toBe("renamed-mcp");
+  });
+
+  it("updates enabled", async () => {
+    const created = parseResult(await callTool("create_agents", {
+      items: [{ identifier: "toggle-mcp", agent: "tab:executor", prompt: "Test" }],
+    }));
+
+    const result = await callTool("update_agents", {
+      items: [{ id: created[0].id, enabled: 0 }],
+    });
+
+    const updated = parseResult(result);
+    expect(updated[0].enabled).toBe(0);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Action Logs
+// Runs
 // ---------------------------------------------------------------------------
 
-describe("create_action_log", () => {
-  it("creates with action_id, entity_type, entity_id — status is always 'running'", async () => {
-    const actions = parseResult(await callTool("list_actions", { kind: "plan" }));
-    const actionId = actions.data[0].id;
-    const proj = parseResult(await callTool("create_project", { title: "Create Log Proj" }));
+describe("create_run", () => {
+  it("creates with agent string, entity_type, entity_id — status is always running", async () => {
+    const proj = parseResult(await callTool("create_project", { title: "Create Run Proj" }));
 
-    const result = await callTool("create_action_log", {
-      items: [{ action_id: actionId, entity_type: "project", entity_id: proj.id }],
+    const result = await callTool("create_run", {
+      items: [{ agent: "plan", entity_type: "project", entity_id: proj.id }],
     });
 
     const entries = parseResult(result);
     expect(entries).toHaveLength(1);
-    expect(entries[0].action_id).toBe(actionId);
+    expect(entries[0].agent).toBe("plan");
     expect(entries[0].entity_type).toBe("project");
     expect(entries[0].entity_id).toBe(proj.id);
     expect(entries[0].status).toBe("running");
@@ -289,61 +323,68 @@ describe("create_action_log", () => {
     expect(entries[0].finished_at).toBeNull();
   });
 
-  it("rejects nonexistent action_id", async () => {
-    const result = await callTool("create_action_log", {
-      items: [{ action_id: "00000000000000000000000000", entity_type: "project", entity_id: "fake" }],
+  it("does not validate agent exists — stores any string", async () => {
+    const proj = parseResult(await callTool("create_project", { title: "Any Agent Run" }));
+
+    const result = await callTool("create_run", {
+      items: [{ agent: "nonexistent-agent", entity_type: "project", entity_id: proj.id }],
     });
-    expect(result.isError).toBe(true);
+
+    expect(result.isError).toBeFalsy();
+    const entries = parseResult(result);
+    expect(entries[0].agent).toBe("nonexistent-agent");
   });
 });
 
-describe("list_action_logs", () => {
-  it("filters by status work", async () => {
-    const actions = parseResult(await callTool("list_actions", { kind: "plan" }));
-    const actionId = actions.data[0].id;
-    const proj = parseResult(await callTool("create_project", { title: "Log Test Proj" }));
+describe("list_runs", () => {
+  it("filters by status", async () => {
+    const proj = parseResult(await callTool("create_project", { title: "List Run Proj" }));
 
-    const created = parseResult(await callTool("create_action_log", {
-      items: [{ action_id: actionId, entity_type: "project", entity_id: proj.id }],
-    }));
+    await callTool("create_run", {
+      items: [{ agent: "plan", entity_type: "project", entity_id: proj.id }],
+    });
 
-    const list = parseResult(
-      await callTool("list_action_logs", { status: "running" })
-    );
+    const list = parseResult(await callTool("list_runs", { status: "running" }));
     expect(list.data.length).toBeGreaterThanOrEqual(1);
     expect(list.data.every((e: { status: string }) => e.status === "running")).toBe(true);
-    expect(list.data.some((e: { id: string }) => e.id === created[0].id)).toBe(true);
   });
 
-  it("id filter works", async () => {
-    const actions = parseResult(await callTool("list_actions", { kind: "goal" }));
-    const actionId = actions.data[0].id;
-    const proj = parseResult(await callTool("create_project", { title: "Log ID Filter" }));
+  it("filters by agent", async () => {
+    const proj = parseResult(await callTool("create_project", { title: "Agent Filter Run" }));
+    await callTool("create_run", {
+      items: [{ agent: "special-filter-agent", entity_type: "project", entity_id: proj.id }],
+    });
 
-    const created = parseResult(await callTool("create_action_log", {
-      items: [{ action_id: actionId, entity_type: "project", entity_id: proj.id }],
+    const list = parseResult(await callTool("list_runs", { agent: "special-filter-agent" }));
+    expect(list.data.length).toBeGreaterThanOrEqual(1);
+    expect(list.data.every((e: { agent: string }) => e.agent === "special-filter-agent")).toBe(true);
+  });
+
+  it("filters by id", async () => {
+    const proj = parseResult(await callTool("create_project", { title: "ID Filter Run" }));
+    const created = parseResult(await callTool("create_run", {
+      items: [{ agent: "goal", entity_type: "project", entity_id: proj.id }],
     }));
 
-    const list = parseResult(await callTool("list_action_logs", { id: created[0].id }));
+    const list = parseResult(await callTool("list_runs", { id: created[0].id }));
     expect(list.data).toHaveLength(1);
     expect(list.data[0].id).toBe(created[0].id);
   });
 });
 
-describe("update_action_log", () => {
-  async function createLogEntry(kind: string = "plan") {
-    const actions = parseResult(await callTool("list_actions", { kind }));
-    const proj = parseResult(await callTool("create_project", { title: `Log ${kind}` }));
-    const created = parseResult(await callTool("create_action_log", {
-      items: [{ action_id: actions.data[0].id, entity_type: "project", entity_id: proj.id }],
+describe("update_run", () => {
+  async function createRunEntry(agent: string = "plan") {
+    const proj = parseResult(await callTool("create_project", { title: `Run ${agent}` }));
+    const created = parseResult(await callTool("create_run", {
+      items: [{ agent, entity_type: "project", entity_id: proj.id }],
     }));
     return created[0];
   }
 
   it("status 'done' auto-sets finished_at", async () => {
-    const entry = await createLogEntry("plan");
+    const entry = await createRunEntry("plan");
 
-    const result = await callTool("update_action_log", {
+    const result = await callTool("update_run", {
       items: [{ id: entry.id, status: "done" }],
     });
     const updated = parseResult(result);
@@ -352,9 +393,9 @@ describe("update_action_log", () => {
   });
 
   it("status 'failed' auto-sets finished_at", async () => {
-    const entry = await createLogEntry("goal");
+    const entry = await createRunEntry("goal");
 
-    const result = await callTool("update_action_log", {
+    const result = await callTool("update_run", {
       items: [{ id: entry.id, status: "failed" }],
     });
     const updated = parseResult(result);
@@ -362,10 +403,32 @@ describe("update_action_log", () => {
     expect(updated[0].finished_at).not.toBeNull();
   });
 
-  it("status 'running' does not set finished_at", async () => {
-    const entry = await createLogEntry("requirements");
+  it("status 'cancelled' auto-sets finished_at", async () => {
+    const entry = await createRunEntry("plan");
 
-    const result = await callTool("update_action_log", {
+    const result = await callTool("update_run", {
+      items: [{ id: entry.id, status: "cancelled" }],
+    });
+    const updated = parseResult(result);
+    expect(updated[0].status).toBe("cancelled");
+    expect(updated[0].finished_at).not.toBeNull();
+  });
+
+  it("status 'todo' does NOT set finished_at", async () => {
+    const entry = await createRunEntry("plan");
+
+    const result = await callTool("update_run", {
+      items: [{ id: entry.id, status: "todo" }],
+    });
+    const updated = parseResult(result);
+    expect(updated[0].status).toBe("todo");
+    expect(updated[0].finished_at).toBeNull();
+  });
+
+  it("status 'running' does NOT set finished_at", async () => {
+    const entry = await createRunEntry("plan");
+
+    const result = await callTool("update_run", {
       items: [{ id: entry.id, status: "running" }],
     });
     const updated = parseResult(result);
@@ -374,9 +437,9 @@ describe("update_action_log", () => {
   });
 
   it("optional output field is stored", async () => {
-    const entry = await createLogEntry("design");
+    const entry = await createRunEntry("plan");
 
-    const result = await callTool("update_action_log", {
+    const result = await callTool("update_run", {
       items: [{ id: entry.id, status: "done", output: "Task completed successfully" }],
     });
     const updated = parseResult(result);
@@ -401,8 +464,8 @@ describe("deleted tools are not registered", () => {
     expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
   });
 
-  it("delete_actions is not found", async () => {
-    const result = await callTool("delete_actions", { ids: ["fake"] });
+  it("delete_agents is not found", async () => {
+    const result = await callTool("delete_agents", { ids: ["fake"] });
     expect(result.isError).toBe(true);
     expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
   });
