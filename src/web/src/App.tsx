@@ -14,6 +14,7 @@ import { useHashRoute, useEventFanOut, EventSubscriptionContext } from "./hooks"
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { ActionsPage } from "./pages/ActionsPage";
+import { ActionLogPage } from "./pages/ActionLogPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
 import { ActionsDashboardPage } from "./pages/ActionsDashboardPage";
@@ -22,6 +23,7 @@ const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
   { label: "Dashboard", path: "/actions/dashboard" },
   { label: "Actions", path: "/actions" },
+  { label: "Action Log", path: "/action-log" },
   { label: "Themes", path: "/themes" },
 ];
 
@@ -47,6 +49,8 @@ export function App() {
     ? "/themes"
     : path === "/actions/dashboard"
     ? "/actions/dashboard"
+    : path.startsWith("/action-log")
+    ? "/action-log"
     : path.startsWith("/actions")
     ? "/actions"
     : "/";
@@ -74,6 +78,9 @@ export function App() {
     }
     if (path === "/actions/dashboard") {
       return <ActionsDashboardPage />;
+    }
+    if (path.startsWith("/action-log")) {
+      return <ActionLogPage />;
     }
     if (path.startsWith("/actions")) {
       return <ActionsPage />;

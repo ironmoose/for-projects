@@ -29,6 +29,7 @@ export { AddItemInput } from "./molecules/AddItemInput";
 export { MetadataTable } from "./molecules/MetadataTable";
 export { EmptyState } from "./molecules/EmptyState";
 export { BackButton } from "./molecules/BackButton";
+export { Pagination } from "./molecules/Pagination";
 export { HighlightOnChange } from "./molecules/HighlightOnChange";
 export { AnimatedList } from "./molecules/AnimatedList";
 export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
@@ -44,6 +45,8 @@ export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ConfirmDialog } from "./organisms/ConfirmDialog";
 export { ActivitySection } from "./organisms/ActivitySection";
+export { ActionLogFilterBar } from "./organisms/ActionLogFilterBar";
+export { ActionLogTable } from "./organisms/ActionLogTable";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";
