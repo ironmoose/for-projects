@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
-import { actionRoutes } from "../server/routes/actions";
+import { agentRoutes } from "../server/routes/agents";
 import { projectRoutes } from "../server/routes/projects";
 import { taskRoutes } from "../server/routes/tasks";
-import { actionLogRoutes } from "../server/routes/action-log";
+import { runRoutes } from "../server/routes/runs";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 let ctx: AppContext;
@@ -22,8 +22,8 @@ beforeAll(async () => {
   app = new Hono();
   app.route("/projects", projectRoutes(ctx.projectService));
   app.route("/tasks", taskRoutes(ctx.taskService));
-  app.route("/actions", actionRoutes(ctx.actionService));
-  app.route("/action-log", actionLogRoutes(ctx.actionLogService));
+  app.route("/agents", agentRoutes(ctx.agentService));
+  app.route("/runs", runRoutes(ctx.runService));
   app.onError((err, c) => {
     if (err instanceof SyntaxError) return c.json({ error: "invalid JSON body" }, 400);
     if (err instanceof ServiceError) return c.json({ error: err.message }, err.statusCode as ContentfulStatusCode);
@@ -179,170 +179,213 @@ describe("Task Routes", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Action Routes
+// Agent Routes
 // ---------------------------------------------------------------------------
 
-describe("Action Routes", () => {
-  it("POST /actions creates action", async () => {
-    const res = await req("/actions", {
+describe("Agent Routes", () => {
+  it("POST /agents creates agent (201)", async () => {
+    const res = await req("/agents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([{
-        kind: "plan",
-        prompt: "test action",
+        identifier: "plan",
+        prompt: "test agent",
         agent: "tab:orchestrator",
       }]),
     });
     expect(res.status).toBe(201);
     const [body] = await res.json();
-    expect(body.kind).toBe("plan");
-    expect(body.prompt).toBe("test action");
+    expect(body.identifier).toBe("plan");
+    expect(body.prompt).toBe("test agent");
     expect(body.agent).toBe("tab:orchestrator");
+    expect(body.enabled).toBe(1);
   });
 
-  it("POST /actions — invalid agent returns 400", async () => {
-    const res = await req("/actions", {
+  it("POST /agents — invalid agent returns 400", async () => {
+    const res = await req("/agents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ kind: "goal", prompt: "x", agent: "invalid" }]),
+      body: JSON.stringify([{ identifier: "bad-agent", prompt: "x", agent: "invalid" }]),
     });
     expect(res.status).toBe(400);
   });
 
-  it("POST /actions — missing prompt returns 400", async () => {
-    const res = await req("/actions", {
+  it("POST /agents — missing prompt returns 400", async () => {
+    const res = await req("/agents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ kind: "goal", prompt: "", agent: "tab:orchestrator" }]),
+      body: JSON.stringify([{ identifier: "no-prompt", prompt: "", agent: "tab:orchestrator" }]),
     });
     expect(res.status).toBe(400);
   });
 
-  it("GET /actions lists actions", async () => {
-    const res = await req("/actions");
+  it("GET /agents lists agents", async () => {
+    const res = await req("/agents");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toBeArray();
     expect(typeof body.total).toBe("number");
   });
 
-  it("GET /actions/:id returns action", async () => {
-    const create = await req("/actions", {
+  it("GET /agents/:id returns agent", async () => {
+    const create = await req("/agents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ kind: "goal", prompt: "find me", agent: "tab:executor" }]),
+      body: JSON.stringify([{ identifier: "find-me", prompt: "find me", agent: "tab:executor" }]),
     });
-    const [action] = await create.json();
-    const res = await req(`/actions/${action.id}`);
+    const [agent] = await create.json();
+    const res = await req(`/agents/${agent.id}`);
     expect(res.status).toBe(200);
-    expect((await res.json()).id).toBe(action.id);
+    expect((await res.json()).id).toBe(agent.id);
   });
 
-  it("GET /actions/:id — 404 for missing", async () => {
-    const res = await req("/actions/nonexistent");
+  it("GET /agents/:id — 404 for missing", async () => {
+    const res = await req("/agents/nonexistent");
     expect(res.status).toBe(404);
   });
 
-  it("PATCH /actions updates prompt", async () => {
-    const create = await req("/actions", {
+  it("PATCH /agents updates prompt", async () => {
+    const create = await req("/agents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ kind: "design", prompt: "update me", agent: "tab:orchestrator" }]),
+      body: JSON.stringify([{ identifier: "update-prompt", prompt: "update me", agent: "tab:orchestrator" }]),
     });
-    const [action] = await create.json();
-    const res = await req("/actions", {
+    const [agent] = await create.json();
+    const res = await req("/agents", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: action.id, prompt: "updated" }]),
+      body: JSON.stringify([{ id: agent.id, prompt: "updated" }]),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
     expect(body.prompt).toBe("updated");
   });
+
+  it("PATCH /agents updates identifier", async () => {
+    const create = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ identifier: "rename-route", prompt: "test", agent: "tab:orchestrator" }]),
+    });
+    const [agent] = await create.json();
+    const res = await req("/agents", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: agent.id, identifier: "renamed-route" }]),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.identifier).toBe("renamed-route");
+  });
+
+  it("PATCH /agents updates enabled", async () => {
+    const create = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ identifier: "disable-route", prompt: "test", agent: "tab:executor" }]),
+    });
+    const [agent] = await create.json();
+    const res = await req("/agents", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: agent.id, enabled: 0 }]),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.enabled).toBe(0);
+  });
+
+  it("DELETE /agents removes agents (204)", async () => {
+    const create = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ identifier: "delete-me", prompt: "bye", agent: "tab:orchestrator" }]),
+    });
+    const [agent] = await create.json();
+    const res = await req("/agents", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [agent.id] }),
+    });
+    expect(res.status).toBe(204);
+
+    const check = await req(`/agents/${agent.id}`);
+    expect(check.status).toBe(404);
+  });
 });
 
 // ---------------------------------------------------------------------------
-// Action Log Routes
+// Run Routes
 // ---------------------------------------------------------------------------
 
-describe("Action Log Routes", () => {
-  let actionId: string;
+describe("Run Routes", () => {
   let projectId: string;
 
   beforeAll(async () => {
-    const [p] = ctx.projectService.create([{ title: "Log Route Project" }]);
+    const [p] = ctx.projectService.create([{ title: "Run Route Project" }]);
     projectId = p.id;
-
-    const [a] = ctx.actionService.create([{
-      kind: "requirements",
-      prompt: "log route action",
-      agent: "tab:orchestrator",
-    }]);
-    actionId = a.id;
   });
 
-  it("POST /action-log creates entry", async () => {
-    const res = await req("/action-log", {
+  it("POST /runs creates run (201)", async () => {
+    const res = await req("/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([{
-        action_id: actionId,
+        agent: "plan",
         entity_type: "project",
         entity_id: projectId,
       }]),
     });
     expect(res.status).toBe(201);
     const [body] = await res.json();
-    expect(body.action_id).toBe(actionId);
+    expect(body.agent).toBe("plan");
     expect(body.entity_type).toBe("project");
     expect(body.status).toBe("running");
     expect(body.output).toBeNull();
   });
 
-  it("GET /action-log lists entries", async () => {
-    const res = await req("/action-log");
+  it("GET /runs lists runs", async () => {
+    const res = await req("/runs");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toBeArray();
     expect(body.total).toBeGreaterThanOrEqual(1);
   });
 
-  it("GET /action-log/:id returns entry", async () => {
-    const create = await req("/action-log", {
+  it("GET /runs/:id returns run", async () => {
+    const create = await req("/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([{
-        action_id: actionId,
+        agent: "goal",
         entity_type: "project",
         entity_id: projectId,
       }]),
     });
     const [entry] = await create.json();
-    const res = await req(`/action-log/${entry.id}`);
+    const res = await req(`/runs/${entry.id}`);
     expect(res.status).toBe(200);
     expect((await res.json()).id).toBe(entry.id);
   });
 
-  it("PATCH /action-log updates status and output", async () => {
-    const create = await req("/action-log", {
+  it("PATCH /runs updates status and output", async () => {
+    const create = await req("/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([{
-        action_id: actionId,
+        agent: "plan",
         entity_type: "project",
         entity_id: projectId,
       }]),
     });
     const [entry] = await create.json();
-    const now = new Date().toISOString();
-    const res = await req("/action-log", {
+    const res = await req("/runs", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([{
         id: entry.id,
         status: "done",
         output: "Result",
-        finished_at: now,
       }]),
     });
     expect(res.status).toBe(200);
@@ -351,10 +394,26 @@ describe("Action Log Routes", () => {
     expect(body.output).toBe("Result");
   });
 
-  it("GET /action-log filters by entity_type", async () => {
-    const res = await req("/action-log?entity_type=project");
+  it("GET /runs filters by entity_type", async () => {
+    const res = await req("/runs?entity_type=project");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.every((e: { entity_type: string }) => e.entity_type === "project")).toBe(true);
+  });
+
+  it("GET /runs filters by agent", async () => {
+    const res = await req("/runs?agent=plan");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.every((e: { agent: string }) => e.agent === "plan")).toBe(true);
+  });
+
+  it("GET /runs/stats returns daily and summary stats", async () => {
+    const res = await req("/runs/stats");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.daily).toBeArray();
+    expect(body.summary).toBeDefined();
+    expect(typeof body.summary.total).toBe("number");
   });
 });

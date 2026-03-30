@@ -159,117 +159,148 @@ describe("Task CRUD", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Action CRUD
+// Agent CRUD
 // ---------------------------------------------------------------------------
 
-describe("Action CRUD", () => {
-  it("creates action with kind, prompt, and agent", () => {
-    const [action] = ctx.actionService.create([{
-      kind: "plan",
+describe("Agent CRUD", () => {
+  it("creates agent with identifier, prompt, and agent", () => {
+    const [agent] = ctx.agentService.create([{
+      identifier: "plan",
       prompt: "Plan the work",
       agent: "tab:orchestrator",
     }]);
 
-    expect(action.id).toBeTruthy();
-    expect(action.kind).toBe("plan");
-    expect(action.prompt).toBe("Plan the work");
-    expect(action.agent).toBe("tab:orchestrator");
-    expect(action.created_at).toBeTruthy();
+    expect(agent.id).toBeTruthy();
+    expect(agent.identifier).toBe("plan");
+    expect(agent.prompt).toBe("Plan the work");
+    expect(agent.agent).toBe("tab:orchestrator");
+    expect(agent.enabled).toBe(1);
+    expect(agent.created_at).toBeTruthy();
   });
 
-  it("rejects invalid kind", () => {
+  it("rejects empty identifier", () => {
     expect(() =>
-      ctx.actionService.create([{
-        kind: "invalid" as "plan",
+      ctx.agentService.create([{
+        identifier: "",
         prompt: "X",
         agent: "tab:orchestrator",
-      }])
-    ).toThrow(ServiceError);
-  });
-
-  it("rejects invalid agent", () => {
-    expect(() =>
-      ctx.actionService.create([{
-        kind: "goal",
-        prompt: "X",
-        agent: "invalid" as "tab:orchestrator",
       }])
     ).toThrow(ServiceError);
   });
 
   it("rejects empty prompt", () => {
     expect(() =>
-      ctx.actionService.create([{
-        kind: "goal",
+      ctx.agentService.create([{
+        identifier: "empty-prompt-test",
         prompt: "",
         agent: "tab:executor",
       }])
     ).toThrow(ServiceError);
   });
 
-  it("rejects duplicate kind", () => {
-    // "plan" was already created above
+  it("rejects invalid agent enum", () => {
     expect(() =>
-      ctx.actionService.create([{
-        kind: "plan",
-        prompt: "Duplicate",
-        agent: "tab:orchestrator",
+      ctx.agentService.create([{
+        identifier: "bad-agent-test",
+        prompt: "X",
+        agent: "invalid" as "tab:orchestrator",
       }])
     ).toThrow(ServiceError);
   });
 
-  it("updates action prompt", async () => {
-    const [action] = ctx.actionService.create([{
-      kind: "goal",
+  it("rejects duplicate identifier — 409", () => {
+    // "plan" was already created above
+    try {
+      ctx.agentService.create([{
+        identifier: "plan",
+        prompt: "Duplicate",
+        agent: "tab:orchestrator",
+      }]);
+      expect(true).toBe(false); // should not reach here
+    } catch (err) {
+      expect(err).toBeInstanceOf(ServiceError);
+      expect((err as ServiceError).statusCode).toBe(409);
+    }
+  });
+
+  it("updates agent prompt", async () => {
+    const [agent] = ctx.agentService.create([{
+      identifier: "goal",
       prompt: "Original",
       agent: "tab:executor",
     }]);
     await new Promise((r) => setTimeout(r, 5));
-    const [updated] = ctx.actionService.update([{ id: action.id, prompt: "Updated" }]);
+    const [updated] = ctx.agentService.update([{ id: agent.id, prompt: "Updated" }]);
     expect(updated.prompt).toBe("Updated");
-    expect(updated.updated_at).not.toBe(action.updated_at);
+    expect(updated.updated_at).not.toBe(agent.updated_at);
   });
 
-  it("throws 404 updating non-existent action", () => {
+  it("updates agent identifier", () => {
+    const [agent] = ctx.agentService.create([{
+      identifier: "rename-me",
+      prompt: "Test",
+      agent: "tab:orchestrator",
+    }]);
+    const [updated] = ctx.agentService.update([{ id: agent.id, identifier: "renamed" }]);
+    expect(updated.identifier).toBe("renamed");
+  });
+
+  it("toggles enabled field", () => {
+    const [agent] = ctx.agentService.create([{
+      identifier: "toggle-test",
+      prompt: "Test",
+      agent: "tab:orchestrator",
+    }]);
+    expect(agent.enabled).toBe(1);
+
+    const [disabled] = ctx.agentService.update([{ id: agent.id, enabled: 0 }]);
+    expect(disabled.enabled).toBe(0);
+
+    const [reenabled] = ctx.agentService.update([{ id: agent.id, enabled: 1 }]);
+    expect(reenabled.enabled).toBe(1);
+  });
+
+  it("throws 404 updating non-existent agent", () => {
     expect(() =>
-      ctx.actionService.update([{ id: "nonexistent", prompt: "X" }])
+      ctx.agentService.update([{ id: "nonexistent", prompt: "X" }])
     ).toThrow(ServiceError);
   });
 
   it("list returns paginated results", () => {
-    const result = ctx.actionService.list({ limit: 10, offset: 0 });
+    const result = ctx.agentService.list({ limit: 10, offset: 0 });
     expect(result.data).toBeArray();
     expect(typeof result.total).toBe("number");
   });
 
-  it("list with kind filter", () => {
-    const result = ctx.actionService.list({ limit: 100, offset: 0, kind: "plan" });
+  it("list with identifier filter", () => {
+    const result = ctx.agentService.list({ limit: 100, offset: 0, identifier: "plan" });
     expect(result.data.length).toBeGreaterThanOrEqual(1);
-    expect(result.data.every((a) => a.kind === "plan")).toBe(true);
+    expect(result.data.every((a) => a.identifier === "plan")).toBe(true);
+  });
+
+  it("list with enabled filter", () => {
+    const result = ctx.agentService.list({ limit: 100, offset: 0, enabled: 1 });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.every((a) => a.enabled === 1)).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Action Log
+// Run
 // ---------------------------------------------------------------------------
 
-describe("Action Log", () => {
-  it("creates an action log entry", () => {
-    const [project] = ctx.projectService.create([{ title: "Log Project" }]);
-    const [action] = ctx.actionService.create([{
-      kind: "requirements",
-      prompt: "Gather reqs",
-      agent: "tab:orchestrator",
-    }]);
+describe("Run", () => {
+  it("creates a run with agent string identifier", () => {
+    const [project] = ctx.projectService.create([{ title: "Run Project" }]);
 
-    const [entry] = ctx.actionLogService.create([{
-      action_id: action.id,
+    const [entry] = ctx.runService.create([{
+      agent: "plan",
       entity_type: "project",
       entity_id: project.id,
     }]);
 
     expect(entry.id).toBeTruthy();
-    expect(entry.action_id).toBe(action.id);
+    expect(entry.agent).toBe("plan");
     expect(entry.entity_type).toBe("project");
     expect(entry.entity_id).toBe(project.id);
     expect(entry.status).toBe("running");
@@ -278,47 +309,118 @@ describe("Action Log", () => {
     expect(entry.finished_at).toBeNull();
   });
 
-  it("updates status and output", () => {
-    const [project] = ctx.projectService.create([{ title: "Update Log" }]);
-    const [action] = ctx.actionService.create([{
-      kind: "design",
-      prompt: "Design it",
-      agent: "tab:executor",
-    }]);
-    const [entry] = ctx.actionLogService.create([{
-      action_id: action.id,
+  it("does not validate that agent exists — just stores string", () => {
+    const [project] = ctx.projectService.create([{ title: "No Validation Project" }]);
+
+    const [entry] = ctx.runService.create([{
+      agent: "nonexistent-agent",
       entity_type: "project",
       entity_id: project.id,
     }]);
 
-    const now = new Date().toISOString();
-    const [updated] = ctx.actionLogService.update([{
+    expect(entry.agent).toBe("nonexistent-agent");
+    expect(entry.status).toBe("running");
+  });
+
+  it("default status is running", () => {
+    const [project] = ctx.projectService.create([{ title: "Default Status" }]);
+    const [entry] = ctx.runService.create([{
+      agent: "plan",
+      entity_type: "project",
+      entity_id: project.id,
+    }]);
+
+    expect(entry.status).toBe("running");
+  });
+
+  it("updates status to done", () => {
+    const [project] = ctx.projectService.create([{ title: "Done Run" }]);
+    const [entry] = ctx.runService.create([{
+      agent: "plan",
+      entity_type: "project",
+      entity_id: project.id,
+    }]);
+
+    const [updated] = ctx.runService.update([{
       id: entry.id,
       status: "done",
-      output: "Result text",
-      finished_at: now,
     }]);
 
     expect(updated.status).toBe("done");
-    expect(updated.output).toBe("Result text");
-    expect(updated.finished_at).toBe(now);
+    expect(updated.finished_at).not.toBeNull();
   });
 
-  it("rejects nonexistent action_id", () => {
-    expect(() =>
-      ctx.actionLogService.create([{
-        action_id: "nonexistent",
-        entity_type: "project",
-        entity_id: "some-id",
-      }])
-    ).toThrow(ServiceError);
+  it("updates status to failed", () => {
+    const [project] = ctx.projectService.create([{ title: "Failed Run" }]);
+    const [entry] = ctx.runService.create([{
+      agent: "goal",
+      entity_type: "project",
+      entity_id: project.id,
+    }]);
+
+    const [updated] = ctx.runService.update([{
+      id: entry.id,
+      status: "failed",
+    }]);
+
+    expect(updated.status).toBe("failed");
+    expect(updated.finished_at).not.toBeNull();
+  });
+
+  it("updates status to cancelled", () => {
+    const [project] = ctx.projectService.create([{ title: "Cancelled Run" }]);
+    const [entry] = ctx.runService.create([{
+      agent: "plan",
+      entity_type: "project",
+      entity_id: project.id,
+    }]);
+
+    const [updated] = ctx.runService.update([{
+      id: entry.id,
+      status: "cancelled",
+    }]);
+
+    expect(updated.status).toBe("cancelled");
+    expect(updated.finished_at).not.toBeNull();
+  });
+
+  it("updates status to todo", () => {
+    const [project] = ctx.projectService.create([{ title: "Todo Run" }]);
+    const [entry] = ctx.runService.create([{
+      agent: "plan",
+      entity_type: "project",
+      entity_id: project.id,
+    }]);
+
+    const [updated] = ctx.runService.update([{
+      id: entry.id,
+      status: "todo",
+    }]);
+
+    expect(updated.status).toBe("todo");
+  });
+
+  it("updates output field", () => {
+    const [project] = ctx.projectService.create([{ title: "Output Run" }]);
+    const [entry] = ctx.runService.create([{
+      agent: "plan",
+      entity_type: "project",
+      entity_id: project.id,
+    }]);
+
+    const [updated] = ctx.runService.update([{
+      id: entry.id,
+      status: "done",
+      output: "Result text",
+    }]);
+
+    expect(updated.output).toBe("Result text");
   });
 
   it("rejects invalid entity_type", () => {
-    const { data: [action] } = ctx.actionService.list({ limit: 1, offset: 0 });
     expect(() =>
-      ctx.actionLogService.create([{
-        action_id: action.id,
+      ctx.runService.create([{
+        agent: "plan",
         entity_type: "widget" as "project",
         entity_id: "x",
       }])
@@ -327,13 +429,46 @@ describe("Action Log", () => {
 
   it("throws 404 updating nonexistent entry", () => {
     expect(() =>
-      ctx.actionLogService.update([{ id: "nonexistent", status: "done" }])
+      ctx.runService.update([{ id: "nonexistent", status: "done" }])
     ).toThrow(ServiceError);
   });
 
   it("list filters by entity_type and entity_id", () => {
-    const result = ctx.actionLogService.list({ limit: 100, offset: 0, entity_type: "project" });
+    const result = ctx.runService.list({ limit: 100, offset: 0, entity_type: "project" });
     expect(result.data).toBeArray();
     expect(result.data.every((e) => e.entity_type === "project")).toBe(true);
+  });
+
+  it("list filters by agent", () => {
+    const result = ctx.runService.list({ limit: 100, offset: 0, agent: "plan" });
+    expect(result.data).toBeArray();
+    expect(result.data.every((e) => e.agent === "plan")).toBe(true);
+  });
+
+  it("list filters by status", () => {
+    const result = ctx.runService.list({ limit: 100, offset: 0, status: "running" });
+    expect(result.data).toBeArray();
+    expect(result.data.every((e) => e.status === "running")).toBe(true);
+  });
+
+  it("stats returns by_agent grouping", () => {
+    const stats = ctx.runService.stats();
+    expect(stats.summary).toBeDefined();
+    expect(typeof stats.summary.total).toBe("number");
+    expect(stats.daily).toBeArray();
+
+    // Verify by_agent grouping exists in daily stats
+    if (stats.daily.length > 0) {
+      expect(stats.daily[0]).toHaveProperty("agent");
+    }
+  });
+
+  it("stats summary includes todo and cancelled counts", () => {
+    const stats = ctx.runService.stats();
+    expect(typeof stats.summary.todo).toBe("number");
+    expect(typeof stats.summary.cancelled).toBe("number");
+    expect(typeof stats.summary.done).toBe("number");
+    expect(typeof stats.summary.failed).toBe("number");
+    expect(typeof stats.summary.running).toBe("number");
   });
 });
