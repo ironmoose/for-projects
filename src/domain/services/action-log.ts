@@ -1,4 +1,4 @@
-import type { ActionLogEntry, ActionLogStats, ActionLogStatus, EntityType } from "../entities";
+import type { ActionLogEntry, ActionLogDailyStats, ActionLogSummaryStats, ActionLogStatus, EntityType } from "../entities";
 import type { CreateActionLogInput, UpdateActionLogInput } from "../inputs";
 import type { IActionLogService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -63,10 +63,6 @@ export class ActionLogService implements IActionLogService {
     return entries;
   }
 
-  stats(): ActionLogStats {
-    return this.actionLogRepo.stats();
-  }
-
   update(inputs: UpdateActionLogInput[]): ActionLogEntry[] {
     for (const input of inputs) {
       const existing = this.actionLogRepo.findById(input.id);
@@ -76,5 +72,16 @@ export class ActionLogService implements IActionLogService {
     const entries = this.actionLogRepo.updateMany(inputs);
     this.eventBus.emit({ type: "updated", entity_type: "action_log", payload: entries });
     return entries;
+  }
+
+  stats(days?: number): { daily: ActionLogDailyStats[]; summary: ActionLogSummaryStats } {
+    const d = days ?? 30;
+    if (d < 1 || d > 365) {
+      throw new ServiceError("days must be between 1 and 365", 400);
+    }
+    return {
+      daily: this.actionLogRepo.getDaily(d),
+      summary: this.actionLogRepo.getSummary(),
+    };
   }
 }

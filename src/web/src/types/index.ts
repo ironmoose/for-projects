@@ -46,3 +46,24 @@ export interface ActionLogStats {
   by_kind: { kind: string; count: number }[];
   total: number;
 }
+
+export interface ActionLogDailyStats {
+  date: string;
+  status: string;
+  kind: string;
+  count: number;
+  avg_duration_ms: number | null;
+}
+
+export interface ActionLogSummaryStats {
+  total: number;
+  done: number;
+  failed: number;
+  running: number;
+  avg_duration_ms: number | null;
+}
+
+export interface ActionLogStatsResponse {
+  daily: ActionLogDailyStats[];
+  summary: ActionLogSummaryStats;
+}

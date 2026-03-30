@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { ActionKind, ActionLogEntry, ActionLogStatus, ActionLogStats, EntityType } from "../entities";
+import type { ActionKind, ActionLogEntry, ActionLogStatus, ActionLogStats, ActionLogDailyStats, ActionLogSummaryStats, EntityType } from "../entities";
 
 export interface ActionLogRow {
   id: string;
@@ -136,6 +136,33 @@ export class ActionLogRepository {
     }
 
     return ids.map((id) => this.findById(id)!);
+  }
+
+  getDaily(days: number): ActionLogDailyStats[] {
+    return this.db
+      .query(
+        `SELECT date(al.started_at) AS date, al.status, a.kind, COUNT(*) AS count,
+  AVG(CASE WHEN al.finished_at IS NOT NULL THEN (julianday(al.finished_at) - julianday(al.started_at)) * 86400000 ELSE NULL END) AS avg_duration_ms
+FROM action_log al JOIN actions a ON a.id = al.action_id
+WHERE al.started_at >= date('now', '-' || ? || ' days')
+GROUP BY date(al.started_at), al.status, a.kind ORDER BY date ASC`,
+      )
+      .all(days) as ActionLogDailyStats[];
+  }
+
+  getSummary(): ActionLogSummaryStats {
+    const row = this.db
+      .query(
+        `SELECT COUNT(*) AS total,
+  SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done,
+  SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+  SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) AS running,
+  AVG(CASE WHEN finished_at IS NOT NULL THEN (julianday(finished_at) - julianday(started_at)) * 86400000 ELSE NULL END) AS avg_duration_ms
+FROM action_log`,
+      )
+      .get() as ActionLogSummaryStats | null;
+
+    return row ?? { total: 0, done: 0, failed: 0, running: 0, avg_duration_ms: null };
   }
 
   updateMany(rows: { id: string; status?: ActionLogStatus; output?: string | null; finished_at?: string | null }[]): ActionLogEntry[] {
