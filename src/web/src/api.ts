@@ -1,4 +1,4 @@
-import type { Action, ActionLogEntry, Project, Task } from "./types";
+import type { Action, ActionLogEntry, ActionLogStats, Project, Task } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -159,5 +159,10 @@ export async function createActionLog(inputs: Array<{ action_id: string; entity_
 
 export async function updateActionLog(inputs: Array<{ id: string; status?: string; output?: string | null; finished_at?: string | null }>): Promise<ActionLogEntry[]> {
   const res = await apiFetch("/api/action-log", jsonPatch(inputs));
+  return res.json();
+}
+
+export async function fetchActionLogStats(): Promise<ActionLogStats> {
+  const res = await apiFetch("/api/action-log/stats");
   return res.json();
 }

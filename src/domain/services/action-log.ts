@@ -1,4 +1,4 @@
-import type { ActionLogEntry, ActionLogStatus, EntityType } from "../entities";
+import type { ActionLogEntry, ActionLogStats, ActionLogStatus, EntityType } from "../entities";
 import type { CreateActionLogInput, UpdateActionLogInput } from "../inputs";
 import type { IActionLogService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -61,6 +61,10 @@ export class ActionLogService implements IActionLogService {
     const entries = this.actionLogRepo.insertMany(rows);
     this.eventBus.emit({ type: "created", entity_type: "action_log", payload: entries });
     return entries;
+  }
+
+  stats(): ActionLogStats {
+    return this.actionLogRepo.stats();
   }
 
   update(inputs: UpdateActionLogInput[]): ActionLogEntry[] {

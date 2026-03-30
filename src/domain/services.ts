@@ -1,4 +1,4 @@
-import type { Project, Task, Action, ActionLogEntry, ActionKind, AgentType, ActionLogStatus, EntityType } from "./entities";
+import type { Project, Task, Action, ActionLogEntry, ActionKind, AgentType, ActionLogStatus, ActionLogStats, EntityType } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -52,4 +52,5 @@ export interface IActionLogService {
   get(id: string): ActionLogEntry;
   create(inputs: CreateActionLogInput[]): ActionLogEntry[];
   update(inputs: UpdateActionLogInput[]): ActionLogEntry[];
+  stats(): ActionLogStats;
 }
