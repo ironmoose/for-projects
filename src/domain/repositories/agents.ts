@@ -12,18 +12,23 @@ export interface AgentRow {
   updated_at: string;
 }
 
+function mapRow(row: AgentRow | null): Agent | null {
+  if (!row) return null;
+  return { ...row, enabled: Boolean(row.enabled) };
+}
+
 export class AgentRepository {
   constructor(private db: Database) {}
 
   findById(id: string): Agent | null {
-    return this.db.query("SELECT * FROM agents WHERE id = ?").get(id) as Agent | null;
+    return mapRow(this.db.query("SELECT * FROM agents WHERE id = ?").get(id) as AgentRow | null);
   }
 
   findByIdentifier(identifier: string): Agent | null {
-    return this.db.query("SELECT * FROM agents WHERE identifier = ?").get(identifier) as Agent | null;
+    return mapRow(this.db.query("SELECT * FROM agents WHERE identifier = ?").get(identifier) as AgentRow | null);
   }
 
-  findMany(filter?: { id?: string; limit?: number; offset?: number; identifier?: string; agent?: string; enabled?: number }): Agent[] {
+  findMany(filter?: { id?: string; limit?: number; offset?: number; identifier?: string; agent?: string; enabled?: boolean }): Agent[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
@@ -43,18 +48,18 @@ export class AgentRepository {
     }
     if (filter?.enabled !== undefined) {
       conditions.push("enabled = ?");
-      params.push(filter.enabled);
+      params.push(filter.enabled ? 1 : 0);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
     params.push(limit, offset);
 
-    return this.db
+    return (this.db
       .query(`SELECT * FROM agents ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-      .all(...params) as Agent[];
+      .all(...params) as AgentRow[]).map((r) => mapRow(r)!) as Agent[];
   }
 
-  count(filter?: { id?: string; identifier?: string; agent?: string; enabled?: number }): number {
+  count(filter?: { id?: string; identifier?: string; agent?: string; enabled?: boolean }): number {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
 
@@ -72,7 +77,7 @@ export class AgentRepository {
     }
     if (filter?.enabled !== undefined) {
       conditions.push("enabled = ?");
-      params.push(filter.enabled);
+      params.push(filter.enabled ? 1 : 0);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
@@ -84,7 +89,7 @@ export class AgentRepository {
     ).total;
   }
 
-  insertMany(rows: Omit<AgentRow, "id" | "created_at" | "updated_at">[]): Agent[] {
+  insertMany(rows: { identifier: string; prompt: string; agent: string; enabled: boolean }[]): Agent[] {
     const stmt = this.db.query(
       "INSERT INTO agents (id, identifier, prompt, agent, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
@@ -94,13 +99,13 @@ export class AgentRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.identifier, row.prompt, row.agent, row.enabled, now, now);
+      stmt.run(id, row.identifier, row.prompt, row.agent, row.enabled ? 1 : 0, now, now);
     }
 
     return ids.map((id) => this.findById(id)!);
   }
 
-  updateMany(rows: { id: string; identifier?: string; prompt?: string; agent?: string; enabled?: number }[]): Agent[] {
+  updateMany(rows: { id: string; identifier?: string; prompt?: string; agent?: string; enabled?: boolean }[]): Agent[] {
     const now = new Date().toISOString();
     const results: Agent[] = [];
 
@@ -115,7 +120,7 @@ export class AgentRepository {
 
       this.db
         .query("UPDATE agents SET identifier = ?, prompt = ?, agent = ?, enabled = ?, updated_at = ? WHERE id = ?")
-        .run(identifier, prompt, agent, enabled, now, row.id);
+        .run(identifier, prompt, agent, enabled ? 1 : 0, now, row.id);
 
       results.push(this.findById(row.id)!);
     }

@@ -89,7 +89,16 @@ export class RunService implements IRunService {
       }
     }
 
-    const entries = this.runRepo.updateMany(inputs);
+    const TERMINAL: RunStatus[] = ['done', 'failed', 'cancelled'];
+    const now = new Date().toISOString();
+    const mapped = inputs.map((input) => ({
+      ...input,
+      finished_at: input.status !== undefined && TERMINAL.includes(input.status)
+        ? now
+        : input.finished_at,
+    }));
+
+    const entries = this.runRepo.updateMany(mapped);
     this.eventBus.emit({ type: "updated", entity_type: "run", payload: entries });
     return entries;
   }

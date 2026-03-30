@@ -50,7 +50,7 @@ describe("migrator", () => {
     await runMigrations(db);
 
     const tables = getAllUserTables(db);
-    expect(tables).toEqual(["action_log", "actions", "projects", "tasks"]);
+    expect(tables).toEqual(["agents", "projects", "runs", "tasks"]);
   });
 
   it("running migrations twice is idempotent", async () => {
@@ -85,8 +85,8 @@ describe("migrator", () => {
     const tables = getAllUserTables(db);
     expect(tables).toContain("projects");
     expect(tables).toContain("tasks");
-    expect(tables).toContain("actions");
-    expect(tables).toContain("action_log");
+    expect(tables).toContain("agents");
+    expect(tables).toContain("runs");
   });
 
   it("foreign key: task with bad project_id fails", async () => {

@@ -174,7 +174,7 @@ describe("Agent CRUD", () => {
     expect(agent.identifier).toBe("plan");
     expect(agent.prompt).toBe("Plan the work");
     expect(agent.agent).toBe("tab:orchestrator");
-    expect(agent.enabled).toBe(1);
+    expect(agent.enabled).toBe(true);
     expect(agent.created_at).toBeTruthy();
   });
 
@@ -251,13 +251,13 @@ describe("Agent CRUD", () => {
       prompt: "Test",
       agent: "tab:orchestrator",
     }]);
-    expect(agent.enabled).toBe(1);
+    expect(agent.enabled).toBe(true);
 
-    const [disabled] = ctx.agentService.update([{ id: agent.id, enabled: 0 }]);
-    expect(disabled.enabled).toBe(0);
+    const [disabled] = ctx.agentService.update([{ id: agent.id, enabled: false }]);
+    expect(disabled.enabled).toBe(false);
 
-    const [reenabled] = ctx.agentService.update([{ id: agent.id, enabled: 1 }]);
-    expect(reenabled.enabled).toBe(1);
+    const [reenabled] = ctx.agentService.update([{ id: agent.id, enabled: true }]);
+    expect(reenabled.enabled).toBe(true);
   });
 
   it("throws 404 updating non-existent agent", () => {
@@ -279,9 +279,9 @@ describe("Agent CRUD", () => {
   });
 
   it("list with enabled filter", () => {
-    const result = ctx.agentService.list({ limit: 100, offset: 0, enabled: 1 });
+    const result = ctx.agentService.list({ limit: 100, offset: 0, enabled: true });
     expect(result.data.length).toBeGreaterThanOrEqual(1);
-    expect(result.data.every((a) => a.enabled === 1)).toBe(true);
+    expect(result.data.every((a) => a.enabled === true)).toBe(true);
   });
 });
 

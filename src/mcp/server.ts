@@ -5,19 +5,19 @@ import {
   ServiceError,
   type IProjectService,
   type ITaskService,
-  type IActionService,
-  type IActionLogService,
-  type CreateActionInput,
-  type UpdateActionInput,
-  type CreateActionLogInput,
-  type UpdateActionLogInput,
+  type IAgentService,
+  type IRunService,
+  type CreateAgentInput,
+  type UpdateAgentInput,
+  type CreateRunInput,
+  type UpdateRunInput,
 } from "../domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
-  agentService: IActionService;
-  runService: IActionLogService;
+  agentService: IAgentService;
+  runService: IRunService;
 }
 
 function handle<T>(fn: () => T) {
@@ -191,7 +191,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         })).min(1),
       },
     },
-    ({ items }) => handle(() => agentService.create(items as CreateActionInput[]))
+    ({ items }) => handle(() => agentService.create(items as CreateAgentInput[]))
   );
 
   server.registerTool(
@@ -208,7 +208,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         })).min(1),
       },
     },
-    ({ items }) => handle(() => agentService.update(items as UpdateActionInput[]))
+    ({ items }) => handle(() => agentService.update(items as UpdateAgentInput[]))
   );
 
   // -- Runs -----------------------------------------------------------
@@ -225,7 +225,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         })).min(1),
       },
     },
-    ({ items }) => handle(() => runService.create(items as CreateActionLogInput[]))
+    ({ items }) => handle(() => runService.create(items as CreateRunInput[]))
   );
 
   server.registerTool(
@@ -240,15 +240,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         })).min(1),
       },
     },
-    ({ items }) => handle(() => {
-      const mapped = items.map((item) => ({
-        ...item,
-        finished_at: item.status === "done" || item.status === "failed" || item.status === "cancelled"
-          ? new Date().toISOString()
-          : undefined,
-      }));
-      return runService.update(mapped as UpdateActionLogInput[]);
-    })
+    ({ items }) => handle(() => runService.update(items as UpdateRunInput[]))
   );
 
   return server;

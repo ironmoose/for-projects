@@ -226,7 +226,7 @@ describe("create_agents", () => {
     expect(agents[0].identifier).toBe("plan");
     expect(agents[0].agent).toBe("tab:orchestrator");
     expect(agents[0].prompt).toBe("Plan prompt");
-    expect(agents[0].enabled).toBe(1);
+    expect(agents[0].enabled).toBe(true);
     expect(agents[1].identifier).toBe("goal");
     expect(agents[1].agent).toBe("tab:executor");
     expect(agents[1].id).toBeTruthy();
@@ -246,15 +246,15 @@ describe("list_agents", () => {
       items: [{ identifier: "disabled-mcp", agent: "tab:orchestrator", prompt: "Disabled" }],
     }));
     await callTool("update_agents", {
-      items: [{ id: created[0].id, enabled: 0 }],
+      items: [{ id: created[0].id, enabled: false }],
     });
 
-    const enabledList = parseResult(await callTool("list_agents", { enabled: 1 }));
-    expect(enabledList.data.every((a: { enabled: number }) => a.enabled === 1)).toBe(true);
+    const enabledList = parseResult(await callTool("list_agents", { enabled: true }));
+    expect(enabledList.data.every((a: { enabled: boolean }) => a.enabled === true)).toBe(true);
 
-    const disabledList = parseResult(await callTool("list_agents", { enabled: 0 }));
+    const disabledList = parseResult(await callTool("list_agents", { enabled: false }));
     expect(disabledList.data.length).toBeGreaterThanOrEqual(1);
-    expect(disabledList.data.every((a: { enabled: number }) => a.enabled === 0)).toBe(true);
+    expect(disabledList.data.every((a: { enabled: boolean }) => a.enabled === false)).toBe(true);
   });
 });
 
@@ -292,11 +292,11 @@ describe("update_agents", () => {
     }));
 
     const result = await callTool("update_agents", {
-      items: [{ id: created[0].id, enabled: 0 }],
+      items: [{ id: created[0].id, enabled: false }],
     });
 
     const updated = parseResult(result);
-    expect(updated[0].enabled).toBe(0);
+    expect(updated[0].enabled).toBe(false);
   });
 });
 

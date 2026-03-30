@@ -22,8 +22,8 @@ beforeAll(async () => {
   app = new Hono();
   app.route("/projects", projectRoutes(ctx.projectService));
   app.route("/tasks", taskRoutes(ctx.taskService));
-  app.route("/agents", agentRoutes(ctx.agentService));
-  app.route("/runs", runRoutes(ctx.runService));
+  app.route("/agents", agentRoutes({ agentService: ctx.agentService }));
+  app.route("/runs", runRoutes({ runService: ctx.runService }));
   app.onError((err, c) => {
     if (err instanceof SyntaxError) return c.json({ error: "invalid JSON body" }, 400);
     if (err instanceof ServiceError) return c.json({ error: err.message }, err.statusCode as ContentfulStatusCode);
@@ -198,7 +198,7 @@ describe("Agent Routes", () => {
     expect(body.identifier).toBe("plan");
     expect(body.prompt).toBe("test agent");
     expect(body.agent).toBe("tab:orchestrator");
-    expect(body.enabled).toBe(1);
+    expect(body.enabled).toBe(true);
   });
 
   it("POST /agents — invalid agent returns 400", async () => {
@@ -288,11 +288,11 @@ describe("Agent Routes", () => {
     const res = await req("/agents", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: agent.id, enabled: 0 }]),
+      body: JSON.stringify([{ id: agent.id, enabled: false }]),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
-    expect(body.enabled).toBe(0);
+    expect(body.enabled).toBe(false);
   });
 
   it("DELETE /agents removes agents (204)", async () => {
