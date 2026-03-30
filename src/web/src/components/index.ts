@@ -18,7 +18,7 @@ export { Card } from "./molecules/Card";
 export { Stack } from "./molecules/Stack";
 export { Markdown } from "./molecules/Markdown";
 export { PageHeader } from "./molecules/PageHeader";
-export { CreateForm } from "./molecules/CreateForm";
+export { CreateEntityOverlay } from "./organisms/CreateEntityOverlay";
 export { ListItem } from "./molecules/ListItem";
 export { TagChip } from "./molecules/TagChip";
 export { AddItemInput } from "./molecules/AddItemInput";
