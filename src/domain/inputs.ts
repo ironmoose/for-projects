@@ -1,4 +1,4 @@
-import type { ActionKind, AgentType, ActionLogStatus, EntityType } from "./entities";
+import type { AgentType, EntityType, RunStatus } from "./entities";
 
 export interface CreateProjectInput {
   title: string;
@@ -27,29 +27,31 @@ export interface UpdateTaskInput {
   plan?: string | null;
 }
 
-export interface CreateActionInput {
-  kind: ActionKind;
+export interface CreateAgentInput {
+  identifier: string;
   prompt: string;
   agent: AgentType;
+  enabled?: boolean;
 }
 
-export interface UpdateActionInput {
+export interface UpdateAgentInput {
   id: string;
-  kind?: ActionKind;
+  identifier?: string;
   prompt?: string;
   agent?: AgentType;
+  enabled?: boolean;
 }
 
-export interface CreateActionLogInput {
-  action_id: string;
+export interface CreateRunInput {
+  agent: string;
   entity_type: EntityType;
   entity_id: string;
   started_at?: string;
 }
 
-export interface UpdateActionLogInput {
+export interface UpdateRunInput {
   id: string;
-  status?: ActionLogStatus;
+  status?: RunStatus;
   output?: string | null;
   finished_at?: string | null;
 }
