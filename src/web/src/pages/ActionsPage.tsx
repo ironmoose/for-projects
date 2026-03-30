@@ -16,12 +16,14 @@ import {
   StatusDonutChart,
   KindBreakdownChart,
   DurationSparkline,
+  ActivitySection,
 } from "../components";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchActions, createActions, updateActions, deleteActions } from "../api";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { useActionLogStats } from "../hooks/useActionLogStats";
+import { useActivityFeed } from "../hooks/useActivityFeed";
 import type { Action } from "../types";
 import { formatDate } from "../utils";
 
@@ -45,6 +47,7 @@ export function ActionsPage() {
   const { theme } = useTheme();
   const { showToast } = useToastContext();
   const { subscribeEvents } = useEventSubscription();
+  const activity = useActivityFeed();
 
   const { data: statsData, loading: statsLoading } = useActionLogStats(30);
 
@@ -250,6 +253,14 @@ export function ActionsPage() {
           </div>
         </CreateEntityOverlay>
       )}
+
+      <ActivitySection
+        running={activity.running}
+        recent={activity.recent}
+        loading={activity.loading}
+        timeframeMinutes={activity.timeframeMinutes}
+        onTimeframeChange={activity.setTimeframeMinutes}
+      />
 
       <div
         style={{

@@ -18,11 +18,15 @@ export function actionLogRoutes(service: IActionLogService): Hono {
     const entity_id = c.req.query("entity_id");
     const action_id = c.req.query("action_id");
     const status = c.req.query("status");
+    const started_after = c.req.query("started_after");
+    const finished_after = c.req.query("finished_after");
     const filter: {
       entity_type?: string;
       entity_id?: string;
       action_id?: string;
       status?: string;
+      started_after?: string;
+      finished_after?: string;
       limit: number;
       offset: number;
     } = { limit, offset };
@@ -30,6 +34,8 @@ export function actionLogRoutes(service: IActionLogService): Hono {
     if (entity_id) filter.entity_id = entity_id;
     if (action_id) filter.action_id = action_id;
     if (status) filter.status = status;
+    if (started_after) filter.started_after = started_after;
+    if (finished_after) filter.finished_after = finished_after;
     return c.json(service.list(filter));
   });
 

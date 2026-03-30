@@ -28,6 +28,8 @@ export class ActionLogRepository {
     entity_id?: string;
     action_id?: string;
     status?: ActionLogStatus;
+    started_after?: string;
+    finished_after?: string;
   }): ActionLogEntry[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
@@ -54,6 +56,14 @@ export class ActionLogRepository {
       conditions.push("status = ?");
       params.push(filter.status);
     }
+    if (filter?.started_after) {
+      conditions.push("started_at >= ?");
+      params.push(filter.started_after);
+    }
+    if (filter?.finished_after) {
+      conditions.push("finished_at >= ?");
+      params.push(filter.finished_after);
+    }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
     params.push(limit, offset);
@@ -69,6 +79,8 @@ export class ActionLogRepository {
     entity_id?: string;
     action_id?: string;
     status?: ActionLogStatus;
+    started_after?: string;
+    finished_after?: string;
   }): number {
     const conditions: string[] = [];
     const params: string[] = [];
@@ -92,6 +104,14 @@ export class ActionLogRepository {
     if (filter?.status) {
       conditions.push("status = ?");
       params.push(filter.status);
+    }
+    if (filter?.started_after) {
+      conditions.push("started_at >= ?");
+      params.push(filter.started_after);
+    }
+    if (filter?.finished_after) {
+      conditions.push("finished_at >= ?");
+      params.push(filter.finished_after);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
