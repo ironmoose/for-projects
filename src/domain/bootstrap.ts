@@ -3,6 +3,7 @@ import { createDatabase } from "./db/connection";
 import { runMigrations } from "./db/migrator";
 import { ProjectRepository } from "./repositories/projects";
 import { TaskRepository } from "./repositories/tasks";
+import { ActivityLogRepository } from "./repositories/activity-log";
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
 import { EventBus } from "./events";
@@ -12,6 +13,7 @@ export interface AppContext {
   eventBus: EventBus;
   projectService: ProjectService;
   taskService: TaskService;
+  activityLogRepo: ActivityLogRepository;
 }
 
 export async function bootstrap(dbPath?: string): Promise<AppContext> {
@@ -20,11 +22,12 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
 
   const projectRepo = new ProjectRepository(db);
   const taskRepo = new TaskRepository(db);
+  const activityLogRepo = new ActivityLogRepository(db);
 
   const eventBus = new EventBus();
 
-  const projectService = new ProjectService(projectRepo, eventBus);
-  const taskService = new TaskService(taskRepo, projectRepo, eventBus);
+  const projectService = new ProjectService(projectRepo, activityLogRepo, eventBus);
+  const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus);
 
-  return { db, eventBus, projectService, taskService };
+  return { db, eventBus, projectService, taskService, activityLogRepo };
 }

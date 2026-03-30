@@ -4,6 +4,7 @@ export { useEventSubscription, useEventFanOut, useEntitySubscription, EventSubsc
 export type { SubscribeEvents, EventSubscriptionContextValue } from "./useEventSubscription";
 export { useProjects } from "./useProjects";
 export { useProject } from "./useProject";
+export { useActivityLog } from "./useActivityLog";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";

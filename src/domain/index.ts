@@ -10,3 +10,4 @@ export { ProjectRepository } from "./repositories/projects";
 export { TaskRepository } from "./repositories/tasks";
 export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
+export { ActivityLogRepository } from "./repositories/activity-log";

@@ -3,11 +3,13 @@ import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
 import type { IProjectService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
+import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
 export class ProjectService implements IProjectService {
   constructor(
     private repo: ProjectRepository,
+    private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
   ) {}
 
@@ -51,6 +53,14 @@ export class ProjectService implements IProjectService {
     }));
 
     const projects = this.repo.insertMany(rows);
+    for (const p of projects) {
+      this.activityLog.insert({
+        entity_type: "project",
+        entity_id: p.id,
+        action: "created",
+        summary: JSON.stringify({ title: p.title }),
+      });
+    }
     this.eventBus.emit({ type: "created", entity_type: "project", payload: projects });
     return projects;
   }
@@ -77,12 +87,29 @@ export class ProjectService implements IProjectService {
     }
 
     const projects = this.repo.updateMany(inputs);
+    for (const p of projects) {
+      const fields = Object.keys(inputs.find((i) => i.id === p.id) ?? {}).filter((k) => k !== "id");
+      this.activityLog.insert({
+        entity_type: "project",
+        entity_id: p.id,
+        action: "updated",
+        summary: JSON.stringify({ fields }),
+      });
+    }
     this.eventBus.emit({ type: "updated", entity_type: "project", payload: projects });
     return projects;
   }
 
   remove(ids: string[]): void {
     this.repo.deleteMany(ids);
+    for (const id of ids) {
+      this.activityLog.insert({
+        entity_type: "project",
+        entity_id: id,
+        action: "deleted",
+        summary: JSON.stringify({}),
+      });
+    }
     this.eventBus.emit({ type: "deleted", entity_type: "project", ids });
   }
 }

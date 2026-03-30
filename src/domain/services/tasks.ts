@@ -4,12 +4,14 @@ import type { ITaskService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
+import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
 export class TaskService implements ITaskService {
   constructor(
     private taskRepo: TaskRepository,
     private projectRepo: ProjectRepository,
+    private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
   ) {}
 
@@ -62,6 +64,14 @@ export class TaskService implements ITaskService {
     }));
 
     const tasks = this.taskRepo.insertMany(rows);
+    for (const t of tasks) {
+      this.activityLog.insert({
+        entity_type: "task",
+        entity_id: t.id,
+        action: "created",
+        summary: JSON.stringify({ title: t.title, project_id: t.project_id }),
+      });
+    }
     this.eventBus.emit({ type: "created", entity_type: "task", payload: tasks });
     return tasks;
   }
@@ -91,12 +101,29 @@ export class TaskService implements ITaskService {
     }
 
     const tasks = this.taskRepo.updateMany(inputs);
+    for (const t of tasks) {
+      const fields = Object.keys(inputs.find((i) => i.id === t.id) ?? {}).filter((k) => k !== "id");
+      this.activityLog.insert({
+        entity_type: "task",
+        entity_id: t.id,
+        action: "updated",
+        summary: JSON.stringify({ fields }),
+      });
+    }
     this.eventBus.emit({ type: "updated", entity_type: "task", payload: tasks });
     return tasks;
   }
 
   remove(ids: string[]): void {
     this.taskRepo.deleteMany(ids);
+    for (const id of ids) {
+      this.activityLog.insert({
+        entity_type: "task",
+        entity_id: id,
+        action: "deleted",
+        summary: JSON.stringify({}),
+      });
+    }
     this.eventBus.emit({ type: "deleted", entity_type: "task", ids });
   }
 }

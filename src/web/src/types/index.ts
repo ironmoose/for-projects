@@ -24,3 +24,12 @@ export interface Task {
   updated_at: string;
 }
 
+export interface ActivityLog {
+  id: string;
+  entity_type: string;
+  entity_id: string | null;
+  action: string;
+  summary: string;
+  created_at: string;
+}
+

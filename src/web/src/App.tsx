@@ -15,9 +15,11 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
+import { ActivityLogPage } from "./pages/ActivityLogPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
+  { label: "Activity", path: "/activity" },
   { label: "Themes", path: "/themes" },
 ];
 
@@ -39,6 +41,8 @@ export function App() {
 
   const activePath = path.startsWith("/gallery")
     ? "/gallery"
+    : path.startsWith("/activity")
+    ? "/activity"
     : path.startsWith("/themes")
     ? "/themes"
     : "/";
@@ -60,6 +64,9 @@ export function App() {
   function renderView() {
     if (path.startsWith("/gallery")) {
       return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;
+    }
+    if (path.startsWith("/activity")) {
+      return <ActivityLogPage />;
     }
     if (path.startsWith("/themes")) {
       return <ThemesPage />;
