@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Button,
   Icon,
+  IconButton,
   Input,
   useTheme,
   ListPageLayout,
@@ -9,6 +10,7 @@ import {
   CreateForm,
   EmptyState,
   HighlightOnChange,
+  ConfirmDialog,
 } from "../components";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
@@ -24,9 +26,11 @@ import { formatDate } from "../utils";
 function ProjectTableRow({
   project,
   onClick,
+  onDelete,
 }: {
   project: Project;
   onClick: () => void;
+  onDelete: () => void;
 }) {
   const { theme } = useTheme();
 
@@ -90,6 +94,14 @@ function ProjectTableRow({
           {formatDate(project.updated_at)}
         </span>
 
+        <IconButton
+          icon="delete"
+          size={16}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          aria-label="Delete project"
+          style={{ flexShrink: 0 }}
+        />
+
         <Icon name="chevron_right" size={16} style={{ color: theme.color.textFaint, flexShrink: 0 }} />
       </div>
     </HighlightOnChange>
@@ -102,11 +114,12 @@ function ProjectTableRow({
 
 export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) => void }) {
   const { theme } = useTheme();
-  const { projects, create } = useProjects();
+  const { projects, create, remove } = useProjects();
   const { showToast } = useToastContext();
   const [title, setTitle] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   async function handleCreate() {
     if (!title.trim()) return;
@@ -119,6 +132,16 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
       showToast(err instanceof ApiError ? err.message : "Failed to create project");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeleteProject() {
+    if (!deleteTarget) return;
+    try {
+      await remove([deleteTarget.id]);
+      setDeleteTarget(null);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to delete project");
     }
   }
 
@@ -169,6 +192,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
             key={p.id}
             project={p}
             onClick={() => onOpenProject(p.id)}
+            onDelete={() => setDeleteTarget(p)}
           />
         ))}
       </div>
@@ -178,6 +202,14 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
           icon="folder_open"
           message='No projects yet. Click "New Project" to get started.'
           variant="card"
+        />
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete Project"
+          message={`Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`}
+          onConfirm={handleDeleteProject}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </ListPageLayout>

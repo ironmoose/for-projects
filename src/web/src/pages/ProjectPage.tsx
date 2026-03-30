@@ -13,6 +13,7 @@ import {
   AddItemInput,
   ListItem,
   EmptyState,
+  ConfirmDialog,
 } from "../components";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProject } from "../hooks";
@@ -111,11 +112,12 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
 
 export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const { theme } = useTheme();
-  const { project, tasks, notFound, updateProject, addTask } = useProject(projectId);
+  const { project, tasks, notFound, updateProject, addTask, deleteTask } = useProject(projectId);
   const { showToast } = useToastContext();
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [addingTask, setAddingTask] = useState(false);
+  const [deleteTaskTarget, setDeleteTaskTarget] = useState<Task | null>(null);
 
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
 
@@ -131,6 +133,19 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       showToast(err instanceof ApiError ? err.message : "Failed to add task");
     } finally {
       setAddingTask(false);
+    }
+  }
+
+  async function handleDeleteTask() {
+    if (!deleteTaskTarget) return;
+    try {
+      await deleteTask(deleteTaskTarget.id);
+      if (selectedTaskId === deleteTaskTarget.id) {
+        setSelectedTaskId(null);
+      }
+      setDeleteTaskTarget(null);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to delete task");
     }
   }
 
@@ -245,6 +260,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                   {task.title}
                 </span>
                 <PresenceCharm active={task.plan != null} label="Has plan" color={theme.color.success} />
+                <IconButton
+                  icon="delete"
+                  size={14}
+                  onClick={(e) => { e.stopPropagation(); setDeleteTaskTarget(task); }}
+                  aria-label="Delete task"
+                />
               </Stack>
             </ListItem>
           ))}
@@ -258,6 +279,14 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         <TaskDetailPanel
           task={selectedTask}
           onClose={handleClosePanel}
+        />
+      )}
+      {deleteTaskTarget && (
+        <ConfirmDialog
+          title="Delete Task"
+          message={`Are you sure you want to delete "${deleteTaskTarget.title}"? This action cannot be undone.`}
+          onConfirm={handleDeleteTask}
+          onCancel={() => setDeleteTaskTarget(null)}
         />
       )}
     </DetailPageLayout>

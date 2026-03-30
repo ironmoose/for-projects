@@ -36,6 +36,7 @@ export type { NavItem } from "./organisms/TopBar";
 export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
+export { ConfirmDialog } from "./organisms/ConfirmDialog";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";
