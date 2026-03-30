@@ -18,11 +18,13 @@ import { RunsPage } from "./pages/RunsPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
 import { AgentsDashboardPage } from "./pages/AgentsDashboardPage";
+import { SessionsPage } from "./pages/SessionsPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
   { label: "Dashboard", path: "/agents/dashboard" },
   { label: "Agents", path: "/agents" },
+  { label: "Sessions", path: "/sessions" },
   { label: "Runs", path: "/runs" },
   { label: "Themes", path: "/themes" },
 ];
@@ -49,6 +51,8 @@ export function App() {
     ? "/themes"
     : path === "/agents/dashboard"
     ? "/agents/dashboard"
+    : path.startsWith("/sessions")
+    ? "/sessions"
     : path.startsWith("/runs")
     ? "/runs"
     : path.startsWith("/agents")
@@ -78,6 +82,9 @@ export function App() {
     }
     if (path === "/agents/dashboard") {
       return <AgentsDashboardPage />;
+    }
+    if (path.startsWith("/sessions")) {
+      return <SessionsPage />;
     }
     if (path.startsWith("/runs")) {
       return <RunsPage />;

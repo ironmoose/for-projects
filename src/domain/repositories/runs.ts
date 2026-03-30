@@ -7,6 +7,7 @@ export interface RunRow {
   agent: string;
   entity_type: EntityType;
   entity_id: string;
+  session_id: string | null;
   status: RunStatus;
   output: string | null;
   started_at: string;
@@ -26,6 +27,7 @@ export class RunRepository {
     offset?: number;
     entity_type?: EntityType;
     entity_id?: string;
+    session_id?: string;
     agent?: string;
     agent_identifier?: string;
     status?: RunStatus;
@@ -43,6 +45,10 @@ export class RunRepository {
     if (filter?.id) {
       conditions.push("runs.id = ?");
       params.push(filter.id);
+    }
+    if (filter?.session_id) {
+      conditions.push("runs.session_id = ?");
+      params.push(filter.session_id);
     }
     if (filter?.entity_type) {
       conditions.push("runs.entity_type = ?");
@@ -94,6 +100,7 @@ export class RunRepository {
     id?: string;
     entity_type?: EntityType;
     entity_id?: string;
+    session_id?: string;
     agent?: string;
     agent_identifier?: string;
     status?: RunStatus;
@@ -109,6 +116,10 @@ export class RunRepository {
     if (filter?.id) {
       conditions.push("runs.id = ?");
       params.push(filter.id);
+    }
+    if (filter?.session_id) {
+      conditions.push("runs.session_id = ?");
+      params.push(filter.session_id);
     }
     if (filter?.entity_type) {
       conditions.push("runs.entity_type = ?");
@@ -179,14 +190,14 @@ export class RunRepository {
 
   insertMany(rows: Omit<RunRow, "id">[]): Run[] {
     const stmt = this.db.query(
-      "INSERT INTO runs (id, agent, entity_type, entity_id, status, output, started_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO runs (id, agent, entity_type, entity_id, session_id, status, output, started_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const ids: string[] = [];
 
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.agent, row.entity_type, row.entity_id, row.status, row.output, row.started_at, row.finished_at);
+      stmt.run(id, row.agent, row.entity_type, row.entity_id, row.session_id, row.status, row.output, row.started_at, row.finished_at);
     }
 
     return ids.map((id) => this.findById(id)!);

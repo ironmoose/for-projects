@@ -1,4 +1,4 @@
-import type { Project, Task, Agent, Run, RunDailyStats, RunSummaryStats, AgentType, RunStatus, EntityType } from "./entities";
+import type { Project, Task, Agent, Session, Run, RunDailyStats, RunSummaryStats, AgentType, RunStatus, EntityType } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -6,6 +6,8 @@ import type {
   UpdateTaskInput,
   CreateAgentInput,
   UpdateAgentInput,
+  CreateSessionInput,
+  UpdateSessionInput,
   CreateRunInput,
   UpdateRunInput,
 } from "./inputs";
@@ -39,6 +41,14 @@ export interface IAgentService {
   remove(ids: string[]): void;
 }
 
+export interface ISessionService {
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string }): Paginated<Session>;
+  get(id: string): Session;
+  create(inputs: CreateSessionInput[]): Session[];
+  update(inputs: UpdateSessionInput[]): Session[];
+  remove(ids: string[]): void;
+}
+
 export interface IRunService {
   list(filter?: {
     id?: string;
@@ -46,6 +56,7 @@ export interface IRunService {
     offset?: number;
     entity_type?: EntityType;
     entity_id?: string;
+    session_id?: string;
     agent?: string;
     status?: RunStatus;
     search?: string;

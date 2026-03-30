@@ -47,6 +47,7 @@ export { ConfirmDialog } from "./organisms/ConfirmDialog";
 export { ActivitySection } from "./organisms/ActivitySection";
 export { RunFilterBar } from "./organisms/RunFilterBar";
 export { RunTable } from "./organisms/RunTable";
+export { SessionTable } from "./organisms/SessionTable";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

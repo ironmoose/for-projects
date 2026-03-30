@@ -50,7 +50,7 @@ describe("migrator", () => {
     await runMigrations(db);
 
     const tables = getAllUserTables(db);
-    expect(tables).toEqual(["agents", "projects", "runs", "tasks"]);
+    expect(tables).toEqual(["agents", "projects", "runs", "sessions", "tasks"]);
   });
 
   it("running migrations twice is idempotent", async () => {

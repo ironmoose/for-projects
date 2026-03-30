@@ -31,11 +31,20 @@ export interface Agent {
   updated_at: string;
 }
 
+export interface Session {
+  id: string;
+  project_id: string;
+  summary: string | null;
+  started_at: string;
+  finished_at: string | null;
+}
+
 export interface Run {
   id: string;
   agent: string;
   entity_type: string;
   entity_id: string;
+  session_id: string | null;
   status: string;
   output: string | null;
   started_at: string;

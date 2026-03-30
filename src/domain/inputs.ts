@@ -42,10 +42,21 @@ export interface UpdateAgentInput {
   enabled?: boolean;
 }
 
+export interface CreateSessionInput {
+  project_id: string;
+}
+
+export interface UpdateSessionInput {
+  id: string;
+  summary?: string | null;
+  finished_at?: string | null;
+}
+
 export interface CreateRunInput {
   agent: string;
   entity_type: EntityType;
   entity_id: string;
+  session_id?: string;
   started_at?: string;
 }
 

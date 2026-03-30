@@ -16,6 +16,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
 import { agentRoutes } from "./routes/agents";
+import { sessionRoutes } from "./routes/sessions";
 import { runRoutes } from "./routes/runs";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
@@ -54,6 +55,7 @@ export class Server {
     app.route("/api/projects", projectRoutes(ctx.projectService));
     app.route("/api/tasks", taskRoutes(ctx.taskService));
     app.route("/api/agents", agentRoutes(ctx));
+    app.route("/api/sessions", sessionRoutes(ctx));
     app.route("/api/runs", runRoutes(ctx));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 

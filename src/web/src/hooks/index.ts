@@ -9,6 +9,8 @@ export { useRunStats } from "./useRunStats";
 export { useActivityFeed } from "./useActivityFeed";
 export { useRunSearch } from "./useRunSearch";
 export type { RunFilters } from "./useRunSearch";
+export { useSessions } from "./useSessions";
+export type { SessionFilters } from "./useSessions";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";

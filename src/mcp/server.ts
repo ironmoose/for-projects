@@ -6,6 +6,7 @@ import {
   type IProjectService,
   type ITaskService,
   type IAgentService,
+  type ISessionService,
   type IRunService,
   type CreateAgentInput,
   type UpdateAgentInput,
@@ -17,6 +18,7 @@ export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
   agentService: IAgentService;
+  sessionService: ISessionService;
   runService: IRunService;
 }
 
@@ -47,7 +49,7 @@ const runStatusEnum = z.enum(["todo", "running", "done", "failed", "cancelled"])
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, agentService, runService } = ctx;
+  const { projectService, taskService, agentService, sessionService, runService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -101,19 +103,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_runs",
     {
-      description: "List runs with optional filters: entity_type, entity_id, agent, status. Returns { data, total }. Pass id to retrieve a single run.",
+      description: "List runs with optional filters: entity_type, entity_id, session_id, agent, status. Returns { data, total }. Pass id to retrieve a single run.",
       inputSchema: {
         id: z.string().max(26).optional(),
         entity_type: entityTypeEnum.optional(),
         entity_id: z.string().max(26).optional(),
+        session_id: z.string().max(26).optional(),
         agent: z.string().optional(),
         status: runStatusEnum.optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, entity_type, entity_id, agent, status, limit, offset }) =>
-      handle(() => runService.list({ id, entity_type, entity_id, agent, status, limit, offset } as Parameters<typeof runService.list>[0]))
+    ({ id, entity_type, entity_id, session_id, agent, status, limit, offset }) =>
+      handle(() => runService.list({ id, entity_type, entity_id, session_id, agent, status, limit, offset } as Parameters<typeof runService.list>[0]))
   );
 
   // -- Projects -------------------------------------------------------
@@ -211,17 +214,58 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ items }) => handle(() => agentService.update(items as UpdateAgentInput[]))
   );
 
+  // -- Sessions -------------------------------------------------------
+
+  server.registerTool(
+    "list_sessions",
+    {
+      description: "List sessions, optionally filtered by project_id. Returns { data, total }. Pass id to retrieve a single session.",
+      inputSchema: {
+        id: z.string().max(26).optional(),
+        project_id: z.string().max(26).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ id, project_id, limit, offset }) => handle(() => sessionService.list({ id, project_id, limit, offset }))
+  );
+
+  server.registerTool(
+    "create_session",
+    {
+      description: "Start a new session for a project. Returns the session with started_at set to now.",
+      inputSchema: {
+        project_id: z.string().max(26),
+      },
+    },
+    (input) => handle(() => sessionService.create([input])[0])
+  );
+
+  server.registerTool(
+    "update_session",
+    {
+      description: "Update a session's summary or finished_at. Set finished_at to close the session.",
+      inputSchema: {
+        id: z.string().max(26),
+        summary: z.string().max(50000).optional(),
+        finished_at: z.string().optional(),
+      },
+    },
+    (input) => handle(() => sessionService.update([input])[0])
+  );
+
   // -- Runs -----------------------------------------------------------
 
   server.registerTool(
     "create_run",
     {
-      description: "Schedule an agent for execution. Creates a run entry with status 'running'. Requires agent identifier, entity_type, and entity_id.",
+      description: "Schedule an agent for execution. Creates a run entry with status 'running'. Requires agent identifier, entity_type, and entity_id. Optionally attach to a session.",
       inputSchema: {
         items: z.array(z.object({
           agent: z.string(),
           entity_type: entityTypeEnum,
           entity_id: z.string().max(26),
+          session_id: z.string().max(26).optional(),
         })).min(1),
       },
     },

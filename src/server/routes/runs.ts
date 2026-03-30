@@ -21,6 +21,7 @@ export function runRoutes(ctx: RunRouteContext): Hono {
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const entity_type = c.req.query("entity_type");
     const entity_id = c.req.query("entity_id");
+    const session_id = c.req.query("session_id");
     const agent = c.req.query("agent");
     const status = c.req.query("status");
     const search = c.req.query("search");
@@ -31,6 +32,7 @@ export function runRoutes(ctx: RunRouteContext): Hono {
     const filter: {
       entity_type?: string;
       entity_id?: string;
+      session_id?: string;
       agent?: string;
       status?: string;
       search?: string;
@@ -43,6 +45,7 @@ export function runRoutes(ctx: RunRouteContext): Hono {
     } = { limit, offset };
     if (entity_type) filter.entity_type = entity_type;
     if (entity_id) filter.entity_id = entity_id;
+    if (session_id) filter.session_id = session_id;
     if (agent) filter.agent = agent;
     if (status) filter.status = status;
     if (search) filter.search = search;

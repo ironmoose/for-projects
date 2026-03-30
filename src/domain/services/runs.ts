@@ -23,6 +23,7 @@ export class RunService implements IRunService {
     offset?: number;
     entity_type?: EntityType;
     entity_id?: string;
+    session_id?: string;
     agent?: string;
     status?: RunStatus;
     search?: string;
@@ -68,6 +69,7 @@ export class RunService implements IRunService {
       agent: input.agent,
       entity_type: input.entity_type,
       entity_id: input.entity_id,
+      session_id: input.session_id ?? null,
       status: 'running' as const,
       output: null,
       started_at: input.started_at ?? now,

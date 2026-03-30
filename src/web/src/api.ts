@@ -1,4 +1,4 @@
-import type { Agent, Run, RunStatsResponse, Project, Task } from "./types";
+import type { Agent, Run, RunStatsResponse, Project, Session, Task } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -141,6 +141,29 @@ export async function updateAgents(inputs: Array<{ id: string; identifier?: stri
 
 export async function deleteAgents(ids: string[]): Promise<void> {
   await apiFetch("/api/agents", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+}
+
+// ---------------------------------------------------------------------------
+// Sessions API
+// ---------------------------------------------------------------------------
+
+export async function fetchSessions(params?: { project_id?: string; limit?: number; offset?: number }): Promise<{ data: Session[]; total: number }> {
+  const res = await apiFetch(`/api/sessions${qs(params)}`);
+  return res.json();
+}
+
+export async function fetchSession(id: string): Promise<Session> {
+  const res = await apiFetch(`/api/sessions/${encodeURIComponent(id)}`);
+  return res.json();
+}
+
+export async function updateSessions(inputs: Array<{ id: string; summary?: string | null; finished_at?: string | null }>): Promise<Session[]> {
+  const res = await apiFetch("/api/sessions", jsonPatch(inputs));
+  return res.json();
+}
+
+export async function deleteSessions(ids: string[]): Promise<void> {
+  await apiFetch("/api/sessions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
 // ---------------------------------------------------------------------------

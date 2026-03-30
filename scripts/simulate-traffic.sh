@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # simulate-traffic.sh — exercise the full API surface for WebSocket traffic testing
 # Creates realistic project management data with high-quality markdown content,
-# actions, and action log entries.
+# agents, sessions, and run entries.
 set -euo pipefail
 
 # ─── Options ───────────────────────────────────────────────────────────────────
@@ -31,6 +31,61 @@ jids()  { echo "$1" | grep -o '"id":"[^"]*"' | cut -d'"' -f4; }
 
 section() { echo ""; echo "━━━ $1 ━━━"; }
 
+# Helper: generate ISO timestamp N days ago
+days_ago() {
+  local days=$1
+  if [[ "$(uname)" == "Darwin" ]]; then
+    date -u -v-${days}d +%Y-%m-%dT%H:%M:%S.000Z
+  else
+    date -u -d "$days days ago" +%Y-%m-%dT%H:%M:%S.000Z
+  fi
+}
+
+# Helper: generate ISO timestamp N days ago + M seconds later
+days_ago_plus() {
+  local days=$1
+  local secs=$2
+  if [[ "$(uname)" == "Darwin" ]]; then
+    date -u -v-${days}d -v+${secs}S +%Y-%m-%dT%H:%M:%S.000Z
+  else
+    date -u -d "$days days ago + $secs seconds" +%Y-%m-%dT%H:%M:%S.000Z
+  fi
+}
+
+# Helper: create run with backdated started_at, then complete it
+# Args: agent_identifier entity_type entity_id days_back duration_secs [status] [output]
+create_and_finish() {
+  local agent_id=$1 entity_type=$2 entity_id=$3 days_back=$4 duration_secs=$5 status=${6:-done} output=${7:-}
+  local started=$(days_ago "$days_back")
+  local finished=$(days_ago_plus "$days_back" "$duration_secs")
+
+  RUN=$(post "$API/runs" "[{
+    \"agent\": \"$agent_id\",
+    \"entity_type\": \"$entity_type\",
+    \"entity_id\": \"$entity_id\",
+    \"started_at\": \"$started\"
+  }]")
+  RUN_ID=$(jid "$RUN")
+
+  if [ -n "$output" ]; then
+    patch "$API/runs" "[{\"id\": \"$RUN_ID\", \"status\": \"$status\", \"output\": \"$output\", \"finished_at\": \"$finished\"}]" > /dev/null
+  else
+    patch "$API/runs" "[{\"id\": \"$RUN_ID\", \"status\": \"$status\", \"finished_at\": \"$finished\"}]" > /dev/null
+  fi
+  echo "  ✓ $entity_type/$entity_id: $agent_id ($status, ${duration_secs}s, ${days_back}d ago)"
+}
+
+# Helper: create run that stays running
+create_running() {
+  local agent_id=$1 entity_type=$2 entity_id=$3
+  post "$API/runs" "[{
+    \"agent\": \"$agent_id\",
+    \"entity_type\": \"$entity_type\",
+    \"entity_id\": \"$entity_id\"
+  }]" > /dev/null
+  echo "  ✓ $entity_type/$entity_id: $agent_id (running)"
+}
+
 # ─── Health Check ──────────────────────────────────────────────────────────────
 
 section "Health Check"
@@ -42,28 +97,41 @@ echo "  ✓ GET /api/health"
 
 section "Cleanup — removing existing data"
 
-# Delete action_log entries first (depends on actions)
-AL_IDS=$(curl -sf "$API/action-log?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
-if [ -n "$AL_IDS" ]; then
-  JSON_IDS=$(echo "$AL_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
-  del "$API/action-log" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
-  echo "  ✓ Deleted action_log entries"
+# Helper: extract IDs from a list endpoint (pipefail-safe)
+extract_ids() { grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//'; }
+
+# Delete runs first (references sessions and agents)
+RUN_IDS=$(curl -sf "$API/runs?limit=200" | extract_ids || true)
+if [ -n "$RUN_IDS" ]; then
+  JSON_IDS=$(echo "$RUN_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
+  del "$API/runs" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
+  echo "  ✓ Deleted runs"
 else
-  echo "  ✓ No action_log entries to delete"
+  echo "  ✓ No runs to delete"
 fi
 
-# Delete actions
-ACT_IDS=$(curl -sf "$API/actions?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
-if [ -n "$ACT_IDS" ]; then
-  JSON_IDS=$(echo "$ACT_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
-  del "$API/actions" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
-  echo "  ✓ Deleted actions"
+# Delete agents
+AGENT_IDS=$(curl -sf "$API/agents?limit=200" | extract_ids || true)
+if [ -n "$AGENT_IDS" ]; then
+  JSON_IDS=$(echo "$AGENT_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
+  del "$API/agents" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
+  echo "  ✓ Deleted agents"
 else
-  echo "  ✓ No actions to delete"
+  echo "  ✓ No agents to delete"
+fi
+
+# Delete sessions (runs.session_id is SET NULL on cascade, so safe after runs)
+SESS_IDS=$(curl -sf "$API/sessions?limit=200" | extract_ids || true)
+if [ -n "$SESS_IDS" ]; then
+  JSON_IDS=$(echo "$SESS_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
+  del "$API/sessions" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
+  echo "  ✓ Deleted sessions"
+else
+  echo "  ✓ No sessions to delete"
 fi
 
 # Delete tasks
-TASK_IDS=$(curl -sf "$API/tasks?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
+TASK_IDS=$(curl -sf "$API/tasks?limit=200" | extract_ids || true)
 if [ -n "$TASK_IDS" ]; then
   JSON_IDS=$(echo "$TASK_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
   del "$API/tasks" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
@@ -73,7 +141,7 @@ else
 fi
 
 # Delete projects
-PROJ_IDS=$(curl -sf "$API/projects?limit=200" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | tr '\n' ',' | sed 's/,$//')
+PROJ_IDS=$(curl -sf "$API/projects?limit=200" | extract_ids || true)
 if [ -n "$PROJ_IDS" ]; then
   JSON_IDS=$(echo "$PROJ_IDS" | awk -F',' '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?",":""); print ""}')
   del "$API/projects" "{\"ids\":[$JSON_IDS]}" > /dev/null 2>&1 || true
@@ -284,136 +352,174 @@ P5_TASK_IDS=($(echo "$P5_TASKS" | grep -o '"id":"[^"]*"' | cut -d'"' -f4))
 for i in "${!P5_TASK_IDS[@]}"; do echo "  ✓ Task P5.$((i+1)): ${P5_TASK_IDS[$i]}"; done
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ACTIONS — create the 4 reusable action definitions (kind is unique)
+# SESSIONS — conversational sessions bound to projects
 # ═══════════════════════════════════════════════════════════════════════════════
 
-section "Creating Actions"
+section "Creating Sessions"
 
-ACTIONS=$(post "$API/actions" '[
+# Session 1: P1 — closed, 10 days ago, lasted ~45 min
+S1_STARTED=$(days_ago 10)
+S1_FINISHED=$(days_ago_plus 10 2700)
+S1=$(post "$API/sessions" "[{\"project_id\": \"$P1_ID\"}]")
+S1_ID=$(jid "$S1")
+patch "$API/sessions" "[{
+  \"id\": \"$S1_ID\",
+  \"summary\": \"Initial architecture session. Reviewed diff parsing approach, decided on parse-diff + semantic chunking. Set up context window budget (128K tokens). Spawned 3 agents: diff parser spike, token budget analysis, and GitHub API integration research.\",
+  \"finished_at\": \"$S1_FINISHED\"
+}]" > /dev/null
+echo "  ✓ Session 1 (P1, closed):  $S1_ID"
+
+# Session 2: P1 — closed, 7 days ago, lasted ~30 min
+S2_STARTED=$(days_ago 7)
+S2_FINISHED=$(days_ago_plus 7 1800)
+S2=$(post "$API/sessions" "[{\"project_id\": \"$P1_ID\"}]")
+S2_ID=$(jid "$S2")
+patch "$API/sessions" "[{
+  \"id\": \"$S2_ID\",
+  \"summary\": \"Review comment severity calibration. Analyzed pilot data from first 200 PRs — adjusted severity distribution. Critical comments had too many false positives (10% → 8%). Nitpick dismissal rate was high, reduced volume (40% → 32%).\",
+  \"finished_at\": \"$S2_FINISHED\"
+}]" > /dev/null
+echo "  ✓ Session 2 (P1, closed):  $S2_ID"
+
+# Session 3: P2 — closed, 6 days ago, lasted ~1 hour
+S3_STARTED=$(days_ago 6)
+S3_FINISHED=$(days_ago_plus 6 3600)
+S3=$(post "$API/sessions" "[{\"project_id\": \"$P2_ID\"}]")
+S3_ID=$(jid "$S3")
+patch "$API/sessions" "[{
+  \"id\": \"$S3_ID\",
+  \"summary\": \"CRDT engine deep dive. Evaluated Automerge vs Yjs for structured data — chose Automerge for better nested map/list support. Designed sync loop and conflict resolution rules. Spawned agent to prototype Durable Object gateway.\",
+  \"finished_at\": \"$S3_FINISHED\"
+}]" > /dev/null
+echo "  ✓ Session 3 (P2, closed):  $S3_ID"
+
+# Session 4: P3 — closed, 4 days ago, lasted ~20 min
+S4_STARTED=$(days_ago 4)
+S4_FINISHED=$(days_ago_plus 4 1200)
+S4=$(post "$API/sessions" "[{\"project_id\": \"$P3_ID\"}]")
+S4_ID=$(jid "$S4")
+patch "$API/sessions" "[{
+  \"id\": \"$S4_ID\",
+  \"summary\": \"Tail sampling strategy review. Design was rejected — didn't account for cross-service trace correlation. Spawned 2 agents: one to research distributed tail sampling approaches, one to analyze current trace topology.\",
+  \"finished_at\": \"$S4_FINISHED\"
+}]" > /dev/null
+echo "  ✓ Session 4 (P3, closed):  $S4_ID"
+
+# Session 5: P4 — closed, 2 days ago, lasted ~35 min
+S5_STARTED=$(days_ago 2)
+S5_FINISHED=$(days_ago_plus 2 2100)
+S5=$(post "$API/sessions" "[{\"project_id\": \"$P4_ID\"}]")
+S5_ID=$(jid "$S5")
+patch "$API/sessions" "[{
+  \"id\": \"$S5_ID\",
+  \"summary\": \"API spec discovery pipeline design. Mapped out CI → S3 → validator → registry → portal flow. Decided on Envoy for gateway with JWT validation + RBAC. Spawned agent to scaffold the OpenAPI spec watcher Lambda.\",
+  \"finished_at\": \"$S5_FINISHED\"
+}]" > /dev/null
+echo "  ✓ Session 5 (P4, closed):  $S5_ID"
+
+# Session 6: P5 — closed, 1 day ago, lasted ~25 min
+S6_STARTED=$(days_ago 1)
+S6_FINISHED=$(days_ago_plus 1 1500)
+S6=$(post "$API/sessions" "[{\"project_id\": \"$P5_ID\"}]")
+S6_ID=$(jid "$S6")
+patch "$API/sessions" "[{
+  \"id\": \"$S6_ID\",
+  \"summary\": \"Bundle diet planning. Identified top 3 offenders: moment.js (330KB), full lodash (540KB), unused analytics SDK (280KB). Mapped all 47 moment.js call sites. Spawned agent to verify tree-shaking results with lodash-es.\",
+  \"finished_at\": \"$S6_FINISHED\"
+}]" > /dev/null
+echo "  ✓ Session 6 (P5, closed):  $S6_ID"
+
+# Session 7: P1 — still active (current session)
+S7=$(post "$API/sessions" "[{\"project_id\": \"$P1_ID\"}]")
+S7_ID=$(jid "$S7")
+echo "  ✓ Session 7 (P1, active):  $S7_ID"
+
+# Session 8: P2 — still active
+S8=$(post "$API/sessions" "[{\"project_id\": \"$P2_ID\"}]")
+S8_ID=$(jid "$S8")
+echo "  ✓ Session 8 (P2, active):  $S8_ID"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AGENTS — create the 4 reusable agent definitions (identifier is unique)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+section "Creating Agents"
+
+AGENTS=$(post "$API/agents" '[
   {
-    "kind": "goal",
+    "identifier": "goal",
     "prompt": "You are a strategic product thinker. Given a project title and any existing context, define its north-star goal.\n\n## Output Format\n\nProduce a markdown document with:\n1. **One-liner**: A single sentence capturing the outcome\n2. **Problem statement**: What pain exists today, with data if available\n3. **Success criteria**: Measurable outcomes with specific targets and timeframes\n4. **Non-goals**: What this project explicitly will NOT do\n\n## Guidelines\n\n- Be specific — \"reduce latency\" is not a goal, \"reduce P95 latency from 800ms to 200ms\" is\n- Success criteria must be independently verifiable\n- Non-goals prevent scope creep — list the most tempting adjacent work",
-    "agent": "tab:orchestrator"
+    "agent": "tab:orchestrator",
+    "enabled": true
   },
   {
-    "kind": "requirements",
+    "identifier": "requirements",
     "prompt": "You are a requirements analyst. Given a project with its goal defined, produce a comprehensive requirements document.\n\n## Output Format\n\n### Functional Requirements\nTable with columns: ID, Requirement, Priority (P0/P1/P2), Acceptance Criteria\n\n### Non-Functional Requirements\nBulleted list covering: availability, scalability, security, observability, latency\n\n### Constraints\nHard constraints that bound the solution space (tech stack mandates, compliance requirements, budget limits)\n\n## Guidelines\n\n- P0 = must ship in v1, P1 = should ship in v1, P2 = nice to have\n- Every functional requirement needs a testable acceptance criterion\n- Non-functional requirements need specific numbers, not adjectives",
-    "agent": "tab:orchestrator"
+    "agent": "tab:orchestrator",
+    "enabled": true
   },
   {
-    "kind": "design",
+    "identifier": "design",
     "prompt": "You are a systems architect. Given a project with its goal and requirements defined, produce a high-level design document.\n\n## Output Format\n\n1. **Architecture diagram** (ASCII art showing components and data flow)\n2. **Key decisions**: Numbered list of important choices with rationale\n3. **Technology choices**: Table with component → technology → why\n4. **Data model**: Core entities and relationships\n5. **Failure modes**: What can go wrong and how the system handles it\n\n## Guidelines\n\n- Diagrams are mandatory — they force clarity\n- Every technology choice needs a \"why not X\" counterpoint\n- Design for the 90th percentile, handle the 99th, survive the 100th",
-    "agent": "tab:orchestrator"
+    "agent": "tab:orchestrator",
+    "enabled": true
   },
   {
-    "kind": "plan",
+    "identifier": "plan",
     "prompt": "You are an implementation planner. Given a task title and its parent project context, produce a detailed implementation plan.\n\n## Output Format\n\n1. **Approach**: High-level strategy (2-3 sentences)\n2. **Steps**: Numbered implementation steps with enough detail to execute\n3. **Edge cases**: Bullet list of things that could go wrong\n4. **Verification**: How to confirm the implementation is correct\n\n## Guidelines\n\n- Steps should be small enough to complete in one sitting\n- Edge cases are where bugs live — be thorough\n- Verification should be automatable where possible",
-    "agent": "tab:executor"
+    "agent": "tab:executor",
+    "enabled": true
   }
 ]')
 
-ACTION_IDS=($(echo "$ACTIONS" | grep -o '"id":"[^"]*"' | cut -d'"' -f4))
-A_GOAL_ID="${ACTION_IDS[0]}"
-A_REQS_ID="${ACTION_IDS[1]}"
-A_DESIGN_ID="${ACTION_IDS[2]}"
-A_PLAN_ID="${ACTION_IDS[3]}"
+AGENT_IDS=($(echo "$AGENTS" | grep -o '"id":"[^"]*"' | cut -d'"' -f4))
+AG_GOAL_ID="${AGENT_IDS[0]}"
+AG_REQS_ID="${AGENT_IDS[1]}"
+AG_DESIGN_ID="${AGENT_IDS[2]}"
+AG_PLAN_ID="${AGENT_IDS[3]}"
 
-echo "  ✓ Action (goal):         $A_GOAL_ID"
-echo "  ✓ Action (requirements): $A_REQS_ID"
-echo "  ✓ Action (design):       $A_DESIGN_ID"
-echo "  ✓ Action (plan):         $A_PLAN_ID"
+echo "  ✓ Agent (goal):         $AG_GOAL_ID"
+echo "  ✓ Agent (requirements): $AG_REQS_ID"
+echo "  ✓ Agent (design):       $AG_DESIGN_ID"
+echo "  ✓ Agent (plan):         $AG_PLAN_ID"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ACTION LOG — simulate orchestration with realistic timestamps spread over 14 days
+# RUNS — simulate orchestration with realistic timestamps spread over 14 days
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Helper: generate ISO timestamp N days ago
-days_ago() {
-  local days=$1
-  if [[ "$(uname)" == "Darwin" ]]; then
-    date -u -v-${days}d +%Y-%m-%dT%H:%M:%S.000Z
-  else
-    date -u -d "$days days ago" +%Y-%m-%dT%H:%M:%S.000Z
-  fi
-}
-
-# Helper: generate ISO timestamp N days ago + M seconds later
-days_ago_plus() {
-  local days=$1
-  local secs=$2
-  if [[ "$(uname)" == "Darwin" ]]; then
-    date -u -v-${days}d -v+${secs}S +%Y-%m-%dT%H:%M:%S.000Z
-  else
-    date -u -d "$days days ago + $secs seconds" +%Y-%m-%dT%H:%M:%S.000Z
-  fi
-}
-
-# Helper: create action log entry with backdated started_at, then complete it
-create_and_finish() {
-  local action_id=$1 entity_type=$2 entity_id=$3 days_back=$4 duration_secs=$5 status=${6:-done} output=${7:-}
-  local started=$(days_ago "$days_back")
-  local finished=$(days_ago_plus "$days_back" "$duration_secs")
-
-  LOG=$(post "$API/action-log" "[{
-    \"action_id\": \"$action_id\",
-    \"entity_type\": \"$entity_type\",
-    \"entity_id\": \"$entity_id\",
-    \"started_at\": \"$started\"
-  }]")
-  LOG_ID=$(jid "$LOG")
-
-  if [ -n "$output" ]; then
-    patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"$status\", \"output\": \"$output\", \"finished_at\": \"$finished\"}]" > /dev/null
-  else
-    patch "$API/action-log" "[{\"id\": \"$LOG_ID\", \"status\": \"$status\", \"finished_at\": \"$finished\"}]" > /dev/null
-  fi
-  echo "  ✓ $entity_type/$entity_id: $action_id ($status, ${duration_secs}s, ${days_back}d ago)"
-}
-
-# Helper: create action log entry that stays running
-create_running() {
-  local action_id=$1 entity_type=$2 entity_id=$3
-  post "$API/action-log" "[{
-    \"action_id\": \"$action_id\",
-    \"entity_type\": \"$entity_type\",
-    \"entity_id\": \"$entity_id\"
-  }]" > /dev/null
-  echo "  ✓ $entity_type/$entity_id: $action_id (running)"
-}
-
-section "Creating Action Log — Goal actions on all projects (spread over days 12-8)"
+section "Creating Runs — Goal agents on all projects (spread over days 12-8)"
 
 # P1 goal: 12 days ago, took 25s
-create_and_finish "$A_GOAL_ID" "project" "$P1_ID" 12 25
+create_and_finish "goal" "project" "$P1_ID" 12 25
 # P2 goal: 11 days ago, took 42s
-create_and_finish "$A_GOAL_ID" "project" "$P2_ID" 11 42
+create_and_finish "goal" "project" "$P2_ID" 11 42
 # P3 goal: 10 days ago, took 18s
-create_and_finish "$A_GOAL_ID" "project" "$P3_ID" 10 18
+create_and_finish "goal" "project" "$P3_ID" 10 18
 # P4 goal: still running (recent)
-create_running "$A_GOAL_ID" "project" "$P4_ID"
+create_running "goal" "project" "$P4_ID"
 # P5 goal: failed 9 days ago (took 8s), retried 9 days ago (took 35s)
-create_and_finish "$A_GOAL_ID" "project" "$P5_ID" 9 8 "failed" "Error: context window exceeded. Project description too long for single-pass goal extraction."
-create_and_finish "$A_GOAL_ID" "project" "$P5_ID" 9 35
+create_and_finish "goal" "project" "$P5_ID" 9 8 "failed" "Error: context window exceeded. Project description too long for single-pass goal extraction."
+create_and_finish "goal" "project" "$P5_ID" 9 35
 
-section "Creating Action Log — Requirements actions on projects 1-3 (days 8-6)"
+section "Creating Runs — Requirements agents on projects 1-3 (days 8-6)"
 
 # P1 reqs: 8 days ago, took 65s
-create_and_finish "$A_REQS_ID" "project" "$P1_ID" 8 65
+create_and_finish "requirements" "project" "$P1_ID" 8 65
 # P2 reqs: 7 days ago, took 48s
-create_and_finish "$A_REQS_ID" "project" "$P2_ID" 7 48
+create_and_finish "requirements" "project" "$P2_ID" 7 48
 # P3 reqs: 6 days ago, took 90s
-create_and_finish "$A_REQS_ID" "project" "$P3_ID" 6 90
+create_and_finish "requirements" "project" "$P3_ID" 6 90
 
-section "Creating Action Log — Design actions (days 5-3)"
+section "Creating Runs — Design agents (days 5-3)"
 
 # P1 design: 5 days ago, took 120s
-create_and_finish "$A_DESIGN_ID" "project" "$P1_ID" 5 120
+create_and_finish "design" "project" "$P1_ID" 5 120
 # P2 design: 4 days ago, took 85s
-create_and_finish "$A_DESIGN_ID" "project" "$P2_ID" 4 85
+create_and_finish "design" "project" "$P2_ID" 4 85
 # P3 design: failed 3 days ago (took 15s)
-create_and_finish "$A_DESIGN_ID" "project" "$P3_ID" 3 15 "failed" "Design rejected: tail sampling strategy does not account for cross-service trace correlation."
+create_and_finish "design" "project" "$P3_ID" 3 15 "failed" "Design rejected: tail sampling strategy does not account for cross-service trace correlation."
 
-section "Creating Action Log — Plan actions on tasks (days 4-0)"
+section "Creating Runs — Plan agents on tasks (days 4-0)"
 
 # P1 tasks: done over days 4-2, varying durations
 DURATIONS_P1=(30 55 45 22 70)
@@ -421,7 +527,7 @@ for i in "${!P1_TASK_IDS[@]}"; do
   TID="${P1_TASK_IDS[$i]}"
   DAYS_BACK=$((4 - i))
   if [ "$DAYS_BACK" -lt 1 ]; then DAYS_BACK=1; fi
-  create_and_finish "$A_PLAN_ID" "task" "$TID" "$DAYS_BACK" "${DURATIONS_P1[$i]}"
+  create_and_finish "plan" "task" "$TID" "$DAYS_BACK" "${DURATIONS_P1[$i]}"
 done
 
 # P2 tasks: first 2 done (days 3-2), last 2 still running
@@ -429,32 +535,32 @@ for i in 0 1; do
   TID="${P2_TASK_IDS[$i]}"
   DAYS_BACK=$((3 - i))
   DURATION=$((40 + i * 20))
-  create_and_finish "$A_PLAN_ID" "task" "$TID" "$DAYS_BACK" "$DURATION"
+  create_and_finish "plan" "task" "$TID" "$DAYS_BACK" "$DURATION"
 done
 for i in 2 3; do
   TID="${P2_TASK_IDS[$i]}"
-  create_running "$A_PLAN_ID" "task" "$TID"
+  create_running "plan" "task" "$TID"
 done
 
-section "Creating Action Log — Extra historical entries for chart density"
+section "Creating Runs — Extra historical entries for chart density"
 
 # Scatter additional goal/req runs across days 14-7 for richer chart data
-create_and_finish "$A_GOAL_ID" "project" "$P1_ID" 14 32
-create_and_finish "$A_REQS_ID" "project" "$P1_ID" 13 55
-create_and_finish "$A_GOAL_ID" "project" "$P2_ID" 13 28
-create_and_finish "$A_DESIGN_ID" "project" "$P1_ID" 12 95
-create_and_finish "$A_REQS_ID" "project" "$P2_ID" 11 72
-create_and_finish "$A_GOAL_ID" "project" "$P3_ID" 10 38 "failed" "Timeout after 38s — upstream model overloaded."
-create_and_finish "$A_GOAL_ID" "project" "$P3_ID" 10 22
-create_and_finish "$A_PLAN_ID" "task" "${P1_TASK_IDS[0]}" 9 40
-create_and_finish "$A_PLAN_ID" "task" "${P1_TASK_IDS[1]}" 8 65
-create_and_finish "$A_DESIGN_ID" "project" "$P2_ID" 7 110
-create_and_finish "$A_REQS_ID" "project" "$P3_ID" 6 80
-create_and_finish "$A_PLAN_ID" "task" "${P1_TASK_IDS[2]}" 5 50
-create_and_finish "$A_PLAN_ID" "task" "${P2_TASK_IDS[0]}" 4 35
-create_and_finish "$A_GOAL_ID" "project" "$P4_ID" 3 20 "failed" "Rate limited — retry after cooldown."
-create_and_finish "$A_REQS_ID" "project" "$P4_ID" 2 58
-create_and_finish "$A_PLAN_ID" "task" "${P2_TASK_IDS[1]}" 1 45
+create_and_finish "goal" "project" "$P1_ID" 14 32
+create_and_finish "requirements" "project" "$P1_ID" 13 55
+create_and_finish "goal" "project" "$P2_ID" 13 28
+create_and_finish "design" "project" "$P1_ID" 12 95
+create_and_finish "requirements" "project" "$P2_ID" 11 72
+create_and_finish "goal" "project" "$P3_ID" 10 38 "failed" "Timeout after 38s — upstream model overloaded."
+create_and_finish "goal" "project" "$P3_ID" 10 22
+create_and_finish "plan" "task" "${P1_TASK_IDS[0]}" 9 40
+create_and_finish "plan" "task" "${P1_TASK_IDS[1]}" 8 65
+create_and_finish "design" "project" "$P2_ID" 7 110
+create_and_finish "requirements" "project" "$P3_ID" 6 80
+create_and_finish "plan" "task" "${P1_TASK_IDS[2]}" 5 50
+create_and_finish "plan" "task" "${P2_TASK_IDS[0]}" 4 35
+create_and_finish "goal" "project" "$P4_ID" 3 20 "failed" "Rate limited — retry after cooldown."
+create_and_finish "requirements" "project" "$P4_ID" 2 58
+create_and_finish "plan" "task" "${P2_TASK_IDS[1]}" 1 45
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # UPDATES — project and task modifications
@@ -519,47 +625,60 @@ echo "  ✓ GET P4 tasks (all)"
 get "$API/tasks?project_id=$P5_ID" > /dev/null
 echo "  ✓ GET P5 tasks (all)"
 
-get "$API/actions?limit=2&offset=0" > /dev/null
-echo "  ✓ GET actions page 1"
-get "$API/actions?limit=2&offset=2" > /dev/null
-echo "  ✓ GET actions page 2"
+get "$API/agents?limit=2&offset=0" > /dev/null
+echo "  ✓ GET agents page 1"
+get "$API/agents?limit=2&offset=2" > /dev/null
+echo "  ✓ GET agents page 2"
 
-get "$API/action-log?limit=5&offset=0" > /dev/null
-echo "  ✓ GET action-log page 1"
-get "$API/action-log?limit=5&offset=5" > /dev/null
-echo "  ✓ GET action-log page 2"
-get "$API/action-log?limit=5&offset=10" > /dev/null
-echo "  ✓ GET action-log page 3"
+get "$API/runs?limit=5&offset=0" > /dev/null
+echo "  ✓ GET runs page 1"
+get "$API/runs?limit=5&offset=5" > /dev/null
+echo "  ✓ GET runs page 2"
+get "$API/runs?limit=5&offset=10" > /dev/null
+echo "  ✓ GET runs page 3"
+
+section "Read Queries — Sessions"
+
+get "$API/sessions?limit=5&offset=0" > /dev/null
+echo "  ✓ GET sessions page 1"
+get "$API/sessions?project_id=$P1_ID" > /dev/null
+echo "  ✓ GET sessions for P1"
+get "$API/sessions?project_id=$P2_ID" > /dev/null
+echo "  ✓ GET sessions for P2"
+get "$API/sessions/$S1_ID" > /dev/null
+echo "  ✓ GET session $S1_ID"
+get "$API/sessions/$S7_ID" > /dev/null
+echo "  ✓ GET session $S7_ID (active)"
 
 section "Read Queries — Filters"
 
-get "$API/actions?kind=goal" > /dev/null
-echo "  ✓ GET actions?kind=goal"
-get "$API/actions?kind=plan" > /dev/null
-echo "  ✓ GET actions?kind=plan"
-get "$API/actions?kind=design" > /dev/null
-echo "  ✓ GET actions?kind=design"
-get "$API/actions?kind=requirements" > /dev/null
-echo "  ✓ GET actions?kind=requirements"
+get "$API/agents?identifier=goal" > /dev/null
+echo "  ✓ GET agents?identifier=goal"
+get "$API/agents?identifier=plan" > /dev/null
+echo "  ✓ GET agents?identifier=plan"
+get "$API/agents?identifier=design" > /dev/null
+echo "  ✓ GET agents?identifier=design"
+get "$API/agents?identifier=requirements" > /dev/null
+echo "  ✓ GET agents?identifier=requirements"
 
-get "$API/action-log?entity_type=project" > /dev/null
-echo "  ✓ GET action-log?entity_type=project"
-get "$API/action-log?entity_type=task" > /dev/null
-echo "  ✓ GET action-log?entity_type=task"
-get "$API/action-log?status=running" > /dev/null
-echo "  ✓ GET action-log?status=running"
-get "$API/action-log?status=done" > /dev/null
-echo "  ✓ GET action-log?status=done"
-get "$API/action-log?status=failed" > /dev/null
-echo "  ✓ GET action-log?status=failed"
-get "$API/action-log?action_id=$A_GOAL_ID" > /dev/null
-echo "  ✓ GET action-log?action_id=$A_GOAL_ID"
-get "$API/action-log?action_id=$A_PLAN_ID&status=done" > /dev/null
-echo "  ✓ GET action-log?action_id=$A_PLAN_ID&status=done"
-get "$API/action-log?entity_type=project&entity_id=$P1_ID" > /dev/null
-echo "  ✓ GET action-log for project P1"
-get "$API/action-log?entity_type=task&entity_id=${P1_TASK_IDS[0]}" > /dev/null
-echo "  ✓ GET action-log for task P1.1"
+get "$API/runs?entity_type=project" > /dev/null
+echo "  ✓ GET runs?entity_type=project"
+get "$API/runs?entity_type=task" > /dev/null
+echo "  ✓ GET runs?entity_type=task"
+get "$API/runs?status=running" > /dev/null
+echo "  ✓ GET runs?status=running"
+get "$API/runs?status=done" > /dev/null
+echo "  ✓ GET runs?status=done"
+get "$API/runs?status=failed" > /dev/null
+echo "  ✓ GET runs?status=failed"
+get "$API/runs?agent=goal" > /dev/null
+echo "  ✓ GET runs?agent=goal"
+get "$API/runs?agent=plan&status=done" > /dev/null
+echo "  ✓ GET runs?agent=plan&status=done"
+get "$API/runs?entity_type=project&entity_id=$P1_ID" > /dev/null
+echo "  ✓ GET runs for project P1"
+get "$API/runs?entity_type=task&entity_id=${P1_TASK_IDS[0]}" > /dev/null
+echo "  ✓ GET runs for task P1.1"
 
 section "Read Queries — Individual Resources"
 
@@ -573,9 +692,9 @@ for TID in "${P1_TASK_IDS[@]}" "${P2_TASK_IDS[@]}" "${P3_TASK_IDS[@]}" "${P4_TAS
   echo "  ✓ GET /api/tasks/$TID"
 done
 
-for AID in "$A_GOAL_ID" "$A_REQS_ID" "$A_DESIGN_ID" "$A_PLAN_ID"; do
-  get "$API/actions/$AID" > /dev/null
-  echo "  ✓ GET /api/actions/$AID"
+for AID in "$AG_GOAL_ID" "$AG_REQS_ID" "$AG_DESIGN_ID" "$AG_PLAN_ID"; do
+  get "$API/agents/$AID" > /dev/null
+  echo "  ✓ GET /api/agents/$AID"
 done
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -587,8 +706,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Traffic simulation complete."
 echo "  Total API requests: $COUNT"
 echo ""
-echo "  Created: 5 projects, 21 tasks, 4 actions, ~35 action log entries"
-echo "  Updates: 2 project updates, 2 task updates"
-echo "  Action log lifecycle: done, failed, retry patterns across 14 days"
-echo "  Read queries: pagination, filters, individual lookups"
+echo "  Created: 5 projects, 21 tasks, 8 sessions, 4 agents, ~35 runs"
+echo "  Updates: 2 project updates, 2 task updates, 6 session closes"
+echo "  Sessions: 6 closed with summaries, 2 active"
+echo "  Run lifecycle: done, failed, retry patterns across 14 days"
+echo "  Read queries: pagination, filters, sessions, individual lookups"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
