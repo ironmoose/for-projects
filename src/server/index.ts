@@ -15,8 +15,8 @@ import { parseArgs, parseCorsOrigins, logListening, type ServerOptions } from ".
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
-import { actionRoutes } from "./routes/actions";
-import { actionLogRoutes } from "./routes/action-log";
+import { agentRoutes } from "./routes/agents";
+import { runRoutes } from "./routes/runs";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
 
@@ -53,8 +53,8 @@ export class Server {
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
     app.route("/api/projects", projectRoutes(ctx.projectService));
     app.route("/api/tasks", taskRoutes(ctx.taskService));
-    app.route("/api/actions", actionRoutes(ctx.actionService));
-    app.route("/api/action-log", actionLogRoutes(ctx.actionLogService));
+    app.route("/api/agents", agentRoutes(ctx));
+    app.route("/api/runs", runRoutes(ctx));
     app.get("/api/health", (c) => c.json({ status: "ok" }));
 
     // -- MCP --------------------------------------------------------
