@@ -7,7 +7,7 @@ import {
   useTheme,
   ListPageLayout,
   PageHeader,
-  CreateForm,
+  CreateEntityOverlay,
   EmptyState,
   Badge,
 } from "../components";
@@ -41,7 +41,7 @@ export function ActionsPage() {
 
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -88,7 +88,7 @@ export function ActionsPage() {
       setPrompt("");
       setKind("plan");
       setAgent("tab:orchestrator");
-      setShowCreateForm(false);
+      setShowCreateOverlay(false);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to create action");
     } finally {
@@ -126,7 +126,7 @@ export function ActionsPage() {
         title="Actions"
         subtitle="Define action templates for project orchestration."
         trailing={
-          <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+          <Button onClick={() => setShowCreateOverlay(true)}>
             <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
               <Icon name="add" size={16} />
               New Action
@@ -136,36 +136,65 @@ export function ActionsPage() {
         style={{ marginBottom: theme.spacing.xl }}
       />
 
-      <CreateForm
-        visible={showCreateForm}
-        onCancel={() => setShowCreateForm(false)}
-        onSubmit={handleCreate}
-        creating={creating}
-      >
-        <div style={{ flex: "0 0 auto" }}>
-          <Select
-            value={kind}
-            onChange={(e) => setKind(e.target.value)}
-            options={kindOptions}
-          />
-        </div>
-        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+      {showCreateOverlay && (
+        <CreateEntityOverlay
+          title="Create Action"
+          onSubmit={handleCreate}
+          onClose={() => setShowCreateOverlay(false)}
+          loading={creating}
+          submitDisabled={!prompt.trim()}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <label
+              htmlFor="action-kind"
+              style={{
+                fontSize: theme.font.size.xs,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase" as const,
+                color: theme.color.textFaint,
+                fontFamily: theme.font.body,
+              }}
+            >
+              Kind
+            </label>
+            <Select
+              id="action-kind"
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              options={kindOptions}
+            />
+          </div>
           <Input
             label="Prompt"
+            id="action-prompt"
             placeholder="Describe the action..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            required
           />
-        </div>
-        <div style={{ flex: "0 0 auto" }}>
-          <Select
-            value={agent}
-            onChange={(e) => setAgent(e.target.value)}
-            options={agentOptions}
-          />
-        </div>
-      </CreateForm>
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <label
+              htmlFor="action-agent"
+              style={{
+                fontSize: theme.font.size.xs,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase" as const,
+                color: theme.color.textFaint,
+                fontFamily: theme.font.body,
+              }}
+            >
+              Agent
+            </label>
+            <Select
+              id="action-agent"
+              value={agent}
+              onChange={(e) => setAgent(e.target.value)}
+              options={agentOptions}
+            />
+          </div>
+        </CreateEntityOverlay>
+      )}
 
       <div
         style={{

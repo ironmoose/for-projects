@@ -8,7 +8,7 @@ import {
   useTheme,
   ListPageLayout,
   PageHeader,
-  CreateForm,
+  CreateEntityOverlay,
   EmptyState,
   HighlightOnChange,
   ConfirmDialog,
@@ -113,7 +113,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
   const { projects, create, remove } = useProjects();
   const { showToast } = useToastContext();
   const [title, setTitle] = useState("");
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
@@ -123,7 +123,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
     try {
       await create(title);
       setTitle("");
-      setShowCreateForm(false);
+      setShowCreateOverlay(false);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to create project");
     } finally {
@@ -162,7 +162,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
         title="Mission Control"
         subtitle="Monitor your projects and track progress from a centralized dashboard."
         trailing={
-          <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+          <Button onClick={() => setShowCreateOverlay(true)}>
             <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
               <Icon name="add" size={16} />
               New Project
@@ -172,22 +172,22 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
         style={{ marginBottom: theme.spacing.xl }}
       />
 
-      <CreateForm
-        visible={showCreateForm}
-        onCancel={() => setShowCreateForm(false)}
-        onSubmit={handleCreate}
-        creating={creating}
-      >
-        <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+      {showCreateOverlay && (
+        <CreateEntityOverlay
+          title="Create Project"
+          onSubmit={handleCreate}
+          onClose={() => setShowCreateOverlay(false)}
+          loading={creating}
+          submitDisabled={!title.trim()}
+        >
           <Input
             label="Project Title"
             placeholder="e.g. Riverfront Pavilion"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required
           />
-        </div>
-      </CreateForm>
+        </CreateEntityOverlay>
+      )}
 
       <div
         style={{
