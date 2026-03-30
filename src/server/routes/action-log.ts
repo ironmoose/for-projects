@@ -40,6 +40,13 @@ export function actionLogRoutes(service: IActionLogService): Hono {
     return c.json(entries, 201);
   });
 
+  // GET /api/action-log/stats
+  app.get("/stats", (c) => {
+    const rawDays = parseInt(c.req.query("days") ?? "", 10);
+    const days = Number.isFinite(rawDays) && rawDays >= 1 ? Math.min(rawDays, 365) : 30;
+    return c.json(service.stats(days));
+  });
+
   // GET /api/action-log/:id
   app.get("/:id", (c) => {
     return c.json(service.get(c.req.param("id")));

@@ -10,11 +10,18 @@ import {
   CreateForm,
   EmptyState,
   Badge,
+  Skeleton,
+  ChartCard,
+  DailyActivityChart,
+  StatusDonutChart,
+  KindBreakdownChart,
+  DurationSparkline,
 } from "../components";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchActions, createActions, updateActions, deleteActions } from "../api";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
+import { useActionLogStats } from "../hooks/useActionLogStats";
 import type { Action } from "../types";
 import { formatDate } from "../utils";
 
@@ -38,6 +45,8 @@ export function ActionsPage() {
   const { theme } = useTheme();
   const { showToast } = useToastContext();
   const { subscribeEvents } = useEventSubscription();
+
+  const { data: statsData, loading: statsLoading } = useActionLogStats(30);
 
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,6 +144,52 @@ export function ActionsPage() {
         }
         style={{ marginBottom: theme.spacing.xl }}
       />
+
+      {/* Charts grid */}
+      {statsLoading ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.lg, marginBottom: theme.spacing.xl }}>
+          <div style={{ flex: "1 1 400px" }}>
+            <Skeleton width="100%" height={240} borderRadius={theme.radius.xl} />
+          </div>
+          <div style={{ flex: "0 1 280px" }}>
+            <Skeleton width="100%" height={240} borderRadius={theme.radius.xl} />
+          </div>
+          <div style={{ flex: "1 1 340px" }}>
+            <Skeleton width="100%" height={180} borderRadius={theme.radius.xl} />
+          </div>
+          <div style={{ flex: "1 1 340px" }}>
+            <Skeleton width="100%" height={180} borderRadius={theme.radius.xl} />
+          </div>
+        </div>
+      ) : statsData && (statsData.summary.total > 0 || statsData.daily.length > 0) ? (
+        <div style={{ marginBottom: theme.spacing.xl }}>
+          {/* Row 1 */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.lg, marginBottom: theme.spacing.lg }}>
+            <ChartCard title="Daily Activity" style={{ flex: "1 1 400px", minWidth: 0 }}>
+              <DailyActivityChart data={statsData.daily} width={560} height={180} />
+            </ChartCard>
+            <ChartCard title="Status Breakdown" style={{ flex: "0 1 280px", minWidth: 200 }}>
+              <StatusDonutChart summary={statsData.summary} width={220} height={180} />
+            </ChartCard>
+          </div>
+          {/* Row 2 */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.lg }}>
+            <ChartCard title="By Kind" style={{ flex: "1 1 340px", minWidth: 0 }}>
+              <KindBreakdownChart data={statsData.daily} width={380} height={140} />
+            </ChartCard>
+            <ChartCard title="Avg Duration / Day" style={{ flex: "1 1 340px", minWidth: 0 }}>
+              <DurationSparkline data={statsData.daily} width={380} height={120} />
+            </ChartCard>
+          </div>
+        </div>
+      ) : !statsLoading && statsData ? (
+        <EmptyState
+          icon="bolt"
+          message="No action log data yet. Run some actions to see charts."
+          variant="card"
+          style={{ marginBottom: theme.spacing.xl }}
+        />
+      ) : null}
 
       <CreateForm
         visible={showCreateForm}

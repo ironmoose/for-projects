@@ -40,3 +40,24 @@ export interface ActionLogEntry {
   started_at: string;
   finished_at: string | null;
 }
+
+export interface ActionLogDailyStats {
+  date: string;
+  status: string;
+  kind: string;
+  count: number;
+  avg_duration_ms: number | null;
+}
+
+export interface ActionLogSummaryStats {
+  total: number;
+  done: number;
+  failed: number;
+  running: number;
+  avg_duration_ms: number | null;
+}
+
+export interface ActionLogStatsResponse {
+  daily: ActionLogDailyStats[];
+  summary: ActionLogSummaryStats;
+}
