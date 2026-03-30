@@ -40,6 +40,11 @@ export function actionLogRoutes(service: IActionLogService): Hono {
     return c.json(entries, 201);
   });
 
+  // GET /api/action-log/stats
+  app.get("/stats", (c) => {
+    return c.json(service.stats());
+  });
+
   // GET /api/action-log/:id
   app.get("/:id", (c) => {
     return c.json(service.get(c.req.param("id")));

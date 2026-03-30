@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { ActionLogEntry, ActionLogStatus, EntityType } from "../entities";
+import type { ActionKind, ActionLogEntry, ActionLogStatus, ActionLogStats, EntityType } from "../entities";
 
 export interface ActionLogRow {
   id: string;
@@ -101,6 +101,26 @@ export class ActionLogRepository {
         .query(`SELECT COUNT(*) as total FROM action_log ${where}`)
         .get(...params) as { total: number }
     ).total;
+  }
+
+  stats(): ActionLogStats {
+    const byStatus = this.db
+      .query("SELECT status, COUNT(*) as count FROM action_log GROUP BY status ORDER BY status")
+      .all() as { status: ActionLogStatus; count: number }[];
+
+    const byKind = this.db
+      .query("SELECT a.kind, COUNT(*) as count FROM action_log al JOIN actions a ON a.id = al.action_id GROUP BY a.kind ORDER BY a.kind")
+      .all() as { kind: ActionKind; count: number }[];
+
+    const totalRow = this.db
+      .query("SELECT COUNT(*) as total FROM action_log")
+      .get() as { total: number };
+
+    return {
+      by_status: byStatus,
+      by_kind: byKind,
+      total: totalRow.total,
+    };
   }
 
   insertMany(rows: Omit<ActionLogRow, "id">[]): ActionLogEntry[] {

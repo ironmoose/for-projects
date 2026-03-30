@@ -40,3 +40,9 @@ export interface ActionLogEntry {
   started_at: string;
   finished_at: string | null;
 }
+
+export interface ActionLogStats {
+  by_status: { status: string; count: number }[];
+  by_kind: { kind: string; count: number }[];
+  total: number;
+}

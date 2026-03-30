@@ -16,9 +16,11 @@ import { ProjectPage } from "./pages/ProjectPage";
 import { ActionsPage } from "./pages/ActionsPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
+import { ActionsDashboardPage } from "./pages/ActionsDashboardPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
+  { label: "Dashboard", path: "/actions/dashboard" },
   { label: "Actions", path: "/actions" },
   { label: "Themes", path: "/themes" },
 ];
@@ -43,6 +45,8 @@ export function App() {
     ? "/gallery"
     : path.startsWith("/themes")
     ? "/themes"
+    : path === "/actions/dashboard"
+    ? "/actions/dashboard"
     : path.startsWith("/actions")
     ? "/actions"
     : "/";
@@ -67,6 +71,9 @@ export function App() {
     }
     if (path.startsWith("/themes")) {
       return <ThemesPage />;
+    }
+    if (path === "/actions/dashboard") {
+      return <ActionsDashboardPage />;
     }
     if (path.startsWith("/actions")) {
       return <ActionsPage />;
