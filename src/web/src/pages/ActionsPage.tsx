@@ -10,11 +10,13 @@ import {
   CreateForm,
   EmptyState,
   Badge,
+  ActivitySection,
 } from "../components";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchActions, createActions, updateActions, deleteActions } from "../api";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
+import { useActivityFeed } from "../hooks/useActivityFeed";
 import type { Action } from "../types";
 import { formatDate } from "../utils";
 
@@ -38,6 +40,7 @@ export function ActionsPage() {
   const { theme } = useTheme();
   const { showToast } = useToastContext();
   const { subscribeEvents } = useEventSubscription();
+  const activity = useActivityFeed();
 
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,6 +169,14 @@ export function ActionsPage() {
           />
         </div>
       </CreateForm>
+
+      <ActivitySection
+        running={activity.running}
+        recent={activity.recent}
+        loading={activity.loading}
+        timeframeMinutes={activity.timeframeMinutes}
+        onTimeframeChange={activity.setTimeframeMinutes}
+      />
 
       <div
         style={{

@@ -23,6 +23,8 @@ export class ActionLogService implements IActionLogService {
     entity_id?: string;
     action_id?: string;
     status?: ActionLogStatus;
+    started_after?: string;
+    finished_after?: string;
   }): Paginated<ActionLogEntry> {
     return {
       data: this.actionLogRepo.findMany(filter),

@@ -48,6 +48,8 @@ export interface IActionLogService {
     entity_id?: string;
     action_id?: string;
     status?: ActionLogStatus;
+    started_after?: string;
+    finished_after?: string;
   }): Paginated<ActionLogEntry>;
   get(id: string): ActionLogEntry;
   create(inputs: CreateActionLogInput[]): ActionLogEntry[];
