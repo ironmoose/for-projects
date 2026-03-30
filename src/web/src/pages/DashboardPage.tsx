@@ -3,12 +3,15 @@ import {
   Button,
   Card,
   Icon,
+  IconButton,
   Input,
   useTheme,
   ListPageLayout,
   PageHeader,
   CreateForm,
   EmptyState,
+  HighlightOnChange,
+  ConfirmDialog,
 } from "../components";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
@@ -25,10 +28,12 @@ function ProjectCard({
   project,
   taskCount,
   onClick,
+  onDelete,
 }: {
   project: Project;
   taskCount: number;
   onClick: () => void;
+  onDelete: () => void;
 }) {
   const { theme } = useTheme();
 
@@ -86,6 +91,14 @@ function ProjectCard({
         <span style={{ fontFamily: theme.font.mono }}>
           {formatDate(project.updated_at)}
         </span>
+
+        <IconButton
+          icon="delete"
+          size={16}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          aria-label="Delete project"
+          style={{ flexShrink: 0 }}
+        />
       </div>
     </Card>
   );
@@ -97,11 +110,12 @@ function ProjectCard({
 
 export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) => void }) {
   const { theme } = useTheme();
-  const { projects, create } = useProjects();
+  const { projects, create, remove } = useProjects();
   const { showToast } = useToastContext();
   const [title, setTitle] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   async function handleCreate() {
     if (!title.trim()) return;
@@ -129,6 +143,16 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
       setTaskCounts(counts);
     }).catch(() => {});
   }, [projects]);
+
+  async function handleDeleteProject() {
+    if (!deleteTarget) return;
+    try {
+      await remove([deleteTarget.id]);
+      setDeleteTarget(null);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to delete project");
+    }
+  }
 
   const sorted = [...projects].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 
@@ -178,6 +202,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
             project={p}
             taskCount={taskCounts[p.id] ?? 0}
             onClick={() => onOpenProject(p.id)}
+            onDelete={() => setDeleteTarget(p)}
           />
         ))}
       </div>
@@ -187,6 +212,14 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
           icon="folder_open"
           message='No projects yet. Click "New Project" to get started.'
           variant="card"
+        />
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete Project"
+          message={`Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`}
+          onConfirm={handleDeleteProject}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </ListPageLayout>
