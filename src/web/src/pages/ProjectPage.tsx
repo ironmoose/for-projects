@@ -9,6 +9,7 @@ import {
   SidePanelLayout,
   BackButton,
   SectionLabel,
+  CollapsibleSection,
   MetadataTable,
   AddItemInput,
   ListItem,
@@ -184,8 +185,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           { key: "requirements" as const, label: "Requirements" },
           { key: "design" as const, label: "Design" },
         ]).map(({ key, label }) => (
-          <div key={key} style={{ marginBottom: theme.spacing.xl }}>
-            <SectionLabel>{label}</SectionLabel>
+          <CollapsibleSection key={key} label={label} defaultOpen style={{ marginBottom: theme.spacing.xl }}>
             {project[key] ? (
               <Markdown>{project[key]}</Markdown>
             ) : (
@@ -193,7 +193,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 Not set
               </p>
             )}
-          </div>
+          </CollapsibleSection>
         ))}
 
         {/* Tasks */}

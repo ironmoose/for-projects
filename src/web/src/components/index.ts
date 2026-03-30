@@ -29,6 +29,7 @@ export { HighlightOnChange } from "./molecules/HighlightOnChange";
 export { AnimatedList } from "./molecules/AnimatedList";
 export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 export { PresenceCharm } from "./molecules/PresenceCharm";
+export { CollapsibleSection } from "./molecules/CollapsibleSection";
 
 // Organisms
 export { TopBar } from "./organisms/TopBar";
