@@ -1,13 +1,13 @@
-import type { Project, Task, Action, ActionLogEntry, ActionLogDailyStats, ActionLogSummaryStats, ActionKind, AgentType, ActionLogStatus, ActionLogStats, EntityType } from "./entities";
+import type { Project, Task, Agent, Run, RunDailyStats, RunSummaryStats, AgentType, RunStatus, EntityType } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateTaskInput,
   UpdateTaskInput,
-  CreateActionInput,
-  UpdateActionInput,
-  CreateActionLogInput,
-  UpdateActionLogInput,
+  CreateAgentInput,
+  UpdateAgentInput,
+  CreateRunInput,
+  UpdateRunInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -31,32 +31,32 @@ export interface ITaskService {
   remove(ids: string[]): void;
 }
 
-export interface IActionService {
-  list(filter?: { id?: string; limit?: number; offset?: number; kind?: ActionKind }): Paginated<Action>;
-  get(id: string): Action;
-  create(inputs: CreateActionInput[]): Action[];
-  update(inputs: UpdateActionInput[]): Action[];
+export interface IAgentService {
+  list(filter?: { id?: string; limit?: number; offset?: number; identifier?: string; enabled?: boolean }): Paginated<Agent>;
+  get(id: string): Agent;
+  create(inputs: CreateAgentInput[]): Agent[];
+  update(inputs: UpdateAgentInput[]): Agent[];
   remove(ids: string[]): void;
 }
 
-export interface IActionLogService {
+export interface IRunService {
   list(filter?: {
     id?: string;
     limit?: number;
     offset?: number;
     entity_type?: EntityType;
     entity_id?: string;
-    action_id?: string;
-    status?: ActionLogStatus;
+    agent?: string;
+    status?: RunStatus;
     search?: string;
     started_after?: string;
     started_before?: string;
     finished_after?: string;
-    action_kind?: string;
-  }): Paginated<ActionLogEntry>;
-  get(id: string): ActionLogEntry;
-  create(inputs: CreateActionLogInput[]): ActionLogEntry[];
-  update(inputs: UpdateActionLogInput[]): ActionLogEntry[];
-  stats(days?: number): { daily: ActionLogDailyStats[]; summary: ActionLogSummaryStats };
+    agent_identifier?: string;
+  }): Paginated<Run>;
+  get(id: string): Run;
+  create(inputs: CreateRunInput[]): Run[];
+  update(inputs: UpdateRunInput[]): Run[];
+  stats(days?: number): { daily: RunDailyStats[]; summary: RunSummaryStats };
   remove(ids: string[]): void;
 }
