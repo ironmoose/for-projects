@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchActionsDashboard } from "../api";
-import type { EntityActionDashboardRow } from "../types";
+import { fetchAgents } from "../api";
+import type { Agent } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useThrottledCallback } from "./useThrottledCallback";
 
-export function useActionsDashboard() {
-  const [rows, setRows] = useState<EntityActionDashboardRow[]>([]);
+export function useAgentsDashboard() {
+  const [rows, setRows] = useState<Agent[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const { subscribeEvents } = useEventSubscription();
@@ -13,7 +13,7 @@ export function useActionsDashboard() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await fetchActionsDashboard({ limit: 200 });
+      const result = await fetchAgents({ limit: 200 });
       setRows(result.data);
       setTotal(result.total);
     } catch {
@@ -33,7 +33,7 @@ export function useActionsDashboard() {
   useEffect(() => {
     load();
     return subscribeEvents((event) => {
-      if (event.entity === "entity_action" || event.entity === "action") {
+      if (event.entity_type === "agent" || event.entity_type === "run") {
         throttledLoad();
       }
     });

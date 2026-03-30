@@ -1,23 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, fetchActionLog } from "../api";
-import type { ActionLogEntry } from "../types";
+import { ApiError, fetchRuns } from "../api";
+import type { Run } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
-export interface ActionLogFilters {
+export interface RunFilters {
   status: string;
   entity_type: string;
-  action_kind: string;
+  agent_identifier: string;
   search: string;
   started_after: string;
   started_before: string;
 }
 
-const INITIAL_FILTERS: ActionLogFilters = {
+const INITIAL_FILTERS: RunFilters = {
   status: "",
   entity_type: "",
-  action_kind: "",
+  agent_identifier: "",
   search: "",
   started_after: "",
   started_before: "",
@@ -25,10 +25,10 @@ const INITIAL_FILTERS: ActionLogFilters = {
 
 const PAGE_SIZE = 20;
 
-export function useActionLogSearch() {
-  const [filters, setFilters] = useState<ActionLogFilters>(INITIAL_FILTERS);
+export function useRunSearch() {
+  const [filters, setFilters] = useState<RunFilters>(INITIAL_FILTERS);
   const [page, setPage] = useState(1);
-  const [entries, setEntries] = useState<ActionLogEntry[]>([]);
+  const [entries, setEntries] = useState<Run[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const { subscribeEvents } = useEventSubscription();
@@ -55,7 +55,7 @@ export function useActionLogSearch() {
     const changed =
       prev.status !== filters.status ||
       prev.entity_type !== filters.entity_type ||
-      prev.action_kind !== filters.action_kind ||
+      prev.agent_identifier !== filters.agent_identifier ||
       prev.started_after !== filters.started_after ||
       prev.started_before !== filters.started_before;
     if (changed) setPage(1);
@@ -82,20 +82,20 @@ export function useActionLogSearch() {
       };
       if (filters.status) params.status = filters.status;
       if (filters.entity_type) params.entity_type = filters.entity_type;
-      if (filters.action_kind) params.action_kind = filters.action_kind;
+      if (filters.agent_identifier) params.agent_identifier = filters.agent_identifier;
       if (debouncedSearch) params.search = debouncedSearch;
       if (filters.started_after) params.started_after = filters.started_after;
       if (filters.started_before) params.started_before = filters.started_before;
 
-      const body = await fetchActionLog(params);
+      const body = await fetchRuns(params);
       setEntries(body.data);
       setTotal(body.total);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to load action log");
+      showToast(err instanceof ApiError ? err.message : "Failed to load runs");
     } finally {
       setLoading(false);
     }
-  }, [filters.status, filters.entity_type, filters.action_kind, filters.started_after, filters.started_before, debouncedSearch, offset, showToast]);
+  }, [filters.status, filters.entity_type, filters.agent_identifier, filters.started_after, filters.started_before, debouncedSearch, offset, showToast]);
 
   const loadRef = useRef(load);
   loadRef.current = load;
@@ -107,7 +107,7 @@ export function useActionLogSearch() {
   useEffect(() => {
     load();
     return subscribeEvents((event) => {
-      if (event.entity_type === "action_log") {
+      if (event.entity_type === "run") {
         throttledLoad();
       }
     });
@@ -120,7 +120,7 @@ export function useActionLogSearch() {
     setPage(1);
   }, []);
 
-  const updateFilter = useCallback(<K extends keyof ActionLogFilters>(key: K, value: ActionLogFilters[K]) => {
+  const updateFilter = useCallback(<K extends keyof RunFilters>(key: K, value: RunFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 

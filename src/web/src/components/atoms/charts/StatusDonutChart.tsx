@@ -1,8 +1,8 @@
 import { useTheme } from "../../theme/ThemeContext";
-import type { ActionLogSummaryStats } from "../../../types";
+import type { RunSummaryStats } from "../../../types";
 
 interface StatusDonutChartProps {
-  summary: ActionLogSummaryStats;
+  summary: RunSummaryStats;
   width?: number;
   height?: number;
 }
@@ -10,7 +10,7 @@ interface StatusDonutChartProps {
 export function StatusDonutChart({ summary, width = 200, height = 200 }: StatusDonutChartProps) {
   const { theme } = useTheme();
 
-  const total = summary.done + summary.failed + summary.running;
+  const total = summary.done + summary.failed + summary.running + summary.todo + summary.cancelled;
   const cx = width / 2;
   const cy = height / 2;
   const r = Math.min(cx, cy) - 20;
@@ -49,9 +49,11 @@ export function StatusDonutChart({ summary, width = 200, height = 200 }: StatusD
   }
 
   const segments: Array<{ value: number; color: string; label: string }> = [
+    { value: summary.todo, color: theme.color.textMuted, label: "Todo" },
     { value: summary.done, color: theme.color.success, label: "Done" },
     { value: summary.failed, color: theme.color.danger, label: "Failed" },
     { value: summary.running, color: theme.color.running, label: "Running" },
+    { value: summary.cancelled, color: theme.color.textFaint, label: "Cancelled" },
   ];
 
   let offset = 0;

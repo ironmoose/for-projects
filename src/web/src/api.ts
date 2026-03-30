@@ -1,4 +1,4 @@
-import type { Action, ActionLogEntry, ActionLogStats, ActionLogStatsResponse, Project, Task } from "./types";
+import type { Agent, Run, RunStatsResponse, Project, Task } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -46,7 +46,7 @@ export async function apiFetch(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function qs(params?: Record<string, string | number | undefined>): string {
+function qs(params?: Record<string, string | number | boolean | undefined>): string {
   if (!params) return "";
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -121,48 +121,48 @@ export async function deleteTasks(ids: string[]): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Actions API
+// Agents API
 // ---------------------------------------------------------------------------
 
-export async function fetchActions(params?: { kind?: string; limit?: number; offset?: number }): Promise<{ data: Action[]; total: number }> {
-  const res = await apiFetch(`/api/actions${qs(params)}`);
+export async function fetchAgents(params?: { identifier?: string; enabled?: boolean; limit?: number; offset?: number }): Promise<{ data: Agent[]; total: number }> {
+  const res = await apiFetch(`/api/agents${qs(params)}`);
   return res.json();
 }
 
-export async function createActions(inputs: Array<{ kind: string; prompt: string; agent: string }>): Promise<Action[]> {
-  const res = await apiFetch("/api/actions", jsonPost(inputs));
+export async function createAgents(inputs: Array<{ identifier: string; prompt: string; agent: string; enabled: boolean }>): Promise<Agent[]> {
+  const res = await apiFetch("/api/agents", jsonPost(inputs));
   return res.json();
 }
 
-export async function updateActions(inputs: Array<{ id: string; kind?: string; prompt?: string; agent?: string }>): Promise<Action[]> {
-  const res = await apiFetch("/api/actions", jsonPatch(inputs));
+export async function updateAgents(inputs: Array<{ id: string; identifier?: string; prompt?: string; agent?: string; enabled?: boolean }>): Promise<Agent[]> {
+  const res = await apiFetch("/api/agents", jsonPatch(inputs));
   return res.json();
 }
 
-export async function deleteActions(ids: string[]): Promise<void> {
-  await apiFetch("/api/actions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+export async function deleteAgents(ids: string[]): Promise<void> {
+  await apiFetch("/api/agents", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
 // ---------------------------------------------------------------------------
-// Action Log API
+// Runs API
 // ---------------------------------------------------------------------------
 
-export async function fetchActionLog(params?: { entity_type?: string; entity_id?: string; action_id?: string; status?: string; search?: string; started_after?: string; started_before?: string; finished_after?: string; action_kind?: string; limit?: number; offset?: number }): Promise<{ data: ActionLogEntry[]; total: number }> {
-  const res = await apiFetch(`/api/action-log${qs(params)}`);
+export async function fetchRuns(params?: { entity_type?: string; entity_id?: string; agent?: string; status?: string; search?: string; started_after?: string; started_before?: string; finished_after?: string; agent_identifier?: string; limit?: number; offset?: number }): Promise<{ data: Run[]; total: number }> {
+  const res = await apiFetch(`/api/runs${qs(params)}`);
   return res.json();
 }
 
-export async function createActionLog(inputs: Array<{ action_id: string; entity_type: string; entity_id: string; status: string; output?: string }>): Promise<ActionLogEntry[]> {
-  const res = await apiFetch("/api/action-log", jsonPost(inputs));
+export async function createRun(inputs: Array<{ agent: string; entity_type: string; entity_id: string; status: string; output?: string }>): Promise<Run[]> {
+  const res = await apiFetch("/api/runs", jsonPost(inputs));
   return res.json();
 }
 
-export async function updateActionLog(inputs: Array<{ id: string; status?: string; output?: string | null; finished_at?: string | null }>): Promise<ActionLogEntry[]> {
-  const res = await apiFetch("/api/action-log", jsonPatch(inputs));
+export async function updateRun(inputs: Array<{ id: string; status?: string; output?: string | null; finished_at?: string | null }>): Promise<Run[]> {
+  const res = await apiFetch("/api/runs", jsonPatch(inputs));
   return res.json();
 }
 
-export async function fetchActionLogStats(params?: { days?: number }): Promise<ActionLogStatsResponse> {
-  const res = await apiFetch(`/api/action-log/stats${qs(params)}`);
+export async function fetchRunStats(params?: { days?: number }): Promise<RunStatsResponse> {
+  const res = await apiFetch(`/api/runs/stats${qs(params)}`);
   return res.json();
 }

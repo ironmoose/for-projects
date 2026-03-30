@@ -45,8 +45,8 @@ export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ConfirmDialog } from "./organisms/ConfirmDialog";
 export { ActivitySection } from "./organisms/ActivitySection";
-export { ActionLogFilterBar } from "./organisms/ActionLogFilterBar";
-export { ActionLogTable } from "./organisms/ActionLogTable";
+export { RunFilterBar } from "./organisms/RunFilterBar";
+export { RunTable } from "./organisms/RunTable";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";
