@@ -16,7 +16,7 @@ export interface Paginated<T> {
 }
 
 export interface IProjectService {
-  list(filter?: { limit?: number; offset?: number }): Paginated<Project>;
+  list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<Project>;
   get(id: string): Project;
   create(inputs: CreateProjectInput[]): Project[];
   update(inputs: UpdateProjectInput[]): Project[];
@@ -24,7 +24,7 @@ export interface IProjectService {
 }
 
 export interface ITaskService {
-  list(filter?: { limit?: number; offset?: number; project_id?: string }): Paginated<Task>;
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string }): Paginated<Task>;
   get(id: string): Task;
   create(inputs: CreateTaskInput[]): Task[];
   update(inputs: UpdateTaskInput[]): Task[];
@@ -32,7 +32,7 @@ export interface ITaskService {
 }
 
 export interface IActionService {
-  list(filter?: { limit?: number; offset?: number; kind?: ActionKind }): Paginated<Action>;
+  list(filter?: { id?: string; limit?: number; offset?: number; kind?: ActionKind }): Paginated<Action>;
   get(id: string): Action;
   create(inputs: CreateActionInput[]): Action[];
   update(inputs: UpdateActionInput[]): Action[];
@@ -41,6 +41,7 @@ export interface IActionService {
 
 export interface IActionLogService {
   list(filter?: {
+    id?: string;
     limit?: number;
     offset?: number;
     entity_type?: EntityType;

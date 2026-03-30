@@ -13,7 +13,7 @@ export class TaskService implements ITaskService {
     private eventBus: EventBus,
   ) {}
 
-  list(filter?: { limit?: number; offset?: number; project_id?: string }): Paginated<Task> {
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string }): Paginated<Task> {
     return {
       data: this.taskRepo.findMany(filter),
       total: this.taskRepo.count(filter),

@@ -21,6 +21,7 @@ export class ActionLogRepository {
   }
 
   findMany(filter?: {
+    id?: string;
     limit?: number;
     offset?: number;
     entity_type?: EntityType;
@@ -33,6 +34,10 @@ export class ActionLogRepository {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
 
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
+    }
     if (filter?.entity_type) {
       conditions.push("entity_type = ?");
       params.push(filter.entity_type);
@@ -59,6 +64,7 @@ export class ActionLogRepository {
   }
 
   count(filter?: {
+    id?: string;
     entity_type?: EntityType;
     entity_id?: string;
     action_id?: string;
@@ -67,6 +73,10 @@ export class ActionLogRepository {
     const conditions: string[] = [];
     const params: string[] = [];
 
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
+    }
     if (filter?.entity_type) {
       conditions.push("entity_type = ?");
       params.push(filter.entity_type);

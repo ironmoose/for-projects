@@ -11,10 +11,10 @@ export class ProjectService implements IProjectService {
     private eventBus: EventBus,
   ) {}
 
-  list(filter?: { limit?: number; offset?: number }): Paginated<Project> {
+  list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<Project> {
     return {
       data: this.repo.findMany(filter),
-      total: this.repo.count(),
+      total: this.repo.count(filter),
     };
   }
 

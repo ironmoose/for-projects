@@ -45,7 +45,6 @@ const kindEnum = z.enum(["plan", "goal", "requirements", "design"]);
 const agentEnum = z.enum(["tab:orchestrator", "tab:executor"]);
 const entityTypeEnum = z.enum(["project", "task"]);
 const actionLogStatusEnum = z.enum(["running", "done", "failed"]);
-const queryTypeEnum = z.enum(["project", "task", "action", "action_log"]);
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
@@ -56,47 +55,65 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     version: "0.1.0",
   });
 
-  // -- Query ----------------------------------------------------------
+  // -- List tools -----------------------------------------------------
 
   server.registerTool(
-    "query",
+    "list_projects",
     {
-      description:
-        "Filtered list/lookup across entity types. Supports project, task, action, action_log. Pass id for single-entity lookup.",
+      description: "List projects with optional pagination. Returns { data, total }. Pass id to retrieve a single project.",
       inputSchema: {
-        type: queryTypeEnum,
         id: z.string().max(26).optional(),
-        project_id: z.string().max(26).optional(),
-        kind: kindEnum.optional(),
-        entity_type: entityTypeEnum.optional(),
-        entity_id: z.string().max(26).optional(),
-        action_id: z.string().max(26).optional(),
-        status: z.string().max(50).optional(),
-        limit: z.number().int().min(1).max(500).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ type: entityType, id, project_id, kind, entity_type, entity_id, action_id, status, limit, offset }) =>
-      handle(() => {
-        switch (entityType) {
-          case "project": {
-            if (id) return projectService.get(id);
-            return projectService.list({ limit, offset });
-          }
-          case "task": {
-            if (id) return taskService.get(id);
-            return taskService.list({ project_id, limit, offset });
-          }
-          case "action": {
-            if (id) return actionService.get(id);
-            return actionService.list({ kind, limit, offset });
-          }
-          case "action_log": {
-            if (id) return actionLogService.get(id);
-            return actionLogService.list({ entity_type, entity_id, action_id, status, limit, offset });
-          }
-        }
-      })
+    ({ id, limit, offset }) => handle(() => projectService.list({ id, limit, offset }))
+  );
+
+  server.registerTool(
+    "list_tasks",
+    {
+      description: "List tasks, optionally filtered by project_id. Returns { data, total }. Pass id to retrieve a single task.",
+      inputSchema: {
+        id: z.string().max(26).optional(),
+        project_id: z.string().max(26).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ id, project_id, limit, offset }) => handle(() => taskService.list({ id, project_id, limit, offset }))
+  );
+
+  server.registerTool(
+    "list_actions",
+    {
+      description: "List actions, optionally filtered by kind (plan|goal|requirements|design). Returns { data, total }. Pass id to retrieve a single action.",
+      inputSchema: {
+        id: z.string().max(26).optional(),
+        kind: kindEnum.optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ id, kind, limit, offset }) => handle(() => actionService.list({ id, kind, limit, offset }))
+  );
+
+  server.registerTool(
+    "list_action_logs",
+    {
+      description: "List action log entries with optional filters: entity_type, entity_id, action_id, status. Returns { data, total }. Pass id to retrieve a single entry.",
+      inputSchema: {
+        id: z.string().max(26).optional(),
+        entity_type: entityTypeEnum.optional(),
+        entity_id: z.string().max(26).optional(),
+        action_id: z.string().max(26).optional(),
+        status: actionLogStatusEnum.optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ id, entity_type, entity_id, action_id, status, limit, offset }) =>
+      handle(() => actionLogService.list({ id, entity_type, entity_id, action_id, status, limit, offset }))
   );
 
   // -- Projects -------------------------------------------------------
@@ -104,7 +121,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_project",
     {
-      description: "Create a new project",
+      description: "Create a project with a title. Goal, requirements, and design can be provided now or added later via update_project.",
       inputSchema: {
         title: z.string().max(255),
         goal: z.string().max(10000).optional(),
@@ -118,7 +135,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_project",
     {
-      description: "Update an existing project",
+      description: "Update a project's title, goal, requirements, or design by ID. Only provided fields are changed.",
       inputSchema: {
         id: z.string().max(26),
         title: z.string().max(255).optional(),
@@ -130,26 +147,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     (input) => handle(() => projectService.update([input])[0])
   );
 
-  server.registerTool(
-    "delete_projects",
-    {
-      description: "Delete projects by IDs",
-      inputSchema: {
-        ids: z.array(z.string().max(26)).min(1),
-      },
-    },
-    ({ ids }) => handle(() => {
-      projectService.remove(ids);
-      return { deleted: ids.length };
-    })
-  );
-
   // -- Tasks ----------------------------------------------------------
 
   server.registerTool(
     "create_task",
     {
-      description: "Create a task in a project",
+      description: "Create a task within a project. A task represents a unit of work. Plan can be added now or later.",
       inputSchema: {
         project_id: z.string().max(26),
         title: z.string().max(500),
@@ -162,7 +165,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update a task by ID",
+      description: "Update a task's title or plan by ID. Only provided fields are changed.",
       inputSchema: {
         id: z.string().max(26),
         project_id: z.string().max(26),
@@ -173,26 +176,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     (input) => handle(() => taskService.update([input])[0])
   );
 
-  server.registerTool(
-    "delete_tasks",
-    {
-      description: "Delete tasks by IDs",
-      inputSchema: {
-        ids: z.array(z.string().max(26)).min(1),
-      },
-    },
-    ({ ids }) => handle(() => {
-      taskService.remove(ids);
-      return { deleted: ids.length };
-    })
-  );
-
   // -- Actions --------------------------------------------------------
 
   server.registerTool(
     "create_actions",
     {
-      description: "Create one or more actions",
+      description: "Create one or more actions. An action defines a prompt to be executed by an agent against a project or task.",
       inputSchema: {
         items: z.array(z.object({
           kind: kindEnum,
@@ -209,7 +198,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_actions",
     {
-      description: "Update one or more actions",
+      description: "Update one or more actions by ID. Use to revise prompts, reassign agents, or change kind.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
@@ -224,31 +213,17 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ items }) => handle(() => actionService.update(items as UpdateActionInput[]))
   );
 
-  server.registerTool(
-    "delete_actions",
-    {
-      description: "Delete actions by IDs",
-      inputSchema: {
-        ids: z.array(z.string().max(26)).min(1),
-      },
-    },
-    ({ ids }) => handle(() => {
-      actionService.remove(ids);
-      return { deleted: ids.length };
-    })
-  );
-
   // -- Action Logs ----------------------------------------------------
 
   server.registerTool(
     "create_action_log",
     {
-      description: "Create one or more action log entries",
+      description: "Schedule an action for execution. Creates a log entry with status 'running'. Requires action_id, entity_type, and entity_id.",
       inputSchema: {
         items: z.array(z.object({
           action_id: z.string().max(26),
-          status: actionLogStatusEnum,
-          output: z.string().max(50000).optional(),
+          entity_type: entityTypeEnum,
+          entity_id: z.string().max(26),
         })).min(1),
       },
     },
@@ -258,16 +233,24 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_action_log",
     {
-      description: "Update one or more action log entries",
+      description: "Update the status of an action log entry (running|done|failed). Optionally include output for debugging/auditing. finished_at is auto-set on terminal statuses.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
-          status: actionLogStatusEnum.optional(),
+          status: actionLogStatusEnum,
           output: z.string().max(50000).optional(),
         })).min(1),
       },
     },
-    ({ items }) => handle(() => actionLogService.update(items as UpdateActionLogInput[]))
+    ({ items }) => handle(() => {
+      const mapped = items.map((item) => ({
+        ...item,
+        finished_at: item.status === "done" || item.status === "failed"
+          ? new Date().toISOString()
+          : undefined,
+      }));
+      return actionLogService.update(mapped as UpdateActionLogInput[]);
+    })
   );
 
   return server;

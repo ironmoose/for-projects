@@ -22,12 +22,16 @@ export class ActionRepository {
     return this.db.query("SELECT * FROM actions WHERE kind = ?").get(kind) as Action | null;
   }
 
-  findMany(filter?: { limit?: number; offset?: number; kind?: ActionKind; agent?: AgentType }): Action[] {
+  findMany(filter?: { id?: string; limit?: number; offset?: number; kind?: ActionKind; agent?: AgentType }): Action[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
     const params: (string | number)[] = [];
 
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
+    }
     if (filter?.kind) {
       conditions.push("kind = ?");
       params.push(filter.kind);
@@ -45,10 +49,14 @@ export class ActionRepository {
       .all(...params) as Action[];
   }
 
-  count(filter?: { kind?: ActionKind; agent?: AgentType }): number {
+  count(filter?: { id?: string; kind?: ActionKind; agent?: AgentType }): number {
     const conditions: string[] = [];
     const params: string[] = [];
 
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
+    }
     if (filter?.kind) {
       conditions.push("kind = ?");
       params.push(filter.kind);

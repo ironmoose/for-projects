@@ -14,7 +14,7 @@ export class ActionService implements IActionService {
     private eventBus: EventBus,
   ) {}
 
-  list(filter?: { limit?: number; offset?: number; kind?: ActionKind }): Paginated<Action> {
+  list(filter?: { id?: string; limit?: number; offset?: number; kind?: ActionKind }): Paginated<Action> {
     return {
       data: this.actionRepo.findMany(filter),
       total: this.actionRepo.count(filter),

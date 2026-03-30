@@ -19,16 +19,41 @@ export class ProjectRepository {
     return this.db.query("SELECT * FROM projects WHERE id = ?").get(id) as Project | null;
   }
 
-  findMany(filter?: { limit?: number; offset?: number }): Project[] {
+  findMany(filter?: { id?: string; limit?: number; offset?: number }): Project[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+    params.push(limit, offset);
+
     return this.db
-      .query("SELECT * FROM projects ORDER BY created_at DESC LIMIT ? OFFSET ?")
-      .all(limit, offset) as Project[];
+      .query(`SELECT * FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+      .all(...params) as Project[];
   }
 
-  count(): number {
-    return (this.db.query("SELECT COUNT(*) as total FROM projects").get() as { total: number }).total;
+  count(filter?: { id?: string }): number {
+    const conditions: string[] = [];
+    const params: string[] = [];
+
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+
+    return (
+      this.db
+        .query(`SELECT COUNT(*) as total FROM projects ${where}`)
+        .get(...params) as { total: number }
+    ).total;
   }
 
   insertMany(rows: Omit<ProjectRow, "id" | "created_at" | "updated_at">[]): Project[] {

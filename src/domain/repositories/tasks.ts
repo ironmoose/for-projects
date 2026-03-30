@@ -18,26 +18,49 @@ export class TaskRepository {
     return this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Task | null;
   }
 
-  findMany(filter?: { limit?: number; offset?: number; project_id?: string }): Task[] {
+  findMany(filter?: { id?: string; limit?: number; offset?: number; project_id?: string }): Task[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
 
-    if (filter?.project_id) {
-      return this.db
-        .query("SELECT * FROM tasks WHERE project_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?")
-        .all(filter.project_id, limit, offset) as Task[];
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
     }
+    if (filter?.project_id) {
+      conditions.push("project_id = ?");
+      params.push(filter.project_id);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+    params.push(limit, offset);
 
     return this.db
-      .query("SELECT * FROM tasks ORDER BY created_at ASC LIMIT ? OFFSET ?")
-      .all(limit, offset) as Task[];
+      .query(`SELECT * FROM tasks ${where}ORDER BY created_at ASC LIMIT ? OFFSET ?`)
+      .all(...params) as Task[];
   }
 
-  count(filter?: { project_id?: string }): number {
-    if (filter?.project_id) {
-      return (this.db.query("SELECT COUNT(*) as total FROM tasks WHERE project_id = ?").get(filter.project_id) as { total: number }).total;
+  count(filter?: { id?: string; project_id?: string }): number {
+    const conditions: string[] = [];
+    const params: string[] = [];
+
+    if (filter?.id) {
+      conditions.push("id = ?");
+      params.push(filter.id);
     }
-    return (this.db.query("SELECT COUNT(*) as total FROM tasks").get() as { total: number }).total;
+    if (filter?.project_id) {
+      conditions.push("project_id = ?");
+      params.push(filter.project_id);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+
+    return (
+      this.db
+        .query(`SELECT COUNT(*) as total FROM tasks ${where}`)
+        .get(...params) as { total: number }
+    ).total;
   }
 
   insertMany(rows: Omit<TaskRow, "id" | "created_at" | "updated_at">[]): Task[] {

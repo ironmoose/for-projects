@@ -16,6 +16,7 @@ export class ActionLogService implements IActionLogService {
   ) {}
 
   list(filter?: {
+    id?: string;
     limit?: number;
     offset?: number;
     entity_type?: EntityType;
