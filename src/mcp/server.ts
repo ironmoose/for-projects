@@ -16,8 +16,8 @@ import {
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
-  actionService: IActionService;
-  actionLogService: IActionLogService;
+  agentService: IActionService;
+  runService: IActionLogService;
 }
 
 function handle<T>(fn: () => T) {
@@ -41,14 +41,13 @@ function handle<T>(fn: () => T) {
 
 // -- Zod enums --------------------------------------------------------
 
-const kindEnum = z.enum(["plan", "goal", "requirements", "design"]);
 const agentEnum = z.enum(["tab:orchestrator", "tab:executor"]);
 const entityTypeEnum = z.enum(["project", "task"]);
-const actionLogStatusEnum = z.enum(["running", "done", "failed"]);
+const runStatusEnum = z.enum(["todo", "running", "done", "failed", "cancelled"]);
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, actionService, actionLogService } = ctx;
+  const { projectService, taskService, agentService, runService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -85,35 +84,36 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   );
 
   server.registerTool(
-    "list_actions",
+    "list_agents",
     {
-      description: "List actions, optionally filtered by kind (plan|goal|requirements|design). Returns { data, total }. Pass id to retrieve a single action.",
+      description: "List agents, optionally filtered by identifier or enabled status. Returns { data, total }. Pass id to retrieve a single agent.",
       inputSchema: {
         id: z.string().max(26).optional(),
-        kind: kindEnum.optional(),
+        identifier: z.string().optional(),
+        enabled: z.boolean().optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, kind, limit, offset }) => handle(() => actionService.list({ id, kind, limit, offset }))
+    ({ id, identifier, enabled, limit, offset }) => handle(() => agentService.list({ id, identifier, enabled, limit, offset } as Parameters<typeof agentService.list>[0]))
   );
 
   server.registerTool(
-    "list_action_logs",
+    "list_runs",
     {
-      description: "List action log entries with optional filters: entity_type, entity_id, action_id, status. Returns { data, total }. Pass id to retrieve a single entry.",
+      description: "List runs with optional filters: entity_type, entity_id, agent, status. Returns { data, total }. Pass id to retrieve a single run.",
       inputSchema: {
         id: z.string().max(26).optional(),
         entity_type: entityTypeEnum.optional(),
         entity_id: z.string().max(26).optional(),
-        action_id: z.string().max(26).optional(),
-        status: actionLogStatusEnum.optional(),
+        agent: z.string().optional(),
+        status: runStatusEnum.optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, entity_type, entity_id, action_id, status, limit, offset }) =>
-      handle(() => actionLogService.list({ id, entity_type, entity_id, action_id, status, limit, offset }))
+    ({ id, entity_type, entity_id, agent, status, limit, offset }) =>
+      handle(() => runService.list({ id, entity_type, entity_id, agent, status, limit, offset } as Parameters<typeof runService.list>[0]))
   );
 
   // -- Projects -------------------------------------------------------
@@ -176,68 +176,66 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     (input) => handle(() => taskService.update([input])[0])
   );
 
-  // -- Actions --------------------------------------------------------
+  // -- Agents ---------------------------------------------------------
 
   server.registerTool(
-    "create_actions",
+    "create_agents",
     {
-      description: "Create one or more actions. An action defines a prompt to be executed by an agent against a project or task.",
+      description: "Create one or more agents. An agent defines a prompt to be executed against a project or task.",
       inputSchema: {
         items: z.array(z.object({
-          kind: kindEnum,
+          identifier: z.string(),
           agent: agentEnum,
           prompt: z.string().max(50000),
-          entity_type: entityTypeEnum,
-          entity_id: z.string().max(26),
+          enabled: z.boolean().optional(),
         })).min(1),
       },
     },
-    ({ items }) => handle(() => actionService.create(items as CreateActionInput[]))
+    ({ items }) => handle(() => agentService.create(items as CreateActionInput[]))
   );
 
   server.registerTool(
-    "update_actions",
+    "update_agents",
     {
-      description: "Update one or more actions by ID. Use to revise prompts, reassign agents, or change kind.",
+      description: "Update one or more agents by ID. Use to revise prompts, reassign agent types, change identifier, or toggle enabled.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
-          kind: kindEnum.optional(),
+          identifier: z.string().optional(),
           agent: agentEnum.optional(),
           prompt: z.string().max(50000).optional(),
-          entity_type: entityTypeEnum.optional(),
-          entity_id: z.string().max(26).optional(),
+          enabled: z.boolean().optional(),
         })).min(1),
       },
     },
-    ({ items }) => handle(() => actionService.update(items as UpdateActionInput[]))
+    ({ items }) => handle(() => agentService.update(items as UpdateActionInput[]))
   );
 
-  // -- Action Logs ----------------------------------------------------
+  // -- Runs -----------------------------------------------------------
 
   server.registerTool(
-    "create_action_log",
+    "create_run",
     {
-      description: "Schedule an action for execution. Creates a log entry with status 'running'. Requires action_id, entity_type, and entity_id.",
+      description: "Schedule an agent for execution. Creates a run entry with status 'running'. Requires agent identifier, entity_type, and entity_id.",
       inputSchema: {
         items: z.array(z.object({
-          action_id: z.string().max(26),
+          agent: z.string(),
           entity_type: entityTypeEnum,
           entity_id: z.string().max(26),
         })).min(1),
       },
     },
-    ({ items }) => handle(() => actionLogService.create(items as CreateActionLogInput[]))
+    ({ items }) => handle(() => runService.create(items as CreateActionLogInput[]))
   );
 
   server.registerTool(
-    "update_action_log",
+    "update_run",
     {
-      description: "Update the status of an action log entry (running|done|failed). Optionally include output for debugging/auditing. finished_at is auto-set on terminal statuses.",
+      description: "Update the status of a run (todo|running|done|failed|cancelled). Optionally include output. finished_at auto-set on terminal statuses.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
-          status: actionLogStatusEnum,
+          status: runStatusEnum,
           output: z.string().max(50000).optional(),
         })).min(1),
       },
@@ -245,11 +243,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ items }) => handle(() => {
       const mapped = items.map((item) => ({
         ...item,
-        finished_at: item.status === "done" || item.status === "failed"
+        finished_at: item.status === "done" || item.status === "failed" || item.status === "cancelled"
           ? new Date().toISOString()
           : undefined,
       }));
-      return actionLogService.update(mapped as UpdateActionLogInput[]);
+      return runService.update(mapped as UpdateActionLogInput[]);
     })
   );
 
