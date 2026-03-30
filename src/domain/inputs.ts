@@ -1,5 +1,3 @@
-import type { AgentType, EntityType, RunStatus } from "./entities";
-
 export interface CreateProjectInput {
   title: string;
   goal?: string;
@@ -19,50 +17,16 @@ export interface CreateTaskInput {
   project_id: string;
   title: string;
   plan?: string;
+  description?: string;
+  implementation?: string;
+  acceptance_criteria?: string;
 }
 
 export interface UpdateTaskInput {
   id: string;
   title?: string;
   plan?: string | null;
-}
-
-export interface CreateAgentInput {
-  identifier: string;
-  prompt: string;
-  agent: AgentType;
-  enabled?: boolean;
-}
-
-export interface UpdateAgentInput {
-  id: string;
-  identifier?: string;
-  prompt?: string;
-  agent?: AgentType;
-  enabled?: boolean;
-}
-
-export interface CreateSessionInput {
-  project_id: string;
-}
-
-export interface UpdateSessionInput {
-  id: string;
-  summary?: string | null;
-  finished_at?: string | null;
-}
-
-export interface CreateRunInput {
-  agent: string;
-  entity_type: EntityType;
-  entity_id: string;
-  session_id?: string;
-  started_at?: string;
-}
-
-export interface UpdateRunInput {
-  id: string;
-  status?: RunStatus;
-  output?: string | null;
-  finished_at?: string | null;
+  description?: string | null;
+  implementation?: string | null;
+  acceptance_criteria?: string | null;
 }

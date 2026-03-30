@@ -13,19 +13,11 @@ import { useRealtimeEvents } from "./useRealtimeEvents";
 import { useHashRoute, useEventFanOut, EventSubscriptionContext } from "./hooks";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
-import { AgentsPage } from "./pages/AgentsPage";
-import { RunsPage } from "./pages/RunsPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
-import { AgentsDashboardPage } from "./pages/AgentsDashboardPage";
-import { SessionsPage } from "./pages/SessionsPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
-  { label: "Dashboard", path: "/agents/dashboard" },
-  { label: "Agents", path: "/agents" },
-  { label: "Sessions", path: "/sessions" },
-  { label: "Runs", path: "/runs" },
   { label: "Themes", path: "/themes" },
 ];
 
@@ -49,14 +41,6 @@ export function App() {
     ? "/gallery"
     : path.startsWith("/themes")
     ? "/themes"
-    : path === "/agents/dashboard"
-    ? "/agents/dashboard"
-    : path.startsWith("/sessions")
-    ? "/sessions"
-    : path.startsWith("/runs")
-    ? "/runs"
-    : path.startsWith("/agents")
-    ? "/agents"
     : "/";
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
@@ -79,18 +63,6 @@ export function App() {
     }
     if (path.startsWith("/themes")) {
       return <ThemesPage />;
-    }
-    if (path === "/agents/dashboard") {
-      return <AgentsDashboardPage />;
-    }
-    if (path.startsWith("/sessions")) {
-      return <SessionsPage />;
-    }
-    if (path.startsWith("/runs")) {
-      return <RunsPage />;
-    }
-    if (path.startsWith("/agents")) {
-      return <AgentsPage />;
     }
     if (projectId) {
       return <ProjectPage projectId={projectId} onBack={() => navigate("/")} />;

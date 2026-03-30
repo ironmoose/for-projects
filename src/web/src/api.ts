@@ -1,4 +1,4 @@
-import type { Agent, Run, RunStatsResponse, Project, Session, Task } from "./types";
+import type { Project, Task } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -106,12 +106,12 @@ export async function fetchTask(id: string): Promise<Task> {
   return res.json();
 }
 
-export async function createTasks(inputs: Array<{ project_id: string; title: string; plan?: string }>): Promise<Task[]> {
+export async function createTasks(inputs: Array<{ project_id: string; title: string; plan?: string; description?: string; implementation?: string; acceptance_criteria?: string }>): Promise<Task[]> {
   const res = await apiFetch("/api/tasks", jsonPost(inputs));
   return res.json();
 }
 
-export async function updateTasks(inputs: Array<{ id: string; title?: string; plan?: string | null }>): Promise<Task[]> {
+export async function updateTasks(inputs: Array<{ id: string; title?: string; plan?: string | null; description?: string | null; implementation?: string | null; acceptance_criteria?: string | null }>): Promise<Task[]> {
   const res = await apiFetch("/api/tasks", jsonPatch(inputs));
   return res.json();
 }
@@ -120,72 +120,3 @@ export async function deleteTasks(ids: string[]): Promise<void> {
   await apiFetch("/api/tasks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
-// ---------------------------------------------------------------------------
-// Agents API
-// ---------------------------------------------------------------------------
-
-export async function fetchAgents(params?: { identifier?: string; enabled?: boolean; limit?: number; offset?: number }): Promise<{ data: Agent[]; total: number }> {
-  const res = await apiFetch(`/api/agents${qs(params)}`);
-  return res.json();
-}
-
-export async function createAgents(inputs: Array<{ identifier: string; prompt: string; agent: string; enabled: boolean }>): Promise<Agent[]> {
-  const res = await apiFetch("/api/agents", jsonPost(inputs));
-  return res.json();
-}
-
-export async function updateAgents(inputs: Array<{ id: string; identifier?: string; prompt?: string; agent?: string; enabled?: boolean }>): Promise<Agent[]> {
-  const res = await apiFetch("/api/agents", jsonPatch(inputs));
-  return res.json();
-}
-
-export async function deleteAgents(ids: string[]): Promise<void> {
-  await apiFetch("/api/agents", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
-}
-
-// ---------------------------------------------------------------------------
-// Sessions API
-// ---------------------------------------------------------------------------
-
-export async function fetchSessions(params?: { project_id?: string; limit?: number; offset?: number }): Promise<{ data: Session[]; total: number }> {
-  const res = await apiFetch(`/api/sessions${qs(params)}`);
-  return res.json();
-}
-
-export async function fetchSession(id: string): Promise<Session> {
-  const res = await apiFetch(`/api/sessions/${encodeURIComponent(id)}`);
-  return res.json();
-}
-
-export async function updateSessions(inputs: Array<{ id: string; summary?: string | null; finished_at?: string | null }>): Promise<Session[]> {
-  const res = await apiFetch("/api/sessions", jsonPatch(inputs));
-  return res.json();
-}
-
-export async function deleteSessions(ids: string[]): Promise<void> {
-  await apiFetch("/api/sessions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
-}
-
-// ---------------------------------------------------------------------------
-// Runs API
-// ---------------------------------------------------------------------------
-
-export async function fetchRuns(params?: { entity_type?: string; entity_id?: string; agent?: string; status?: string; search?: string; started_after?: string; started_before?: string; finished_after?: string; agent_identifier?: string; limit?: number; offset?: number }): Promise<{ data: Run[]; total: number }> {
-  const res = await apiFetch(`/api/runs${qs(params)}`);
-  return res.json();
-}
-
-export async function createRun(inputs: Array<{ agent: string; entity_type: string; entity_id: string; status: string; output?: string }>): Promise<Run[]> {
-  const res = await apiFetch("/api/runs", jsonPost(inputs));
-  return res.json();
-}
-
-export async function updateRun(inputs: Array<{ id: string; status?: string; output?: string | null; finished_at?: string | null }>): Promise<Run[]> {
-  const res = await apiFetch("/api/runs", jsonPatch(inputs));
-  return res.json();
-}
-
-export async function fetchRunStats(params?: { days?: number }): Promise<RunStatsResponse> {
-  const res = await apiFetch(`/api/runs/stats${qs(params)}`);
-  return res.json();
-}

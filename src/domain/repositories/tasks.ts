@@ -7,6 +7,9 @@ export interface TaskRow {
   project_id: string;
   title: string;
   plan: string | null;
+  description: string | null;
+  implementation: string | null;
+  acceptance_criteria: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,7 +68,7 @@ export class TaskRepository {
 
   insertMany(rows: Omit<TaskRow, "id" | "created_at" | "updated_at">[]): Task[] {
     const stmt = this.db.query(
-      "INSERT INTO tasks (id, project_id, title, plan, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO tasks (id, project_id, title, plan, description, implementation, acceptance_criteria, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const now = new Date().toISOString();
     const ids: string[] = [];
@@ -73,13 +76,13 @@ export class TaskRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.project_id, row.title, row.plan ?? null, now, now);
+      stmt.run(id, row.project_id, row.title, row.plan ?? null, row.description ?? null, row.implementation ?? null, row.acceptance_criteria ?? null, now, now);
     }
 
     return ids.map((id) => this.findById(id)!);
   }
 
-  updateMany(rows: { id: string; title?: string; plan?: string | null }[]): Task[] {
+  updateMany(rows: { id: string; title?: string; plan?: string | null; description?: string | null; implementation?: string | null; acceptance_criteria?: string | null }[]): Task[] {
     const now = new Date().toISOString();
     const results: Task[] = [];
 
@@ -89,10 +92,13 @@ export class TaskRepository {
 
       const title = row.title !== undefined ? row.title : existing.title;
       const plan = row.plan !== undefined ? row.plan : existing.plan;
+      const description = row.description !== undefined ? row.description : existing.description;
+      const implementation = row.implementation !== undefined ? row.implementation : existing.implementation;
+      const acceptance_criteria = row.acceptance_criteria !== undefined ? row.acceptance_criteria : existing.acceptance_criteria;
 
       this.db
-        .query("UPDATE tasks SET title = ?, plan = ?, updated_at = ? WHERE id = ?")
-        .run(title, plan, now, row.id);
+        .query("UPDATE tasks SET title = ?, plan = ?, description = ?, implementation = ?, acceptance_criteria = ?, updated_at = ? WHERE id = ?")
+        .run(title, plan, description, implementation, acceptance_criteria, now, row.id);
 
       results.push(this.findById(row.id)!);
     }

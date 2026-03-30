@@ -156,319 +156,68 @@ describe("Task CRUD", () => {
       ctx.taskService.create([{ project_id: project.id, title: "" }])
     ).toThrow(ServiceError);
   });
-});
 
-// ---------------------------------------------------------------------------
-// Agent CRUD
-// ---------------------------------------------------------------------------
-
-describe("Agent CRUD", () => {
-  it("creates agent with identifier, prompt, and agent", () => {
-    const [agent] = ctx.agentService.create([{
-      identifier: "plan",
-      prompt: "Plan the work",
-      agent: "tab:orchestrator",
+  it("creates a task with description, implementation, and acceptance_criteria", () => {
+    const [project] = ctx.projectService.create([{ title: "New Fields Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Full task",
+      description: "A description",
+      implementation: "Some implementation details",
+      acceptance_criteria: "It works",
     }]);
 
-    expect(agent.id).toBeTruthy();
-    expect(agent.identifier).toBe("plan");
-    expect(agent.prompt).toBe("Plan the work");
-    expect(agent.agent).toBe("tab:orchestrator");
-    expect(agent.enabled).toBe(true);
-    expect(agent.created_at).toBeTruthy();
+    expect(task.description).toBe("A description");
+    expect(task.implementation).toBe("Some implementation details");
+    expect(task.acceptance_criteria).toBe("It works");
   });
 
-  it("rejects empty identifier", () => {
-    expect(() =>
-      ctx.agentService.create([{
-        identifier: "",
-        prompt: "X",
-        agent: "tab:orchestrator",
-      }])
-    ).toThrow(ServiceError);
-  });
-
-  it("rejects empty prompt", () => {
-    expect(() =>
-      ctx.agentService.create([{
-        identifier: "empty-prompt-test",
-        prompt: "",
-        agent: "tab:executor",
-      }])
-    ).toThrow(ServiceError);
-  });
-
-  it("rejects invalid agent enum", () => {
-    expect(() =>
-      ctx.agentService.create([{
-        identifier: "bad-agent-test",
-        prompt: "X",
-        agent: "invalid" as "tab:orchestrator",
-      }])
-    ).toThrow(ServiceError);
-  });
-
-  it("rejects duplicate identifier — 409", () => {
-    // "plan" was already created above
-    try {
-      ctx.agentService.create([{
-        identifier: "plan",
-        prompt: "Duplicate",
-        agent: "tab:orchestrator",
-      }]);
-      expect(true).toBe(false); // should not reach here
-    } catch (err) {
-      expect(err).toBeInstanceOf(ServiceError);
-      expect((err as ServiceError).statusCode).toBe(409);
-    }
-  });
-
-  it("updates agent prompt", async () => {
-    const [agent] = ctx.agentService.create([{
-      identifier: "goal",
-      prompt: "Original",
-      agent: "tab:executor",
-    }]);
-    await new Promise((r) => setTimeout(r, 5));
-    const [updated] = ctx.agentService.update([{ id: agent.id, prompt: "Updated" }]);
-    expect(updated.prompt).toBe("Updated");
-    expect(updated.updated_at).not.toBe(agent.updated_at);
-  });
-
-  it("updates agent identifier", () => {
-    const [agent] = ctx.agentService.create([{
-      identifier: "rename-me",
-      prompt: "Test",
-      agent: "tab:orchestrator",
-    }]);
-    const [updated] = ctx.agentService.update([{ id: agent.id, identifier: "renamed" }]);
-    expect(updated.identifier).toBe("renamed");
-  });
-
-  it("toggles enabled field", () => {
-    const [agent] = ctx.agentService.create([{
-      identifier: "toggle-test",
-      prompt: "Test",
-      agent: "tab:orchestrator",
-    }]);
-    expect(agent.enabled).toBe(true);
-
-    const [disabled] = ctx.agentService.update([{ id: agent.id, enabled: false }]);
-    expect(disabled.enabled).toBe(false);
-
-    const [reenabled] = ctx.agentService.update([{ id: agent.id, enabled: true }]);
-    expect(reenabled.enabled).toBe(true);
-  });
-
-  it("throws 404 updating non-existent agent", () => {
-    expect(() =>
-      ctx.agentService.update([{ id: "nonexistent", prompt: "X" }])
-    ).toThrow(ServiceError);
-  });
-
-  it("list returns paginated results", () => {
-    const result = ctx.agentService.list({ limit: 10, offset: 0 });
-    expect(result.data).toBeArray();
-    expect(typeof result.total).toBe("number");
-  });
-
-  it("list with identifier filter", () => {
-    const result = ctx.agentService.list({ limit: 100, offset: 0, identifier: "plan" });
-    expect(result.data.length).toBeGreaterThanOrEqual(1);
-    expect(result.data.every((a) => a.identifier === "plan")).toBe(true);
-  });
-
-  it("list with enabled filter", () => {
-    const result = ctx.agentService.list({ limit: 100, offset: 0, enabled: true });
-    expect(result.data.length).toBeGreaterThanOrEqual(1);
-    expect(result.data.every((a) => a.enabled === true)).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Run
-// ---------------------------------------------------------------------------
-
-describe("Run", () => {
-  it("creates a run with agent string identifier", () => {
-    const [project] = ctx.projectService.create([{ title: "Run Project" }]);
-
-    const [entry] = ctx.runService.create([{
-      agent: "plan",
-      entity_type: "project",
-      entity_id: project.id,
+  it("new task fields default to null", () => {
+    const [project] = ctx.projectService.create([{ title: "Null Fields Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Bare task",
     }]);
 
-    expect(entry.id).toBeTruthy();
-    expect(entry.agent).toBe("plan");
-    expect(entry.entity_type).toBe("project");
-    expect(entry.entity_id).toBe(project.id);
-    expect(entry.status).toBe("running");
-    expect(entry.output).toBeNull();
-    expect(entry.started_at).toBeTruthy();
-    expect(entry.finished_at).toBeNull();
+    expect(task.description).toBeNull();
+    expect(task.implementation).toBeNull();
+    expect(task.acceptance_criteria).toBeNull();
   });
 
-  it("does not validate that agent exists — just stores string", () => {
-    const [project] = ctx.projectService.create([{ title: "No Validation Project" }]);
-
-    const [entry] = ctx.runService.create([{
-      agent: "nonexistent-agent",
-      entity_type: "project",
-      entity_id: project.id,
+  it("updates description, implementation, acceptance_criteria", () => {
+    const [project] = ctx.projectService.create([{ title: "Update Fields Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Update me",
     }]);
 
-    expect(entry.agent).toBe("nonexistent-agent");
-    expect(entry.status).toBe("running");
-  });
-
-  it("default status is running", () => {
-    const [project] = ctx.projectService.create([{ title: "Default Status" }]);
-    const [entry] = ctx.runService.create([{
-      agent: "plan",
-      entity_type: "project",
-      entity_id: project.id,
+    const [updated] = ctx.taskService.update([{
+      id: task.id,
+      description: "Updated desc",
+      implementation: "Updated impl",
+      acceptance_criteria: "Updated AC",
     }]);
 
-    expect(entry.status).toBe("running");
+    expect(updated.description).toBe("Updated desc");
+    expect(updated.implementation).toBe("Updated impl");
+    expect(updated.acceptance_criteria).toBe("Updated AC");
   });
 
-  it("updates status to done", () => {
-    const [project] = ctx.projectService.create([{ title: "Done Run" }]);
-    const [entry] = ctx.runService.create([{
-      agent: "plan",
-      entity_type: "project",
-      entity_id: project.id,
+  it("nulls out a field on update", () => {
+    const [project] = ctx.projectService.create([{ title: "Null Update Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Null me",
+      description: "Has a description",
     }]);
 
-    const [updated] = ctx.runService.update([{
-      id: entry.id,
-      status: "done",
+    expect(task.description).toBe("Has a description");
+
+    const [updated] = ctx.taskService.update([{
+      id: task.id,
+      description: null,
     }]);
 
-    expect(updated.status).toBe("done");
-    expect(updated.finished_at).not.toBeNull();
-  });
-
-  it("updates status to failed", () => {
-    const [project] = ctx.projectService.create([{ title: "Failed Run" }]);
-    const [entry] = ctx.runService.create([{
-      agent: "goal",
-      entity_type: "project",
-      entity_id: project.id,
-    }]);
-
-    const [updated] = ctx.runService.update([{
-      id: entry.id,
-      status: "failed",
-    }]);
-
-    expect(updated.status).toBe("failed");
-    expect(updated.finished_at).not.toBeNull();
-  });
-
-  it("updates status to cancelled", () => {
-    const [project] = ctx.projectService.create([{ title: "Cancelled Run" }]);
-    const [entry] = ctx.runService.create([{
-      agent: "plan",
-      entity_type: "project",
-      entity_id: project.id,
-    }]);
-
-    const [updated] = ctx.runService.update([{
-      id: entry.id,
-      status: "cancelled",
-    }]);
-
-    expect(updated.status).toBe("cancelled");
-    expect(updated.finished_at).not.toBeNull();
-  });
-
-  it("updates status to todo", () => {
-    const [project] = ctx.projectService.create([{ title: "Todo Run" }]);
-    const [entry] = ctx.runService.create([{
-      agent: "plan",
-      entity_type: "project",
-      entity_id: project.id,
-    }]);
-
-    const [updated] = ctx.runService.update([{
-      id: entry.id,
-      status: "todo",
-    }]);
-
-    expect(updated.status).toBe("todo");
-  });
-
-  it("updates output field", () => {
-    const [project] = ctx.projectService.create([{ title: "Output Run" }]);
-    const [entry] = ctx.runService.create([{
-      agent: "plan",
-      entity_type: "project",
-      entity_id: project.id,
-    }]);
-
-    const [updated] = ctx.runService.update([{
-      id: entry.id,
-      status: "done",
-      output: "Result text",
-    }]);
-
-    expect(updated.output).toBe("Result text");
-  });
-
-  it("rejects invalid entity_type", () => {
-    expect(() =>
-      ctx.runService.create([{
-        agent: "plan",
-        entity_type: "widget" as "project",
-        entity_id: "x",
-      }])
-    ).toThrow(ServiceError);
-  });
-
-  it("throws 404 updating nonexistent entry", () => {
-    expect(() =>
-      ctx.runService.update([{ id: "nonexistent", status: "done" }])
-    ).toThrow(ServiceError);
-  });
-
-  it("list filters by entity_type and entity_id", () => {
-    const result = ctx.runService.list({ limit: 100, offset: 0, entity_type: "project" });
-    expect(result.data).toBeArray();
-    expect(result.data.every((e) => e.entity_type === "project")).toBe(true);
-  });
-
-  it("list filters by agent", () => {
-    const result = ctx.runService.list({ limit: 100, offset: 0, agent: "plan" });
-    expect(result.data).toBeArray();
-    expect(result.data.every((e) => e.agent === "plan")).toBe(true);
-  });
-
-  it("list filters by status", () => {
-    const result = ctx.runService.list({ limit: 100, offset: 0, status: "running" });
-    expect(result.data).toBeArray();
-    expect(result.data.every((e) => e.status === "running")).toBe(true);
-  });
-
-  it("stats returns by_agent grouping", () => {
-    const stats = ctx.runService.stats();
-    expect(stats.summary).toBeDefined();
-    expect(typeof stats.summary.total).toBe("number");
-    expect(stats.daily).toBeArray();
-
-    // Verify by_agent grouping exists in daily stats
-    if (stats.daily.length > 0) {
-      expect(stats.daily[0]).toHaveProperty("agent");
-    }
-  });
-
-  it("stats summary includes todo and cancelled counts", () => {
-    const stats = ctx.runService.stats();
-    expect(typeof stats.summary.todo).toBe("number");
-    expect(typeof stats.summary.cancelled).toBe("number");
-    expect(typeof stats.summary.done).toBe("number");
-    expect(typeof stats.summary.failed).toBe("number");
-    expect(typeof stats.summary.running).toBe("number");
+    expect(updated.description).toBeNull();
   });
 });

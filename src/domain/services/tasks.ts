@@ -41,12 +41,24 @@ export class TaskService implements ITaskService {
       if (input.plan !== undefined && input.plan.length > 50000) {
         throw new ServiceError("plan must be 50000 characters or fewer", 400);
       }
+      if (input.description !== undefined && input.description.length > 50000) {
+        throw new ServiceError("description must be 50000 characters or fewer", 400);
+      }
+      if (input.implementation !== undefined && input.implementation.length > 50000) {
+        throw new ServiceError("implementation must be 50000 characters or fewer", 400);
+      }
+      if (input.acceptance_criteria !== undefined && input.acceptance_criteria.length > 50000) {
+        throw new ServiceError("acceptance_criteria must be 50000 characters or fewer", 400);
+      }
     }
 
     const rows = inputs.map((input) => ({
       project_id: input.project_id,
       title: input.title,
       plan: input.plan ?? null,
+      description: input.description ?? null,
+      implementation: input.implementation ?? null,
+      acceptance_criteria: input.acceptance_criteria ?? null,
     }));
 
     const tasks = this.taskRepo.insertMany(rows);
@@ -64,6 +76,15 @@ export class TaskService implements ITaskService {
       }
       if (input.plan !== undefined && input.plan !== null && input.plan.length > 50000) {
         throw new ServiceError("plan must be 50000 characters or fewer", 400);
+      }
+      if (input.description !== undefined && input.description !== null && input.description.length > 50000) {
+        throw new ServiceError("description must be 50000 characters or fewer", 400);
+      }
+      if (input.implementation !== undefined && input.implementation !== null && input.implementation.length > 50000) {
+        throw new ServiceError("implementation must be 50000 characters or fewer", 400);
+      }
+      if (input.acceptance_criteria !== undefined && input.acceptance_criteria !== null && input.acceptance_criteria.length > 50000) {
+        throw new ServiceError("acceptance_criteria must be 50000 characters or fewer", 400);
       }
       const existing = this.taskRepo.findById(input.id);
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);

@@ -12,11 +12,6 @@ export { Overlay } from "./atoms/Overlay";
 export { AnimationStyles } from "./atoms/AnimationStyles";
 export { Skeleton, CardSkeleton, RowSkeleton } from "./atoms/Skeleton";
 export { ActivityIndicator } from "./atoms/ActivityIndicator";
-export { DailyActivityChart } from "./atoms/charts/DailyActivityChart";
-export { StatusDonutChart } from "./atoms/charts/StatusDonutChart";
-export { KindBreakdownChart } from "./atoms/charts/KindBreakdownChart";
-export { DurationSparkline } from "./atoms/charts/DurationSparkline";
-
 // Molecules
 export { Card } from "./molecules/Card";
 export { Stack } from "./molecules/Stack";
@@ -35,8 +30,6 @@ export { AnimatedList } from "./molecules/AnimatedList";
 export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 export { PresenceCharm } from "./molecules/PresenceCharm";
 export { CollapsibleSection } from "./molecules/CollapsibleSection";
-export { ChartCard } from "./molecules/ChartCard";
-
 // Organisms
 export { TopBar } from "./organisms/TopBar";
 export type { NavItem } from "./organisms/TopBar";
@@ -44,10 +37,6 @@ export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ConfirmDialog } from "./organisms/ConfirmDialog";
-export { ActivitySection } from "./organisms/ActivitySection";
-export { RunFilterBar } from "./organisms/RunFilterBar";
-export { RunTable } from "./organisms/RunTable";
-export { SessionTable } from "./organisms/SessionTable";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

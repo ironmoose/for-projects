@@ -85,6 +85,54 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
           </p>
         )}
 
+        <SectionLabel style={{ marginTop: theme.spacing.lg }}>Description</SectionLabel>
+        {task.description ? (
+          <Markdown>{task.description}</Markdown>
+        ) : (
+          <p
+            style={{
+              margin: 0,
+              fontSize: theme.font.size.sm,
+              color: theme.color.textFaint,
+              fontStyle: "italic",
+            }}
+          >
+            No description yet
+          </p>
+        )}
+
+        <SectionLabel style={{ marginTop: theme.spacing.lg }}>Implementation</SectionLabel>
+        {task.implementation ? (
+          <Markdown>{task.implementation}</Markdown>
+        ) : (
+          <p
+            style={{
+              margin: 0,
+              fontSize: theme.font.size.sm,
+              color: theme.color.textFaint,
+              fontStyle: "italic",
+            }}
+          >
+            No implementation yet
+          </p>
+        )}
+
+        <SectionLabel style={{ marginTop: theme.spacing.lg }}>Acceptance Criteria</SectionLabel>
+        {task.acceptance_criteria ? (
+          <Markdown>{task.acceptance_criteria}</Markdown>
+        ) : (
+          <p
+            style={{
+              margin: 0,
+              fontSize: theme.font.size.sm,
+              color: theme.color.textFaint,
+              fontStyle: "italic",
+            }}
+          >
+            No acceptance criteria yet
+          </p>
+        )}
+
         {/* Metadata */}
         <div
           style={{

@@ -208,242 +208,42 @@ describe("update_task", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Agents
-// ---------------------------------------------------------------------------
+describe("create_task with new fields", () => {
+  it("creates task with new fields", async () => {
+    const proj = parseResult(await callTool("create_project", { title: "New Fields Proj" }));
+    const task = parseResult(
+      await callTool("create_task", {
+        project_id: proj.id,
+        title: "Full Task",
+        description: "A description",
+        implementation: "Some impl",
+        acceptance_criteria: "It passes",
+      })
+    );
 
-describe("create_agents", () => {
-  it("creates with identifier, agent, prompt", async () => {
-    const result = await callTool("create_agents", {
-      items: [
-        { identifier: "plan", agent: "tab:orchestrator", prompt: "Plan prompt" },
-        { identifier: "goal", agent: "tab:executor", prompt: "Goal prompt" },
-      ],
-    });
-
-    const agents = parseResult(result);
-    expect(agents).toHaveLength(2);
-    expect(agents[0].identifier).toBe("plan");
-    expect(agents[0].agent).toBe("tab:orchestrator");
-    expect(agents[0].prompt).toBe("Plan prompt");
-    expect(agents[0].enabled).toBe(true);
-    expect(agents[1].identifier).toBe("goal");
-    expect(agents[1].agent).toBe("tab:executor");
-    expect(agents[1].id).toBeTruthy();
+    expect(task.description).toBe("A description");
+    expect(task.implementation).toBe("Some impl");
+    expect(task.acceptance_criteria).toBe("It passes");
   });
 });
 
-describe("list_agents", () => {
-  it("filters by identifier", async () => {
-    const list = parseResult(await callTool("list_agents", { identifier: "plan" }));
-    expect(list.data.length).toBeGreaterThanOrEqual(1);
-    expect(list.data.every((a: { identifier: string }) => a.identifier === "plan")).toBe(true);
-  });
+describe("update_task with new fields", () => {
+  it("updates new fields via update_task", async () => {
+    const proj = parseResult(await callTool("create_project", { title: "Update New Fields Proj" }));
+    const task = parseResult(
+      await callTool("create_task", { project_id: proj.id, title: "Bare Task" })
+    );
 
-  it("filters by enabled", async () => {
-    // Create a disabled agent
-    const created = parseResult(await callTool("create_agents", {
-      items: [{ identifier: "disabled-mcp", agent: "tab:orchestrator", prompt: "Disabled" }],
-    }));
-    await callTool("update_agents", {
-      items: [{ id: created[0].id, enabled: false }],
-    });
+    const updated = parseResult(
+      await callTool("update_task", {
+        id: task.id,
+        project_id: proj.id,
+        description: "Now has description",
+      })
+    );
 
-    const enabledList = parseResult(await callTool("list_agents", { enabled: true }));
-    expect(enabledList.data.every((a: { enabled: boolean }) => a.enabled === true)).toBe(true);
-
-    const disabledList = parseResult(await callTool("list_agents", { enabled: false }));
-    expect(disabledList.data.length).toBeGreaterThanOrEqual(1);
-    expect(disabledList.data.every((a: { enabled: boolean }) => a.enabled === false)).toBe(true);
-  });
-});
-
-describe("update_agents", () => {
-  it("updates prompt on existing agent", async () => {
-    const list = parseResult(await callTool("list_agents", { identifier: "plan" }));
-    const agent = list.data[0];
-
-    const result = await callTool("update_agents", {
-      items: [{ id: agent.id, prompt: "Updated plan prompt" }],
-    });
-
-    const updated = parseResult(result);
-    expect(updated).toHaveLength(1);
-    expect(updated[0].prompt).toBe("Updated plan prompt");
-    expect(updated[0].identifier).toBe("plan"); // unchanged
-  });
-
-  it("updates identifier", async () => {
-    const created = parseResult(await callTool("create_agents", {
-      items: [{ identifier: "rename-mcp", agent: "tab:orchestrator", prompt: "Test" }],
-    }));
-
-    const result = await callTool("update_agents", {
-      items: [{ id: created[0].id, identifier: "renamed-mcp" }],
-    });
-
-    const updated = parseResult(result);
-    expect(updated[0].identifier).toBe("renamed-mcp");
-  });
-
-  it("updates enabled", async () => {
-    const created = parseResult(await callTool("create_agents", {
-      items: [{ identifier: "toggle-mcp", agent: "tab:executor", prompt: "Test" }],
-    }));
-
-    const result = await callTool("update_agents", {
-      items: [{ id: created[0].id, enabled: false }],
-    });
-
-    const updated = parseResult(result);
-    expect(updated[0].enabled).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Runs
-// ---------------------------------------------------------------------------
-
-describe("create_run", () => {
-  it("creates with agent string, entity_type, entity_id — status is always running", async () => {
-    const proj = parseResult(await callTool("create_project", { title: "Create Run Proj" }));
-
-    const result = await callTool("create_run", {
-      items: [{ agent: "plan", entity_type: "project", entity_id: proj.id }],
-    });
-
-    const entries = parseResult(result);
-    expect(entries).toHaveLength(1);
-    expect(entries[0].agent).toBe("plan");
-    expect(entries[0].entity_type).toBe("project");
-    expect(entries[0].entity_id).toBe(proj.id);
-    expect(entries[0].status).toBe("running");
-    expect(entries[0].output).toBeNull();
-    expect(entries[0].started_at).toBeTruthy();
-    expect(entries[0].finished_at).toBeNull();
-  });
-
-  it("does not validate agent exists — stores any string", async () => {
-    const proj = parseResult(await callTool("create_project", { title: "Any Agent Run" }));
-
-    const result = await callTool("create_run", {
-      items: [{ agent: "nonexistent-agent", entity_type: "project", entity_id: proj.id }],
-    });
-
-    expect(result.isError).toBeFalsy();
-    const entries = parseResult(result);
-    expect(entries[0].agent).toBe("nonexistent-agent");
-  });
-});
-
-describe("list_runs", () => {
-  it("filters by status", async () => {
-    const proj = parseResult(await callTool("create_project", { title: "List Run Proj" }));
-
-    await callTool("create_run", {
-      items: [{ agent: "plan", entity_type: "project", entity_id: proj.id }],
-    });
-
-    const list = parseResult(await callTool("list_runs", { status: "running" }));
-    expect(list.data.length).toBeGreaterThanOrEqual(1);
-    expect(list.data.every((e: { status: string }) => e.status === "running")).toBe(true);
-  });
-
-  it("filters by agent", async () => {
-    const proj = parseResult(await callTool("create_project", { title: "Agent Filter Run" }));
-    await callTool("create_run", {
-      items: [{ agent: "special-filter-agent", entity_type: "project", entity_id: proj.id }],
-    });
-
-    const list = parseResult(await callTool("list_runs", { agent: "special-filter-agent" }));
-    expect(list.data.length).toBeGreaterThanOrEqual(1);
-    expect(list.data.every((e: { agent: string }) => e.agent === "special-filter-agent")).toBe(true);
-  });
-
-  it("filters by id", async () => {
-    const proj = parseResult(await callTool("create_project", { title: "ID Filter Run" }));
-    const created = parseResult(await callTool("create_run", {
-      items: [{ agent: "goal", entity_type: "project", entity_id: proj.id }],
-    }));
-
-    const list = parseResult(await callTool("list_runs", { id: created[0].id }));
-    expect(list.data).toHaveLength(1);
-    expect(list.data[0].id).toBe(created[0].id);
-  });
-});
-
-describe("update_run", () => {
-  async function createRunEntry(agent: string = "plan") {
-    const proj = parseResult(await callTool("create_project", { title: `Run ${agent}` }));
-    const created = parseResult(await callTool("create_run", {
-      items: [{ agent, entity_type: "project", entity_id: proj.id }],
-    }));
-    return created[0];
-  }
-
-  it("status 'done' auto-sets finished_at", async () => {
-    const entry = await createRunEntry("plan");
-
-    const result = await callTool("update_run", {
-      items: [{ id: entry.id, status: "done" }],
-    });
-    const updated = parseResult(result);
-    expect(updated[0].status).toBe("done");
-    expect(updated[0].finished_at).not.toBeNull();
-  });
-
-  it("status 'failed' auto-sets finished_at", async () => {
-    const entry = await createRunEntry("goal");
-
-    const result = await callTool("update_run", {
-      items: [{ id: entry.id, status: "failed" }],
-    });
-    const updated = parseResult(result);
-    expect(updated[0].status).toBe("failed");
-    expect(updated[0].finished_at).not.toBeNull();
-  });
-
-  it("status 'cancelled' auto-sets finished_at", async () => {
-    const entry = await createRunEntry("plan");
-
-    const result = await callTool("update_run", {
-      items: [{ id: entry.id, status: "cancelled" }],
-    });
-    const updated = parseResult(result);
-    expect(updated[0].status).toBe("cancelled");
-    expect(updated[0].finished_at).not.toBeNull();
-  });
-
-  it("status 'todo' does NOT set finished_at", async () => {
-    const entry = await createRunEntry("plan");
-
-    const result = await callTool("update_run", {
-      items: [{ id: entry.id, status: "todo" }],
-    });
-    const updated = parseResult(result);
-    expect(updated[0].status).toBe("todo");
-    expect(updated[0].finished_at).toBeNull();
-  });
-
-  it("status 'running' does NOT set finished_at", async () => {
-    const entry = await createRunEntry("plan");
-
-    const result = await callTool("update_run", {
-      items: [{ id: entry.id, status: "running" }],
-    });
-    const updated = parseResult(result);
-    expect(updated[0].status).toBe("running");
-    expect(updated[0].finished_at).toBeNull();
-  });
-
-  it("optional output field is stored", async () => {
-    const entry = await createRunEntry("plan");
-
-    const result = await callTool("update_run", {
-      items: [{ id: entry.id, status: "done", output: "Task completed successfully" }],
-    });
-    const updated = parseResult(result);
-    expect(updated[0].output).toBe("Task completed successfully");
+    expect(updated.description).toBe("Now has description");
+    expect(updated.implementation).toBeNull();
   });
 });
 
@@ -460,12 +260,6 @@ describe("deleted tools are not registered", () => {
 
   it("delete_tasks is not found", async () => {
     const result = await callTool("delete_tasks", { ids: ["fake"] });
-    expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
-  });
-
-  it("delete_agents is not found", async () => {
-    const result = await callTool("delete_agents", { ids: ["fake"] });
     expect(result.isError).toBe(true);
     expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
   });
