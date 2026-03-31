@@ -50,6 +50,11 @@ export interface CreateTaskInput {
   description?: string;
   implementation?: string;
   acceptance_criteria?: string;
+  group_key?: string;
+  status?: string;
+  effort?: string;
+  impact?: string;
+  category?: string;
 }
 
 export interface UpdateTaskInput {
@@ -59,4 +64,9 @@ export interface UpdateTaskInput {
   description?: string | null;
   implementation?: string | null;
   acceptance_criteria?: string | null;
+  group_key?: string | null;
+  status?: string;
+  effort?: string | null;
+  impact?: string | null;
+  category?: string | null;
 }

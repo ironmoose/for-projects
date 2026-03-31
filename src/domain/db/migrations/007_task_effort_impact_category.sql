@@ -1,0 +1,3 @@
+ALTER TABLE tasks ADD COLUMN effort TEXT;
+ALTER TABLE tasks ADD COLUMN impact TEXT;
+ALTER TABLE tasks ADD COLUMN category TEXT;

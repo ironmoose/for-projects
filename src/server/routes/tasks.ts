@@ -15,8 +15,18 @@ export function taskRoutes(service: ITaskService): Hono {
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const project_id = c.req.query("project_id");
-    const filter: { project_id?: string; limit: number; offset: number } = { limit, offset };
+    const group_key = c.req.query("group_key");
+    const status = c.req.query("status");
+    const effort = c.req.query("effort");
+    const impact = c.req.query("impact");
+    const category = c.req.query("category");
+    const filter: { project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; limit: number; offset: number } = { limit, offset };
     if (project_id) filter.project_id = project_id;
+    if (group_key) filter.group_key = group_key;
+    if (status) filter.status = status;
+    if (effort) filter.effort = effort;
+    if (impact) filter.impact = impact;
+    if (category) filter.category = category;
     return c.json(service.list(filter));
   });
 

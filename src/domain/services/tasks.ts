@@ -15,7 +15,12 @@ export class TaskService implements ITaskService {
     private eventBus: EventBus,
   ) {}
 
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string }): Paginated<Task> {
+  private static VALID_STATUSES = ["todo", "in_progress", "done", "archived"];
+  private static VALID_EFFORTS = ["trivial", "low", "medium", "high", "extreme"];
+  private static VALID_IMPACTS = ["trivial", "low", "medium", "high", "extreme"];
+  private static VALID_CATEGORIES = ["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"];
+
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }): Paginated<Task> {
     return {
       data: this.taskRepo.findMany(filter),
       total: this.taskRepo.count(filter),
@@ -52,6 +57,21 @@ export class TaskService implements ITaskService {
       if (input.acceptance_criteria !== undefined && input.acceptance_criteria.length > 50000) {
         throw new ServiceError("acceptance_criteria must be 50000 characters or fewer", 400);
       }
+      if (input.group_key !== undefined && input.group_key.length > 32) {
+        throw new ServiceError("group_key must be 32 characters or fewer", 400);
+      }
+      if (input.status !== undefined && !TaskService.VALID_STATUSES.includes(input.status)) {
+        throw new ServiceError(`status must be one of: ${TaskService.VALID_STATUSES.join(", ")}`, 400);
+      }
+      if (input.effort !== undefined && !TaskService.VALID_EFFORTS.includes(input.effort)) {
+        throw new ServiceError(`effort must be one of: ${TaskService.VALID_EFFORTS.join(", ")}`, 400);
+      }
+      if (input.impact !== undefined && !TaskService.VALID_IMPACTS.includes(input.impact)) {
+        throw new ServiceError(`impact must be one of: ${TaskService.VALID_IMPACTS.join(", ")}`, 400);
+      }
+      if (input.category !== undefined && !TaskService.VALID_CATEGORIES.includes(input.category)) {
+        throw new ServiceError(`category must be one of: ${TaskService.VALID_CATEGORIES.join(", ")}`, 400);
+      }
     }
 
     const rows = inputs.map((input) => ({
@@ -61,6 +81,11 @@ export class TaskService implements ITaskService {
       description: input.description ?? null,
       implementation: input.implementation ?? null,
       acceptance_criteria: input.acceptance_criteria ?? null,
+      group_key: input.group_key ?? null,
+      status: input.status ?? "todo",
+      effort: input.effort ?? null,
+      impact: input.impact ?? null,
+      category: input.category ?? null,
     }));
 
     const tasks = this.taskRepo.insertMany(rows);
@@ -95,6 +120,21 @@ export class TaskService implements ITaskService {
       }
       if (input.acceptance_criteria !== undefined && input.acceptance_criteria !== null && input.acceptance_criteria.length > 50000) {
         throw new ServiceError("acceptance_criteria must be 50000 characters or fewer", 400);
+      }
+      if (input.group_key !== undefined && input.group_key !== null && input.group_key.length > 32) {
+        throw new ServiceError("group_key must be 32 characters or fewer", 400);
+      }
+      if (input.status !== undefined && !TaskService.VALID_STATUSES.includes(input.status)) {
+        throw new ServiceError(`status must be one of: ${TaskService.VALID_STATUSES.join(", ")}`, 400);
+      }
+      if (input.effort !== undefined && input.effort !== null && !TaskService.VALID_EFFORTS.includes(input.effort)) {
+        throw new ServiceError(`effort must be one of: ${TaskService.VALID_EFFORTS.join(", ")}`, 400);
+      }
+      if (input.impact !== undefined && input.impact !== null && !TaskService.VALID_IMPACTS.includes(input.impact)) {
+        throw new ServiceError(`impact must be one of: ${TaskService.VALID_IMPACTS.join(", ")}`, 400);
+      }
+      if (input.category !== undefined && input.category !== null && !TaskService.VALID_CATEGORIES.includes(input.category)) {
+        throw new ServiceError(`category must be one of: ${TaskService.VALID_CATEGORIES.join(", ")}`, 400);
       }
       const existing = this.taskRepo.findById(input.id);
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);

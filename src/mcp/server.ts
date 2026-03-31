@@ -62,15 +62,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tasks",
     {
-      description: "List tasks, optionally filtered by project_id. Returns { data, total }. Pass id to retrieve a single task.",
+      description: "List tasks, optionally filtered by project_id, group_key, status, effort, impact, and/or category. Returns { data, total }. Pass id to retrieve a single task.",
       inputSchema: {
         id: z.string().max(26).optional(),
         project_id: z.string().max(26).optional(),
+        group_key: z.string().max(32).optional(),
+        status: z.enum(["todo", "in_progress", "done", "archived"]).optional(),
+        effort: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
+        impact: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
+        category: z.enum(["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"]).optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, project_id, limit, offset }) => handle(() => taskService.list({ id, project_id, limit, offset }))
+    ({ id, project_id, group_key, status, effort, impact, category, limit, offset }) => handle(() => taskService.list({ id, project_id, group_key, status, effort, impact, category, limit, offset }))
   );
 
   // -- Projects -------------------------------------------------------
@@ -113,7 +118,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_task",
     {
-      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item.",
+      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Optional group_key (max 32 chars) for organizing tasks into flat groups. Status defaults to 'todo' if not provided. Optional effort (trivial/low/medium/high/extreme), impact (trivial/low/medium/high/extreme), and category (feature/bugfix/refactor/test/perf/infra/docs/security/design/chore).",
       inputSchema: {
         items: z.array(z.object({
           project_id: z.string().max(26),
@@ -122,6 +127,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           description: z.string().max(10000).optional(),
           implementation: z.string().max(10000).optional(),
           acceptance_criteria: z.string().max(10000).optional(),
+          group_key: z.string().max(32).optional(),
+          status: z.enum(["todo", "in_progress", "done", "archived"]).optional(),
+          effort: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
+          impact: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
+          category: z.enum(["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"]).optional(),
         })),
       },
     },
@@ -141,6 +151,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           description: z.string().max(10000).optional(),
           implementation: z.string().max(10000).optional(),
           acceptance_criteria: z.string().max(10000).optional(),
+          group_key: z.string().max(32).optional(),
+          status: z.enum(["todo", "in_progress", "done", "archived"]).optional(),
+          effort: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
+          impact: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
+          category: z.enum(["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"]).optional(),
         })),
       },
     },

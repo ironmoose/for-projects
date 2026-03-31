@@ -16,6 +16,11 @@ export interface Task {
   description: string | null;
   implementation: string | null;
   acceptance_criteria: string | null;
+  group_key: string | null;
+  status: string;
+  effort: string | null;
+  impact: string | null;
+  category: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -16,12 +16,25 @@ import {
   EmptyState,
   ConfirmDialog,
 } from "../components";
+import { Badge } from "../components/atoms/Badge";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProject } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError } from "../api";
 import type { Task } from "../types";
 import { formatDate } from "../utils";
+
+const STATUS_LABELS: Record<string, string> = {
+  todo: "Todo",
+  in_progress: "In Progress",
+  done: "Done",
+  archived: "Archived",
+};
+
+function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "archived" | "default" {
+  if (status === "todo" || status === "in_progress" || status === "done" || status === "archived") return status;
+  return "default";
+}
 
 // ---------------------------------------------------------------------------
 // TaskDetailPanel
@@ -57,6 +70,11 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
           </div>
           <IconButton icon="close" size={18} onClick={onClose} aria-label="Close detail panel" />
         </Stack>
+        <div style={{ marginTop: theme.spacing.sm }}>
+          <Badge variant={statusBadgeVariant(task.status)}>
+            {STATUS_LABELS[task.status] ?? task.status}
+          </Badge>
+        </div>
       </div>
 
       {/* Body */}
@@ -145,6 +163,11 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
             title="Metadata"
             rows={[
               { label: "ID", value: task.id },
+              { label: "Status", value: STATUS_LABELS[task.status] ?? task.status },
+              ...(task.group_key ? [{ label: "Group", value: task.group_key }] : []),
+              ...(task.effort ? [{ label: "Effort", value: task.effort }] : []),
+              ...(task.impact ? [{ label: "Impact", value: task.impact }] : []),
+              ...(task.category ? [{ label: "Category", value: task.category }] : []),
               { label: "Created", value: formatDate(task.created_at) },
               { label: "Updated", value: formatDate(task.updated_at) },
             ]}
@@ -299,14 +322,18 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                     flex: 1,
                     minWidth: 0,
                     fontSize: theme.font.size.sm,
-                    color: theme.color.text,
+                    color: task.status === "done" ? theme.color.textMuted : theme.color.text,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
+                    textDecoration: task.status === "done" ? "line-through" : "none",
                   }}
                 >
                   {task.title}
                 </span>
+                <Badge variant={statusBadgeVariant(task.status)}>
+                  {STATUS_LABELS[task.status] ?? task.status}
+                </Badge>
                 <PresenceCharm active={task.plan != null} label="Has plan" color={theme.color.success} />
                 <IconButton
                   icon="delete"
