@@ -8,95 +8,80 @@ import {
   Select,
   useTheme,
 } from "../components";
-import { useActivityLog } from "../hooks/useActivityLog";
-import type { ActivityLog } from "../types";
+import { useJobs } from "../hooks/useJobs";
+import type { Agent, Job } from "../types";
 import { relativeTime, formatDate } from "../utils";
 
 // ---------------------------------------------------------------------------
-// Action badge mapping
+// Status badge mapping
 // ---------------------------------------------------------------------------
 
-const ACTION_VARIANTS: Record<string, "complete" | "active" | "failed" | "default"> = {
-  created: "complete",
-  updated: "active",
-  deleted: "failed",
+const STATUS_VARIANTS: Record<string, "todo" | "running" | "complete" | "failed" | "default"> = {
+  todo: "todo",
+  running: "running",
+  done: "complete",
+  failed: "failed",
+  cancelled: "default",
 };
 
-function ActionBadge({ action }: { action: string }) {
-  return <Badge variant={ACTION_VARIANTS[action] ?? "default"}>{action}</Badge>;
-}
-
-// ---------------------------------------------------------------------------
-// Summary renderer
-// ---------------------------------------------------------------------------
-
-function SummaryCell({ summary }: { summary: string }) {
-  const { theme } = useTheme();
-
-  const parsed = useMemo(() => {
-    try {
-      return JSON.parse(summary) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  }, [summary]);
-
-  if (!parsed || Object.keys(parsed).length === 0) {
-    return <span style={{ color: theme.color.textFaint }}>--</span>;
-  }
-
-  const parts: string[] = [];
-
-  if (typeof parsed.title === "string") {
-    parts.push(parsed.title);
-  }
-  if (Array.isArray(parsed.fields) && parsed.fields.length > 0) {
-    parts.push((parsed.fields as string[]).join(", "));
-  }
-  if (typeof parsed.project_id === "string") {
-    parts.push(`project ${(parsed.project_id as string).slice(-6)}`);
-  }
-
-  return (
-    <span
-      style={{
-        fontFamily: theme.font.mono,
-        fontSize: theme.font.size.xxs,
-        color: theme.color.textMuted,
-      }}
-    >
-      {parts.join(" \u00b7 ") || summary}
-    </span>
-  );
+function StatusBadge({ status }: { status: string }) {
+  return <Badge variant={STATUS_VARIANTS[status] ?? "default"}>{status}</Badge>;
 }
 
 // ---------------------------------------------------------------------------
 // Table row
 // ---------------------------------------------------------------------------
 
-function LogRow({ log }: { log: ActivityLog }) {
+function JobRow({ job, agent }: { job: Job; agent: Agent | undefined }) {
   const { theme } = useTheme();
 
   return (
     <tr>
       <td style={cellStyle(theme)}>
-        <ActionBadge action={log.action} />
-      </td>
-      <td style={cellStyle(theme)}>
-        <Badge variant="default">{log.entity_type}</Badge>
+        <StatusBadge status={job.status} />
       </td>
       <td
         style={{
           ...cellStyle(theme),
-          fontFamily: theme.font.mono,
-          fontSize: theme.font.size.xxs,
-          color: theme.color.textFaint,
+          fontWeight: 500,
+          fontSize: theme.font.size.sm,
         }}
       >
-        {log.entity_id ? log.entity_id.slice(-8) : "--"}
+        {agent?.name ?? (
+          <span style={{ color: theme.color.textFaint, fontFamily: theme.font.mono, fontSize: theme.font.size.xxs }}>
+            {job.agent_id.slice(-8)}
+          </span>
+        )}
       </td>
-      <td style={cellStyle(theme)}>
-        <SummaryCell summary={log.summary} />
+      <td
+        style={{
+          ...cellStyle(theme),
+          maxWidth: 300,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontFamily: theme.font.mono,
+          fontSize: theme.font.size.xxs,
+          color: theme.color.textMuted,
+        }}
+        title={job.input ?? undefined}
+      >
+        {job.input ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+      </td>
+      <td
+        style={{
+          ...cellStyle(theme),
+          maxWidth: 300,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontFamily: theme.font.mono,
+          fontSize: theme.font.size.xxs,
+          color: theme.color.textMuted,
+        }}
+        title={job.output ?? undefined}
+      >
+        {job.output ?? <span style={{ color: theme.color.textFaint }}>--</span>}
       </td>
       <td
         style={{
@@ -106,9 +91,9 @@ function LogRow({ log }: { log: ActivityLog }) {
           color: theme.color.textFaint,
           whiteSpace: "nowrap",
         }}
-        title={formatDate(log.created_at)}
+        title={formatDate(job.created_at)}
       >
-        {relativeTime(log.created_at)}
+        {relativeTime(job.created_at)}
       </td>
     </tr>
   );
@@ -126,35 +111,36 @@ function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProper
 // Page
 // ---------------------------------------------------------------------------
 
-export function ActivityLogPage() {
+export function JobsPage() {
   const { theme } = useTheme();
-  const [entityType, setEntityType] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<string | undefined>(undefined);
 
   const filter = useMemo(
-    () => (entityType ? { entity_type: entityType } : undefined),
-    [entityType],
+    () => (status ? { status } : undefined),
+    [status],
   );
 
-  const { logs, total, totalPages, page, setPage, loading } = useActivityLog(filter);
+  const { jobs, agents, total, totalPages, page, setPage, loading } = useJobs(filter);
 
   return (
     <ListPageLayout>
       <PageHeader
-        title="Activity Log"
-        subtitle={`${total} events recorded`}
+        title="Jobs"
+        subtitle={`${total} job${total !== 1 ? "s" : ""} tracked`}
         trailing={
           <Select
-            value={entityType ?? ""}
+            value={status ?? ""}
             onChange={(e) => {
-              setEntityType(e.target.value || undefined);
+              setStatus(e.target.value || undefined);
               setPage(1);
             }}
             options={[
-              { value: "", label: "All types" },
-              { value: "project", label: "Projects" },
-              { value: "task", label: "Tasks" },
-              { value: "agent", label: "Agents" },
-              { value: "job", label: "Jobs" },
+              { value: "", label: "All statuses" },
+              { value: "todo", label: "Todo" },
+              { value: "running", label: "Running" },
+              { value: "done", label: "Done" },
+              { value: "failed", label: "Failed" },
+              { value: "cancelled", label: "Cancelled" },
             ]}
             style={{ minWidth: 140 }}
           />
@@ -166,8 +152,8 @@ export function ActivityLogPage() {
         <div style={{ textAlign: "center", padding: theme.spacing.xl, color: theme.color.textMuted }}>
           Loading...
         </div>
-      ) : logs.length === 0 ? (
-        <EmptyState icon="history" message="No activity recorded yet." variant="card" />
+      ) : jobs.length === 0 ? (
+        <EmptyState icon="work" message="No jobs yet." variant="card" />
       ) : (
         <div
           style={{
@@ -187,7 +173,7 @@ export function ActivityLogPage() {
           >
             <thead>
               <tr>
-                {["Action", "Type", "Entity", "Details", "When"].map((h) => (
+                {["Status", "Agent", "Input", "Output", "Created"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -208,8 +194,8 @@ export function ActivityLogPage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
-                <LogRow key={log.id} log={log} />
+              {jobs.map((job) => (
+                <JobRow key={job.id} job={job} agent={agents.get(job.agent_id)} />
               ))}
             </tbody>
           </table>

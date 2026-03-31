@@ -20,6 +20,28 @@ export interface Task {
   updated_at: string;
 }
 
+export interface Agent {
+  id: string;
+  name: string;
+  description: string | null;
+  platform_agent: string | null;
+  prompt: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Job {
+  id: string;
+  agent_id: string;
+  status: string;
+  input: string | null;
+  output: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ActivityLog {
   id: string;
   entity_type: string;

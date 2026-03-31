@@ -16,9 +16,13 @@ import { ProjectPage } from "./pages/ProjectPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
 import { ActivityLogPage } from "./pages/ActivityLogPage";
+import { AgentsPage } from "./pages/AgentsPage";
+import { JobsPage } from "./pages/JobsPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
+  { label: "Agents", path: "/agents" },
+  { label: "Jobs", path: "/jobs" },
   { label: "Activity", path: "/activity" },
   { label: "Themes", path: "/themes" },
 ];
@@ -41,6 +45,10 @@ export function App() {
 
   const activePath = path.startsWith("/gallery")
     ? "/gallery"
+    : path.startsWith("/agents")
+    ? "/agents"
+    : path.startsWith("/jobs")
+    ? "/jobs"
     : path.startsWith("/activity")
     ? "/activity"
     : path.startsWith("/themes")
@@ -64,6 +72,12 @@ export function App() {
   function renderView() {
     if (path.startsWith("/gallery")) {
       return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;
+    }
+    if (path.startsWith("/agents")) {
+      return <AgentsPage />;
+    }
+    if (path.startsWith("/jobs")) {
+      return <JobsPage />;
     }
     if (path.startsWith("/activity")) {
       return <ActivityLogPage />;
