@@ -94,7 +94,7 @@ export function App() {
   return (
     <EventSubscriptionContext.Provider value={eventCtx}>
       <AnimationStyles />
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", fontFamily: theme.font.body }}>
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: theme.font.body }}>
         <TopBar
           trailing={<TrailingIndicators connected={connected} />}
           navItems={navItems}
@@ -104,7 +104,7 @@ export function App() {
         <DisconnectionBanner connected={connected} />
         <main
           role="main"
-          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}
+          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, minHeight: 0 }}
         >
           <ErrorBoundary>
             {renderView()}

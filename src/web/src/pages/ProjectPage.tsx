@@ -267,11 +267,11 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
         {/* Markdown sections: goal, requirements, design */}
         {([
-          { key: "goal" as const, label: "Goal" },
-          { key: "requirements" as const, label: "Requirements" },
-          { key: "design" as const, label: "Design" },
-        ]).map(({ key, label }) => (
-          <CollapsibleSection key={key} label={label} defaultOpen style={{ marginBottom: theme.spacing.xl }}>
+          { key: "goal" as const, label: "Goal", defaultOpen: true },
+          { key: "requirements" as const, label: "Requirements", defaultOpen: false },
+          { key: "design" as const, label: "Design", defaultOpen: false },
+        ]).map(({ key, label, defaultOpen }) => (
+          <CollapsibleSection key={key} label={label} defaultOpen={defaultOpen} style={{ marginBottom: theme.spacing.xl }}>
             {project[key] ? (
               <Markdown>{project[key]}</Markdown>
             ) : (
@@ -334,7 +334,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 <Badge variant={statusBadgeVariant(task.status)}>
                   {STATUS_LABELS[task.status] ?? task.status}
                 </Badge>
-                <PresenceCharm active={task.plan != null} label="Has plan" color={theme.color.success} />
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <PresenceCharm active={task.plan != null} label="Plan" color={theme.color.success} />
+                  <PresenceCharm active={task.description != null} label="Description" color={theme.color.info ?? theme.color.primary} />
+                  <PresenceCharm active={task.implementation != null} label="Implementation" color={theme.color.tertiary} />
+                  <PresenceCharm active={task.acceptance_criteria != null} label="Acceptance criteria" color={theme.color.warning ?? theme.color.secondary} />
+                </div>
                 <IconButton
                   icon="delete"
                   size={14}
