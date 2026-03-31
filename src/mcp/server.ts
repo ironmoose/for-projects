@@ -78,30 +78,34 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_project",
     {
-      description: "Create a project with a title. Goal, requirements, and design can be provided now or added later via update_project.",
+      description: "Create projects. Pass an `items` array of objects, each with a required title and optional goal, requirements, design.",
       inputSchema: {
-        title: z.string().max(255),
-        goal: z.string().max(10000).optional(),
-        requirements: z.string().max(10000).optional(),
-        design: z.string().max(10000).optional(),
+        items: z.array(z.object({
+          title: z.string().max(255),
+          goal: z.string().max(10000).optional(),
+          requirements: z.string().max(10000).optional(),
+          design: z.string().max(10000).optional(),
+        })),
       },
     },
-    (input) => handle(() => projectService.create([input])[0])
+    ({ items }) => handle(() => projectService.create(items))
   );
 
   server.registerTool(
     "update_project",
     {
-      description: "Update a project's title, goal, requirements, or design by ID. Only provided fields are changed.",
+      description: "Update projects by ID. Pass an `items` array. Only provided fields are changed.",
       inputSchema: {
-        id: z.string().max(26),
-        title: z.string().max(255).optional(),
-        goal: z.string().max(10000).optional(),
-        requirements: z.string().max(10000).optional(),
-        design: z.string().max(10000).optional(),
+        items: z.array(z.object({
+          id: z.string().max(26),
+          title: z.string().max(255).optional(),
+          goal: z.string().max(10000).optional(),
+          requirements: z.string().max(10000).optional(),
+          design: z.string().max(10000).optional(),
+        })),
       },
     },
-    (input) => handle(() => projectService.update([input])[0])
+    ({ items }) => handle(() => projectService.update(items))
   );
 
   // -- Tasks ----------------------------------------------------------
@@ -109,34 +113,38 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_task",
     {
-      description: "Create a task within a project. Plan, description, implementation, and acceptance_criteria can be added now or later.",
+      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item.",
       inputSchema: {
-        project_id: z.string().max(26),
-        title: z.string().max(500),
-        plan: z.string().max(10000).optional(),
-        description: z.string().max(10000).optional(),
-        implementation: z.string().max(10000).optional(),
-        acceptance_criteria: z.string().max(10000).optional(),
+        items: z.array(z.object({
+          project_id: z.string().max(26),
+          title: z.string().max(500),
+          plan: z.string().max(10000).optional(),
+          description: z.string().max(10000).optional(),
+          implementation: z.string().max(10000).optional(),
+          acceptance_criteria: z.string().max(10000).optional(),
+        })),
       },
     },
-    (input) => handle(() => taskService.create([input])[0])
+    ({ items }) => handle(() => taskService.create(items))
   );
 
   server.registerTool(
     "update_task",
     {
-      description: "Update a task by ID. Only provided fields are changed.",
+      description: "Update tasks by ID. Pass an `items` array with required id and project_id. Only provided fields are changed.",
       inputSchema: {
-        id: z.string().max(26),
-        project_id: z.string().max(26),
-        title: z.string().max(500).optional(),
-        plan: z.string().max(10000).optional(),
-        description: z.string().max(10000).optional(),
-        implementation: z.string().max(10000).optional(),
-        acceptance_criteria: z.string().max(10000).optional(),
+        items: z.array(z.object({
+          id: z.string().max(26),
+          project_id: z.string().max(26),
+          title: z.string().max(500).optional(),
+          plan: z.string().max(10000).optional(),
+          description: z.string().max(10000).optional(),
+          implementation: z.string().max(10000).optional(),
+          acceptance_criteria: z.string().max(10000).optional(),
+        })),
       },
     },
-    (input) => handle(() => taskService.update([input])[0])
+    ({ items }) => handle(() => taskService.update(items))
   );
 
   // -- Agents ---------------------------------------------------------
@@ -157,30 +165,34 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_agent",
     {
-      description: "Register an agent blueprint. Set platform_agent to reference a Claude platform agent (e.g. 'Explore', 'Plan'), or provide a prompt for a custom agent. Both can be combined to overlay custom instructions on a platform agent.",
+      description: "Register agent blueprints. Pass an `items` array with required name per item. Set platform_agent to reference a Claude platform agent (e.g. 'Explore', 'Plan'), or provide a prompt for a custom agent.",
       inputSchema: {
-        name: z.string().max(255),
-        description: z.string().max(10000).optional(),
-        platform_agent: z.string().max(255).optional(),
-        prompt: z.string().max(50000).optional(),
+        items: z.array(z.object({
+          name: z.string().max(255),
+          description: z.string().max(10000).optional(),
+          platform_agent: z.string().max(255).optional(),
+          prompt: z.string().max(50000).optional(),
+        })),
       },
     },
-    (input) => handle(() => agentService.create([input])[0])
+    ({ items }) => handle(() => agentService.create(items))
   );
 
   server.registerTool(
     "update_agent",
     {
-      description: "Update an agent blueprint by ID. Only provided fields are changed.",
+      description: "Update agent blueprints by ID. Pass an `items` array. Only provided fields are changed.",
       inputSchema: {
-        id: z.string().max(26),
-        name: z.string().max(255).optional(),
-        description: z.string().max(10000).optional(),
-        platform_agent: z.string().max(255).optional(),
-        prompt: z.string().max(50000).optional(),
+        items: z.array(z.object({
+          id: z.string().max(26),
+          name: z.string().max(255).optional(),
+          description: z.string().max(10000).optional(),
+          platform_agent: z.string().max(255).optional(),
+          prompt: z.string().max(50000).optional(),
+        })),
       },
     },
-    (input) => handle(() => agentService.update([input])[0])
+    ({ items }) => handle(() => agentService.update(items))
   );
 
   // -- Jobs -----------------------------------------------------------
@@ -203,30 +215,34 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_job",
     {
-      description: "Create a job for an agent. Defaults to status 'todo'. Agents poll for todo jobs to pick up work.",
+      description: "Create jobs for agents. Pass an `items` array with required agent_id per item. Defaults to status 'todo'.",
       inputSchema: {
-        agent_id: z.string().max(26),
-        status: z.string().optional(),
-        input: z.string().max(50000).optional(),
+        items: z.array(z.object({
+          agent_id: z.string().max(26),
+          status: z.string().optional(),
+          input: z.string().max(50000).optional(),
+        })),
       },
     },
-    (input) => handle(() => jobService.create([input])[0])
+    ({ items }) => handle(() => jobService.create(items))
   );
 
   server.registerTool(
     "update_job",
     {
-      description: "Update a job's status, input, output, started_at, or ended_at. Use this to transition jobs through their lifecycle: todo → running → done/failed/cancelled.",
+      description: "Update jobs by ID. Pass an `items` array. Use this to transition jobs through their lifecycle: todo → running → done/failed/cancelled.",
       inputSchema: {
-        id: z.string().max(26),
-        status: z.string().optional(),
-        input: z.string().max(50000).optional(),
-        output: z.string().max(50000).optional(),
-        started_at: z.string().optional(),
-        ended_at: z.string().optional(),
+        items: z.array(z.object({
+          id: z.string().max(26),
+          status: z.string().optional(),
+          input: z.string().max(50000).optional(),
+          output: z.string().max(50000).optional(),
+          started_at: z.string().optional(),
+          ended_at: z.string().optional(),
+        })),
       },
     },
-    (input) => handle(() => jobService.update([input])[0])
+    ({ items }) => handle(() => jobService.update(items))
   );
 
   return server;
