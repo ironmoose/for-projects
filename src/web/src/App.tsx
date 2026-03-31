@@ -6,6 +6,7 @@ import {
   ConnectionStatus,
   DisconnectionBanner,
   AnimationStyles,
+  SynthBackground,
   ErrorBoundary,
 } from "./components";
 import type { NavItem } from "./components";
@@ -95,7 +96,8 @@ export function App() {
   return (
     <EventSubscriptionContext.Provider value={eventCtx}>
       <AnimationStyles />
-      <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: theme.font.body }}>
+      <SynthBackground />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: theme.font.body }}>
         <TopBar
           trailing={<TrailingIndicators connected={connected} />}
           navItems={navItems}

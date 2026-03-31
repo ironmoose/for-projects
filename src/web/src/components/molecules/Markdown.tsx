@@ -92,10 +92,10 @@ function buildComponents(theme: Theme): Components {
           <code
             style={{
               display: "block",
-              fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace",
+              fontFamily: font.mono,
               fontSize: font.size.sm,
-              lineHeight: 1.6,
-              color: color.text,
+              lineHeight: font.lineHeight.mono,
+              color: color.primary,
             }}
           >
             {children}
@@ -105,12 +105,14 @@ function buildComponents(theme: Theme): Components {
       return (
         <code
           style={{
-            fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace",
+            fontFamily: font.mono,
             fontSize: "0.9em",
             background: color.surfaceContainerHigh,
+            border: `1px solid ${color.borderSubtle}`,
             borderRadius: radius.sm,
             padding: "1px 5px",
-            color: color.primary,
+            color: color.tertiary,
+            textShadow: `0 0 8px ${color.glowPrimary}`,
           }}
         >
           {children}
@@ -124,8 +126,10 @@ function buildComponents(theme: Theme): Components {
           marginBottom: spacing.sm,
           padding: spacing.md,
           background: color.surfaceContainerHigh,
+          borderLeft: `2px solid ${color.tertiary}`,
           borderRadius: radius.lg,
           overflowX: "auto",
+          boxShadow: `inset 2px 0 12px -4px ${color.glowPrimary}, ${theme.shadow.sm}`,
         }}
       >
         {children}

@@ -319,6 +319,45 @@ export const themes: Record<string, Theme> = {
       lg: "0 8px 40px rgba(0,0,0,0.35)",
     },
   },
+
+  // Synthwave — neon-soaked retrowave
+  synth: {
+    name: "synth",
+    label: "Synth",
+    ...shared,
+    color: {
+      text: "#e0d6f6",
+      textMuted: "#9b8ec2",
+      textFaint: "#655b82",
+      surface: "#0a0a1a",
+      surfaceContainer: "#110f28",
+      surfaceContainerLow: "#0e0c22",
+      surfaceContainerHigh: "#181535",
+      surfaceContainerHighest: "#1f1b42",
+      border: "#1f1b42",
+      borderSubtle: "#161333",
+      primary: "#00f0ff",
+      primaryContainer: "#003d42",
+      onPrimary: "#001f22",
+      onPrimaryContainer: "#80f8ff",
+      tertiary: "#ff2d95",
+      danger: "#ff4080",
+      success: "#39ff14",
+      warning: "#ffe44d",
+      activityFlash: "rgba(0, 240, 255, 0.09)",
+      running: "#00f0ff",
+      failed: "#ff4080",
+      glowPrimary: "rgba(0, 240, 255, 0.35)",
+      glowSuccess: "rgba(57, 255, 20, 0.30)",
+      glowDanger: "rgba(255, 64, 128, 0.30)",
+      activityBorder: "rgba(0, 240, 255, 0.40)",
+    },
+    shadow: {
+      sm: "0 1px 4px rgba(0, 240, 255, 0.10)",
+      md: "0 4px 20px rgba(0, 240, 255, 0.08)",
+      lg: "0 8px 40px rgba(255, 45, 149, 0.12)",
+    },
+  },
 };
 
 export const defaultThemeName = "deepTeal";

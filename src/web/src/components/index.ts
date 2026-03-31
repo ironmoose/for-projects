@@ -10,6 +10,7 @@ export { StatusDot } from "./atoms/StatusDot";
 export { MetaValue } from "./atoms/MetaValue";
 export { Overlay } from "./atoms/Overlay";
 export { AnimationStyles } from "./atoms/AnimationStyles";
+export { SynthBackground } from "./atoms/SynthBackground";
 export { Skeleton, CardSkeleton, RowSkeleton } from "./atoms/Skeleton";
 export { ActivityIndicator } from "./atoms/ActivityIndicator";
 // Molecules

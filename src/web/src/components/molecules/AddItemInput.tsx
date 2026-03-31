@@ -31,7 +31,7 @@ export function AddItemInput({ placeholder, value, onChange, onSubmit, loading, 
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
-        <Button type="submit" size="sm" disabled={loading}>
+        <Button type="submit" size="md" disabled={loading}>
           <Icon name={loading ? "hourglass_empty" : "add"} size={16} />
         </Button>
       </Stack>

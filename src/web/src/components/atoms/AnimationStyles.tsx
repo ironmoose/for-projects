@@ -76,6 +76,38 @@ export function AnimationStyles() {
         to   { transform: rotate(360deg); }
       }
 
+      @keyframes synth-grid-scroll {
+        from { transform: perspective(350px) rotateX(50deg) translateY(0); }
+        to   { transform: perspective(350px) rotateX(50deg) translateY(48px); }
+      }
+
+      @keyframes synth-horizon-pulse {
+        0%, 100% { opacity: 0.5; }
+        50%      { opacity: 0.85; }
+      }
+
+      @keyframes synth-scanline {
+        from { transform: translateY(-100%); }
+        to   { transform: translateY(100vh); }
+      }
+
+      @keyframes synth-sun-breathe {
+        0%, 100% { transform: translateX(-50%) scale(1); filter: blur(0px); }
+        50%      { transform: translateX(-50%) scale(1.06); filter: blur(2px); }
+      }
+
+      @keyframes synth-star-twinkle {
+        0%, 100% { opacity: 0.3; }
+        50%      { opacity: 1; }
+      }
+
+      @keyframes synth-vline-drift {
+        0%   { opacity: 0; transform: translateY(20%); }
+        10%  { opacity: 1; }
+        90%  { opacity: 1; }
+        100% { opacity: 0; transform: translateY(-100%); }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
           animation-duration: 0.01ms !important;

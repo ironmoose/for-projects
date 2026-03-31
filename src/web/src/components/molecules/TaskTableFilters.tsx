@@ -40,11 +40,11 @@ export function TaskTableFilters({ filter, onChange }: TaskTableFiltersProps) {
         />
       </div>
       <Select
-        value={filter.status ?? "in_progress,todo"}
+        value={filter.status ?? ""}
         onChange={(e) => onChange({ ...filter, status: e.target.value || undefined })}
         options={[
-          { value: "in_progress,todo", label: "Active" },
           { value: "", label: "All statuses" },
+          { value: "in_progress,todo", label: "Active" },
           { value: "todo", label: "Todo" },
           { value: "in_progress", label: "In progress" },
           { value: "done", label: "Done" },
