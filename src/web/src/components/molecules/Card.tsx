@@ -17,30 +17,37 @@ export function Card({ padding = "lg", variant = "default", hover, style, ...pro
   const variantStyles: Record<CardVariant, React.CSSProperties> = {
     default: {
       background: theme.color.surfaceContainer,
-      border: `1px solid ${theme.color.borderSubtle}`,
+      borderWidth: 1,
+      borderStyle: "solid",
+      borderColor: theme.color.borderSubtle,
       boxShadow: "none",
     },
     flat: {
       background: theme.color.surfaceContainerLow,
-      border: "none",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
       boxShadow: "none",
     },
     live: {
       background: theme.color.surfaceContainer,
-      border: `1px solid ${theme.color.primary}33`,
+      borderWidth: 1,
+      borderStyle: "solid",
+      borderColor: `${theme.color.primary}33`,
       ["--border-pulse-color" as string]: `${theme.color.primary}66`,
       ["--border-pulse-dim" as string]: `${theme.color.primary}1a`,
       animation: `border-pulse 2s ease-in-out infinite`,
     },
     elevated: {
       background: theme.color.surfaceContainer,
-      border: `1px solid ${theme.color.borderSubtle}`,
+      borderWidth: 1,
+      borderStyle: "solid",
+      borderColor: theme.color.borderSubtle,
       boxShadow: theme.shadow.md,
     },
   };
 
-  const baseVariant = variantStyles[variant];
-  const baseBorderColor = baseVariant.border === "none" ? "transparent" : theme.color.borderSubtle;
+  const baseBorderColor = variantStyles[variant].borderColor as string;
   const hoverStyles: React.CSSProperties = hover
     ? hovered
       ? { boxShadow: theme.shadow.md, borderColor: theme.color.border }

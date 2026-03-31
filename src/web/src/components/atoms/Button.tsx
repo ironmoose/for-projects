@@ -14,20 +14,25 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 function getVariantStyles(theme: Theme): Record<ButtonVariant, React.CSSProperties> {
   return {
     primary: {
-      background: `linear-gradient(135deg, ${theme.color.primaryContainer}, ${theme.color.primary})`,
-      color: theme.color.onPrimary,
-      border: "none",
-      boxShadow: theme.shadow.sm,
+      background: theme.color.primaryContainer,
+      color: theme.color.onPrimaryContainer,
+      borderWidth: 1,
+      borderStyle: "solid",
+      borderColor: theme.color.primaryContainer,
     },
     ghost: {
       background: "transparent",
       color: theme.color.textMuted,
-      border: "1px solid transparent",
+      borderWidth: 1,
+      borderStyle: "solid",
+      borderColor: theme.color.borderSubtle,
     },
     danger: {
-      background: `${theme.color.danger}26`,
+      background: "transparent",
       color: theme.color.danger,
-      border: `1px solid ${theme.color.danger}33`,
+      borderWidth: 1,
+      borderStyle: "solid",
+      borderColor: `${theme.color.danger}44`,
     },
     icon: {
       background: "transparent",
@@ -52,7 +57,7 @@ export function Button({
 
   const sizeStyles: Record<ButtonSize, React.CSSProperties> = {
     sm: { padding: "0.25rem 0.625rem", fontSize: theme.font.size.sm },
-    md: { padding: "0.5rem 1rem", fontSize: theme.font.size.md },
+    md: { padding: "0.5rem 1rem", fontSize: theme.font.size.sm },
   };
 
   const isDisabled = disabled || loading;
@@ -63,9 +68,9 @@ export function Button({
         borderRadius: theme.radius.lg,
         cursor: isDisabled ? "not-allowed" : "pointer",
         fontFamily: theme.font.body,
-        fontWeight: 500,
+        fontWeight: 600,
         letterSpacing: "0.01em",
-        transition: "background 0.15s, opacity 0.15s, box-shadow 0.15s",
+        transition: "background 0.15s, opacity 0.15s, border-color 0.15s, filter 0.15s",
         opacity: isDisabled ? 0.6 : 1,
         ...getVariantStyles(theme)[variant],
         ...(variant !== "icon" ? sizeStyles[size] : {}),
