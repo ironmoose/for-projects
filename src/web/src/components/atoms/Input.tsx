@@ -33,7 +33,7 @@ export function Input({ label, style, id, ...props }: InputProps) {
           border: `1px solid ${theme.color.borderSubtle}`,
           borderRadius: theme.radius.lg,
           fontFamily: theme.font.body,
-          fontSize: theme.font.size.md,
+          fontSize: theme.font.size.sm,
           outline: "none",
           background: theme.color.surfaceContainerHigh,
           color: theme.color.text,

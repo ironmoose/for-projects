@@ -26,7 +26,7 @@ export class TaskRepository {
     return this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Task | null;
   }
 
-  findMany(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }): Task[] {
+  findMany(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Task[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
@@ -45,8 +45,13 @@ export class TaskRepository {
       params.push(filter.group_key);
     }
     if (filter?.status) {
-      conditions.push("status = ?");
-      params.push(filter.status);
+      const statuses = filter.status.split(",");
+      if (statuses.length === 1) {
+        conditions.push("status = ?"); params.push(statuses[0]);
+      } else {
+        conditions.push(`status IN (${statuses.map(() => "?").join(", ")})`);
+        params.push(...statuses);
+      }
     }
     if (filter?.effort) {
       conditions.push("effort = ?");
@@ -60,6 +65,10 @@ export class TaskRepository {
       conditions.push("category = ?");
       params.push(filter.category);
     }
+    if (filter?.title) {
+      conditions.push("title LIKE ?");
+      params.push(`%${filter.title}%`);
+    }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
     params.push(limit, offset);
@@ -69,7 +78,7 @@ export class TaskRepository {
       .all(...params) as Task[];
   }
 
-  count(filter?: { id?: string; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }): number {
+  count(filter?: { id?: string; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): number {
     const conditions: string[] = [];
     const params: string[] = [];
 
@@ -86,8 +95,13 @@ export class TaskRepository {
       params.push(filter.group_key);
     }
     if (filter?.status) {
-      conditions.push("status = ?");
-      params.push(filter.status);
+      const statuses = filter.status.split(",");
+      if (statuses.length === 1) {
+        conditions.push("status = ?"); params.push(statuses[0]);
+      } else {
+        conditions.push(`status IN (${statuses.map(() => "?").join(", ")})`);
+        params.push(...statuses);
+      }
     }
     if (filter?.effort) {
       conditions.push("effort = ?");
@@ -100,6 +114,10 @@ export class TaskRepository {
     if (filter?.category) {
       conditions.push("category = ?");
       params.push(filter.category);
+    }
+    if (filter?.title) {
+      conditions.push("title LIKE ?");
+      params.push(`%${filter.title}%`);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";

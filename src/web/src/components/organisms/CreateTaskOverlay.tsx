@@ -10,9 +10,9 @@ interface CreateTaskOverlayProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: "todo", label: "Todo" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "done", label: "Done" },
+  { value: "todo", label: "todo" },
+  { value: "in_progress", label: "in progress" },
+  { value: "done", label: "done" },
 ];
 
 export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps) {

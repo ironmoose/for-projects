@@ -96,7 +96,7 @@ export async function deleteProjects(ids: string[]): Promise<void> {
 // Tasks API
 // ---------------------------------------------------------------------------
 
-export async function fetchTasks(params?: { project_id?: string; limit?: number; offset?: number }): Promise<{ data: Task[]; total: number }> {
+export async function fetchTasks(params?: { project_id?: string; status?: string; effort?: string; impact?: string; category?: string; group_key?: string; title?: string; limit?: number; offset?: number }): Promise<{ data: Task[]; total: number }> {
   const res = await apiFetch(`/api/tasks${qs(params)}`);
   return res.json();
 }

@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ApiError, fetchProject as apiFetchProject, fetchTasks, createTasks, updateProjects, deleteTasks } from "../api";
-import type { Project, Task } from "../types";
+import { ApiError, fetchProject as apiFetchProject, createTasks, updateProjects, deleteTasks } from "../api";
+import type { Project } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export function useProject(projectId: string) {
   const [project, setProject] = useState<Project | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
@@ -16,20 +15,10 @@ export function useProject(projectId: string) {
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
 
-  async function loadTasks(pid: string) {
-    try {
-      const body = await fetchTasks({ project_id: pid });
-      setTasks(body.data);
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to load tasks");
-    }
-  }
-
   async function loadProject() {
     try {
       const p = await apiFetchProject(projectIdRef.current);
       setProject(p);
-      loadTasks(p.id);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
@@ -51,12 +40,11 @@ export function useProject(projectId: string) {
   useEffect(() => {
     setNotFound(false);
     setProject(null);
-    setTasks([]);
     setLoading(true);
     loadProject();
 
     return subscribeEvents((event) => {
-      if (event.entity_type === "project" || event.entity_type === "task" || event.entity_type === "run") {
+      if (event.entity_type === "project" || event.entity_type === "run") {
         throttledLoad();
       }
     });
@@ -80,5 +68,5 @@ export function useProject(projectId: string) {
     await deleteTasks([taskId]);
   }
 
-  return { project, tasks, notFound, loading, updateProject, addTask, deleteTask };
+  return { project, notFound, loading, updateProject, addTask, deleteTask };
 }

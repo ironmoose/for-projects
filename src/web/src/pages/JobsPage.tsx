@@ -135,12 +135,12 @@ export function JobsPage() {
               setPage(1);
             }}
             options={[
-              { value: "", label: "All statuses" },
-              { value: "todo", label: "Todo" },
-              { value: "running", label: "Running" },
-              { value: "done", label: "Done" },
-              { value: "failed", label: "Failed" },
-              { value: "cancelled", label: "Cancelled" },
+              { value: "", label: "all statuses" },
+              { value: "todo", label: "todo" },
+              { value: "running", label: "running" },
+              { value: "done", label: "done" },
+              { value: "failed", label: "failed" },
+              { value: "cancelled", label: "cancelled" },
             ]}
             style={{ minWidth: 140 }}
           />

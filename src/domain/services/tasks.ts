@@ -20,7 +20,7 @@ export class TaskService implements ITaskService {
   private static VALID_IMPACTS = ["trivial", "low", "medium", "high", "extreme"];
   private static VALID_CATEGORIES = ["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"];
 
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }): Paginated<Task> {
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Paginated<Task> {
     return {
       data: this.taskRepo.findMany(filter),
       total: this.taskRepo.count(filter),

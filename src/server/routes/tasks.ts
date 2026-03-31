@@ -20,13 +20,15 @@ export function taskRoutes(service: ITaskService): Hono {
     const effort = c.req.query("effort");
     const impact = c.req.query("impact");
     const category = c.req.query("category");
-    const filter: { project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; limit: number; offset: number } = { limit, offset };
+    const title = c.req.query("title");
+    const filter: { project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; limit: number; offset: number } = { limit, offset };
     if (project_id) filter.project_id = project_id;
     if (group_key) filter.group_key = group_key;
     if (status) filter.status = status;
     if (effort) filter.effort = effort;
     if (impact) filter.impact = impact;
     if (category) filter.category = category;
+    if (title) filter.title = title;
     return c.json(service.list(filter));
   });
 

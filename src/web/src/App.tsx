@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
   { label: "Agents", path: "/agents" },
   { label: "Jobs", path: "/jobs" },
   { label: "Activity", path: "/activity" },
+  { label: "Gallery", path: "/gallery" },
   { label: "Themes", path: "/themes" },
 ];
 

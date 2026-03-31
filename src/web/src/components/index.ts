@@ -30,6 +30,7 @@ export { AnimatedList } from "./molecules/AnimatedList";
 export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 export { PresenceCharm } from "./molecules/PresenceCharm";
 export { CollapsibleSection } from "./molecules/CollapsibleSection";
+export { TaskTableFilters } from "./molecules/TaskTableFilters";
 // Organisms
 export { TopBar } from "./organisms/TopBar";
 export type { NavItem } from "./organisms/TopBar";
@@ -37,6 +38,7 @@ export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ConfirmDialog } from "./organisms/ConfirmDialog";
+export { TaskTable } from "./organisms/TaskTable";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";
