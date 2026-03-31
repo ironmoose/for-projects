@@ -6,8 +6,7 @@ import {
   useTheme,
   DetailPageLayout,
   BackButton,
-  SectionLabel,
-  CollapsibleSection,
+  ExpandableCard,
   MetadataTable,
   AddItemInput,
   EmptyState,
@@ -138,17 +137,21 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
               flexDirection: "column",
             }}
           >
-            <SectionLabel>Description</SectionLabel>
-            {task.description ? <Markdown>{task.description}</Markdown> : emptyText("description")}
+            <ExpandableCard title="Description" defaultOpen variant="flat" style={{ marginBottom: theme.spacing.sm }}>
+              {task.description ? <Markdown>{task.description}</Markdown> : emptyText("description")}
+            </ExpandableCard>
 
-            <SectionLabel style={{ marginTop: theme.spacing.lg }}>Plan</SectionLabel>
-            {task.plan ? <Markdown>{task.plan}</Markdown> : emptyText("plan")}
+            <ExpandableCard title="Plan" defaultOpen={false} variant="flat" style={{ marginBottom: theme.spacing.sm }}>
+              {task.plan ? <Markdown>{task.plan}</Markdown> : emptyText("plan")}
+            </ExpandableCard>
 
-            <SectionLabel style={{ marginTop: theme.spacing.lg }}>Implementation</SectionLabel>
-            {task.implementation ? <Markdown>{task.implementation}</Markdown> : emptyText("implementation")}
+            <ExpandableCard title="Implementation" defaultOpen={false} variant="flat" style={{ marginBottom: theme.spacing.sm }}>
+              {task.implementation ? <Markdown>{task.implementation}</Markdown> : emptyText("implementation")}
+            </ExpandableCard>
 
-            <SectionLabel style={{ marginTop: theme.spacing.lg }}>Acceptance Criteria</SectionLabel>
-            {task.acceptance_criteria ? <Markdown>{task.acceptance_criteria}</Markdown> : emptyText("acceptance criteria")}
+            <ExpandableCard title="Acceptance Criteria" defaultOpen={false} variant="flat">
+              {task.acceptance_criteria ? <Markdown>{task.acceptance_criteria}</Markdown> : emptyText("acceptance criteria")}
+            </ExpandableCard>
 
             {/* Metadata */}
             <div
@@ -276,7 +279,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           { key: "requirements" as const, label: "Requirements", defaultOpen: false },
           { key: "design" as const, label: "Design", defaultOpen: false },
         ]).map(({ key, label, defaultOpen }) => (
-          <CollapsibleSection key={key} label={label} defaultOpen={defaultOpen} style={{ marginBottom: theme.spacing.xl }}>
+          <ExpandableCard key={key} title={label} defaultOpen={defaultOpen} style={{ marginBottom: theme.spacing.xl }}>
             {project[key] ? (
               <Markdown>{project[key]}</Markdown>
             ) : (
@@ -284,7 +287,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 Not set
               </p>
             )}
-          </CollapsibleSection>
+          </ExpandableCard>
         ))}
 
         {/* Tasks */}

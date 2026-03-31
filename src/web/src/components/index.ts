@@ -14,6 +14,7 @@ export { Skeleton, CardSkeleton, RowSkeleton } from "./atoms/Skeleton";
 export { ActivityIndicator } from "./atoms/ActivityIndicator";
 // Molecules
 export { Card } from "./molecules/Card";
+export { ExpandableCard } from "./molecules/ExpandableCard";
 export { Stack } from "./molecules/Stack";
 export { Markdown } from "./molecules/Markdown";
 export { PageHeader } from "./molecules/PageHeader";

@@ -17,6 +17,7 @@ import {
   Skeleton,
   CardSkeleton,
   RowSkeleton,
+  ExpandableCard,
 } from "../components";
 
 export function registerAllComponents(): void {
@@ -183,6 +184,33 @@ export function registerAllComponents(): void {
       </Card>
     ),
     codeTemplate: `<Card variant="default" padding="lg">Content</Card>`,
+  });
+
+  registerComponent({
+    name: "ExpandableCard",
+    description: "Card with clickable header, chevron, and expand/collapse behavior.",
+    category: "molecule",
+    propDefs: [
+      { name: "title", type: "string", defaultValue: "Section Title" },
+      { name: "defaultOpen", type: "boolean", defaultValue: false },
+      { name: "variant", type: "enum", defaultValue: "default", options: ["default", "flat", "elevated"] },
+    ],
+    render: (props) => (
+      <ExpandableCard
+        title={String(props.title)}
+        defaultOpen={props.defaultOpen as boolean}
+        variant={props.variant as "default" | "flat" | "elevated"}
+        style={{ width: 300 }}
+      >
+        <span>Expandable content goes here. Click the header to toggle.</span>
+      </ExpandableCard>
+    ),
+    variants: [
+      { name: "Closed", props: { defaultOpen: false } },
+      { name: "Open", props: { defaultOpen: true } },
+      { name: "Flat", props: { variant: "flat", defaultOpen: true } },
+    ],
+    codeTemplate: `<ExpandableCard title="Section" defaultOpen={false}>Content</ExpandableCard>`,
   });
 
   registerComponent({

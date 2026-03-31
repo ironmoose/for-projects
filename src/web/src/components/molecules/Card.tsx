@@ -39,10 +39,13 @@ export function Card({ padding = "lg", variant = "default", hover, style, ...pro
     },
   };
 
-  const hoverStyles: React.CSSProperties =
-    hover && hovered
+  const baseVariant = variantStyles[variant];
+  const baseBorderColor = baseVariant.border === "none" ? "transparent" : theme.color.borderSubtle;
+  const hoverStyles: React.CSSProperties = hover
+    ? hovered
       ? { boxShadow: theme.shadow.md, borderColor: theme.color.border }
-      : {};
+      : { borderColor: baseBorderColor }
+    : {};
 
   return (
     <div
