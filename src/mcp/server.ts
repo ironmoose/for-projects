@@ -219,7 +219,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         id: z.string().max(26).optional(),
         agent_id: z.string().max(26).optional(),
-        status: z.string().optional(),
+        status: z.enum(["todo", "running", "done", "failed", "cancelled"]).optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
@@ -234,7 +234,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         items: z.array(z.object({
           agent_id: z.string().max(26),
-          status: z.string().optional(),
+          status: z.enum(["todo", "running", "done", "failed", "cancelled"]).optional(),
           input: z.string().max(50000).optional(),
         })),
       },
@@ -249,7 +249,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
-          status: z.string().optional(),
+          status: z.enum(["todo", "running", "done", "failed", "cancelled"]).optional(),
           input: z.string().max(50000).optional(),
           output: z.string().max(50000).optional(),
           started_at: z.string().optional(),

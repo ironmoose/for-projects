@@ -1,4 +1,4 @@
-import type { Agent } from "../entities";
+import { type Agent, toAgentSummary } from "../entities";
 import type { CreateAgentInput, UpdateAgentInput } from "../inputs";
 import type { IAgentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -15,7 +15,7 @@ export class AgentService implements IAgentService {
 
   list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<Agent> {
     return {
-      data: this.repo.findMany(filter),
+      data: this.repo.findMany(filter).map(toAgentSummary),
       total: this.repo.count(filter),
     };
   }
