@@ -21,7 +21,7 @@ import { useProject } from "../hooks";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError } from "../api";
+import { ApiError, fetchTask } from "../api";
 import type { Task } from "../types";
 import { formatDate } from "../utils";
 
@@ -198,7 +198,16 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
-  const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null;
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  useEffect(() => {
+    if (!selectedTaskId) { setSelectedTask(null); return; }
+    let cancelled = false;
+    fetchTask(selectedTaskId)
+      .then((t) => { if (!cancelled) setSelectedTask(t); })
+      .catch(() => { if (!cancelled) setSelectedTask(null); });
+    return () => { cancelled = true; };
+  }, [selectedTaskId, tasks]);
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
 
