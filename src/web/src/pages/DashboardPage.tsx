@@ -17,7 +17,7 @@ import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchTasks } from "../api";
-import type { Project } from "../types";
+import type { ProjectSummary } from "../types";
 import { formatDate } from "../utils";
 
 // ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ function ProjectCard({
   onClick,
   onDelete,
 }: {
-  project: Project;
+  project: ProjectSummary;
   taskCount: number;
   onClick: () => void;
   onDelete: () => void;
@@ -72,9 +72,9 @@ function ProjectCard({
       </span>
 
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <PresenceCharm active={project.goal != null} label="Goal" color={theme.color.success} />
-        <PresenceCharm active={project.requirements != null} label="Requirements" color={theme.color.info ?? theme.color.primary} />
-        <PresenceCharm active={project.design != null} label="Design" color={theme.color.tertiary} />
+        <PresenceCharm active={project.has_goal} label="Goal" color={theme.color.success} />
+        <PresenceCharm active={project.has_requirements} label="Requirements" color={theme.color.info ?? theme.color.primary} />
+        <PresenceCharm active={project.has_design} label="Design" color={theme.color.tertiary} />
       </div>
 
       <div
@@ -115,7 +115,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
   const [title, setTitle] = useState("");
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
 
   async function handleCreate() {
     if (!title.trim()) return;

@@ -1,4 +1,4 @@
-import type { Project, Task, TaskSummary, Agent, Job, ActivityLog } from "./types";
+import type { Project, ProjectSummary, Task, TaskSummary, Agent, Job, ActivityLog } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -68,7 +68,7 @@ function jsonPatch(body: unknown): RequestInit {
 // Projects API
 // ---------------------------------------------------------------------------
 
-export async function fetchProjects(params?: { limit?: number; offset?: number }): Promise<{ data: Project[]; total: number }> {
+export async function fetchProjects(params?: { limit?: number; offset?: number }): Promise<{ data: ProjectSummary[]; total: number }> {
   const res = await apiFetch(`/api/projects${qs(params)}`);
   return res.json();
 }

@@ -12,6 +12,16 @@ export interface Project {
   updated_at: string;
 }
 
+export interface ProjectSummary {
+  id: string;
+  title: string;
+  has_goal: boolean;
+  has_requirements: boolean;
+  has_design: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Task {
   id: string;
   project_id: string;
