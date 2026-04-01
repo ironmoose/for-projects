@@ -51,32 +51,47 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 
 describe("list_projects", () => {
-  it("returns empty list when filtering for nonexistent id", async () => {
-    const result = await callTool("list_projects", { id: "00000000000000000000000000" });
-    const parsed = parseResult(result);
-    expect(parsed.data).toEqual([]);
-    expect(parsed.total).toBe(0);
-  });
-
   it("returns created projects with correct total", async () => {
-    const createResult = await callTool("create_project", { items: [{ title: "List Test Project" }] });
-    const [project] = parseResult(createResult);
+    await callTool("create_project", { items: [{ title: "List Test Project" }] });
 
-    const listResult = await callTool("list_projects", { id: project.id });
+    const listResult = await callTool("list_projects");
     const parsed = parseResult(listResult);
-    expect(parsed.data).toHaveLength(1);
-    expect(parsed.total).toBe(1);
-    expect(parsed.data[0].title).toBe("List Test Project");
+    expect(parsed.data.length).toBeGreaterThanOrEqual(1);
+    expect(parsed.total).toBeGreaterThanOrEqual(1);
+    expect(parsed.data[0].id).toBeTruthy();
+    expect(parsed.data[0].title).toBeTruthy();
+    expect(parsed.data[0].created_at).toBeTruthy();
+    expect(parsed.data[0].updated_at).toBeTruthy();
   });
 
-  it("id filter returns single project in data array", async () => {
-    const [p1] = parseResult(await callTool("create_project", { items: [{ title: "Filter A" }] }));
-    await callTool("create_project", { items: [{ title: "Filter B" }] });
-
-    const listResult = await callTool("list_projects", { id: p1.id });
+  it("supports pagination via limit and offset", async () => {
+    const listResult = await callTool("list_projects", { limit: 1, offset: 0 });
     const parsed = parseResult(listResult);
     expect(parsed.data).toHaveLength(1);
-    expect(parsed.data[0].id).toBe(p1.id);
+  });
+});
+
+describe("get_project", () => {
+  it("returns full project entity by id", async () => {
+    const [created] = parseResult(
+      await callTool("create_project", { items: [{ title: "Get Me", goal: "A goal", requirements: "Reqs", design: "Design" }] })
+    );
+
+    const result = await callTool("get_project", { id: created.id });
+    const project = parseResult(result);
+    expect(project.id).toBe(created.id);
+    expect(project.title).toBe("Get Me");
+    expect(project.goal).toBe("A goal");
+    expect(project.requirements).toBe("Reqs");
+    expect(project.design).toBe("Design");
+    expect(project.created_at).toBeTruthy();
+    expect(project.updated_at).toBeTruthy();
+  });
+
+  it("returns error for nonexistent id", async () => {
+    const result = await callTool("get_project", { id: "00000000000000000000000000" });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/not found/i);
   });
 });
 
@@ -157,15 +172,45 @@ describe("list_tasks", () => {
     expect(list.data.some((t: { title: string }) => t.title === "T1")).toBe(true);
   });
 
-  it("id filter works", async () => {
-    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "ID Filter Proj" }] }));
-    const [task] = parseResult(
-      await callTool("create_task", { items: [{ project_id: proj.id, title: "Find Me" }] })
+  it("returns summary fields in list results", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Summary Fields Proj" }] }));
+    await callTool("create_task", { items: [{ project_id: proj.id, title: "Summary Task" }] });
+
+    const list = parseResult(await callTool("list_tasks", { project_id: proj.id }));
+    const task = list.data.find((t: { title: string }) => t.title === "Summary Task");
+    expect(task.id).toBeTruthy();
+    expect(task.project_id).toBe(proj.id);
+    expect(task.title).toBe("Summary Task");
+    expect(task.status).toBeTruthy();
+    expect(task.created_at).toBeTruthy();
+    expect(task.updated_at).toBeTruthy();
+  });
+});
+
+describe("get_task", () => {
+  it("returns full task entity by id", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Get Task Proj" }] }));
+    const [created] = parseResult(
+      await callTool("create_task", {
+        items: [{ project_id: proj.id, title: "Full Task", plan: "The plan", description: "Desc" }],
+      })
     );
 
-    const list = parseResult(await callTool("list_tasks", { id: task.id }));
-    expect(list.data).toHaveLength(1);
-    expect(list.data[0].id).toBe(task.id);
+    const result = await callTool("get_task", { id: created.id });
+    const task = parseResult(result);
+    expect(task.id).toBe(created.id);
+    expect(task.title).toBe("Full Task");
+    expect(task.plan).toBe("The plan");
+    expect(task.description).toBe("Desc");
+    expect(task.project_id).toBe(proj.id);
+    expect(task.created_at).toBeTruthy();
+    expect(task.updated_at).toBeTruthy();
+  });
+
+  it("returns error for nonexistent id", async () => {
+    const result = await callTool("get_task", { id: "00000000000000000000000000" });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/not found/i);
   });
 });
 
@@ -396,6 +441,59 @@ describe("batch update_job", () => {
     expect(updated[0].status).toBe("running");
     expect(updated[1].status).toBe("done");
     expect(updated[1].output).toBe("Finished");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Get tools for agents and jobs
+// ---------------------------------------------------------------------------
+
+describe("get_agent", () => {
+  it("returns full agent entity by id", async () => {
+    const [created] = parseResult(
+      await callTool("create_agent", {
+        items: [{ name: "Get Agent", description: "Agent desc", prompt: "Do things" }],
+      })
+    );
+
+    const result = await callTool("get_agent", { id: created.id });
+    const agent = parseResult(result);
+    expect(agent.id).toBe(created.id);
+    expect(agent.name).toBe("Get Agent");
+    expect(agent.description).toBe("Agent desc");
+    expect(agent.prompt).toBe("Do things");
+    expect(agent.created_at).toBeTruthy();
+    expect(agent.updated_at).toBeTruthy();
+  });
+
+  it("returns error for nonexistent id", async () => {
+    const result = await callTool("get_agent", { id: "00000000000000000000000000" });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/not found/i);
+  });
+});
+
+describe("get_job", () => {
+  it("returns full job entity by id", async () => {
+    const [agent] = parseResult(await callTool("create_agent", { items: [{ name: "Get Job Agent" }] }));
+    const [created] = parseResult(
+      await callTool("create_job", { items: [{ agent_id: agent.id, input: "job input" }] })
+    );
+
+    const result = await callTool("get_job", { id: created.id });
+    const job = parseResult(result);
+    expect(job.id).toBe(created.id);
+    expect(job.agent_id).toBe(agent.id);
+    expect(job.input).toBe("job input");
+    expect(job.status).toBeTruthy();
+    expect(job.created_at).toBeTruthy();
+    expect(job.updated_at).toBeTruthy();
+  });
+
+  it("returns error for nonexistent id", async () => {
+    const result = await callTool("get_job", { id: "00000000000000000000000000" });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/not found/i);
   });
 });
 

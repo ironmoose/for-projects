@@ -1,4 +1,4 @@
-import { type Task, toTaskSummary } from "../entities";
+import { type Task, type TaskSummary, toTaskSummary } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
 import type { ITaskService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -20,7 +20,7 @@ export class TaskService implements ITaskService {
   private static VALID_IMPACTS = ["trivial", "low", "medium", "high", "extreme"];
   private static VALID_CATEGORIES = ["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"];
 
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Paginated<Task> {
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Paginated<TaskSummary> {
     return {
       data: this.taskRepo.findMany(filter).map(toTaskSummary),
       total: this.taskRepo.count(filter),

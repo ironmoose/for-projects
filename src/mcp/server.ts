@@ -49,22 +49,29 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_projects",
     {
-      description: "List projects with optional pagination. Returns { data, total }. Pass id to retrieve a single project.",
+      description: "List projects with optional pagination. Returns { data, total } where data contains project summaries (id, title, timestamps).",
       inputSchema: {
-        id: z.string().max(26).optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, limit, offset }) => handle(() => projectService.list({ id, limit, offset }))
+    ({ limit, offset }) => handle(() => projectService.list({ limit, offset }))
+  );
+
+  server.registerTool(
+    "get_project",
+    {
+      description: "Retrieve a single project by ID with all fields.",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => projectService.get(id))
   );
 
   server.registerTool(
     "list_tasks",
     {
-      description: "List tasks, optionally filtered by project_id, group_key, status, effort, impact, and/or category. Returns { data, total }. Pass id to retrieve a single task.",
+      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, and/or category. Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, timestamps).",
       inputSchema: {
-        id: z.string().max(26).optional(),
         project_id: z.string().max(26).optional(),
         group_key: z.string().max(32).optional(),
         status: z.enum(["todo", "in_progress", "done", "archived"]).optional(),
@@ -75,7 +82,16 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, project_id, group_key, status, effort, impact, category, limit, offset }) => handle(() => taskService.list({ id, project_id, group_key, status, effort, impact, category, limit, offset }))
+    ({ project_id, group_key, status, effort, impact, category, limit, offset }) => handle(() => taskService.list({ project_id, group_key, status, effort, impact, category, limit, offset }))
+  );
+
+  server.registerTool(
+    "get_task",
+    {
+      description: "Retrieve a single task by ID with all fields.",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => taskService.get(id))
   );
 
   // -- Projects -------------------------------------------------------
@@ -167,14 +183,22 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_agents",
     {
-      description: "List registered agent blueprints. Returns { data, total }. Pass id to retrieve a single agent.",
+      description: "List registered agent blueprint summaries. Returns { data, total } where data contains agent summaries (id, name, platform_agent, timestamps).",
       inputSchema: {
-        id: z.string().max(26).optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, limit, offset }) => handle(() => agentService.list({ id, limit, offset }))
+    ({ limit, offset }) => handle(() => agentService.list({ limit, offset }))
+  );
+
+  server.registerTool(
+    "get_agent",
+    {
+      description: "Retrieve a single agent by ID with all fields.",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => agentService.get(id))
   );
 
   server.registerTool(
@@ -215,16 +239,24 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_jobs",
     {
-      description: "List jobs, optionally filtered by agent_id or status (todo, running, done, failed, cancelled). Returns { data, total }. Pass id to retrieve a single job.",
+      description: "List job summaries, optionally filtered by agent_id or status. Returns { data, total } where data contains job summaries (id, agent_id, status, started_at, ended_at, timestamps).",
       inputSchema: {
-        id: z.string().max(26).optional(),
         agent_id: z.string().max(26).optional(),
         status: z.enum(["todo", "running", "done", "failed", "cancelled"]).optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ id, agent_id, status, limit, offset }) => handle(() => jobService.list({ id, agent_id, status, limit, offset }))
+    ({ agent_id, status, limit, offset }) => handle(() => jobService.list({ agent_id, status, limit, offset }))
+  );
+
+  server.registerTool(
+    "get_job",
+    {
+      description: "Retrieve a single job by ID with all fields.",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => jobService.get(id))
   );
 
   server.registerTool(

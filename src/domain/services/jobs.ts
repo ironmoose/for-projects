@@ -1,4 +1,4 @@
-import { type Job, toJobSummary } from "../entities";
+import { type Job, type JobSummary, toJobSummary } from "../entities";
 import type { CreateJobInput, UpdateJobInput } from "../inputs";
 import type { IJobService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -17,7 +17,7 @@ export class JobService implements IJobService {
     private eventBus: EventBus,
   ) {}
 
-  list(filter?: { id?: string; agent_id?: string; status?: string; limit?: number; offset?: number }): Paginated<Job> {
+  list(filter?: { id?: string; agent_id?: string; status?: string; limit?: number; offset?: number }): Paginated<JobSummary> {
     return {
       data: this.repo.findMany(filter).map(toJobSummary),
       total: this.repo.count(filter),

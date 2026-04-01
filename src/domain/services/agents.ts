@@ -1,4 +1,4 @@
-import { type Agent, toAgentSummary } from "../entities";
+import { type Agent, type AgentSummary, toAgentSummary } from "../entities";
 import type { CreateAgentInput, UpdateAgentInput } from "../inputs";
 import type { IAgentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -13,7 +13,7 @@ export class AgentService implements IAgentService {
     private eventBus: EventBus,
   ) {}
 
-  list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<Agent> {
+  list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<AgentSummary> {
     return {
       data: this.repo.findMany(filter).map(toAgentSummary),
       total: this.repo.count(filter),

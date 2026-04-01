@@ -53,17 +53,27 @@ describe("Project Routes", () => {
     expect(body[0].title).toBe("Route Project");
   });
 
-  it("GET /projects/:id returns project", async () => {
+  it("GET /projects/:id returns full project entity", async () => {
     const create = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Get Project" }]),
+      body: JSON.stringify([{ title: "Get Project", goal: "A goal", requirements: "Reqs", design: "Design" }]),
     });
     const [project] = await create.json();
     const res = await req(`/projects/${project.id}`);
     const body = await res.json();
     expect(body.id).toBe(project.id);
     expect(body.title).toBe("Get Project");
+    expect(body.goal).toBe("A goal");
+    expect(body.requirements).toBe("Reqs");
+    expect(body.design).toBe("Design");
+    expect(body.created_at).toBeTruthy();
+    expect(body.updated_at).toBeTruthy();
+  });
+
+  it("GET /projects/:id returns 404 for nonexistent id", async () => {
+    const res = await req("/projects/00000000000000000000000000");
+    expect(res.status).toBe(404);
   });
 
   it("PATCH /projects updates fields", async () => {
@@ -84,12 +94,18 @@ describe("Project Routes", () => {
     expect(body.goal).toBe("New goal");
   });
 
-  it("GET /projects lists projects", async () => {
+  it("GET /projects lists projects with summary fields", async () => {
     const res = await req("/projects");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toBeArray();
     expect(typeof body.total).toBe("number");
+    expect(body.data.length).toBeGreaterThan(0);
+    const summary = body.data[0];
+    expect(summary.id).toBeTruthy();
+    expect(summary.title).toBeTruthy();
+    expect(summary.created_at).toBeTruthy();
+    expect(summary.updated_at).toBeTruthy();
   });
 
   it("DELETE /projects deletes projects", async () => {
@@ -135,11 +151,19 @@ describe("Task Routes", () => {
     expect(body.project_id).toBe(projectId);
   });
 
-  it("GET /tasks lists tasks by project", async () => {
+  it("GET /tasks lists tasks with summary fields", async () => {
     const res = await req(`/tasks?project_id=${projectId}`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toBeArray();
+    expect(body.data.length).toBeGreaterThan(0);
+    const summary = body.data[0];
+    expect(summary.id).toBeTruthy();
+    expect(summary.project_id).toBe(projectId);
+    expect(summary.title).toBeTruthy();
+    expect(summary.status).toBeTruthy();
+    expect(summary.created_at).toBeTruthy();
+    expect(summary.updated_at).toBeTruthy();
   });
 
   it("PATCH /tasks updates task", async () => {
@@ -196,17 +220,28 @@ describe("Task Routes", () => {
     expect(body.description).toBe("Patched desc");
   });
 
-  it("GET /tasks/:id returns task", async () => {
+  it("GET /tasks/:id returns full task entity", async () => {
     const create = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ project_id: projectId, title: "Get Task" }]),
+      body: JSON.stringify([{ project_id: projectId, title: "Get Task", description: "Full desc", plan: "Full plan" }]),
     });
     const [task] = await create.json();
     const res = await req(`/tasks/${task.id}`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe(task.id);
+    expect(body.title).toBe("Get Task");
+    expect(body.description).toBe("Full desc");
+    expect(body.plan).toBe("Full plan");
+    expect(body.project_id).toBe(projectId);
+    expect(body.created_at).toBeTruthy();
+    expect(body.updated_at).toBeTruthy();
+  });
+
+  it("GET /tasks/:id returns 404 for nonexistent id", async () => {
+    const res = await req(`/tasks/00000000000000000000000000`);
+    expect(res.status).toBe(404);
   });
 });
 
