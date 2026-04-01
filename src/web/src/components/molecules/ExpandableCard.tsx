@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { type Theme } from "../theme/theme";
 import { useTheme } from "../theme/ThemeContext";
 import { Card } from "./Card";
@@ -23,6 +23,15 @@ export function ExpandableCard({
 }: ExpandableCardProps) {
   const { theme } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
 
   return (
     <Card

@@ -18,6 +18,7 @@ import {
 } from "../components";
 import { Badge } from "../components/atoms/Badge";
 import { useProject } from "../hooks";
+import { useWindowWidth } from "../hooks/useWindowWidth";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useToastContext } from "../components/ToastContext";
@@ -188,6 +189,8 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
 
 export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const { theme } = useTheme();
+  const windowWidth = useWindowWidth();
+  const isWide = windowWidth >= theme.breakpoint.md;
   const { project, notFound, updateProject, addTask, deleteTask } = useProject(projectId);
   const { showToast } = useToastContext();
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -261,8 +264,18 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   return (
     <>
-    <DetailPageLayout>
-      <div style={{ flex: 1, minWidth: 0, padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`, boxSizing: "border-box", overflowY: "auto" }}>
+    <DetailPageLayout expanded={isWide}>
+      <div style={{
+        flex: 1,
+        minWidth: 0,
+        padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        overflowY: "auto" as const,
+        scrollbarWidth: "none" as const,
+      }}>
+        {/* Full-width header */}
         <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: theme.spacing.lg }} />
 
         <Stack direction="row" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.xl }}>
@@ -282,77 +295,96 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           </div>
         </Stack>
 
-        {/* Markdown sections: goal, requirements, design */}
-        {([
-          { key: "goal" as const, label: "Goal", defaultOpen: true },
-          { key: "requirements" as const, label: "Requirements", defaultOpen: false },
-          { key: "design" as const, label: "Design", defaultOpen: false },
-        ]).map(({ key, label, defaultOpen }) => (
-          <ExpandableCard key={key} title={label} defaultOpen={defaultOpen} style={{ marginBottom: theme.spacing.xl }}>
-            {project[key] ? (
-              <Markdown>{project[key]}</Markdown>
+        {/* Two-column area */}
+        <div style={{
+          display: "flex",
+          flexDirection: isWide ? "row" : "column",
+          gap: theme.spacing.xl,
+        }}>
+        {/* Left column — metadata */}
+        <div style={{
+          ...(isWide
+            ? { flex: 1, minWidth: 0 }
+            : {}),
+        }}>
+          {/* Markdown sections: goal, requirements, design */}
+          {([
+            { key: "goal" as const, label: "Goal", defaultOpen: true },
+            { key: "requirements" as const, label: "Requirements", defaultOpen: false },
+            { key: "design" as const, label: "Design", defaultOpen: false },
+          ]).map(({ key, label, defaultOpen }) => (
+            <ExpandableCard key={key} title={label} defaultOpen={isWide || defaultOpen} style={{ marginBottom: theme.spacing.xl }}>
+              {project[key] ? (
+                <Markdown>{project[key]}</Markdown>
+              ) : (
+                <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
+                  Not set
+                </p>
+              )}
+            </ExpandableCard>
+          ))}
+        </div>
+
+        {/* Right column — tasks */}
+        <div style={{
+          flex: 1,
+          minWidth: 0,
+        }}>
+          <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
+            <h3
+              style={{
+                margin: 0,
+                fontFamily: theme.font.headline,
+                fontSize: theme.font.size.lg,
+                fontWeight: 700,
+                color: theme.color.text,
+              }}
+            >
+              Tasks
+            </h3>
+            <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
+              {total} task{total !== 1 ? "s" : ""}
+            </span>
+          </Stack>
+
+          <AddItemInput
+            placeholder="Add a task..."
+            value={newTaskTitle}
+            onChange={setNewTaskTitle}
+            onSubmit={handleAddTask}
+            loading={addingTask}
+            style={{ marginBottom: theme.spacing.lg }}
+          />
+
+          <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} />
+
+          <div style={{ marginTop: theme.spacing.lg }}>
+            {tasksLoading ? (
+              <div style={{ textAlign: "center", padding: theme.spacing.xl, color: theme.color.textMuted }}>
+                Loading...
+              </div>
+            ) : tasks.length === 0 ? (
+              <EmptyState icon="task" message="No tasks match the current filters." />
             ) : (
-              <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
-                Not set
-              </p>
+              <TaskTable
+                tasks={tasks}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={(id) => setSelectedTaskId(id)}
+                onDeleteTask={(task) => setDeleteTaskTarget(task)}
+              />
             )}
-          </ExpandableCard>
-        ))}
+          </div>
 
-        {/* Tasks */}
-        <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
-          <h3
-            style={{
-              margin: 0,
-              fontFamily: theme.font.headline,
-              fontSize: theme.font.size.lg,
-              fontWeight: 700,
-              color: theme.color.text,
-            }}
-          >
-            Tasks
-          </h3>
-          <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
-            {total} task{total !== 1 ? "s" : ""}
-          </span>
-        </Stack>
-
-        <AddItemInput
-          placeholder="Add a task..."
-          value={newTaskTitle}
-          onChange={setNewTaskTitle}
-          onSubmit={handleAddTask}
-          loading={addingTask}
-          style={{ marginBottom: theme.spacing.lg }}
-        />
-
-        <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} />
-
-        <div style={{ marginTop: theme.spacing.lg }}>
-          {tasksLoading ? (
-            <div style={{ textAlign: "center", padding: theme.spacing.xl, color: theme.color.textMuted }}>
-              Loading...
-            </div>
-          ) : tasks.length === 0 ? (
-            <EmptyState icon="task" message="No tasks match the current filters." />
-          ) : (
-            <TaskTable
-              tasks={tasks}
-              selectedTaskId={selectedTaskId}
-              onSelectTask={(id) => setSelectedTaskId(id)}
-              onDeleteTask={(task) => setDeleteTaskTarget(task)}
+          {totalPages > 1 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={setPage}
             />
           )}
         </div>
-
-        {totalPages > 1 && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            onPageChange={setPage}
-          />
-        )}
+        </div>
       </div>
     </DetailPageLayout>
 
