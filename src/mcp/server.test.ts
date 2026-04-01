@@ -52,7 +52,7 @@ afterAll(async () => {
 
 describe("list_projects", () => {
   it("returns created projects with correct total", async () => {
-    await callTool("create_project", { items: [{ title: "List Test Project" }] });
+    await callTool("create_project", { items: [{ title: "List Test Project", goal: "G", requirements: "R", design: "D" }] });
 
     const listResult = await callTool("list_projects");
     const parsed = parseResult(listResult);
@@ -62,6 +62,10 @@ describe("list_projects", () => {
     expect(parsed.data[0].title).toBeTruthy();
     expect(parsed.data[0].created_at).toBeTruthy();
     expect(parsed.data[0].updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(parsed.data[0].goal).toBeUndefined();
+    expect(parsed.data[0].requirements).toBeUndefined();
+    expect(parsed.data[0].design).toBeUndefined();
   });
 
   it("supports pagination via limit and offset", async () => {
@@ -174,7 +178,9 @@ describe("list_tasks", () => {
 
   it("returns summary fields in list results", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Summary Fields Proj" }] }));
-    await callTool("create_task", { items: [{ project_id: proj.id, title: "Summary Task" }] });
+    await callTool("create_task", {
+      items: [{ project_id: proj.id, title: "Summary Task", plan: "P", description: "D", implementation: "I", acceptance_criteria: "AC" }],
+    });
 
     const list = parseResult(await callTool("list_tasks", { project_id: proj.id }));
     const task = list.data.find((t: { title: string }) => t.title === "Summary Task");
@@ -184,6 +190,11 @@ describe("list_tasks", () => {
     expect(task.status).toBeTruthy();
     expect(task.created_at).toBeTruthy();
     expect(task.updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(task.plan).toBeUndefined();
+    expect(task.description).toBeUndefined();
+    expect(task.implementation).toBeUndefined();
+    expect(task.acceptance_criteria).toBeUndefined();
   });
 });
 
@@ -494,6 +505,78 @@ describe("get_job", () => {
     const result = await callTool("get_job", { id: "00000000000000000000000000" });
     expect(result.isError).toBe(true);
     expect(getErrorText(result)).toMatch(/not found/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// List tools for agents and jobs
+// ---------------------------------------------------------------------------
+
+describe("list_agents", () => {
+  it("returns summary fields without description or prompt", async () => {
+    await callTool("create_agent", {
+      items: [{ name: "List Agent", description: "Secret desc", prompt: "Secret prompt", platform_agent: "Explore" }],
+    });
+
+    const list = parseResult(await callTool("list_agents"));
+    expect(list.data.length).toBeGreaterThanOrEqual(1);
+    expect(list.total).toBeGreaterThanOrEqual(1);
+    const agent = list.data.find((a: { name: string }) => a.name === "List Agent");
+    expect(agent.id).toBeTruthy();
+    expect(agent.name).toBe("List Agent");
+    expect(agent.platform_agent).toBe("Explore");
+    expect(agent.created_at).toBeTruthy();
+    expect(agent.updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(agent.description).toBeUndefined();
+    expect(agent.prompt).toBeUndefined();
+  });
+
+  it("supports pagination via limit and offset", async () => {
+    const list = parseResult(await callTool("list_agents", { limit: 1, offset: 0 }));
+    expect(list.data).toHaveLength(1);
+  });
+});
+
+describe("list_jobs", () => {
+  it("returns summary fields without input or output", async () => {
+    const [agent] = parseResult(await callTool("create_agent", { items: [{ name: "List Job Agent" }] }));
+    await callTool("create_job", { items: [{ agent_id: agent.id, input: "secret input" }] });
+
+    const list = parseResult(await callTool("list_jobs"));
+    expect(list.data.length).toBeGreaterThanOrEqual(1);
+    expect(list.total).toBeGreaterThanOrEqual(1);
+    const job = list.data.find((j: { agent_id: string }) => j.agent_id === agent.id);
+    expect(job.id).toBeTruthy();
+    expect(job.agent_id).toBe(agent.id);
+    expect(job.status).toBeTruthy();
+    expect(job.created_at).toBeTruthy();
+    expect(job.updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(job.input).toBeUndefined();
+    expect(job.output).toBeUndefined();
+  });
+
+  it("supports pagination via limit and offset", async () => {
+    const list = parseResult(await callTool("list_jobs", { limit: 1, offset: 0 }));
+    expect(list.data).toHaveLength(1);
+  });
+
+  it("filters by agent_id", async () => {
+    const [agent] = parseResult(await callTool("create_agent", { items: [{ name: "Filter Agent" }] }));
+    await callTool("create_job", { items: [{ agent_id: agent.id }] });
+
+    const list = parseResult(await callTool("list_jobs", { agent_id: agent.id }));
+    expect(list.data.every((j: { agent_id: string }) => j.agent_id === agent.id)).toBe(true);
+  });
+
+  it("filters by status", async () => {
+    const [agent] = parseResult(await callTool("create_agent", { items: [{ name: "Status Filter Agent" }] }));
+    const [job] = parseResult(await callTool("create_job", { items: [{ agent_id: agent.id }] }));
+    await callTool("update_job", { items: [{ id: job.id, status: "running" }] });
+
+    const list = parseResult(await callTool("list_jobs", { status: "running" }));
+    expect(list.data.some((j: { id: string }) => j.id === job.id)).toBe(true);
   });
 });
 

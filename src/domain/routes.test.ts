@@ -7,6 +7,8 @@ import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
 import { projectRoutes } from "../server/routes/projects";
 import { taskRoutes } from "../server/routes/tasks";
+import { agentRoutes } from "../server/routes/agents";
+import { jobRoutes } from "../server/routes/jobs";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 let ctx: AppContext;
@@ -20,6 +22,8 @@ beforeAll(async () => {
   app = new Hono();
   app.route("/projects", projectRoutes(ctx.projectService));
   app.route("/tasks", taskRoutes(ctx.taskService));
+  app.route("/agents", agentRoutes(ctx.agentService));
+  app.route("/jobs", jobRoutes(ctx.jobService));
   app.onError((err, c) => {
     if (err instanceof SyntaxError) return c.json({ error: "invalid JSON body" }, 400);
     if (err instanceof ServiceError) return c.json({ error: err.message }, err.statusCode as ContentfulStatusCode);
@@ -106,6 +110,10 @@ describe("Project Routes", () => {
     expect(summary.title).toBeTruthy();
     expect(summary.created_at).toBeTruthy();
     expect(summary.updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(summary.goal).toBeUndefined();
+    expect(summary.requirements).toBeUndefined();
+    expect(summary.design).toBeUndefined();
   });
 
   it("DELETE /projects deletes projects", async () => {
@@ -152,6 +160,12 @@ describe("Task Routes", () => {
   });
 
   it("GET /tasks lists tasks with summary fields", async () => {
+    // Ensure at least one task with full fields exists
+    await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ project_id: projectId, title: "Summary Check", plan: "P", description: "D", implementation: "I", acceptance_criteria: "AC" }]),
+    });
     const res = await req(`/tasks?project_id=${projectId}`);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -164,6 +178,11 @@ describe("Task Routes", () => {
     expect(summary.status).toBeTruthy();
     expect(summary.created_at).toBeTruthy();
     expect(summary.updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(summary.plan).toBeUndefined();
+    expect(summary.description).toBeUndefined();
+    expect(summary.implementation).toBeUndefined();
+    expect(summary.acceptance_criteria).toBeUndefined();
   });
 
   it("PATCH /tasks updates task", async () => {
@@ -242,6 +261,220 @@ describe("Task Routes", () => {
   it("GET /tasks/:id returns 404 for nonexistent id", async () => {
     const res = await req(`/tasks/00000000000000000000000000`);
     expect(res.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Agent Routes
+// ---------------------------------------------------------------------------
+
+describe("Agent Routes", () => {
+  it("POST /agents creates agent", async () => {
+    const res = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ name: "Route Agent", description: "Desc", prompt: "Do things" }]),
+    });
+    expect(res.status).toBe(201);
+    const [body] = await res.json();
+    expect(body.name).toBe("Route Agent");
+    expect(body.description).toBe("Desc");
+    expect(body.prompt).toBe("Do things");
+  });
+
+  it("GET /agents lists agents with summary fields", async () => {
+    const res = await req("/agents");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBeGreaterThan(0);
+    const summary = body.data[0];
+    expect(summary.id).toBeTruthy();
+    expect(summary.name).toBeTruthy();
+    expect(summary.created_at).toBeTruthy();
+    expect(summary.updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(summary.description).toBeUndefined();
+    expect(summary.prompt).toBeUndefined();
+  });
+
+  it("GET /agents/:id returns full agent entity", async () => {
+    const create = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ name: "Get Agent", description: "Full desc", prompt: "Full prompt", platform_agent: "Explore" }]),
+    });
+    const [agent] = await create.json();
+    const res = await req(`/agents/${agent.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.id).toBe(agent.id);
+    expect(body.name).toBe("Get Agent");
+    expect(body.description).toBe("Full desc");
+    expect(body.prompt).toBe("Full prompt");
+    expect(body.platform_agent).toBe("Explore");
+    expect(body.created_at).toBeTruthy();
+    expect(body.updated_at).toBeTruthy();
+  });
+
+  it("GET /agents/:id returns 404 for nonexistent id", async () => {
+    const res = await req("/agents/00000000000000000000000000");
+    expect(res.status).toBe(404);
+  });
+
+  it("PATCH /agents updates fields", async () => {
+    const create = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ name: "Patch Agent" }]),
+    });
+    const [agent] = await create.json();
+    const res = await req("/agents", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: agent.id, name: "Patched Agent", description: "New desc" }]),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.name).toBe("Patched Agent");
+    expect(body.description).toBe("New desc");
+  });
+
+  it("DELETE /agents deletes agents", async () => {
+    const create = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ name: "Delete Agent" }]),
+    });
+    const [agent] = await create.json();
+    const res = await req("/agents", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [agent.id] }),
+    });
+    expect(res.status).toBe(204);
+
+    const check = await req(`/agents/${agent.id}`);
+    expect(check.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Job Routes
+// ---------------------------------------------------------------------------
+
+describe("Job Routes", () => {
+  let agentId: string;
+
+  beforeAll(async () => {
+    const res = await req("/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ name: "Job Route Agent" }]),
+    });
+    const [agent] = await res.json();
+    agentId = agent.id;
+  });
+
+  it("POST /jobs creates job", async () => {
+    const res = await req("/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ agent_id: agentId, input: "some input" }]),
+    });
+    expect(res.status).toBe(201);
+    const [body] = await res.json();
+    expect(body.agent_id).toBe(agentId);
+    expect(body.input).toBe("some input");
+    expect(body.status).toBeTruthy();
+  });
+
+  it("GET /jobs lists jobs with summary fields", async () => {
+    const res = await req("/jobs");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBeGreaterThan(0);
+    const summary = body.data[0];
+    expect(summary.id).toBeTruthy();
+    expect(summary.agent_id).toBeTruthy();
+    expect(summary.status).toBeTruthy();
+    expect(summary.created_at).toBeTruthy();
+    expect(summary.updated_at).toBeTruthy();
+    // Summary must not include full-entity fields
+    expect(summary.input).toBeUndefined();
+    expect(summary.output).toBeUndefined();
+  });
+
+  it("GET /jobs?agent_id filters by agent", async () => {
+    const res = await req(`/jobs?agent_id=${agentId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.every((j: { agent_id: string }) => j.agent_id === agentId)).toBe(true);
+  });
+
+  it("GET /jobs?status filters by status", async () => {
+    const res = await req("/jobs?status=todo");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.every((j: { status: string }) => j.status === "todo")).toBe(true);
+  });
+
+  it("GET /jobs/:id returns full job entity", async () => {
+    const create = await req("/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ agent_id: agentId, input: "full input" }]),
+    });
+    const [job] = await create.json();
+    const res = await req(`/jobs/${job.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.id).toBe(job.id);
+    expect(body.agent_id).toBe(agentId);
+    expect(body.input).toBe("full input");
+    expect(body.created_at).toBeTruthy();
+    expect(body.updated_at).toBeTruthy();
+  });
+
+  it("GET /jobs/:id returns 404 for nonexistent id", async () => {
+    const res = await req("/jobs/00000000000000000000000000");
+    expect(res.status).toBe(404);
+  });
+
+  it("PATCH /jobs updates fields", async () => {
+    const create = await req("/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ agent_id: agentId }]),
+    });
+    const [job] = await create.json();
+    const res = await req("/jobs", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: job.id, status: "running" }]),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.status).toBe("running");
+  });
+
+  it("DELETE /jobs deletes jobs", async () => {
+    const create = await req("/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ agent_id: agentId }]),
+    });
+    const [job] = await create.json();
+    const res = await req("/jobs", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [job.id] }),
+    });
+    expect(res.status).toBe(204);
+
+    const check = await req(`/jobs/${job.id}`);
+    expect(check.status).toBe(404);
   });
 });
 
