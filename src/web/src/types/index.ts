@@ -29,6 +29,23 @@ export interface Task {
   updated_at: string;
 }
 
+export interface TaskSummary {
+  id: string;
+  project_id: string;
+  title: string;
+  status: string;
+  effort: string | null;
+  impact: string | null;
+  category: string | null;
+  group_key: string | null;
+  has_plan: boolean;
+  has_description: boolean;
+  has_implementation: boolean;
+  has_acceptance_criteria: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Agent {
   id: string;
   name: string;

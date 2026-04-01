@@ -2,7 +2,7 @@ import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 import { PresenceCharm } from "../molecules/PresenceCharm";
 import { useTheme } from "../theme/ThemeContext";
-import type { Task } from "../../types";
+import type { TaskSummary } from "../../types";
 
 const STATUS_LABELS: Record<string, string> = {
   todo: "todo",
@@ -25,10 +25,10 @@ function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProper
 }
 
 interface TaskTableProps {
-  tasks: Task[];
+  tasks: TaskSummary[];
   selectedTaskId: string | null;
   onSelectTask: (id: string) => void;
-  onDeleteTask: (task: Task) => void;
+  onDeleteTask: (task: TaskSummary) => void;
 }
 
 export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask }: TaskTableProps) {
@@ -98,10 +98,10 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask }:
                     {task.title}
                   </span>
                   <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-                    <PresenceCharm active={task.plan != null} label="Plan" color={theme.color.success} />
-                    <PresenceCharm active={task.description != null} label="Description" color={theme.color.info ?? theme.color.primary} />
-                    <PresenceCharm active={task.implementation != null} label="Implementation" color={theme.color.tertiary} />
-                    <PresenceCharm active={task.acceptance_criteria != null} label="Acceptance criteria" color={theme.color.warning ?? theme.color.secondary} />
+                    <PresenceCharm active={task.has_plan} label="Plan" color={theme.color.success} />
+                    <PresenceCharm active={task.has_description} label="Description" color={theme.color.info ?? theme.color.primary} />
+                    <PresenceCharm active={task.has_implementation} label="Implementation" color={theme.color.tertiary} />
+                    <PresenceCharm active={task.has_acceptance_criteria} label="Acceptance criteria" color={theme.color.warning ?? theme.color.secondary} />
                   </div>
                 </div>
               </td>

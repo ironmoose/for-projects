@@ -65,6 +65,10 @@ export interface TaskSummary {
   impact: string | null;
   category: string | null;
   group_key: string | null;
+  has_plan: boolean;
+  has_description: boolean;
+  has_implementation: boolean;
+  has_acceptance_criteria: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -94,7 +98,13 @@ export function toProjectSummary(p: Project): ProjectSummary {
 }
 
 export function toTaskSummary(t: Task): TaskSummary {
-  return { id: t.id, project_id: t.project_id, title: t.title, status: t.status, effort: t.effort, impact: t.impact, category: t.category, group_key: t.group_key, created_at: t.created_at, updated_at: t.updated_at };
+  return {
+    id: t.id, project_id: t.project_id, title: t.title, status: t.status,
+    effort: t.effort, impact: t.impact, category: t.category, group_key: t.group_key,
+    has_plan: t.plan != null, has_description: t.description != null,
+    has_implementation: t.implementation != null, has_acceptance_criteria: t.acceptance_criteria != null,
+    created_at: t.created_at, updated_at: t.updated_at,
+  };
 }
 
 export function toAgentSummary(a: Agent): AgentSummary {

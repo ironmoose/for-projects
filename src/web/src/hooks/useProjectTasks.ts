@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, fetchTasks } from "../api";
-import type { Task } from "../types";
+import type { TaskSummary } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
@@ -24,7 +24,7 @@ const STATUS_PRIORITY: Record<string, number> = {
 };
 
 export function useProjectTasks(projectId: string, filter?: TaskFilter) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);

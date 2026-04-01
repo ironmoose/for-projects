@@ -1,4 +1,4 @@
-import type { Project, Task, Agent, Job, ActivityLog } from "./types";
+import type { Project, Task, TaskSummary, Agent, Job, ActivityLog } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -96,7 +96,7 @@ export async function deleteProjects(ids: string[]): Promise<void> {
 // Tasks API
 // ---------------------------------------------------------------------------
 
-export async function fetchTasks(params?: { project_id?: string; status?: string; effort?: string; impact?: string; category?: string; group_key?: string; title?: string; limit?: number; offset?: number }): Promise<{ data: Task[]; total: number }> {
+export async function fetchTasks(params?: { project_id?: string; status?: string; effort?: string; impact?: string; category?: string; group_key?: string; title?: string; limit?: number; offset?: number }): Promise<{ data: TaskSummary[]; total: number }> {
   const res = await apiFetch(`/api/tasks${qs(params)}`);
   return res.json();
 }

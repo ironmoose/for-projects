@@ -22,7 +22,7 @@ import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchTask } from "../api";
-import type { Task } from "../types";
+import type { Task, TaskSummary } from "../types";
 import { formatDate } from "../utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -193,7 +193,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [addingTask, setAddingTask] = useState(false);
-  const [deleteTaskTarget, setDeleteTaskTarget] = useState<Task | null>(null);
+  const [deleteTaskTarget, setDeleteTaskTarget] = useState<TaskSummary | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>({ status: "in_progress,todo" });
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
