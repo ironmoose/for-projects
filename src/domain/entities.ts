@@ -1,3 +1,21 @@
+// -- Value arrays & derived union types ------------------------------------
+
+export const TASK_STATUSES = ['todo', 'in_progress', 'done', 'archived'] as const;
+export const EFFORT_LEVELS = ['trivial', 'low', 'medium', 'high', 'extreme'] as const;
+export const IMPACT_LEVELS = ['trivial', 'low', 'medium', 'high', 'extreme'] as const;
+export const TASK_CATEGORIES = ['feature', 'bugfix', 'refactor', 'test', 'perf', 'infra', 'docs', 'security', 'design', 'chore'] as const;
+export const ENTITY_TYPES = ['project', 'task'] as const;
+export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
+
+export type TaskStatus = typeof TASK_STATUSES[number];
+export type EffortLevel = typeof EFFORT_LEVELS[number];
+export type ImpactLevel = typeof IMPACT_LEVELS[number];
+export type TaskCategory = typeof TASK_CATEGORIES[number];
+export type EntityType = typeof ENTITY_TYPES[number];
+export type ActivityAction = typeof ACTIVITY_ACTIONS[number];
+
+// -- Entity interfaces ------------------------------------------------------
+
 export interface Project {
   id: string;
   title: string;
@@ -17,32 +35,10 @@ export interface Task {
   implementation: string | null;
   acceptance_criteria: string | null;
   group_key: string | null;
-  status: string;
-  effort: string | null;
-  impact: string | null;
-  category: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Agent {
-  id: string;
-  name: string;
-  description: string | null;
-  platform_agent: string | null;
-  prompt: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Job {
-  id: string;
-  agent_id: string;
-  status: string;
-  input: string | null;
-  output: string | null;
-  started_at: string | null;
-  ended_at: string | null;
+  status: TaskStatus;
+  effort: EffortLevel | null;
+  impact: ImpactLevel | null;
+  category: TaskCategory | null;
   created_at: string;
   updated_at: string;
 }
@@ -63,33 +59,15 @@ export interface TaskSummary {
   id: string;
   project_id: string;
   title: string;
-  status: string;
-  effort: string | null;
-  impact: string | null;
-  category: string | null;
+  status: TaskStatus;
+  effort: EffortLevel | null;
+  impact: ImpactLevel | null;
+  category: TaskCategory | null;
   group_key: string | null;
   has_plan: boolean;
   has_description: boolean;
   has_implementation: boolean;
   has_acceptance_criteria: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AgentSummary {
-  id: string;
-  name: string;
-  platform_agent: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface JobSummary {
-  id: string;
-  agent_id: string;
-  status: string;
-  started_at: string | null;
-  ended_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -114,21 +92,13 @@ export function toTaskSummary(t: Task): TaskSummary {
   };
 }
 
-export function toAgentSummary(a: Agent): AgentSummary {
-  return { id: a.id, name: a.name, platform_agent: a.platform_agent, created_at: a.created_at, updated_at: a.updated_at };
-}
-
-export function toJobSummary(j: Job): JobSummary {
-  return { id: j.id, agent_id: j.agent_id, status: j.status, started_at: j.started_at, ended_at: j.ended_at, created_at: j.created_at, updated_at: j.updated_at };
-}
-
 // -- Activity log --------------------------------------------------------
 
 export interface ActivityLog {
   id: string;
-  entity_type: string;
+  entity_type: EntityType;
   entity_id: string | null;
-  action: string;
+  action: ActivityAction;
   summary: string;
   created_at: string;
 }

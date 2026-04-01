@@ -59,9 +59,9 @@ export function useProject(projectId: string) {
     }
   }
 
-  async function addTask(title: string) {
+  async function addTask(input: { title: string; description?: string; plan?: string; acceptance_criteria?: string; implementation?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }) {
     if (!project) return;
-    await createTasks([{ project_id: project.id, title }]);
+    await createTasks([{ project_id: project.id, ...input }]);
   }
 
   async function deleteTask(taskId: string) {

@@ -1,89 +1,26 @@
 // ---------------------------------------------------------------------------
-// Domain types
+// Domain types — re-exported from the canonical source
 // ---------------------------------------------------------------------------
 
-export interface Project {
-  id: string;
-  title: string;
-  goal: string | null;
-  requirements: string | null;
-  design: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type {
+  Project,
+  ProjectSummary,
+  Task,
+  TaskSummary,
+  ActivityLog,
+  TaskStatus,
+  EffortLevel,
+  ImpactLevel,
+  TaskCategory,
+  EntityType,
+  ActivityAction,
+} from '@domain/entities';
 
-export interface ProjectSummary {
-  id: string;
-  title: string;
-  has_goal: boolean;
-  has_requirements: boolean;
-  has_design: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Task {
-  id: string;
-  project_id: string;
-  title: string;
-  plan: string | null;
-  description: string | null;
-  implementation: string | null;
-  acceptance_criteria: string | null;
-  group_key: string | null;
-  status: string;
-  effort: string | null;
-  impact: string | null;
-  category: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TaskSummary {
-  id: string;
-  project_id: string;
-  title: string;
-  status: string;
-  effort: string | null;
-  impact: string | null;
-  category: string | null;
-  group_key: string | null;
-  has_plan: boolean;
-  has_description: boolean;
-  has_implementation: boolean;
-  has_acceptance_criteria: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Agent {
-  id: string;
-  name: string;
-  description: string | null;
-  platform_agent: string | null;
-  prompt: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Job {
-  id: string;
-  agent_id: string;
-  status: string;
-  input: string | null;
-  output: string | null;
-  started_at: string | null;
-  ended_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ActivityLog {
-  id: string;
-  entity_type: string;
-  entity_id: string | null;
-  action: string;
-  summary: string;
-  created_at: string;
-}
-
+export {
+  TASK_STATUSES,
+  EFFORT_LEVELS,
+  IMPACT_LEVELS,
+  TASK_CATEGORIES,
+  ENTITY_TYPES,
+  ACTIVITY_ACTIONS,
+} from '@domain/entities';

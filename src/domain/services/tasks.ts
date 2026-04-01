@@ -1,4 +1,4 @@
-import { type Task, type TaskSummary, toTaskSummary } from "../entities";
+import { type Task, type TaskSummary, toTaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
 import type { ITaskService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -15,10 +15,6 @@ export class TaskService implements ITaskService {
     private eventBus: EventBus,
   ) {}
 
-  private static VALID_STATUSES = ["todo", "in_progress", "done", "archived"];
-  private static VALID_EFFORTS = ["trivial", "low", "medium", "high", "extreme"];
-  private static VALID_IMPACTS = ["trivial", "low", "medium", "high", "extreme"];
-  private static VALID_CATEGORIES = ["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"];
 
   list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Paginated<TaskSummary> {
     return {
@@ -60,17 +56,17 @@ export class TaskService implements ITaskService {
       if (input.group_key !== undefined && input.group_key.length > 32) {
         throw new ServiceError("group_key must be 32 characters or fewer", 400);
       }
-      if (input.status !== undefined && !TaskService.VALID_STATUSES.includes(input.status)) {
-        throw new ServiceError(`status must be one of: ${TaskService.VALID_STATUSES.join(", ")}`, 400);
+      if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
+        throw new ServiceError(`status must be one of: ${(TASK_STATUSES as readonly string[]).join(", ")}`, 400);
       }
-      if (input.effort !== undefined && !TaskService.VALID_EFFORTS.includes(input.effort)) {
-        throw new ServiceError(`effort must be one of: ${TaskService.VALID_EFFORTS.join(", ")}`, 400);
+      if (input.effort !== undefined && !(EFFORT_LEVELS as readonly string[]).includes(input.effort)) {
+        throw new ServiceError(`effort must be one of: ${(EFFORT_LEVELS as readonly string[]).join(", ")}`, 400);
       }
-      if (input.impact !== undefined && !TaskService.VALID_IMPACTS.includes(input.impact)) {
-        throw new ServiceError(`impact must be one of: ${TaskService.VALID_IMPACTS.join(", ")}`, 400);
+      if (input.impact !== undefined && !(IMPACT_LEVELS as readonly string[]).includes(input.impact)) {
+        throw new ServiceError(`impact must be one of: ${(IMPACT_LEVELS as readonly string[]).join(", ")}`, 400);
       }
-      if (input.category !== undefined && !TaskService.VALID_CATEGORIES.includes(input.category)) {
-        throw new ServiceError(`category must be one of: ${TaskService.VALID_CATEGORIES.join(", ")}`, 400);
+      if (input.category !== undefined && !(TASK_CATEGORIES as readonly string[]).includes(input.category)) {
+        throw new ServiceError(`category must be one of: ${(TASK_CATEGORIES as readonly string[]).join(", ")}`, 400);
       }
     }
 
@@ -124,17 +120,17 @@ export class TaskService implements ITaskService {
       if (input.group_key !== undefined && input.group_key !== null && input.group_key.length > 32) {
         throw new ServiceError("group_key must be 32 characters or fewer", 400);
       }
-      if (input.status !== undefined && !TaskService.VALID_STATUSES.includes(input.status)) {
-        throw new ServiceError(`status must be one of: ${TaskService.VALID_STATUSES.join(", ")}`, 400);
+      if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
+        throw new ServiceError(`status must be one of: ${(TASK_STATUSES as readonly string[]).join(", ")}`, 400);
       }
-      if (input.effort !== undefined && input.effort !== null && !TaskService.VALID_EFFORTS.includes(input.effort)) {
-        throw new ServiceError(`effort must be one of: ${TaskService.VALID_EFFORTS.join(", ")}`, 400);
+      if (input.effort !== undefined && input.effort !== null && !(EFFORT_LEVELS as readonly string[]).includes(input.effort)) {
+        throw new ServiceError(`effort must be one of: ${(EFFORT_LEVELS as readonly string[]).join(", ")}`, 400);
       }
-      if (input.impact !== undefined && input.impact !== null && !TaskService.VALID_IMPACTS.includes(input.impact)) {
-        throw new ServiceError(`impact must be one of: ${TaskService.VALID_IMPACTS.join(", ")}`, 400);
+      if (input.impact !== undefined && input.impact !== null && !(IMPACT_LEVELS as readonly string[]).includes(input.impact)) {
+        throw new ServiceError(`impact must be one of: ${(IMPACT_LEVELS as readonly string[]).join(", ")}`, 400);
       }
-      if (input.category !== undefined && input.category !== null && !TaskService.VALID_CATEGORIES.includes(input.category)) {
-        throw new ServiceError(`category must be one of: ${TaskService.VALID_CATEGORIES.join(", ")}`, 400);
+      if (input.category !== undefined && input.category !== null && !(TASK_CATEGORIES as readonly string[]).includes(input.category)) {
+        throw new ServiceError(`category must be one of: ${(TASK_CATEGORIES as readonly string[]).join(", ")}`, 400);
       }
       const existing = this.taskRepo.findById(input.id);
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);

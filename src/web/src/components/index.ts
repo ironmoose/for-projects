@@ -2,6 +2,7 @@
 export { Button } from "./atoms/Button";
 export { Input } from "./atoms/Input";
 export { Select } from "./atoms/Select";
+export { Textarea } from "./atoms/Textarea";
 export { Icon } from "./atoms/Icon";
 export { IconButton } from "./atoms/IconButton";
 export { Badge } from "./atoms/Badge";
@@ -41,6 +42,8 @@ export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ConfirmDialog } from "./organisms/ConfirmDialog";
 export { TaskTable } from "./organisms/TaskTable";
+export { CreateProjectOverlay } from "./organisms/CreateProjectOverlay";
+export { CreateTaskOverlay } from "./organisms/CreateTaskOverlay";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

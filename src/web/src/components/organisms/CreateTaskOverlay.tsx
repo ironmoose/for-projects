@@ -2,10 +2,24 @@ import { useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Input } from "../atoms/Input";
 import { Select } from "../atoms/Select";
+import { Textarea } from "../atoms/Textarea";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 
+interface CreateTaskFields {
+  title: string;
+  description?: string;
+  plan?: string;
+  acceptance_criteria?: string;
+  implementation?: string;
+  group_key?: string;
+  status?: string;
+  effort?: string;
+  impact?: string;
+  category?: string;
+}
+
 interface CreateTaskOverlayProps {
-  onCreated: (summary: string, context?: string, status?: string) => Promise<void>;
+  onCreated: (fields: CreateTaskFields) => Promise<void>;
   onClose: () => void;
 }
 
@@ -15,21 +29,63 @@ const STATUS_OPTIONS = [
   { value: "done", label: "done" },
 ];
 
+const EFFORT_OPTIONS = [
+  { value: "", label: "-- none --" },
+  { value: "small", label: "small" },
+  { value: "medium", label: "medium" },
+  { value: "large", label: "large" },
+];
+
+const IMPACT_OPTIONS = [
+  { value: "", label: "-- none --" },
+  { value: "low", label: "low" },
+  { value: "medium", label: "medium" },
+  { value: "high", label: "high" },
+];
+
+const CATEGORY_OPTIONS = [
+  { value: "", label: "-- none --" },
+  { value: "feature", label: "feature" },
+  { value: "bug", label: "bug" },
+  { value: "chore", label: "chore" },
+  { value: "docs", label: "docs" },
+  { value: "test", label: "test" },
+  { value: "refactor", label: "refactor" },
+];
+
 export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps) {
   const { theme } = useTheme();
-  const [summary, setSummary] = useState("");
-  const [context, setContext] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [plan, setPlan] = useState("");
+  const [acceptanceCriteria, setAcceptanceCriteria] = useState("");
+  const [implementation, setImplementation] = useState("");
+  const [groupKey, setGroupKey] = useState("");
   const [status, setStatus] = useState("todo");
+  const [effort, setEffort] = useState("");
+  const [impact, setImpact] = useState("");
+  const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    if (!summary.trim()) return;
+    if (!title.trim()) return;
     setLoading(true);
     setError(null);
 
     try {
-      await onCreated(summary.trim(), context.trim() || undefined, status);
+      await onCreated({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        plan: plan.trim() || undefined,
+        acceptance_criteria: acceptanceCriteria.trim() || undefined,
+        implementation: implementation.trim() || undefined,
+        group_key: groupKey.trim() || undefined,
+        status,
+        effort: effort || undefined,
+        impact: impact || undefined,
+        category: category || undefined,
+      });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -44,77 +100,155 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
       onSubmit={handleSubmit}
       onClose={onClose}
       loading={loading}
-      submitDisabled={!summary.trim()}
+      submitDisabled={!title.trim()}
     >
-      {/* Summary input */}
-      <Input
-        label="Summary"
-        id="task-summary"
-        value={summary}
-        onChange={(e) => setSummary(e.target.value)}
-        placeholder="Task summary..."
-      />
-
-      {/* Context textarea */}
-      <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
-        <label
-          htmlFor="task-context"
-          style={{
-            fontSize: theme.font.size.xs,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase" as const,
-            color: theme.color.textFaint,
-            fontFamily: theme.font.body,
-          }}
-        >
-          Context
-        </label>
-        <textarea
-          id="task-context"
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          placeholder="Additional context (optional)..."
-          rows={4}
-          style={{
-            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-            border: `1px solid ${theme.color.borderSubtle}`,
-            borderRadius: theme.radius.lg,
-            fontFamily: theme.font.body,
-            fontSize: theme.font.size.md,
-            outline: "none",
-            background: theme.color.surfaceContainerHigh,
-            color: theme.color.text,
-            transition: "border-color 0.15s",
-            resize: "vertical",
-          }}
+      <div style={{ maxHeight: "60vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: theme.spacing.lg, paddingRight: theme.spacing.xs }}>
+        {/* Title (required) */}
+        <Input
+          label="Title"
+          id="task-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Task title..."
         />
+
+        {/* Description */}
+        <Textarea
+          label="Description"
+          id="task-description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Task description (optional)"
+        />
+
+        {/* Plan */}
+        <Textarea
+          label="Plan"
+          id="task-plan"
+          value={plan}
+          onChange={(e) => setPlan(e.target.value)}
+          placeholder="Execution plan (optional)"
+        />
+
+        {/* Acceptance Criteria */}
+        <Textarea
+          label="Acceptance Criteria"
+          id="task-acceptance-criteria"
+          value={acceptanceCriteria}
+          onChange={(e) => setAcceptanceCriteria(e.target.value)}
+          placeholder="Acceptance criteria (optional)"
+        />
+
+        {/* Implementation */}
+        <Textarea
+          label="Implementation"
+          id="task-implementation"
+          value={implementation}
+          onChange={(e) => setImplementation(e.target.value)}
+          placeholder="Implementation notes (optional)"
+        />
+
+        {/* Group Key */}
+        <Input
+          label="Group Key"
+          id="task-group-key"
+          value={groupKey}
+          onChange={(e) => setGroupKey(e.target.value)}
+          placeholder="Group key (optional)"
+        />
+
+        {/* Row of selects */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.md }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <label
+              htmlFor="task-status"
+              style={{
+                fontSize: theme.font.size.xs,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase" as const,
+                color: theme.color.textFaint,
+                fontFamily: theme.font.body,
+              }}
+            >
+              Status
+            </label>
+            <Select
+              id="task-status"
+              options={STATUS_OPTIONS}
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <label
+              htmlFor="task-effort"
+              style={{
+                fontSize: theme.font.size.xs,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase" as const,
+                color: theme.color.textFaint,
+                fontFamily: theme.font.body,
+              }}
+            >
+              Effort
+            </label>
+            <Select
+              id="task-effort"
+              options={EFFORT_OPTIONS}
+              value={effort}
+              onChange={(e) => setEffort(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <label
+              htmlFor="task-impact"
+              style={{
+                fontSize: theme.font.size.xs,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase" as const,
+                color: theme.color.textFaint,
+                fontFamily: theme.font.body,
+              }}
+            >
+              Impact
+            </label>
+            <Select
+              id="task-impact"
+              options={IMPACT_OPTIONS}
+              value={impact}
+              onChange={(e) => setImpact(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <label
+              htmlFor="task-category"
+              style={{
+                fontSize: theme.font.size.xs,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase" as const,
+                color: theme.color.textFaint,
+                fontFamily: theme.font.body,
+              }}
+            >
+              Category
+            </label>
+            <Select
+              id="task-category"
+              options={CATEGORY_OPTIONS}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Status select */}
-      <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
-        <label
-          htmlFor="task-status"
-          style={{
-            fontSize: theme.font.size.xs,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase" as const,
-            color: theme.color.textFaint,
-            fontFamily: theme.font.body,
-          }}
-        >
-          Status
-        </label>
-        <Select
-          id="task-status"
-          options={STATUS_OPTIONS}
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        />
-      </div>
-
-      {/* Error */}
       {error && (
         <p
           style={{

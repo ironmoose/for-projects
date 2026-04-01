@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Button,
+  Icon,
   IconButton,
   Markdown,
   Stack,
@@ -8,7 +10,6 @@ import {
   BackButton,
   ExpandableCard,
   MetadataTable,
-  AddItemInput,
   EmptyState,
   ConfirmDialog,
   Pagination,
@@ -16,6 +17,7 @@ import {
   TaskTableFilters,
   Overlay,
 } from "../components";
+import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { Badge } from "../components/atoms/Badge";
 import { useProject } from "../hooks";
 import { useWindowWidth } from "../hooks/useWindowWidth";
@@ -193,9 +195,8 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const isWide = windowWidth >= theme.breakpoint.md;
   const { project, notFound, updateProject, addTask, deleteTask } = useProject(projectId);
   const { showToast } = useToastContext();
-  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [showCreateTask, setShowCreateTask] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [addingTask, setAddingTask] = useState(false);
   const [deleteTaskTarget, setDeleteTaskTarget] = useState<TaskSummary | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>({ status: "in_progress,todo" });
 
@@ -214,17 +215,8 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
 
-  async function handleAddTask() {
-    if (!newTaskTitle.trim() || !project) return;
-    setAddingTask(true);
-    try {
-      await addTask(newTaskTitle);
-      setNewTaskTitle("");
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to add task");
-    } finally {
-      setAddingTask(false);
-    }
+  async function handleAddTask(fields: { title: string; description?: string; plan?: string; acceptance_criteria?: string; implementation?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }) {
+    await addTask(fields);
   }
 
   async function handleDeleteTask() {
@@ -347,14 +339,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             </span>
           </Stack>
 
-          <AddItemInput
-            placeholder="Add a task..."
-            value={newTaskTitle}
-            onChange={setNewTaskTitle}
-            onSubmit={handleAddTask}
-            loading={addingTask}
-            style={{ marginBottom: theme.spacing.lg }}
-          />
+          <Button onClick={() => setShowCreateTask(true)} style={{ marginBottom: theme.spacing.lg }}>
+            <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+              <Icon name="add" size={16} />
+              Add Task
+            </span>
+          </Button>
 
           <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} />
 
@@ -388,6 +378,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       </div>
     </DetailPageLayout>
 
+    {showCreateTask && (
+      <CreateTaskOverlay
+        onCreated={handleAddTask}
+        onClose={() => setShowCreateTask(false)}
+      />
+    )}
     {selectedTask && (
       <TaskDetailPanel
         task={selectedTask}

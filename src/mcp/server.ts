@@ -3,17 +3,17 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import {
   ServiceError,
+  TASK_STATUSES,
+  EFFORT_LEVELS,
+  IMPACT_LEVELS,
+  TASK_CATEGORIES,
   type IProjectService,
   type ITaskService,
-  type IAgentService,
-  type IJobService,
 } from "../domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
-  agentService: IAgentService;
-  jobService: IJobService;
 }
 
 function handle<T>(fn: () => T) {
@@ -37,7 +37,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, agentService, jobService } = ctx;
+  const { projectService, taskService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -74,10 +74,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         project_id: z.string().max(26).optional(),
         group_key: z.string().max(32).optional(),
-        status: z.enum(["todo", "in_progress", "done", "archived"]).optional(),
-        effort: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
-        impact: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
-        category: z.enum(["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"]).optional(),
+        status: z.enum([...TASK_STATUSES]).optional(),
+        effort: z.enum([...EFFORT_LEVELS]).optional(),
+        impact: z.enum([...IMPACT_LEVELS]).optional(),
+        category: z.enum([...TASK_CATEGORIES]).optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
@@ -144,10 +144,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           implementation: z.string().max(10000).optional(),
           acceptance_criteria: z.string().max(10000).optional(),
           group_key: z.string().max(32).optional(),
-          status: z.enum(["todo", "in_progress", "done", "archived"]).optional(),
-          effort: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
-          impact: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
-          category: z.enum(["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"]).optional(),
+          status: z.enum([...TASK_STATUSES]).optional(),
+          effort: z.enum([...EFFORT_LEVELS]).optional(),
+          impact: z.enum([...IMPACT_LEVELS]).optional(),
+          category: z.enum([...TASK_CATEGORIES]).optional(),
         })),
       },
     },
@@ -168,128 +168,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           implementation: z.string().max(10000).optional(),
           acceptance_criteria: z.string().max(10000).optional(),
           group_key: z.string().max(32).optional(),
-          status: z.enum(["todo", "in_progress", "done", "archived"]).optional(),
-          effort: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
-          impact: z.enum(["trivial", "low", "medium", "high", "extreme"]).optional(),
-          category: z.enum(["feature", "bugfix", "refactor", "test", "perf", "infra", "docs", "security", "design", "chore"]).optional(),
+          status: z.enum([...TASK_STATUSES]).optional(),
+          effort: z.enum([...EFFORT_LEVELS]).optional(),
+          impact: z.enum([...IMPACT_LEVELS]).optional(),
+          category: z.enum([...TASK_CATEGORIES]).optional(),
         })),
       },
     },
     ({ items }) => handle(() => taskService.update(items))
-  );
-
-  // -- Agents ---------------------------------------------------------
-
-  server.registerTool(
-    "list_agents",
-    {
-      description: "List registered agent blueprint summaries. Returns { data, total } where data contains agent summaries (id, name, platform_agent, timestamps).",
-      inputSchema: {
-        limit: z.number().int().min(1).max(200).optional(),
-        offset: z.number().int().min(0).optional(),
-      },
-    },
-    ({ limit, offset }) => handle(() => agentService.list({ limit, offset }))
-  );
-
-  server.registerTool(
-    "get_agent",
-    {
-      description: "Retrieve a single agent by ID with all fields.",
-      inputSchema: { id: z.string().max(26) },
-    },
-    ({ id }) => handle(() => agentService.get(id))
-  );
-
-  server.registerTool(
-    "create_agent",
-    {
-      description: "Register agent blueprints. Pass an `items` array with required name per item. Set platform_agent to reference a Claude platform agent (e.g. 'Explore', 'Plan'), or provide a prompt for a custom agent.",
-      inputSchema: {
-        items: z.array(z.object({
-          name: z.string().max(255),
-          description: z.string().max(10000).optional(),
-          platform_agent: z.string().max(255).optional(),
-          prompt: z.string().max(50000).optional(),
-        })),
-      },
-    },
-    ({ items }) => handle(() => agentService.create(items))
-  );
-
-  server.registerTool(
-    "update_agent",
-    {
-      description: "Update agent blueprints by ID. Pass an `items` array. Only provided fields are changed.",
-      inputSchema: {
-        items: z.array(z.object({
-          id: z.string().max(26),
-          name: z.string().max(255).optional(),
-          description: z.string().max(10000).optional(),
-          platform_agent: z.string().max(255).optional(),
-          prompt: z.string().max(50000).optional(),
-        })),
-      },
-    },
-    ({ items }) => handle(() => agentService.update(items))
-  );
-
-  // -- Jobs -----------------------------------------------------------
-
-  server.registerTool(
-    "list_jobs",
-    {
-      description: "List job summaries, optionally filtered by agent_id or status. Returns { data, total } where data contains job summaries (id, agent_id, status, started_at, ended_at, timestamps).",
-      inputSchema: {
-        agent_id: z.string().max(26).optional(),
-        status: z.enum(["todo", "running", "done", "failed", "cancelled"]).optional(),
-        limit: z.number().int().min(1).max(200).optional(),
-        offset: z.number().int().min(0).optional(),
-      },
-    },
-    ({ agent_id, status, limit, offset }) => handle(() => jobService.list({ agent_id, status, limit, offset }))
-  );
-
-  server.registerTool(
-    "get_job",
-    {
-      description: "Retrieve a single job by ID with all fields.",
-      inputSchema: { id: z.string().max(26) },
-    },
-    ({ id }) => handle(() => jobService.get(id))
-  );
-
-  server.registerTool(
-    "create_job",
-    {
-      description: "Create jobs for agents. Pass an `items` array with required agent_id per item. Defaults to status 'todo'.",
-      inputSchema: {
-        items: z.array(z.object({
-          agent_id: z.string().max(26),
-          status: z.enum(["todo", "running", "done", "failed", "cancelled"]).optional(),
-          input: z.string().max(50000).optional(),
-        })),
-      },
-    },
-    ({ items }) => handle(() => jobService.create(items))
-  );
-
-  server.registerTool(
-    "update_job",
-    {
-      description: "Update jobs by ID. Pass an `items` array. Use this to transition jobs through their lifecycle: todo → running → done/failed/cancelled.",
-      inputSchema: {
-        items: z.array(z.object({
-          id: z.string().max(26),
-          status: z.enum(["todo", "running", "done", "failed", "cancelled"]).optional(),
-          input: z.string().max(50000).optional(),
-          output: z.string().max(50000).optional(),
-          started_at: z.string().optional(),
-          ended_at: z.string().optional(),
-        })),
-      },
-    },
-    ({ items }) => handle(() => jobService.update(items))
   );
 
   return server;

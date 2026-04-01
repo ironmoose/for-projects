@@ -4,15 +4,13 @@ import {
   Card,
   Icon,
   IconButton,
-  Input,
   useTheme,
   ListPageLayout,
   PageHeader,
-  CreateEntityOverlay,
   EmptyState,
-  HighlightOnChange,
   ConfirmDialog,
 } from "../components";
+import { CreateProjectOverlay } from "../components/organisms/CreateProjectOverlay";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
@@ -112,23 +110,11 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
   const { theme } = useTheme();
   const { projects, create, remove } = useProjects();
   const { showToast } = useToastContext();
-  const [title, setTitle] = useState("");
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
 
-  async function handleCreate() {
-    if (!title.trim()) return;
-    setCreating(true);
-    try {
-      await create(title);
-      setTitle("");
-      setShowCreateOverlay(false);
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to create project");
-    } finally {
-      setCreating(false);
-    }
+  async function handleCreate(fields: { title: string; goal?: string; requirements?: string; design?: string }) {
+    await create(fields);
   }
 
   const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
@@ -173,20 +159,10 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
       />
 
       {showCreateOverlay && (
-        <CreateEntityOverlay
-          title="Create Project"
-          onSubmit={handleCreate}
+        <CreateProjectOverlay
+          onCreated={handleCreate}
           onClose={() => setShowCreateOverlay(false)}
-          loading={creating}
-          submitDisabled={!title.trim()}
-        >
-          <Input
-            label="Project Title"
-            placeholder="e.g. Riverfront Pavilion"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </CreateEntityOverlay>
+        />
       )}
 
       <div

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Emulates the full agent + job data lifecycle against a running dev server.
+# Emulates the full project + task data lifecycle against a running dev server.
 #
 # Usage:
 #   bash scripts/emulate-lifecycle.sh [base-url]
@@ -33,8 +33,6 @@ api_delete() {
   curl -sf -X DELETE "$BASE$1" -H 'Content-Type: application/json' -d "$2" -o /dev/null
 }
 
-now() { date -u +"%Y-%m-%dT%H:%M:%S.000Z"; }
-
 jq_or_die() {
   if ! command -v jq &>/dev/null; then
     echo "Error: jq is required. Install it with: brew install jq" >&2
@@ -49,7 +47,7 @@ jq_or_die() {
 jq_or_die
 
 echo ""
-echo "Agent + Job Lifecycle Emulation"
+echo "Project + Task Lifecycle Emulation"
 echo "Base URL: $BASE"
 echo ""
 
@@ -61,100 +59,85 @@ if ! api_get "/api/health" >/dev/null 2>&1; then
 fi
 log "Server is up"
 
-# 2. Register agent
+# 2. Create project — POST /api/projects expects CreateProjectInput[]
 echo ""
-echo "2. Register agent"
-AGENT_JSON=$(api_post "/api/agents" '[{
-  "name": "code-explorer",
-  "description": "Searches and analyzes codebases to answer questions.",
-  "platform_agent": "Explore",
-  "prompt": "## Job Lifecycle\n\nYou have access to the Tab for Projects MCP.\n\n### Checking for work\n\nCall `list_jobs` with `status: \"todo\"` to find jobs.\n\n### Claiming a job\n\n```\nupdate_job → id: <job_id>, status: \"running\", started_at: <timestamp>\n```\n\n### Reporting results\n\n```\nupdate_job → id: <job_id>, status: \"done\", output: <summary>, ended_at: <timestamp>\n```"
+echo "2. Create project"
+PROJECT_JSON=$(api_post "/api/projects" '[{
+  "title": "Lifecycle Test Project",
+  "goal": "Created by emulate-lifecycle.sh to exercise the full API lifecycle."
 }]')
-AGENT_ID=$(echo "$AGENT_JSON" | jq -r '.[0].id')
-AGENT_NAME=$(echo "$AGENT_JSON" | jq -r '.[0].name')
-AGENT_PLATFORM=$(echo "$AGENT_JSON" | jq -r '.[0].platform_agent')
-log "Created: $AGENT_NAME (${AGENT_ID: -8})"
-log "Platform agent: $AGENT_PLATFORM"
+PROJECT_ID=$(echo "$PROJECT_JSON" | jq -r '.[0].id')
+PROJECT_TITLE=$(echo "$PROJECT_JSON" | jq -r '.[0].title')
+log "Created: $PROJECT_TITLE (${PROJECT_ID: -8})"
 
-# 3. Create jobs
+# 3. Create tasks — POST /api/tasks expects CreateTaskInput[] with project_id
 echo ""
-echo "3. Create jobs"
-JOBS_JSON=$(api_post "/api/jobs" "[
-  {\"agent_id\": \"$AGENT_ID\", \"input\": \"Find all files that import from the domain layer\"},
-  {\"agent_id\": \"$AGENT_ID\", \"input\": \"List the REST API endpoints and their HTTP methods\"},
-  {\"agent_id\": \"$AGENT_ID\", \"input\": \"Identify unused exports in src/domain/index.ts\"}
+echo "3. Create tasks"
+TASKS_JSON=$(api_post "/api/tasks" "[
+  {\"project_id\": \"$PROJECT_ID\", \"title\": \"Find all files that import from the domain layer\"},
+  {\"project_id\": \"$PROJECT_ID\", \"title\": \"List the REST API endpoints and their HTTP methods\"},
+  {\"project_id\": \"$PROJECT_ID\", \"title\": \"Identify unused exports in src/domain/index.ts\"}
 ]")
-JOB1_ID=$(echo "$JOBS_JSON" | jq -r '.[0].id')
-JOB2_ID=$(echo "$JOBS_JSON" | jq -r '.[1].id')
-JOB3_ID=$(echo "$JOBS_JSON" | jq -r '.[2].id')
 for i in 0 1 2; do
-  JID=$(echo "$JOBS_JSON" | jq -r ".[$i].id")
-  JSTATUS=$(echo "$JOBS_JSON" | jq -r ".[$i].status")
-  JINPUT=$(echo "$JOBS_JSON" | jq -r ".[$i].input" | cut -c1-50)
-  log "Job ${JID: -8}: status=$JSTATUS input=\"$JINPUT\""
+  TID=$(echo "$TASKS_JSON" | jq -r ".[$i].id")
+  TSTATUS=$(echo "$TASKS_JSON" | jq -r ".[$i].status")
+  TTITLE=$(echo "$TASKS_JSON" | jq -r ".[$i].title" | cut -c1-50)
+  log "Task ${TID: -8}: status=$TSTATUS title=\"$TTITLE\""
 done
 
-# 4. Poll for todo jobs
-echo ""
-echo "4. Agent polls for todo jobs"
-TODO_TOTAL=$(api_get "/api/jobs?agent_id=$AGENT_ID&status=todo" | jq -r '.total')
-log "Found $TODO_TOTAL todo job(s)"
+TASK1_ID=$(echo "$TASKS_JSON" | jq -r '.[0].id')
+TASK2_ID=$(echo "$TASKS_JSON" | jq -r '.[1].id')
+TASK3_ID=$(echo "$TASKS_JSON" | jq -r '.[2].id')
 
-# 5. Claim first job
+# 4. Start first task — PATCH /api/tasks expects UpdateTaskInput[]
 echo ""
-echo "5. Agent claims first job"
-STARTED=$(now)
-CLAIMED=$(api_patch "/api/jobs" "[{\"id\": \"$JOB1_ID\", \"status\": \"running\", \"started_at\": \"$STARTED\"}]")
-log "Job ${JOB1_ID: -8}: status=$(echo "$CLAIMED" | jq -r '.[0].status') started_at=$STARTED"
+echo "4. Update first task to in_progress"
+UPDATED=$(api_patch "/api/tasks" "[{\"id\": \"$TASK1_ID\", \"status\": \"in_progress\"}]")
+log "Task ${TASK1_ID: -8}: status=$(echo "$UPDATED" | jq -r '.[0].status')"
 
-# 6. Simulate work
+# 5. Simulate work
 echo ""
-echo "6. Agent does work..."
+echo "5. Doing work..."
 sleep 1
 log "(simulated 1s of work)"
 
-# 7. Complete job
+# 6. Complete first task, start second
 echo ""
-echo "7. Agent completes job"
-ENDED=$(now)
-COMPLETED=$(api_patch "/api/jobs" "[{
-  \"id\": \"$JOB1_ID\",
-  \"status\": \"done\",
-  \"output\": \"Found 12 files importing from domain layer: 4 in server/routes, 3 in services, 2 in mcp, 3 in tests.\",
-  \"ended_at\": \"$ENDED\"
-}]")
-log "Job ${JOB1_ID: -8}: status=$(echo "$COMPLETED" | jq -r '.[0].status')"
-log "Output: $(echo "$COMPLETED" | jq -r '.[0].output' | cut -c1-80)"
+echo "6. Complete first task, start second task"
+BATCH=$(api_patch "/api/tasks" "[
+  {\"id\": \"$TASK1_ID\", \"status\": \"done\"},
+  {\"id\": \"$TASK2_ID\", \"status\": \"in_progress\"}
+]")
+log "Task ${TASK1_ID: -8}: status=$(echo "$BATCH" | jq -r '.[0].status')"
+log "Task ${TASK2_ID: -8}: status=$(echo "$BATCH" | jq -r '.[1].status')"
 
-# 8. Fail second job
+# 7. List tasks — GET /api/tasks?project_id=X returns {data: [], total: N}
 echo ""
-echo "8. Agent claims and fails second job"
-STARTED2=$(now)
-api_patch "/api/jobs" "[{\"id\": \"$JOB2_ID\", \"status\": \"running\", \"started_at\": \"$STARTED2\"}]" >/dev/null
-log "Job ${JOB2_ID: -8}: status=running"
-sleep 0.5
-ENDED2=$(now)
-FAILED=$(api_patch "/api/jobs" "[{
-  \"id\": \"$JOB2_ID\",
-  \"status\": \"failed\",
-  \"output\": \"Error: could not parse route definitions — unexpected syntax in routes/agents.ts:15\",
-  \"ended_at\": \"$ENDED2\"
-}]")
-log "Job ${JOB2_ID: -8}: status=$(echo "$FAILED" | jq -r '.[0].status')"
-log "Output: $(echo "$FAILED" | jq -r '.[0].output' | cut -c1-80)"
-
-# 9. Final state
-echo ""
-echo "9. Final job states"
-FINAL=$(api_get "/api/jobs?agent_id=$AGENT_ID")
-echo "$FINAL" | jq -r '.data[] | "\(.id[-8:])  status=\(.status | ljust(9;" "))  started=\(.started_at // "--")  ended=\(.ended_at // "--")"' 2>/dev/null || \
+echo "7. Final task states"
+FINAL=$(api_get "/api/tasks?project_id=$PROJECT_ID")
 echo "$FINAL" | jq -c '.data[]' | while read -r row; do
-  JID=$(echo "$row" | jq -r '.id[-8:]')
-  JSTATUS=$(echo "$row" | jq -r '.status')
-  JSTART=$(echo "$row" | jq -r '.started_at // "--"')
-  JEND=$(echo "$row" | jq -r '.ended_at // "--"')
-  printf "  → %s: status=%-9s started=%s ended=%s\n" "$JID" "$JSTATUS" "$JSTART" "$JEND"
+  TID=$(echo "$row" | jq -r '.id' | tail -c 9)
+  TSTATUS=$(echo "$row" | jq -r '.status')
+  TTITLE=$(echo "$row" | jq -r '.title' | cut -c1-40)
+  printf "  → %s: status=%-11s \"%s\"\n" "$TID" "$TSTATUS" "$TTITLE"
 done
+
+# 8. Verify counts
+echo ""
+echo "8. Verify"
+TOTAL=$(echo "$FINAL" | jq '.total')
+DONE_COUNT=$(echo "$FINAL" | jq '[.data[] | select(.status == "done")] | length')
+IN_PROGRESS=$(echo "$FINAL" | jq '[.data[] | select(.status == "in_progress")] | length')
+TODO_COUNT=$(echo "$FINAL" | jq '[.data[] | select(.status == "todo")] | length')
+log "Total=$TOTAL  done=$DONE_COUNT  in_progress=$IN_PROGRESS  todo=$TODO_COUNT"
+
+# 9. Cleanup — delete tasks then project
+echo ""
+echo "9. Cleanup"
+api_delete "/api/tasks" "{\"ids\": [\"$TASK1_ID\", \"$TASK2_ID\", \"$TASK3_ID\"]}"
+log "Deleted 3 tasks"
+api_delete "/api/projects" "{\"ids\": [\"$PROJECT_ID\"]}"
+log "Deleted project"
 
 echo ""
 echo "Done."
