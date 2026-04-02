@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "../atoms/Input";
+import { Select } from "../atoms/Select";
+import { TAG_NAMES } from "../../types";
 
 interface DocumentSearchBarProps {
   title: string;
@@ -8,33 +10,24 @@ interface DocumentSearchBarProps {
   onTagChange: (value: string) => void;
 }
 
+const tagOptions = [
+  { value: "", label: "All tags" },
+  ...TAG_NAMES.map((t) => ({ value: t, label: t })),
+];
+
 export function DocumentSearchBar({ title, tag, onTitleChange, onTagChange }: DocumentSearchBarProps) {
   const [localTitle, setLocalTitle] = useState(title);
-  const [localTag, setLocalTag] = useState(tag);
   const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tagTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLocalTitle(title);
   }, [title]);
-
-  useEffect(() => {
-    setLocalTag(tag);
-  }, [tag]);
 
   function handleTitleInput(value: string) {
     setLocalTitle(value);
     if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
     titleTimerRef.current = setTimeout(() => {
       onTitleChange(value);
-    }, 350);
-  }
-
-  function handleTagInput(value: string) {
-    setLocalTag(value);
-    if (tagTimerRef.current) clearTimeout(tagTimerRef.current);
-    tagTimerRef.current = setTimeout(() => {
-      onTagChange(value);
     }, 350);
   }
 
@@ -48,10 +41,10 @@ export function DocumentSearchBar({ title, tag, onTitleChange, onTagChange }: Do
         />
       </div>
       <div style={{ minWidth: 120, flex: "0 1 160px" }}>
-        <Input
-          placeholder="Filter by tag..."
-          value={localTag}
-          onChange={(e) => handleTagInput(e.target.value)}
+        <Select
+          options={tagOptions}
+          value={tag}
+          onChange={(e) => onTagChange(e.target.value)}
         />
       </div>
     </div>

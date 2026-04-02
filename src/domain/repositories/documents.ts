@@ -30,7 +30,7 @@ export class DocumentRepository {
     }
     if (filter?.tag) {
       join = " JOIN entity_tags et ON et.entity_type = 'document' AND et.entity_id = d.id JOIN tags t ON t.id = et.tag_id";
-      conditions.push("t.name = ?");
+      conditions.push("t.kind = ?");
       params.push(filter.tag);
     }
 
@@ -53,7 +53,7 @@ export class DocumentRepository {
     }
     if (filter?.tag) {
       join = " JOIN entity_tags et ON et.entity_type = 'document' AND et.entity_id = d.id JOIN tags t ON t.id = et.tag_id";
-      conditions.push("t.name = ?");
+      conditions.push("t.kind = ?");
       params.push(filter.tag);
     }
 

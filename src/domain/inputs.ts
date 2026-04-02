@@ -1,16 +1,16 @@
-import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from './entities';
+import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName } from './entities';
 
 export interface CreateDocumentInput {
   title: string;
   content?: string;
-  tags?: string[];
+  tags?: TagName[];
 }
 
 export interface UpdateDocumentInput {
   id: string;
   title?: string;
   content?: string | null;
-  tags?: string[];
+  tags?: TagName[];
 }
 
 export interface CreateProjectInput {
