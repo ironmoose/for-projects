@@ -31,6 +31,22 @@ export function SynthBackground() {
         }}
       />
 
+      {/* Horizon glow — broad warm band behind the sun */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: "27%",
+          height: "20%",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(255,107,53,0.05) 30%, rgba(255,45,149,0.06) 50%, rgba(255,107,53,0.05) 70%, transparent 100%)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Atmospheric bands */}
+      <AtmosphericBands />
+
       {/* Stars */}
       <Stars />
 
@@ -65,6 +81,22 @@ export function SynthBackground() {
           />
         ))}
       </div>
+
+      {/* Sun underglow — localized radial glow */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "28%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "45vw",
+          height: "25vh",
+          borderRadius: "50%",
+          background: "radial-gradient(ellipse at 50% 30%, rgba(255,107,53,0.07) 0%, rgba(255,45,149,0.04) 40%, transparent 70%)",
+          filter: "blur(30px)",
+          pointerEvents: "none",
+        }}
+      />
 
       {/* Sun reflection glow on the ground */}
       <div
@@ -119,6 +151,19 @@ export function SynthBackground() {
         }}
       />
 
+      {/* Grid fade-in color zone — warm transition at sky-ground boundary */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "30%",
+          height: "15%",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(255,107,53,0.03) 20%, rgba(255,45,149,0.05) 45%, rgba(255,107,53,0.04) 65%, rgba(255,45,149,0.02) 85%, transparent 100%)",
+          pointerEvents: "none",
+        }}
+      />
+
       {/* Horizon line */}
       <div
         style={{
@@ -162,6 +207,47 @@ export function SynthBackground() {
         }}
       />
     </div>
+  );
+}
+
+/** Thin atmospheric bands at varying heights — subtle color wash. */
+function AtmosphericBands() {
+  return (
+    <>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "52%",
+          height: "12%",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(0,240,255,0.025) 50%, transparent 100%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "60%",
+          height: "8%",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(255,45,149,0.02) 40%, rgba(0,240,255,0.03) 60%, transparent 100%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "66%",
+          height: "10%",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(0,240,255,0.03) 50%, transparent 100%)",
+          pointerEvents: "none",
+        }}
+      />
+    </>
   );
 }
 
