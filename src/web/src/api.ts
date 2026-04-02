@@ -73,7 +73,7 @@ export async function fetchProjects(params?: { limit?: number; offset?: number }
   return res.json();
 }
 
-export async function fetchProject(id: string): Promise<Project> {
+export async function fetchProject(id: string): Promise<Project & { documents: DocumentSummary[] }> {
   const res = await apiFetch(`/api/projects/${encodeURIComponent(id)}`);
   return res.json();
 }
