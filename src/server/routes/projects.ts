@@ -19,8 +19,8 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // POST /api/projects
   app.post("/", async (c) => {
-    const body = await c.req.json<CreateProjectInput[]>();
-    const projects = service.create(body);
+    const body = await c.req.json<{ items: CreateProjectInput[] }>();
+    const projects = service.create(body.items);
     return c.json(projects, 201);
   });
 
@@ -31,8 +31,8 @@ export function projectRoutes(service: IProjectService): Hono {
 
   // PATCH /api/projects
   app.patch("/", async (c) => {
-    const body = await c.req.json<UpdateProjectInput[]>();
-    const projects = service.update(body);
+    const body = await c.req.json<{ items: UpdateProjectInput[] }>();
+    const projects = service.update(body.items);
     return c.json(projects);
   });
 

@@ -47,7 +47,7 @@ describe("Project Routes", () => {
     const res = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Route Project" }]),
+      body: JSON.stringify({ items: [{ title: "Route Project" }] }),
     });
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -59,7 +59,7 @@ describe("Project Routes", () => {
     const create = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Get Project", goal: "A goal", requirements: "Reqs", design: "Design" }]),
+      body: JSON.stringify({ items: [{ title: "Get Project", goal: "A goal", requirements: "Reqs", design: "Design" }] }),
     });
     const [project] = await create.json();
     const res = await req(`/projects/${project.id}`);
@@ -82,13 +82,13 @@ describe("Project Routes", () => {
     const create = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Patch Project" }]),
+      body: JSON.stringify({ items: [{ title: "Patch Project" }] }),
     });
     const [project] = await create.json();
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: project.id, title: "Patched", goal: "New goal" }]),
+      body: JSON.stringify({ items: [{ id: project.id, title: "Patched", goal: "New goal" }] }),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
@@ -118,7 +118,7 @@ describe("Project Routes", () => {
     const create = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Delete Me" }]),
+      body: JSON.stringify({ items: [{ title: "Delete Me" }] }),
     });
     const [project] = await create.json();
     const res = await req("/projects", {
@@ -149,7 +149,7 @@ describe("Task Routes", () => {
     const res = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ project_id: projectId, title: "Route Task" }]),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Route Task" }] }),
     });
     expect(res.status).toBe(201);
     const [body] = await res.json();
@@ -162,7 +162,7 @@ describe("Task Routes", () => {
     await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ project_id: projectId, title: "Summary Check", plan: "P", description: "D", implementation: "I", acceptance_criteria: "AC" }]),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Summary Check", plan: "P", description: "D", implementation: "I", acceptance_criteria: "AC" }] }),
     });
     const res = await req(`/tasks?project_id=${projectId}`);
     expect(res.status).toBe(200);
@@ -187,13 +187,13 @@ describe("Task Routes", () => {
     const create = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ project_id: projectId, title: "Patch task" }]),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Patch task" }] }),
     });
     const [task] = await create.json();
     const res = await req("/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: task.id, title: "Patched", plan: "New plan" }]),
+      body: JSON.stringify({ items: [{ id: task.id, title: "Patched", plan: "New plan" }] }),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
@@ -205,13 +205,13 @@ describe("Task Routes", () => {
     const res = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{
+      body: JSON.stringify({ items: [{
         project_id: projectId,
         title: "New Fields Task",
         description: "A description",
         implementation: "Some impl",
         acceptance_criteria: "It passes",
-      }]),
+      }] }),
     });
     expect(res.status).toBe(201);
     const [body] = await res.json();
@@ -224,13 +224,13 @@ describe("Task Routes", () => {
     const create = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ project_id: projectId, title: "Patch new fields" }]),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Patch new fields" }] }),
     });
     const [task] = await create.json();
     const res = await req("/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: task.id, description: "Patched desc" }]),
+      body: JSON.stringify({ items: [{ id: task.id, description: "Patched desc" }] }),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
@@ -241,7 +241,7 @@ describe("Task Routes", () => {
     const create = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ project_id: projectId, title: "Get Task", description: "Full desc", plan: "Full plan" }]),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Get Task", description: "Full desc", plan: "Full plan" }] }),
     });
     const [task] = await create.json();
     const res = await req(`/tasks/${task.id}`);
@@ -421,7 +421,7 @@ describe("Extended Project Routes", () => {
     const [project] = await (await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Attach Test Project" }]),
+      body: JSON.stringify({ items: [{ title: "Attach Test Project" }] }),
     })).json();
     const [doc] = await (await req("/documents", {
       method: "POST",
@@ -433,7 +433,7 @@ describe("Extended Project Routes", () => {
     const patchRes = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: project.id, attach_documents: [doc.id] }]),
+      body: JSON.stringify({ items: [{ id: project.id, attach_documents: [doc.id] }] }),
     });
     expect(patchRes.status).toBe(200);
 
@@ -450,7 +450,7 @@ describe("Extended Project Routes", () => {
     const [project] = await (await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Detach Test Project" }]),
+      body: JSON.stringify({ items: [{ title: "Detach Test Project" }] }),
     })).json();
     const [doc] = await (await req("/documents", {
       method: "POST",
@@ -461,14 +461,14 @@ describe("Extended Project Routes", () => {
     await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: project.id, attach_documents: [doc.id] }]),
+      body: JSON.stringify({ items: [{ id: project.id, attach_documents: [doc.id] }] }),
     });
 
     // Detach
     const detachRes = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ id: project.id, detach_documents: [doc.id] }]),
+      body: JSON.stringify({ items: [{ id: project.id, detach_documents: [doc.id] }] }),
     });
     expect(detachRes.status).toBe(200);
 
@@ -482,7 +482,7 @@ describe("Extended Project Routes", () => {
     const [project] = await (await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{ title: "Conflict Test Project" }]),
+      body: JSON.stringify({ items: [{ title: "Conflict Test Project" }] }),
     })).json();
     const [doc] = await (await req("/documents", {
       method: "POST",
@@ -493,11 +493,11 @@ describe("Extended Project Routes", () => {
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([{
+      body: JSON.stringify({ items: [{
         id: project.id,
         attach_documents: [doc.id],
         detach_documents: [doc.id],
-      }]),
+      }] }),
     });
     expect(res.status).toBe(400);
   });
