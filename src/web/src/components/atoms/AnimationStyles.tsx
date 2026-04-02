@@ -77,8 +77,8 @@ export function AnimationStyles() {
       }
 
       @keyframes synth-grid-scroll {
-        from { transform: perspective(350px) rotateX(50deg) translateY(0); }
-        to   { transform: perspective(350px) rotateX(50deg) translateY(48px); }
+        from { transform: perspective(500px) rotateX(55deg) translateY(0); }
+        to   { transform: perspective(500px) rotateX(55deg) translateY(56px); }
       }
 
       @keyframes synth-horizon-pulse {
