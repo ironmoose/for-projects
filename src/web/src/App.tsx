@@ -17,9 +17,11 @@ import { ProjectPage } from "./pages/ProjectPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { ThemesPage } from "./pages/ThemesPage";
 import { ActivityLogPage } from "./pages/ActivityLogPage";
+import { DocumentsPage } from "./pages/DocumentsPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
+  { label: "Documents", path: "/documents" },
   { label: "Activity", path: "/activity" },
   { label: "Gallery", path: "/gallery" },
   { label: "Themes", path: "/themes" },
@@ -38,10 +40,15 @@ export function App() {
   const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
   const projectId = projectIdMatch?.[1] ?? null;
 
+  const documentIdMatch = path.match(/^\/documents\/([^/]+)$/);
+  const documentId = documentIdMatch?.[1] ?? null;
+
   const galleryComponentMatch = path.match(/^\/gallery\/([^/]+)$/);
   const galleryComponent = galleryComponentMatch?.[1] ?? undefined;
 
-  const activePath = path.startsWith("/gallery")
+  const activePath = path.startsWith("/documents")
+    ? "/documents"
+    : path.startsWith("/gallery")
     ? "/gallery"
     : path.startsWith("/activity")
     ? "/activity"
@@ -64,6 +71,15 @@ export function App() {
   }, [navigate]);
 
   function renderView() {
+    if (path.startsWith("/documents")) {
+      return (
+        <DocumentsPage
+          selectedDocumentId={documentId}
+          onOpenDocument={(dId) => navigate(`/documents/${dId}`)}
+          onBack={() => navigate("/documents")}
+        />
+      );
+    }
     if (path.startsWith("/gallery")) {
       return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;
     }

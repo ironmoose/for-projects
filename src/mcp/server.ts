@@ -9,11 +9,13 @@ import {
   TASK_CATEGORIES,
   type IProjectService,
   type ITaskService,
+  type IDocumentService,
 } from "../domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
+  documentService: IDocumentService;
 }
 
 function handle<T>(fn: () => T) {
@@ -37,7 +39,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService } = ctx;
+  const { projectService, taskService, documentService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -115,7 +117,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_project",
     {
-      description: "Update projects by ID. Pass an `items` array. Only provided fields are changed.",
+      description: "Update projects by ID. Pass an `items` array. Only provided fields are changed. Use attach_documents / detach_documents to link or unlink documents.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
@@ -123,6 +125,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           goal: z.string().max(10000).optional(),
           requirements: z.string().max(10000).optional(),
           design: z.string().max(10000).optional(),
+          attach_documents: z.array(z.string().max(26)).optional(),
+          detach_documents: z.array(z.string().max(26)).optional(),
         })),
       },
     },
@@ -176,6 +180,63 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ items }) => handle(() => taskService.update(items))
+  );
+
+  // -- Documents -------------------------------------------------------
+
+  server.registerTool(
+    "list_documents",
+    {
+      description: "List document summaries and tags, optionally filtered by tag, title, project_id. Returns { data, total } where data contains document summaries (id, title, has_content, tags, timestamps).",
+      inputSchema: {
+        tag: z.string().max(50).optional(),
+        title: z.string().max(255).optional(),
+        project_id: z.string().max(26).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ tag, title, project_id, limit, offset }) => handle(() => documentService.list({ tag, title, limit, offset }))
+  );
+
+  server.registerTool(
+    "get_document",
+    {
+      description: "Retrieve a single document by ID with full markdown content and tags.",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => documentService.get(id))
+  );
+
+  server.registerTool(
+    "create_document",
+    {
+      description: "Create documents. Pass an `items` array of objects, each with a required title, optional content (markdown), and optional tags array.",
+      inputSchema: {
+        items: z.array(z.object({
+          title: z.string().max(255),
+          content: z.string().max(100000).optional(),
+          tags: z.array(z.string().max(50)).max(20).optional(),
+        })),
+      },
+    },
+    ({ items }) => handle(() => documentService.create(items))
+  );
+
+  server.registerTool(
+    "update_document",
+    {
+      description: "Update documents by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags.",
+      inputSchema: {
+        items: z.array(z.object({
+          id: z.string().max(26),
+          title: z.string().max(255).optional(),
+          content: z.string().max(100000).optional(),
+          tags: z.array(z.string().max(50)).max(20).optional(),
+        })),
+      },
+    },
+    ({ items }) => handle(() => documentService.update(items))
   );
 
   return server;

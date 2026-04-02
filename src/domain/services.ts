@@ -1,9 +1,11 @@
-import type { Project, ProjectSummary, Task, TaskSummary } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateTaskInput,
   UpdateTaskInput,
+  CreateDocumentInput,
+  UpdateDocumentInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -24,5 +26,13 @@ export interface ITaskService {
   get(id: string): Task;
   create(inputs: CreateTaskInput[]): Task[];
   update(inputs: UpdateTaskInput[]): Task[];
+  remove(ids: string[]): void;
+}
+
+export interface IDocumentService {
+  list(filter?: { title?: string; tag?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
+  get(id: string): Document & { tags: string[] };
+  create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[];
+  update(inputs: UpdateDocumentInput[]): (Document & { tags: string[] })[];
   remove(ids: string[]): void;
 }

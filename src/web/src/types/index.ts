@@ -7,6 +7,8 @@ export type {
   ProjectSummary,
   Task,
   TaskSummary,
+  Document,
+  DocumentSummary,
   ActivityLog,
   TaskStatus,
   EffortLevel,

@@ -25,13 +25,19 @@ Route handler → Service → Repository → SQLite
 ```
 
 Single process, single port (default 3000):
-- `/api/*` — REST API (projects, tasks, activity-log, health)
-- `/mcp` — MCP endpoint (8 tools: CRUD for projects and tasks)
+- `/api/*` — REST API (projects, tasks, documents, activity-log, health)
+- `/mcp` — MCP endpoint (12 tools: CRUD for projects, tasks, and documents)
 - `/*` — static web assets + SPA fallback
 
 ### Data model
 
-Three tables: `projects`, `tasks`, `activity_log`. Agents and jobs were removed (April 2026) — migration 008 drops those tables. Old migration files (003, 004) are kept because the migrator tracks applied filenames in `schema_migrations`.
+Core tables: `projects`, `tasks`, `activity_log`. Agents and jobs were removed (April 2026) — migration 008 drops those tables. Old migration files (003, 004) are kept because the migrator tracks applied filenames in `schema_migrations`.
+
+Knowledge base tables (migration 009):
+- `documents` — id, title, content, created_at, updated_at (top-level entity, no project FK)
+- `tags` — id, name (unique index), created_at
+- `entity_tags` — entity_type, entity_id, tag_id (polymorphic join; composite PK; no FK on entity_id)
+- `project_documents` — project_id, document_id (many-to-many join; FK cascade both sides)
 
 ### REST API
 
@@ -42,6 +48,24 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 - `POST /api/tasks` — `{items: [{project_id, title, status?, effort?, impact?, category?, group_key?}]}`
 - `PATCH /api/tasks` — `{items: [{id, project_id, status?, ...}]}`
 - `GET /api/tasks` — supports filters: `project_id`, `status`, `effort`, `impact`, `category`, `group_key`
+- `POST /api/documents` — `{items: [{title, content?, tags?}]}` batch create with tags
+- `PATCH /api/documents` — `{items: [{id, title?, content?, tags?}]}` batch update; tags array replaces all existing tags
+- `GET /api/documents` — list with pagination, `?tag`, `?title` filters
+- `GET /api/documents/:id` — full content with tags
+- `DELETE /api/documents` — `{ids: [...]}` batch delete
+- `PATCH /api/projects` extended with `attach_documents` / `detach_documents` arrays
+
+### MCP tools
+
+12 tools total. Document tools (4 new): `list_documents`, `get_document`, `create_document`, `update_document`. `update_project` extended with `attach_documents` / `detach_documents`. No `delete_document` tool — delete is REST-only, consistent with projects/tasks.
+
+### Tagging system
+
+Polymorphic via `entity_tags` (entity_type + entity_id + tag_id). Tags resolved via findOrCreate (idempotent, INSERT OR IGNORE). `setTagsForEntity` does full replacement (delete + reinsert). Tag names normalized to lowercase by service layer. `entity_tags` rows explicitly cleaned up on entity delete (no FK cascade on polymorphic entity_id).
+
+### Frontend
+
+Documents page at `/documents` with list/detail modes. Tag filtering, title search, markdown rendering. WebSocket-driven refetch on document entity events.
 
 ## Testing
 

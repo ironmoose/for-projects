@@ -7,6 +7,7 @@ import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
 import { projectRoutes } from "../server/routes/projects";
 import { taskRoutes } from "../server/routes/tasks";
+import { documentRoutes } from "../server/routes/documents";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 let ctx: AppContext;
@@ -20,6 +21,7 @@ beforeAll(async () => {
   app = new Hono();
   app.route("/projects", projectRoutes(ctx.projectService));
   app.route("/tasks", taskRoutes(ctx.taskService));
+  app.route("/documents", documentRoutes(ctx.documentService));
   app.onError((err, c) => {
     if (err instanceof SyntaxError) return c.json({ error: "invalid JSON body" }, 400);
     if (err instanceof ServiceError) return c.json({ error: err.message }, err.statusCode as ContentfulStatusCode);
@@ -260,4 +262,243 @@ describe("Task Routes", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Document Routes
+// ---------------------------------------------------------------------------
 
+describe("Document Routes", () => {
+  it("POST /documents batch creates with tags", async () => {
+    const res = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Doc One", content: "Body one", tags: ["alpha", "beta"] }],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toBeArray();
+    expect(body[0].title).toBe("Doc One");
+    expect(body[0].content).toBe("Body one");
+    expect(body[0].tags.sort()).toEqual(["alpha", "beta"]);
+  });
+
+  it("PATCH /documents batch updates with tag replacement", async () => {
+    const create = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Patch Doc", content: "Original", tags: ["old"] }],
+      }),
+    });
+    const [doc] = await create.json();
+
+    const res = await req("/documents", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ id: doc.id, title: "Patched Doc", tags: ["new1", "new2"] }],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.title).toBe("Patched Doc");
+    expect(body.tags.sort()).toEqual(["new1", "new2"]);
+  });
+
+  it("GET /documents paginates via limit/offset", async () => {
+    // Create a few documents to ensure pagination is meaningful
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          { title: "Page Doc A" },
+          { title: "Page Doc B" },
+          { title: "Page Doc C" },
+        ],
+      }),
+    });
+
+    const res = await req("/documents?limit=2&offset=0");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBeLessThanOrEqual(2);
+    expect(typeof body.total).toBe("number");
+    expect(body.total).toBeGreaterThanOrEqual(3);
+  });
+
+  it("GET /documents filters by tag", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Tagged Doc", tags: ["unique-tag-filter"] }],
+      }),
+    });
+
+    const res = await req("/documents?tag=unique-tag-filter");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data.every((d: any) => d.tags.includes("unique-tag-filter"))).toBe(true);
+  });
+
+  it("GET /documents filters by title", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "UniqueTitleSearch123" }],
+      }),
+    });
+
+    const res = await req("/documents?title=UniqueTitleSearch123");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data[0].title).toContain("UniqueTitleSearch123");
+  });
+
+  it("GET /documents/:id returns full content and tags", async () => {
+    const create = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Full Doc", content: "Full content here", tags: ["ftag"] }],
+      }),
+    });
+    const [doc] = await create.json();
+
+    const res = await req(`/documents/${doc.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.id).toBe(doc.id);
+    expect(body.title).toBe("Full Doc");
+    expect(body.content).toBe("Full content here");
+    expect(body.tags).toEqual(["ftag"]);
+    expect(body.created_at).toBeTruthy();
+    expect(body.updated_at).toBeTruthy();
+  });
+
+  it("GET /documents/:id returns 404 for nonexistent id", async () => {
+    const res = await req("/documents/00000000000000000000000000");
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE /documents batch deletes", async () => {
+    const create = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Delete Me Doc" }],
+      }),
+    });
+    const [doc] = await create.json();
+
+    const res = await req("/documents", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [doc.id] }),
+    });
+    expect(res.status).toBe(204);
+
+    const check = await req(`/documents/${doc.id}`);
+    expect(check.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Extended Project Routes
+// ---------------------------------------------------------------------------
+
+describe("Extended Project Routes", () => {
+  it("PATCH /projects with attach_documents includes documents in GET", async () => {
+    // Create a project and a document
+    const [project] = await (await req("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ title: "Attach Test Project" }]),
+    })).json();
+    const [doc] = await (await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Attach Test Doc" }] }),
+    })).json();
+
+    // Attach document to project
+    const patchRes = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: project.id, attach_documents: [doc.id] }]),
+    });
+    expect(patchRes.status).toBe(200);
+
+    // Verify GET includes the document
+    const getRes = await req(`/projects/${project.id}`);
+    const body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(1);
+    expect(body.documents[0].id).toBe(doc.id);
+  });
+
+  it("PATCH /projects with detach_documents removes document", async () => {
+    // Create project + document, attach first
+    const [project] = await (await req("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ title: "Detach Test Project" }]),
+    })).json();
+    const [doc] = await (await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Detach Test Doc" }] }),
+    })).json();
+
+    await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: project.id, attach_documents: [doc.id] }]),
+    });
+
+    // Detach
+    const detachRes = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: project.id, detach_documents: [doc.id] }]),
+    });
+    expect(detachRes.status).toBe(200);
+
+    const getRes = await req(`/projects/${project.id}`);
+    const body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(0);
+  });
+
+  it("PATCH /projects with conflicting attach/detach returns 400", async () => {
+    const [project] = await (await req("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ title: "Conflict Test Project" }]),
+    })).json();
+    const [doc] = await (await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Conflict Test Doc" }] }),
+    })).json();
+
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{
+        id: project.id,
+        attach_documents: [doc.id],
+        detach_documents: [doc.id],
+      }]),
+    });
+    expect(res.status).toBe(400);
+  });
+});

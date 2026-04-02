@@ -5,6 +5,8 @@ export type { SubscribeEvents, EventSubscriptionContextValue } from "./useEventS
 export { useProjects } from "./useProjects";
 export { useProject } from "./useProject";
 export { useActivityLog } from "./useActivityLog";
+export { useDocuments } from "./useDocuments";
+export { useDocument } from "./useDocument";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";

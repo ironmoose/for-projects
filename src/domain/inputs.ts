@@ -1,5 +1,18 @@
 import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from './entities';
 
+export interface CreateDocumentInput {
+  title: string;
+  content?: string;
+  tags?: string[];
+}
+
+export interface UpdateDocumentInput {
+  id: string;
+  title?: string;
+  content?: string | null;
+  tags?: string[];
+}
+
 export interface CreateProjectInput {
   title: string;
   goal?: string;
@@ -13,6 +26,8 @@ export interface UpdateProjectInput {
   goal?: string | null;
   requirements?: string | null;
   design?: string | null;
+  attach_documents?: string[];
+  detach_documents?: string[];
 }
 
 export interface CreateTaskInput {

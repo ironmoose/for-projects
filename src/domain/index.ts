@@ -11,3 +11,6 @@ export { TaskRepository } from "./repositories/tasks";
 export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
 export { ActivityLogRepository } from "./repositories/activity-log";
+export { DocumentRepository } from "./repositories/documents";
+export { TagRepository } from "./repositories/tags";
+export { ProjectDocumentRepository } from "./repositories/project-documents";

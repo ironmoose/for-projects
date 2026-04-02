@@ -4,7 +4,7 @@ export const TASK_STATUSES = ['todo', 'in_progress', 'done', 'archived'] as cons
 export const EFFORT_LEVELS = ['trivial', 'low', 'medium', 'high', 'extreme'] as const;
 export const IMPACT_LEVELS = ['trivial', 'low', 'medium', 'high', 'extreme'] as const;
 export const TASK_CATEGORIES = ['feature', 'bugfix', 'refactor', 'test', 'perf', 'infra', 'docs', 'security', 'design', 'chore'] as const;
-export const ENTITY_TYPES = ['project', 'task'] as const;
+export const ENTITY_TYPES = ['project', 'task', 'document'] as const;
 export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
 
 export type TaskStatus = typeof TASK_STATUSES[number];
@@ -90,6 +90,38 @@ export function toTaskSummary(t: Task): TaskSummary {
     has_implementation: t.implementation != null, has_acceptance_criteria: t.acceptance_criteria != null,
     created_at: t.created_at, updated_at: t.updated_at,
   };
+}
+
+export interface Document {
+  id: string;
+  title: string;
+  content: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentSummary {
+  id: string;
+  title: string;
+  has_content: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export function toDocumentSummary(doc: Document, tags: string[] = []): DocumentSummary {
+  return {
+    id: doc.id, title: doc.title,
+    has_content: doc.content != null,
+    tags,
+    created_at: doc.created_at, updated_at: doc.updated_at,
+  };
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 // -- Activity log --------------------------------------------------------

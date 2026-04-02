@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, ActivityLog } from "./types";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, ActivityLog } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -118,6 +118,34 @@ export async function updateTasks(inputs: Array<{ id: string; title?: string; pl
 
 export async function deleteTasks(ids: string[]): Promise<void> {
   await apiFetch("/api/tasks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+}
+
+// ---------------------------------------------------------------------------
+// Documents API
+// ---------------------------------------------------------------------------
+
+export async function fetchDocuments(params?: { tag?: string; title?: string; limit?: number; offset?: number }): Promise<{ data: DocumentSummary[]; total: number }> {
+  const res = await apiFetch(`/api/documents${qs(params)}`);
+  return res.json();
+}
+
+export async function fetchDocument(id: string): Promise<Document & { tags: string[] }> {
+  const res = await apiFetch(`/api/documents/${encodeURIComponent(id)}`);
+  return res.json();
+}
+
+export async function createDocuments(inputs: Array<{ title: string; content?: string; tags?: string[] }>): Promise<(Document & { tags: string[] })[]> {
+  const res = await apiFetch("/api/documents", jsonPost({ items: inputs }));
+  return res.json();
+}
+
+export async function updateDocuments(inputs: Array<{ id: string; title?: string; content?: string | null; tags?: string[] }>): Promise<(Document & { tags: string[] })[]> {
+  const res = await apiFetch("/api/documents", jsonPatch({ items: inputs }));
+  return res.json();
+}
+
+export async function deleteDocuments(ids: string[]): Promise<void> {
+  await apiFetch("/api/documents", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
 // ---------------------------------------------------------------------------

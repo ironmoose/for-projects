@@ -381,6 +381,194 @@ describe("batch update_task", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Documents
+// ---------------------------------------------------------------------------
+
+describe("create_document", () => {
+  it("creates document with title and content via items array", async () => {
+    const result = await callTool("create_document", {
+      items: [{ title: "My Doc", content: "# Hello\nWorld" }],
+    });
+    const [doc] = parseResult(result);
+
+    expect(doc.id).toBeTruthy();
+    expect(doc.title).toBe("My Doc");
+    expect(doc.content).toBe("# Hello\nWorld");
+    expect(doc.created_at).toBeTruthy();
+    expect(doc.updated_at).toBeTruthy();
+  });
+
+  it("creates document with tags, verify tags in response", async () => {
+    const result = await callTool("create_document", {
+      items: [{ title: "Tagged Doc", content: "body", tags: ["alpha", "beta"] }],
+    });
+    const [doc] = parseResult(result);
+
+    expect(doc.tags).toEqual(["alpha", "beta"]);
+  });
+
+  it("creates multiple documents in one batch call", async () => {
+    const result = await callTool("create_document", {
+      items: [
+        { title: "Batch Doc 1" },
+        { title: "Batch Doc 2", content: "content2", tags: ["x"] },
+      ],
+    });
+    const docs = parseResult(result);
+    expect(docs).toHaveLength(2);
+    expect(docs[0].title).toBe("Batch Doc 1");
+    expect(docs[1].title).toBe("Batch Doc 2");
+    expect(docs[1].tags).toEqual(["x"]);
+  });
+});
+
+describe("get_document", () => {
+  it("returns full document by id (title, content, tags, timestamps)", async () => {
+    const [created] = parseResult(
+      await callTool("create_document", {
+        items: [{ title: "Get Me Doc", content: "Full content", tags: ["info"] }],
+      })
+    );
+
+    const result = await callTool("get_document", { id: created.id });
+    const doc = parseResult(result);
+    expect(doc.id).toBe(created.id);
+    expect(doc.title).toBe("Get Me Doc");
+    expect(doc.content).toBe("Full content");
+    expect(doc.tags).toEqual(["info"]);
+    expect(doc.created_at).toBeTruthy();
+    expect(doc.updated_at).toBeTruthy();
+  });
+
+  it("returns error for nonexistent id", async () => {
+    const result = await callTool("get_document", { id: "00000000000000000000000000" });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/not found/i);
+  });
+});
+
+describe("list_documents", () => {
+  it("returns documents with correct total, verify { data, total }", async () => {
+    await callTool("create_document", { items: [{ title: "List Doc" }] });
+
+    const listResult = await callTool("list_documents");
+    const parsed = parseResult(listResult);
+    expect(parsed.data.length).toBeGreaterThanOrEqual(1);
+    expect(parsed.total).toBeGreaterThanOrEqual(1);
+    expect(parsed.data[0].id).toBeTruthy();
+    expect(parsed.data[0].title).toBeTruthy();
+    expect(parsed.data[0].created_at).toBeTruthy();
+    expect(parsed.data[0].updated_at).toBeTruthy();
+  });
+
+  it("supports pagination via limit and offset", async () => {
+    const listResult = await callTool("list_documents", { limit: 1, offset: 0 });
+    const parsed = parseResult(listResult);
+    expect(parsed.data).toHaveLength(1);
+  });
+
+  it("supports tag filter", async () => {
+    await callTool("create_document", { items: [{ title: "Tag Filter A", tags: ["unique-tag-filter"] }] });
+    await callTool("create_document", { items: [{ title: "Tag Filter B", tags: ["other-tag"] }] });
+
+    const listResult = await callTool("list_documents", { tag: "unique-tag-filter" });
+    const parsed = parseResult(listResult);
+    expect(parsed.data.length).toBeGreaterThanOrEqual(1);
+    expect(parsed.data.every((d: { title: string }) => d.title !== "Tag Filter B")).toBe(true);
+    expect(parsed.data.some((d: { title: string }) => d.title === "Tag Filter A")).toBe(true);
+  });
+
+  it("returns summary fields (no full content in list)", async () => {
+    await callTool("create_document", { items: [{ title: "Summary Check Doc", content: "Secret content" }] });
+
+    const listResult = await callTool("list_documents");
+    const parsed = parseResult(listResult);
+    const doc = parsed.data.find((d: { title: string }) => d.title === "Summary Check Doc");
+    expect(doc).toBeTruthy();
+    expect(doc.content).toBeUndefined();
+    expect(doc.has_content).toBeTruthy();
+  });
+});
+
+describe("update_document", () => {
+  it("updates title and content", async () => {
+    const [created] = parseResult(
+      await callTool("create_document", { items: [{ title: "Old Title", content: "Old content" }] })
+    );
+
+    const [updated] = parseResult(
+      await callTool("update_document", {
+        items: [{ id: created.id, title: "New Title", content: "New content" }],
+      })
+    );
+
+    expect(updated.title).toBe("New Title");
+    expect(updated.content).toBe("New content");
+  });
+
+  it("replaces tags", async () => {
+    const [created] = parseResult(
+      await callTool("create_document", { items: [{ title: "Tag Replace", tags: ["a", "b"] }] })
+    );
+
+    await callTool("update_document", {
+      items: [{ id: created.id, tags: ["c"] }],
+    });
+
+    const doc = parseResult(await callTool("get_document", { id: created.id }));
+    expect(doc.tags).toEqual(["c"]);
+  });
+
+  it("rejects unknown id", async () => {
+    const result = await callTool("update_document", {
+      items: [{ id: "00000000000000000000000000", title: "Nope" }],
+    });
+    expect(result.isError).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Extended update_project (document attach/detach)
+// ---------------------------------------------------------------------------
+
+describe("update_project with document attach/detach", () => {
+  it("attach_documents links documents, verify via get_project", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Attach Proj" }] }));
+    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Attachable Doc" }] }));
+
+    await callTool("update_project", {
+      items: [{ id: proj.id, attach_documents: [doc.id] }],
+    });
+
+    const project = parseResult(await callTool("get_project", { id: proj.id }));
+    expect(project.documents).toBeTruthy();
+    expect(project.documents.length).toBeGreaterThanOrEqual(1);
+    expect(project.documents.some((d: { id: string }) => d.id === doc.id)).toBe(true);
+  });
+
+  it("detach_documents removes documents, verify via get_project", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Detach Proj" }] }));
+    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Detachable Doc" }] }));
+
+    await callTool("update_project", {
+      items: [{ id: proj.id, attach_documents: [doc.id] }],
+    });
+
+    // Verify attached
+    let project = parseResult(await callTool("get_project", { id: proj.id }));
+    expect(project.documents.some((d: { id: string }) => d.id === doc.id)).toBe(true);
+
+    // Detach
+    await callTool("update_project", {
+      items: [{ id: proj.id, detach_documents: [doc.id] }],
+    });
+
+    project = parseResult(await callTool("get_project", { id: proj.id }));
+    expect(project.documents.every((d: { id: string }) => d.id !== doc.id)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Deleted tools -- negative tests
 // ---------------------------------------------------------------------------
 
@@ -399,6 +587,12 @@ describe("deleted tools are not registered", () => {
 
   it("query is not found", async () => {
     const result = await callTool("query", { sql: "SELECT 1" });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
+  });
+
+  it("delete_document is not found", async () => {
+    const result = await callTool("delete_document", { id: "fake" });
     expect(result.isError).toBe(true);
     expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
   });
