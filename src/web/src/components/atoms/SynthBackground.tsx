@@ -27,7 +27,7 @@ export function SynthBackground() {
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(to bottom, #05020e 0%, #0c0625 40%, #1a0a3a 65%, #0a0a1a 100%)",
+          background: "linear-gradient(to bottom, #05020e 0%, #0c0625 35%, #1a0a3a 55%, #150828 70%, #0d0618 85%, #080312 100%)",
         }}
       />
 
@@ -60,7 +60,7 @@ export function SynthBackground() {
               right: 0,
               bottom: `${12 + i * 12}%`,
               height: gap,
-              background: "#0a0a1a",
+              background: "#080312",
             }}
           />
         ))}
@@ -74,9 +74,9 @@ export function SynthBackground() {
           left: "50%",
           transform: "translateX(-50%)",
           width: "180%",
-          height: "55%",
+          height: "65%",
           background: `
-            radial-gradient(ellipse at 50% 0%, rgba(255,45,149,0.35) 0%, rgba(255,107,53,0.15) 30%, rgba(0,240,255,0.08) 55%, transparent 70%)
+            radial-gradient(ellipse at 50% 0%, rgba(255,45,149,0.35) 0%, rgba(255,107,53,0.15) 30%, rgba(0,240,255,0.08) 55%, transparent 80%)
           `,
           animation: "synth-horizon-pulse 6s ease-in-out infinite",
         }}
@@ -114,8 +114,8 @@ export function SynthBackground() {
           `,
           backgroundSize: "48px 48px",
           animation: "synth-grid-scroll 2.5s linear infinite",
-          maskImage: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 82%)",
-          WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 82%)",
+          maskImage: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.15) 65%, transparent 78%)",
+          WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.15) 65%, transparent 78%)",
         }}
       />
 
@@ -126,9 +126,11 @@ export function SynthBackground() {
           bottom: "37%",
           left: 0,
           right: 0,
-          height: "2px",
-          background: "linear-gradient(to right, transparent 5%, rgba(0,240,255,0.40) 25%, rgba(255,45,149,0.50) 50%, rgba(0,240,255,0.40) 75%, transparent 95%)",
-          boxShadow: "0 0 24px 6px rgba(255,45,149,0.18), 0 0 80px 15px rgba(0,240,255,0.10)",
+          height: "6px",
+          background: "linear-gradient(to right, transparent 5%, rgba(0,240,255,0.22) 25%, rgba(255,45,149,0.28) 50%, rgba(0,240,255,0.22) 75%, transparent 95%)",
+          boxShadow: "0 0 40px 12px rgba(255,45,149,0.18), 0 0 100px 25px rgba(0,240,255,0.10)",
+          maskImage: "linear-gradient(to bottom, transparent, white 30%, white 70%, transparent)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent, white 30%, white 70%, transparent)",
         }}
       />
 
