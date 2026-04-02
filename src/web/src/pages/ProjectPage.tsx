@@ -205,7 +205,7 @@ function DocumentRow({ title, isLast, onClick }: { title: string; isLast: boolea
       style={{
         padding: `${theme.spacing.sm} ${theme.spacing.md}`,
         cursor: "pointer",
-        background: hovered ? theme.color.surfaceHover : "transparent",
+        background: hovered ? theme.color.surfaceContainerHigh : "transparent",
         borderBottom: isLast ? "none" : `1px solid ${theme.color.borderSubtle}`,
         display: "flex",
         alignItems: "center",
@@ -213,7 +213,7 @@ function DocumentRow({ title, isLast, onClick }: { title: string; isLast: boolea
         transition: "background 120ms ease",
       }}
     >
-      <Icon name="description" size={16} style={{ color: theme.color.textMuted, flexShrink: 0 }} />
+      <Icon name="description" size={16} style={{ color: theme.color.text, flexShrink: 0 }} />
       <span
         style={{
           fontSize: theme.font.size.sm,
@@ -379,7 +379,8 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
               <div
                 style={{
                   borderRadius: theme.radius.md,
-                  border: `1px solid ${theme.color.borderSubtle}`,
+                  border: `1px solid ${theme.color.border}`,
+                  background: theme.color.surfaceContainer,
                   overflow: "hidden",
                 }}
               >
