@@ -27,7 +27,7 @@ export function SynthBackground() {
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(to bottom, #05020e 0%, #0c0625 35%, #1a0a3a 55%, #150828 70%, #0d0618 85%, #080312 100%)",
+          background: "linear-gradient(to bottom, #05020e 0%, #0c0625 30%, #1a0a3a 60%, #0d0618 100%)",
         }}
       />
 
@@ -76,7 +76,7 @@ export function SynthBackground() {
               right: 0,
               bottom: `${12 + i * 12}%`,
               height: gap,
-              background: "#080312",
+              background: "transparent",
             }}
           />
         ))}
@@ -141,8 +141,8 @@ export function SynthBackground() {
           transformOrigin: "center bottom",
           transform: "perspective(500px) rotateX(55deg)",
           backgroundImage: `
-            linear-gradient(to right, rgba(0,240,255,0.40) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0,240,255,0.35) 1px, transparent 1px)
+            linear-gradient(to right, rgba(0,240,255,0.30) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0,240,255,0.25) 1px, transparent 1px)
           `,
           backgroundSize: "56px 56px",
           animation: "synth-grid-scroll 2.5s linear infinite",
@@ -255,11 +255,11 @@ function AtmosphericBands() {
 function Stars() {
   const stars = useMemo(() => {
     const seed = [
-      [8, 12], [23, 5], [45, 18], [67, 8], [82, 22], [15, 30], [38, 7],
-      [55, 25], [72, 14], [91, 19], [5, 20], [29, 3], [50, 10], [76, 28],
-      [88, 6], [12, 26], [42, 15], [63, 2], [35, 22], [58, 9], [95, 16],
-      [18, 8], [47, 27], [70, 4], [83, 24], [26, 14], [53, 20], [9, 17],
-      [61, 11], [78, 26], [33, 6], [44, 23], [86, 10], [20, 18], [66, 21],
+      [8, 12], [23, 5], [45, 18], [67, 8], [82, 22], [15, 24], [38, 7],
+      [55, 20], [72, 14], [91, 19], [5, 20], [29, 3], [50, 10], [76, 23],
+      [88, 6], [12, 21], [42, 15], [63, 2], [35, 22], [58, 9], [95, 16],
+      [18, 8], [47, 22], [70, 4], [83, 22], [26, 14], [53, 20], [9, 17],
+      [61, 11], [78, 21], [33, 6], [44, 23], [86, 10], [20, 18], [66, 21],
     ];
     return seed.map(([x, y], i) => ({
       left: `${x}%`,
@@ -267,7 +267,7 @@ function Stars() {
       size: i % 3 === 0 ? 2 : 1,
       delay: `${(i * 0.7) % 5}s`,
       duration: `${2 + (i % 3)}s`,
-      color: i % 5 === 0 ? "rgba(0,240,255,0.8)" : i % 7 === 0 ? "rgba(255,45,149,0.7)" : "rgba(255,255,255,0.7)",
+      color: i % 5 === 0 ? "rgba(0,240,255,0.9)" : i % 7 === 0 ? "rgba(255,45,149,0.8)" : "rgba(255,255,255,0.8)",
     }));
   }, []);
 

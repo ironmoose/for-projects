@@ -97,7 +97,7 @@ export function AnimationStyles() {
       }
 
       @keyframes synth-star-twinkle {
-        0%, 100% { opacity: 0.3; }
+        0%, 100% { opacity: 0.4; }
         50%      { opacity: 1; }
       }
 
