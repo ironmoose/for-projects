@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { sg } from "../components/theme/synthGlow";
 import {
   Button,
   Icon,
@@ -46,7 +47,8 @@ function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "
 // ---------------------------------------------------------------------------
 
 function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void }) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -89,11 +91,14 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
             pointerEvents: "auto",
             background: theme.color.surfaceContainer,
             borderRadius: theme.radius.lg,
-            boxShadow: theme.shadow.lg,
-            border: `1px solid ${theme.color.borderSubtle}`,
+            boxShadow: isSynth
+              ? `0 0 30px ${sg(19)}, 0 0 60px ${sg(9)}, 0 8px 40px rgba(0,0,0,0.5)`
+              : theme.shadow.lg,
+            border: `1px solid ${isSynth ? sg(27) : theme.color.borderSubtle}`,
             width: "100%",
-            maxWidth: 720,
-            maxHeight: "85vh",
+            maxWidth: 1000,
+            minHeight: "50vh",
+            maxHeight: "75vh",
             display: "flex",
             flexDirection: "column",
           }}

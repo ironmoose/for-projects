@@ -23,7 +23,7 @@ export function ThemeSwitcher() {
               background: t.color.surfaceContainer,
               cursor: "pointer",
               padding: 0,
-              boxShadow: active ? `0 0 0 2px ${t.color.primary}` : "none",
+              boxShadow: active ? `0 0 0 2px ${t.color.primary}, 0 0 10px ${t.color.primary}44` : "none",
               position: "relative",
               transition: "box-shadow 0.15s, border-color 0.15s",
             }}

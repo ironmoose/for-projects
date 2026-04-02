@@ -1,13 +1,23 @@
-import { type InputHTMLAttributes } from "react";
+import { type InputHTMLAttributes, useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
+import { sg } from "../theme/synthGlow";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
 }
 
-export function Input({ label, style, id, ...props }: InputProps) {
-  const { theme } = useTheme();
+export function Input({ label, style, id, onFocus, onBlur, ...props }: InputProps) {
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
+  const [focused, setFocused] = useState(false);
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
+
+  const synthFocusStyles: React.CSSProperties =
+    isSynth && focused
+      ? { borderColor: sg(53), boxShadow: `0 0 12px ${sg(19)}, inset 0 0 6px ${sg(5)}` }
+      : isSynth
+        ? { borderColor: sg(14), boxShadow: `0 0 4px ${sg(6)}` }
+        : {};
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
@@ -28,6 +38,8 @@ export function Input({ label, style, id, ...props }: InputProps) {
       )}
       <input
         id={inputId}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         style={{
           padding: `${theme.spacing.sm} ${theme.spacing.md}`,
           border: `1px solid ${theme.color.borderSubtle}`,
@@ -37,7 +49,8 @@ export function Input({ label, style, id, ...props }: InputProps) {
           outline: "none",
           background: theme.color.surfaceContainerHigh,
           color: theme.color.text,
-          transition: "border-color 0.15s",
+          transition: "border-color 0.15s, box-shadow 0.2s",
+          ...synthFocusStyles,
           ...style,
         }}
         {...props}

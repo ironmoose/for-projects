@@ -5,6 +5,7 @@ import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
 import type { DocumentRepository } from "../repositories/documents";
 import type { ProjectDocumentRepository } from "../repositories/project-documents";
+import type { TagRepository } from "../repositories/tags";
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
@@ -15,6 +16,7 @@ export class ProjectService implements IProjectService {
     private eventBus: EventBus,
     private documentRepo?: DocumentRepository,
     private projectDocumentRepo?: ProjectDocumentRepository,
+    private tagRepo?: TagRepository,
   ) {}
 
   list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<ProjectSummary> {
@@ -27,7 +29,11 @@ export class ProjectService implements IProjectService {
   get(id: string): Project & { documents: DocumentSummary[] } {
     const project = this.repo.findById(id);
     if (!project) throw new ServiceError("project not found", 404);
-    const documents = this.projectDocumentRepo?.getDocumentsForProject(id) ?? [];
+    const rawDocs = this.projectDocumentRepo?.getDocumentsForProject(id) ?? [];
+    const documents = rawDocs.map((doc) => {
+      const tags = this.tagRepo?.getTagsForEntity("document", doc.id).map((t) => t.kind) ?? [];
+      return { ...doc, tags };
+    });
     return { ...project, documents };
   }
 

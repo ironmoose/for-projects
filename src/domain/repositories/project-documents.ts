@@ -19,11 +19,12 @@ export class ProjectDocumentRepository {
   }
 
   getDocumentsForProject(projectId: string): DocumentSummary[] {
-    return this.db
+    const rows = this.db
       .query(
         "SELECT d.id, d.title, (d.content IS NOT NULL) as has_content, d.created_at, d.updated_at FROM documents d JOIN project_documents pd ON pd.document_id = d.id WHERE pd.project_id = ? ORDER BY d.created_at DESC"
       )
-      .all(projectId) as DocumentSummary[];
+      .all(projectId) as (Omit<DocumentSummary, "has_content" | "tags"> & { has_content: number })[];
+    return rows.map((r) => ({ ...r, has_content: !!r.has_content, tags: [] as string[] })) as DocumentSummary[];
   }
 
   getProjectsForDocument(documentId: string): ProjectSummary[] {

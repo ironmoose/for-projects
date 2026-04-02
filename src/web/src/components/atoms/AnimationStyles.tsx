@@ -81,11 +81,6 @@ export function AnimationStyles() {
         to   { transform: perspective(500px) rotateX(55deg) translateY(56px); }
       }
 
-      @keyframes synth-horizon-pulse {
-        0%, 100% { opacity: 0.5; }
-        50%      { opacity: 0.85; }
-      }
-
       @keyframes synth-scanline {
         from { transform: translateY(-100%); }
         to   { transform: translateY(100vh); }
@@ -101,11 +96,20 @@ export function AnimationStyles() {
         50%      { opacity: 1; }
       }
 
-      @keyframes synth-vline-drift {
-        0%   { opacity: 0; transform: translateY(20%); }
-        10%  { opacity: 1; }
-        90%  { opacity: 1; }
-        100% { opacity: 0; transform: translateY(-100%); }
+      /* ---- Synth glow color cycling ---- */
+      @property --synth-glow {
+        syntax: '<color>';
+        inherits: true;
+        initial-value: #00f0ff;
+      }
+
+      @keyframes synth-glow-cycle {
+        0%, 100% { --synth-glow: #00f0ff; }
+        50%      { --synth-glow: #b44dff; }
+      }
+
+      :root[data-synth] {
+        animation: synth-glow-cycle 15s ease-in-out infinite;
       }
 
       @media (prefers-reduced-motion: reduce) {

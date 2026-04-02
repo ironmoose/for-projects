@@ -79,7 +79,7 @@ export function useProjectTasks(projectId: string, filter?: TaskFilter) {
     });
   }, [subscribeEvents, throttledLoad, page, projectId, filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return { tasks, total, totalPages, page, setPage, loading };
 }

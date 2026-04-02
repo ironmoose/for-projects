@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useTheme } from "../theme/ThemeContext";
+import { sg } from "../theme/synthGlow";
 import { useDocument } from "../../hooks/useDocument";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Overlay } from "../atoms/Overlay";
@@ -14,7 +15,8 @@ interface DocumentReaderModalProps {
 }
 
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
   const { document, notFound, loading } = useDocument(documentId);
   const reduced = useReducedMotion();
 
@@ -53,8 +55,10 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
             flexDirection: "column",
             background: theme.color.surface,
             borderRadius: theme.radius.lg,
-            boxShadow: theme.shadow.lg,
-            border: `1px solid ${theme.color.borderSubtle}`,
+            boxShadow: isSynth
+              ? `0 0 30px ${sg(19)}, 0 0 60px ${sg(9)}, 0 8px 40px rgba(0,0,0,0.5)`
+              : theme.shadow.lg,
+            border: `1px solid ${isSynth ? sg(27) : theme.color.borderSubtle}`,
             animation: reduced ? undefined : `fade-in-up 200ms ${theme.animation.easing.decelerate}`,
           }}
         >

@@ -4,6 +4,7 @@ import type { IDocumentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { DocumentRepository } from "../repositories/documents";
 import type { TagRepository } from "../repositories/tags";
+import type { ProjectDocumentRepository } from "../repositories/project-documents";
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
@@ -13,17 +14,27 @@ export class DocumentService implements IDocumentService {
     private tagRepo: TagRepository,
     private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
+    private projectDocumentRepo?: ProjectDocumentRepository,
   ) {}
 
-  list(filter?: { title?: string; tag?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
-    const summaries = this.documentRepo.findMany(filter);
+  list(filter?: { title?: string; tag?: string; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
+    // If filtering by project_id, get linked doc IDs first and intersect
+    let docIds: string[] | undefined;
+    if (filter?.project_id && this.projectDocumentRepo) {
+      const linked = this.projectDocumentRepo.getDocumentsForProject(filter.project_id);
+      docIds = linked.map((d) => d.id);
+      if (docIds.length === 0) return { data: [], total: 0 };
+    }
+
+    const repoFilter = { ...filter, doc_ids: docIds };
+    const summaries = this.documentRepo.findMany(repoFilter);
     const data = summaries.map((s) => {
       const tags = this.tagRepo.getTagsForEntity("document", s.id).map((t) => t.kind);
       return { ...s, tags };
     });
     return {
       data,
-      total: this.documentRepo.count(filter),
+      total: this.documentRepo.count(repoFilter),
     };
   }
 

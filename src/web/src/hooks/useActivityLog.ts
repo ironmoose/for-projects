@@ -46,7 +46,7 @@ export function useActivityLog(filter?: { entity_type?: string; entity_id?: stri
     });
   }, [subscribeEvents, throttledLoad, page, filter?.entity_type, filter?.entity_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return { logs, total, totalPages, page, setPage, loading };
 }

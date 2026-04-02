@@ -1,4 +1,5 @@
 import { useTheme } from "../theme/ThemeContext";
+import { sg } from "../theme/synthGlow";
 
 export interface NavItem {
   label: string;
@@ -47,6 +48,7 @@ function injectTopBarStyles() {
     }
     .topbar-nav-btn[data-active="true"]::after {
       background: var(--topbar-primary);
+      box-shadow: 0 0 8px var(--topbar-primary);
     }
   `;
   document.head.appendChild(style);
@@ -59,13 +61,15 @@ export function TopBar({
   onNavigate,
   breadcrumb,
 }: TopBarProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
 
   injectTopBarStyles();
 
+  const isSynth = themeName === "synth";
+
   const cssVars = {
     "--topbar-text": theme.color.text,
-    "--topbar-primary": theme.color.primary,
+    "--topbar-primary": isSynth ? "var(--synth-glow)" : theme.color.primary,
   } as React.CSSProperties;
 
   return (
@@ -81,10 +85,13 @@ export function TopBar({
         height: 48,
         padding: `0 ${theme.spacing.xl}`,
         boxSizing: "border-box",
-        background: `${theme.color.surfaceContainer}cc`,
+        background: isSynth ? `${theme.color.surfaceContainer}dd` : `${theme.color.surfaceContainer}cc`,
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${theme.color.borderSubtle}`,
+        borderBottom: isSynth
+          ? `1px solid ${sg(27)}`
+          : `1px solid ${theme.color.borderSubtle}`,
+        ...(isSynth ? { boxShadow: `0 2px 20px ${sg(10)}, 0 1px 0 ${sg(20)}` } : {}),
         ...cssVars,
       }}
     >

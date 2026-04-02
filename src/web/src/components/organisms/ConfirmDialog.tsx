@@ -18,7 +18,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -58,8 +59,10 @@ export function ConfirmDialog({
             pointerEvents: "auto",
             background: theme.color.surfaceContainer,
             borderRadius: theme.radius.lg,
-            boxShadow: theme.shadow.lg,
-            border: `1px solid ${theme.color.borderSubtle}`,
+            boxShadow: isSynth
+              ? `0 0 25px ${theme.color.danger}25, 0 0 50px ${theme.color.tertiary}10, 0 8px 40px rgba(0,0,0,0.5)`
+              : theme.shadow.lg,
+            border: `1px solid ${isSynth ? `${theme.color.danger}44` : theme.color.borderSubtle}`,
             width: "100%",
             maxWidth: 400,
             display: "flex",

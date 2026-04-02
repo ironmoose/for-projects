@@ -2,6 +2,7 @@ import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 import { PresenceCharm } from "../molecules/PresenceCharm";
 import { useTheme } from "../theme/ThemeContext";
+import { sg } from "../theme/synthGlow";
 import type { TaskSummary } from "../../types";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -32,15 +33,17 @@ interface TaskTableProps {
 }
 
 export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask }: TaskTableProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
 
   return (
     <div
       style={{
         overflowX: "auto",
         borderRadius: theme.radius.lg,
-        border: `1px solid ${theme.color.border}`,
+        border: `1px solid ${isSynth ? sg(20) : theme.color.border}`,
         background: theme.color.surface,
+        ...(isSynth ? { boxShadow: `0 0 12px ${sg(7)}` } : {}),
       }}
     >
       <table
@@ -61,11 +64,14 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask }:
                   textAlign: "left",
                   fontWeight: 600,
                   fontSize: theme.font.size.xxs,
-                  color: theme.color.textMuted,
+                  color: isSynth ? "var(--synth-glow)" : theme.color.textMuted,
                   textTransform: "uppercase",
                   letterSpacing: theme.font.letterSpacing.wide,
-                  borderBottom: `2px solid ${theme.color.border}`,
+                  borderBottom: isSynth
+                    ? `2px solid ${sg(27)}`
+                    : `2px solid ${theme.color.border}`,
                   whiteSpace: "nowrap",
+                  ...(isSynth ? { textShadow: `0 0 8px ${sg(27)}` } : {}),
                 }}
               >
                 {h}

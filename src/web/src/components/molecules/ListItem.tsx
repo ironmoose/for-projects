@@ -1,4 +1,5 @@
 import { useTheme } from "../theme/ThemeContext";
+import { sg } from "../theme/synthGlow";
 
 interface ListItemProps {
   children: React.ReactNode;
@@ -10,7 +11,8 @@ interface ListItemProps {
 }
 
 export function ListItem({ children, onClick, selected, accentColor, highlighted, style }: ListItemProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
 
   return (
     <div
@@ -20,9 +22,11 @@ export function ListItem({ children, onClick, selected, accentColor, highlighted
         borderRadius: theme.radius.lg,
         padding: `${theme.spacing.sm} ${theme.spacing.md}`,
         cursor: onClick ? "pointer" : undefined,
-        transition: `background ${theme.motion.fast}, border-color ${theme.motion.fast}`,
+        transition: `background ${theme.motion.fast}, border-color ${theme.motion.fast}, box-shadow 0.2s`,
         ...(accentColor ? { borderLeft: `3px solid ${accentColor}` } : {}),
         ...(highlighted ? { animation: `highlight-flash 600ms ease-out` } : {}),
+        ...(isSynth && selected ? { boxShadow: `0 0 10px ${sg(12)}` } : {}),
+        ...(isSynth ? { border: `1px solid ${selected ? sg(20) : "transparent"}` } : {}),
         ...style,
       }}
       onMouseEnter={(e) => {

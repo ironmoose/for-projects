@@ -35,6 +35,7 @@ export function taskRoutes(service: ITaskService): Hono {
   // POST /api/tasks
   app.post("/", async (c) => {
     const body = await c.req.json<{ items: CreateTaskInput[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const tasks = service.create(body.items);
     return c.json(tasks, 201);
   });
@@ -47,14 +48,16 @@ export function taskRoutes(service: ITaskService): Hono {
   // PATCH /api/tasks
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateTaskInput[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const tasks = service.update(body.items);
     return c.json(tasks);
   });
 
   // DELETE /api/tasks
   app.delete("/", async (c) => {
-    const { ids } = await c.req.json<{ ids: string[] }>();
-    service.remove(ids);
+    const body = await c.req.json<{ ids: string[] }>();
+    if (!Array.isArray(body.ids)) return c.json({ error: "ids array is required" }, 400);
+    service.remove(body.ids);
     return c.body(null, 204);
   });
 

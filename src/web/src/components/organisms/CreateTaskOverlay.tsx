@@ -4,6 +4,12 @@ import { Input } from "../atoms/Input";
 import { Select } from "../atoms/Select";
 import { Textarea } from "../atoms/Textarea";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
+import {
+  TASK_STATUSES,
+  EFFORT_LEVELS,
+  IMPACT_LEVELS,
+  TASK_CATEGORIES,
+} from "../../types";
 
 interface CreateTaskFields {
   title: string;
@@ -23,35 +29,26 @@ interface CreateTaskOverlayProps {
   onClose: () => void;
 }
 
-const STATUS_OPTIONS = [
-  { value: "todo", label: "todo" },
-  { value: "in_progress", label: "in progress" },
-  { value: "done", label: "done" },
-];
+function toSelectOptions(
+  values: readonly string[],
+  noneLabel = "-- none --",
+): { value: string; label: string }[] {
+  return [
+    { value: "", label: noneLabel },
+    ...values.map((v) => ({
+      value: v,
+      label: v.replace(/_/g, " "),
+    })),
+  ];
+}
 
-const EFFORT_OPTIONS = [
-  { value: "", label: "-- none --" },
-  { value: "small", label: "small" },
-  { value: "medium", label: "medium" },
-  { value: "large", label: "large" },
-];
+const STATUS_OPTIONS = TASK_STATUSES
+  .filter((s) => s !== "archived")
+  .map((v) => ({ value: v, label: v.replace(/_/g, " ") }));
 
-const IMPACT_OPTIONS = [
-  { value: "", label: "-- none --" },
-  { value: "low", label: "low" },
-  { value: "medium", label: "medium" },
-  { value: "high", label: "high" },
-];
-
-const CATEGORY_OPTIONS = [
-  { value: "", label: "-- none --" },
-  { value: "feature", label: "feature" },
-  { value: "bug", label: "bug" },
-  { value: "chore", label: "chore" },
-  { value: "docs", label: "docs" },
-  { value: "test", label: "test" },
-  { value: "refactor", label: "refactor" },
-];
+const EFFORT_OPTIONS = toSelectOptions(EFFORT_LEVELS);
+const IMPACT_OPTIONS = toSelectOptions(IMPACT_LEVELS);
+const CATEGORY_OPTIONS = toSelectOptions(TASK_CATEGORIES);
 
 export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps) {
   const { theme } = useTheme();

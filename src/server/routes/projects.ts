@@ -20,6 +20,7 @@ export function projectRoutes(service: IProjectService): Hono {
   // POST /api/projects
   app.post("/", async (c) => {
     const body = await c.req.json<{ items: CreateProjectInput[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const projects = service.create(body.items);
     return c.json(projects, 201);
   });
@@ -32,14 +33,16 @@ export function projectRoutes(service: IProjectService): Hono {
   // PATCH /api/projects
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateProjectInput[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const projects = service.update(body.items);
     return c.json(projects);
   });
 
   // DELETE /api/projects
   app.delete("/", async (c) => {
-    const { ids } = await c.req.json<{ ids: string[] }>();
-    service.remove(ids);
+    const body = await c.req.json<{ ids: string[] }>();
+    if (!Array.isArray(body.ids)) return c.json({ error: "ids array is required" }, 400);
+    service.remove(body.ids);
     return c.body(null, 204);
   });
 

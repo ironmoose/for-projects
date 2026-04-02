@@ -44,7 +44,7 @@ export function useProject(projectId: string) {
     loadProject();
 
     return subscribeEvents((event) => {
-      if (event.entity_type === "project" || event.entity_type === "run" || event.entity_type === "document") {
+      if (event.entity_type === "project" || event.entity_type === "document") {
         throttledLoad();
       }
     });

@@ -143,7 +143,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         items: z.array(z.object({
           project_id: z.string().max(26),
-          title: z.string().max(500),
+          title: z.string().max(255),
           plan: z.string().max(10000).optional(),
           description: z.string().max(10000).optional(),
           implementation: z.string().max(10000).optional(),
@@ -162,12 +162,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update tasks by ID. Pass an `items` array with required id and project_id. Only provided fields are changed.",
+      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
-          project_id: z.string().max(26),
-          title: z.string().max(500).optional(),
+          title: z.string().max(255).optional(),
           plan: z.string().max(10000).optional(),
           description: z.string().max(10000).optional(),
           implementation: z.string().max(10000).optional(),
@@ -197,7 +196,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ tag, title, project_id, limit, offset }) => handle(() => documentService.list({ tag, title, limit, offset }))
+    ({ tag, title, project_id, limit, offset }) => handle(() => documentService.list({ tag, title, project_id, limit, offset }))
   );
 
   server.registerTool(
@@ -216,7 +215,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       inputSchema: {
         items: z.array(z.object({
           title: z.string().max(255),
-          content: z.string().max(100000).optional(),
+          content: z.string().max(50000).optional(),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
         })),
       },
@@ -232,7 +231,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
-          content: z.string().max(100000).optional(),
+          content: z.string().max(50000).optional(),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
         })),
       },

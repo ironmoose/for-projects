@@ -153,6 +153,7 @@ export function ActivityLogPage() {
               { value: "", label: "All types" },
               { value: "project", label: "Projects" },
               { value: "task", label: "Tasks" },
+              { value: "document", label: "Documents" },
             ]}
             style={{ minWidth: 140 }}
           />

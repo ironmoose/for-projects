@@ -17,7 +17,7 @@ export class DocumentRepository {
     return this.db.query("SELECT * FROM documents WHERE id = ?").get(id) as Document | null;
   }
 
-  findMany(filter?: { title?: string; tag?: string; limit?: number; offset?: number }): DocumentSummary[] {
+  findMany(filter?: { title?: string; tag?: string; doc_ids?: string[]; limit?: number; offset?: number }): DocumentSummary[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
@@ -33,16 +33,22 @@ export class DocumentRepository {
       conditions.push("t.kind = ?");
       params.push(filter.tag);
     }
+    if (filter?.doc_ids) {
+      const placeholders = filter.doc_ids.map(() => "?").join(", ");
+      conditions.push(`d.id IN (${placeholders})`);
+      params.push(...filter.doc_ids);
+    }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
     params.push(limit, offset);
 
-    return this.db
+    const rows = this.db
       .query(`SELECT d.id, d.title, (d.content IS NOT NULL) as has_content, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
-      .all(...params) as DocumentSummary[];
+      .all(...params) as (Omit<DocumentSummary, "has_content" | "tags"> & { has_content: number })[];
+    return rows.map((r) => ({ ...r, has_content: !!r.has_content, tags: [] as string[] })) as DocumentSummary[];
   }
 
-  count(filter?: { title?: string; tag?: string }): number {
+  count(filter?: { title?: string; tag?: string; doc_ids?: string[] }): number {
     const conditions: string[] = [];
     const params: string[] = [];
     let join = "";
@@ -55,6 +61,11 @@ export class DocumentRepository {
       join = " JOIN entity_tags et ON et.entity_type = 'document' AND et.entity_id = d.id JOIN tags t ON t.id = et.tag_id";
       conditions.push("t.kind = ?");
       params.push(filter.tag);
+    }
+    if (filter?.doc_ids) {
+      const placeholders = filter.doc_ids.map(() => "?").join(", ");
+      conditions.push(`d.id IN (${placeholders})`);
+      params.push(...filter.doc_ids);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
@@ -106,7 +117,6 @@ export class DocumentRepository {
   deleteMany(ids: string[]): void {
     if (ids.length === 0) return;
     const placeholders = ids.map(() => "?").join(", ");
-    this.db.query(`DELETE FROM entity_tags WHERE entity_type = 'document' AND entity_id IN (${placeholders})`).run(...ids);
     this.db.query(`DELETE FROM documents WHERE id IN (${placeholders})`).run(...ids);
   }
 }

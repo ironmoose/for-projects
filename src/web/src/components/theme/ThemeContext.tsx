@@ -47,7 +47,15 @@ export function ThemeProvider({ children, forcedTheme, isolated }: ThemeProvider
     s.color = t.color.text;
     s.fontFamily = t.font.body;
     s.margin = "0";
-  }, [t, isolated]);
+
+    // Toggle data-synth on <html> for CSS glow cycling
+    const root = document.documentElement;
+    if (effectiveName === "synth") {
+      root.setAttribute("data-synth", "");
+    } else {
+      root.removeAttribute("data-synth");
+    }
+  }, [t, isolated, effectiveName]);
 
   return (
     <ThemeContext.Provider value={{ theme: t, themeName: effectiveName, setTheme }}>

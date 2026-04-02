@@ -121,13 +121,17 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
 
   useEffect(() => {
     if (projects.length === 0) return;
-    fetchTasks({ limit: 200 }).then((body) => {
-      const counts: Record<string, number> = {};
-      for (const t of body.data) {
-        counts[t.project_id] = (counts[t.project_id] ?? 0) + 1;
-      }
-      setTaskCounts(counts);
-    }).catch(() => {});
+    Promise.all(
+      projects.map((p) =>
+        fetchTasks({ project_id: p.id, limit: 1 }).then((body) => [p.id, body.total] as const),
+      ),
+    )
+      .then((entries) => {
+        const counts: Record<string, number> = {};
+        for (const [id, total] of entries) counts[id] = total;
+        setTaskCounts(counts);
+      })
+      .catch(() => {});
   }, [projects]);
 
   async function handleDeleteProject() {

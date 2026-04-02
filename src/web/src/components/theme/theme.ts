@@ -353,9 +353,9 @@ export const themes: Record<string, Theme> = {
       activityBorder: "rgba(0, 240, 255, 0.40)",
     },
     shadow: {
-      sm: "0 1px 4px rgba(0, 240, 255, 0.10)",
-      md: "0 4px 20px rgba(0, 240, 255, 0.08)",
-      lg: "0 8px 40px rgba(255, 45, 149, 0.12)",
+      sm: "0 0 8px rgba(0, 240, 255, 0.25), 0 1px 4px rgba(0, 0, 0, 0.4)",
+      md: "0 0 20px rgba(0, 240, 255, 0.20), 0 0 40px rgba(255, 45, 149, 0.10), 0 4px 20px rgba(0, 0, 0, 0.4)",
+      lg: "0 0 30px rgba(0, 240, 255, 0.25), 0 0 60px rgba(255, 45, 149, 0.15), 0 8px 40px rgba(0, 0, 0, 0.5)",
     },
   },
 };

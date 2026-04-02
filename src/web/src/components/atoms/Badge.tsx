@@ -11,8 +11,28 @@ interface BadgeProps {
   style?: React.CSSProperties;
 }
 
+function synthGlowForVariant(variant: BadgeVariant, theme: ReturnType<typeof useTheme>["theme"]): React.CSSProperties {
+  const glowMap: Partial<Record<BadgeVariant, string>> = {
+    active: theme.color.primary,
+    running: theme.color.primary,
+    complete: theme.color.success,
+    failed: theme.color.danger,
+    in_progress: theme.color.tertiary,
+    done: theme.color.success,
+  };
+  const color = glowMap[variant];
+  if (!color) return {};
+  return {
+    boxShadow: `0 0 8px ${color}33, inset 0 0 6px ${color}11`,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: `${color}44`,
+  };
+}
+
 export function Badge({ children, variant = "default", style }: BadgeProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
 
   const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
     active: {
@@ -78,6 +98,7 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
         lineHeight: 1.4,
         transition: `background 200ms, color 200ms, box-shadow 200ms`,
         ...variantStyles[variant],
+        ...(isSynth ? synthGlowForVariant(variant, theme) : {}),
         ...style,
       }}
     >

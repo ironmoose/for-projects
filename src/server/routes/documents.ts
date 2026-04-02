@@ -16,15 +16,18 @@ export function documentRoutes(service: IDocumentService): Hono {
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const tag = c.req.query("tag");
     const title = c.req.query("title");
-    const filter: { tag?: string; title?: string; limit: number; offset: number } = { limit, offset };
+    const project_id = c.req.query("project_id");
+    const filter: { tag?: string; title?: string; project_id?: string; limit: number; offset: number } = { limit, offset };
     if (tag) filter.tag = tag;
     if (title) filter.title = title;
+    if (project_id) filter.project_id = project_id;
     return c.json(service.list(filter));
   });
 
   // POST /api/documents
   app.post("/", async (c) => {
     const body = await c.req.json<{ items: CreateDocumentInput[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const documents = service.create(body.items);
     return c.json(documents, 201);
   });
@@ -37,14 +40,16 @@ export function documentRoutes(service: IDocumentService): Hono {
   // PATCH /api/documents
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateDocumentInput[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const documents = service.update(body.items);
     return c.json(documents);
   });
 
   // DELETE /api/documents
   app.delete("/", async (c) => {
-    const { ids } = await c.req.json<{ ids: string[] }>();
-    service.remove(ids);
+    const body = await c.req.json<{ ids: string[] }>();
+    if (!Array.isArray(body.ids)) return c.json({ error: "ids array is required" }, 400);
+    service.remove(body.ids);
     return c.body(null, 204);
   });
 
