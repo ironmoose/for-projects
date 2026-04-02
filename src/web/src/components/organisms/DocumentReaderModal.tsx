@@ -45,7 +45,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
           style={{
             pointerEvents: "auto",
             width: "100%",
-            maxWidth: 900,
+            maxWidth: 1000,
             minHeight: "50vh",
             maxHeight: "75vh",
             overflow: "hidden",
@@ -94,7 +94,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
             <div
               style={{
                 flexShrink: 0,
-                padding: `${theme.spacing.xl} ${theme.spacing.xl} ${theme.spacing.lg}`,
+                padding: `${theme.spacing.xl} ${theme.spacing["3xl"]} ${theme.spacing.lg}`,
                 borderBottom: `1px solid ${theme.color.borderSubtle}`,
                 display: "flex",
                 flexDirection: "column",
@@ -133,7 +133,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
               style={{
                 flex: 1,
                 overflowY: "auto",
-                padding: theme.spacing.xl,
+                padding: `${theme.spacing.xl} ${theme.spacing["3xl"]}`,
               }}
             >
               {document.content ? (
