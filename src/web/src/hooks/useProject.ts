@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, fetchProject as apiFetchProject, createTasks, updateProjects, deleteTasks } from "../api";
-import type { Project } from "../types";
+import type { Project, DocumentSummary } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export function useProject(projectId: string) {
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<(Project & { documents: DocumentSummary[] }) | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
@@ -44,7 +44,7 @@ export function useProject(projectId: string) {
     loadProject();
 
     return subscribeEvents((event) => {
-      if (event.entity_type === "project" || event.entity_type === "run") {
+      if (event.entity_type === "project" || event.entity_type === "run" || event.entity_type === "document") {
         throttledLoad();
       }
     });

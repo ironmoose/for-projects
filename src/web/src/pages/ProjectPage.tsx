@@ -16,6 +16,7 @@ import {
   TaskTable,
   TaskTableFilters,
   Overlay,
+  DocumentReaderModal,
 } from "../components";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { Badge } from "../components/atoms/Badge";
@@ -186,6 +187,49 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
 }
 
 // ---------------------------------------------------------------------------
+// DocumentRow — clickable row for linked documents
+// ---------------------------------------------------------------------------
+
+function DocumentRow({ title, isLast, onClick }: { title: string; isLast: boolean; onClick: () => void }) {
+  const { theme } = useTheme();
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+        cursor: "pointer",
+        background: hovered ? theme.color.surfaceHover : "transparent",
+        borderBottom: isLast ? "none" : `1px solid ${theme.color.borderSubtle}`,
+        display: "flex",
+        alignItems: "center",
+        gap: theme.spacing.sm,
+        transition: "background 120ms ease",
+      }}
+    >
+      <Icon name="description" size={16} style={{ color: theme.color.textMuted, flexShrink: 0 }} />
+      <span
+        style={{
+          fontSize: theme.font.size.sm,
+          color: theme.color.text,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {title}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ProjectPage
 // ---------------------------------------------------------------------------
 
@@ -199,6 +243,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [deleteTaskTarget, setDeleteTaskTarget] = useState<TaskSummary | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>({ status: "in_progress,todo" });
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
@@ -315,6 +360,40 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
               )}
             </ExpandableCard>
           ))}
+
+          {/* Documents section */}
+          {(project.documents ?? []).length > 0 && (
+            <div style={{ marginBottom: theme.spacing.xl }}>
+              <h3
+                style={{
+                  margin: 0,
+                  marginBottom: theme.spacing.md,
+                  fontFamily: theme.font.headline,
+                  fontSize: theme.font.size.lg,
+                  fontWeight: 700,
+                  color: theme.color.text,
+                }}
+              >
+                Documents
+              </h3>
+              <div
+                style={{
+                  borderRadius: theme.radius.md,
+                  border: `1px solid ${theme.color.borderSubtle}`,
+                  overflow: "hidden",
+                }}
+              >
+                {(project.documents ?? []).map((doc, idx) => (
+                  <DocumentRow
+                    key={doc.id}
+                    title={doc.title}
+                    isLast={idx === (project.documents ?? []).length - 1}
+                    onClick={() => setSelectedDocumentId(doc.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right column — tasks */}
@@ -388,6 +467,12 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       <TaskDetailPanel
         task={selectedTask}
         onClose={handleClosePanel}
+      />
+    )}
+    {selectedDocumentId && (
+      <DocumentReaderModal
+        documentId={selectedDocumentId}
+        onClose={() => setSelectedDocumentId(null)}
       />
     )}
     {deleteTaskTarget && (
