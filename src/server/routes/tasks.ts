@@ -34,8 +34,8 @@ export function taskRoutes(service: ITaskService): Hono {
 
   // POST /api/tasks
   app.post("/", async (c) => {
-    const body = await c.req.json<CreateTaskInput[]>();
-    const tasks = service.create(body);
+    const body = await c.req.json<{ items: CreateTaskInput[] }>();
+    const tasks = service.create(body.items);
     return c.json(tasks, 201);
   });
 
@@ -46,8 +46,8 @@ export function taskRoutes(service: ITaskService): Hono {
 
   // PATCH /api/tasks
   app.patch("/", async (c) => {
-    const body = await c.req.json<UpdateTaskInput[]>();
-    const tasks = service.update(body);
+    const body = await c.req.json<{ items: UpdateTaskInput[] }>();
+    const tasks = service.update(body.items);
     return c.json(tasks);
   });
 

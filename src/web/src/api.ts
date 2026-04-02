@@ -79,12 +79,12 @@ export async function fetchProject(id: string): Promise<Project> {
 }
 
 export async function createProjects(inputs: Array<{ title: string; goal?: string; requirements?: string; design?: string }>): Promise<Project[]> {
-  const res = await apiFetch("/api/projects", jsonPost(inputs));
+  const res = await apiFetch("/api/projects", jsonPost({ items: inputs }));
   return res.json();
 }
 
 export async function updateProjects(inputs: Array<{ id: string; title?: string; goal?: string | null; requirements?: string | null; design?: string | null }>): Promise<Project[]> {
-  const res = await apiFetch("/api/projects", jsonPatch(inputs));
+  const res = await apiFetch("/api/projects", jsonPatch({ items: inputs }));
   return res.json();
 }
 
@@ -107,12 +107,12 @@ export async function fetchTask(id: string): Promise<Task> {
 }
 
 export async function createTasks(inputs: Array<{ project_id: string; title: string; plan?: string; description?: string; implementation?: string; acceptance_criteria?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }>): Promise<Task[]> {
-  const res = await apiFetch("/api/tasks", jsonPost(inputs));
+  const res = await apiFetch("/api/tasks", jsonPost({ items: inputs }));
   return res.json();
 }
 
 export async function updateTasks(inputs: Array<{ id: string; title?: string; plan?: string | null; description?: string | null; implementation?: string | null; acceptance_criteria?: string | null }>): Promise<Task[]> {
-  const res = await apiFetch("/api/tasks", jsonPatch(inputs));
+  const res = await apiFetch("/api/tasks", jsonPatch({ items: inputs }));
   return res.json();
 }
 
