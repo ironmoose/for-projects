@@ -16,6 +16,7 @@ export type {
   TaskCategory,
   EntityType,
   ActivityAction,
+  TagName,
 } from '@domain/entities';
 
 export {
@@ -25,4 +26,6 @@ export {
   TASK_CATEGORIES,
   ENTITY_TYPES,
   ACTIVITY_ACTIONS,
+  TAG_NAMES,
+  TAG_CATEGORIES,
 } from '@domain/entities';

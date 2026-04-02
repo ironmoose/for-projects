@@ -245,12 +245,12 @@ describe("Document CRUD", () => {
   it("creates a document with tags array", () => {
     const [doc] = ctx.documentService.create([{
       title: "Tagged Doc",
-      tags: ["api", "design"],
+      tags: ["security", "ui"],
     }]);
 
     expect(doc.tags).toBeArray();
-    expect(doc.tags).toContain("api");
-    expect(doc.tags).toContain("design");
+    expect(doc.tags).toContain("security");
+    expect(doc.tags).toContain("ui");
   });
 
   it("updates document title and content", () => {
@@ -281,13 +281,13 @@ describe("Document CRUD", () => {
   });
 
   it("lists documents filtered by tag", () => {
-    ctx.documentService.create([{ title: "Tagged for filter", tags: ["unique-filter-tag"] }]);
+    ctx.documentService.create([{ title: "Tagged for filter", tags: ["infra"] }]);
     ctx.documentService.create([{ title: "Untagged for filter" }]);
 
-    const result = ctx.documentService.list({ tag: "unique-filter-tag" });
+    const result = ctx.documentService.list({ tag: "infra" });
     expect(result.data.length).toBeGreaterThanOrEqual(1);
     for (const doc of result.data) {
-      expect(doc.tags).toContain("unique-filter-tag");
+      expect(doc.tags).toContain("infra");
     }
   });
 
@@ -303,14 +303,14 @@ describe("Document CRUD", () => {
     const [doc] = ctx.documentService.create([{
       title: "Full Doc",
       content: "Full content body",
-      tags: ["get-test"],
+      tags: ["guide"],
     }]);
 
     const fetched = ctx.documentService.get(doc.id);
     expect(fetched.id).toBe(doc.id);
     expect(fetched.title).toBe("Full Doc");
     expect(fetched.content).toBe("Full content body");
-    expect(fetched.tags).toContain("get-test");
+    expect(fetched.tags).toContain("guide");
   });
 
   it("rejects empty title", () => {
@@ -349,42 +349,55 @@ describe("Document CRUD", () => {
   it("normalizes tags to lowercase", () => {
     const [doc] = ctx.documentService.create([{
       title: "Case Tag Doc",
-      tags: ["UPPER", "MiXeD"],
+      tags: ["UI", "Data"],
     }]);
 
-    expect(doc.tags).toContain("upper");
-    expect(doc.tags).toContain("mixed");
-    expect(doc.tags).not.toContain("UPPER");
-    expect(doc.tags).not.toContain("MiXeD");
+    expect(doc.tags).toContain("ui");
+    expect(doc.tags).toContain("data");
+    expect(doc.tags).not.toContain("UI");
+    expect(doc.tags).not.toContain("Data");
   });
 
   it("setTagsForEntity replaces all tags", () => {
     const [doc] = ctx.documentService.create([{
       title: "Replace Tags Doc",
-      tags: ["old-a", "old-b"],
+      tags: ["security", "performance"],
     }]);
 
-    expect(doc.tags).toContain("old-a");
-    expect(doc.tags).toContain("old-b");
+    expect(doc.tags).toContain("security");
+    expect(doc.tags).toContain("performance");
 
     const [updated] = ctx.documentService.update([{
       id: doc.id,
-      tags: ["new-x"],
+      tags: ["testing"],
     }]);
 
-    expect(updated.tags).toEqual(["new-x"]);
+    expect(updated.tags).toEqual(["testing"]);
   });
 
   it("getTagsForEntity returns current tags", () => {
     const [doc] = ctx.documentService.create([{
       title: "Get Tags Doc",
-      tags: ["alpha", "beta"],
+      tags: ["architecture", "domain"],
     }]);
 
     const fetched = ctx.documentService.get(doc.id);
-    expect(fetched.tags).toContain("alpha");
-    expect(fetched.tags).toContain("beta");
+    expect(fetched.tags).toContain("architecture");
+    expect(fetched.tags).toContain("domain");
     expect(fetched.tags.length).toBe(2);
+  });
+
+  it("rejects invalid tag names on create", () => {
+    expect(() =>
+      ctx.documentService.create([{ title: "Bad Tag Doc", tags: ["invalid-tag"] as any }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects invalid tag names on update", () => {
+    const [doc] = ctx.documentService.create([{ title: "Update Bad Tag Doc" }]);
+    expect(() =>
+      ctx.documentService.update([{ id: doc.id, tags: ["not-a-tag"] as any }])
+    ).toThrow(ServiceError);
   });
 });
 

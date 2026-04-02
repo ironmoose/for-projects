@@ -7,6 +7,7 @@ import {
   EFFORT_LEVELS,
   IMPACT_LEVELS,
   TASK_CATEGORIES,
+  TAG_NAMES,
   type IProjectService,
   type ITaskService,
   type IDocumentService,
@@ -187,7 +188,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_documents",
     {
-      description: "List document summaries and tags, optionally filtered by tag, title, project_id. Returns { data, total } where data contains document summaries (id, title, has_content, tags, timestamps).",
+      description: "List document summaries and tags, optionally filtered by tag, title, project_id. Returns { data, total } where data contains document summaries (id, title, has_content, tags, timestamps). Valid tag values — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
       inputSchema: {
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
@@ -211,12 +212,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_document",
     {
-      description: "Create documents. Pass an `items` array of objects, each with a required title, optional content (markdown), and optional tags array.",
+      description: "Create documents. Pass an `items` array of objects, each with a required title, optional content (markdown), and optional tags array. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
       inputSchema: {
         items: z.array(z.object({
           title: z.string().max(255),
           content: z.string().max(100000).optional(),
-          tags: z.array(z.string().max(50)).max(20).optional(),
+          tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
         })),
       },
     },
@@ -226,13 +227,13 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_document",
     {
-      description: "Update documents by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags.",
+      description: "Update documents by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
           content: z.string().max(100000).optional(),
-          tags: z.array(z.string().max(50)).max(20).optional(),
+          tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
         })),
       },
     },

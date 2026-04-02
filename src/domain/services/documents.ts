@@ -1,4 +1,4 @@
-import { type Document, type DocumentSummary, toDocumentSummary } from "../entities";
+import { type Document, type DocumentSummary, type TagName, TAG_NAMES, toDocumentSummary } from "../entities";
 import type { CreateDocumentInput, UpdateDocumentInput } from "../inputs";
 import type { IDocumentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -18,7 +18,7 @@ export class DocumentService implements IDocumentService {
   list(filter?: { title?: string; tag?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
     const summaries = this.documentRepo.findMany(filter);
     const data = summaries.map((s) => {
-      const tags = this.tagRepo.getTagsForEntity("document", s.id).map((t) => t.name);
+      const tags = this.tagRepo.getTagsForEntity("document", s.id).map((t) => t.kind);
       return { ...s, tags };
     });
     return {
@@ -30,7 +30,7 @@ export class DocumentService implements IDocumentService {
   get(id: string): Document & { tags: string[] } {
     const doc = this.documentRepo.findById(id);
     if (!doc) throw new ServiceError("document not found", 404);
-    const tags = this.tagRepo.getTagsForEntity("document", id).map((t) => t.name);
+    const tags = this.tagRepo.getTagsForEntity("document", id).map((t) => t.kind);
     return { ...doc, tags };
   }
 
@@ -47,8 +47,9 @@ export class DocumentService implements IDocumentService {
       }
       if (input.tags) {
         for (const tag of input.tags) {
-          if (tag.length > 64) {
-            throw new ServiceError("each tag must be 64 characters or fewer", 400);
+          const normalized = tag.toLowerCase();
+          if (!(TAG_NAMES as readonly string[]).includes(normalized)) {
+            throw new ServiceError(`invalid tag "${tag}". Valid tags: ${TAG_NAMES.join(', ')}`, 400);
           }
         }
       }
@@ -71,7 +72,7 @@ export class DocumentService implements IDocumentService {
 
     const results: (Document & { tags: string[] })[] = [];
     for (const doc of documents) {
-      const tags = this.tagRepo.getTagsForEntity("document", doc.id).map((t) => t.name);
+      const tags = this.tagRepo.getTagsForEntity("document", doc.id).map((t) => t.kind);
       results.push({ ...doc, tags });
       this.activityLog.insert({
         entity_type: "document",
@@ -97,8 +98,9 @@ export class DocumentService implements IDocumentService {
       }
       if (input.tags) {
         for (const tag of input.tags) {
-          if (tag.length > 64) {
-            throw new ServiceError("each tag must be 64 characters or fewer", 400);
+          const normalized = tag.toLowerCase();
+          if (!(TAG_NAMES as readonly string[]).includes(normalized)) {
+            throw new ServiceError(`invalid tag "${tag}". Valid tags: ${TAG_NAMES.join(', ')}`, 400);
           }
         }
       }
@@ -119,7 +121,7 @@ export class DocumentService implements IDocumentService {
 
     const results: (Document & { tags: string[] })[] = [];
     for (const doc of documents) {
-      const tags = this.tagRepo.getTagsForEntity("document", doc.id).map((t) => t.name);
+      const tags = this.tagRepo.getTagsForEntity("document", doc.id).map((t) => t.kind);
       results.push({ ...doc, tags });
       const fields = Object.keys(inputs.find((i) => i.id === doc.id) ?? {}).filter((k) => k !== "id");
       this.activityLog.insert({

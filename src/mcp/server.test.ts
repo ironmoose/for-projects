@@ -400,25 +400,25 @@ describe("create_document", () => {
 
   it("creates document with tags, verify tags in response", async () => {
     const result = await callTool("create_document", {
-      items: [{ title: "Tagged Doc", content: "body", tags: ["alpha", "beta"] }],
+      items: [{ title: "Tagged Doc", content: "body", tags: ["architecture", "domain"] }],
     });
     const [doc] = parseResult(result);
 
-    expect(doc.tags).toEqual(["alpha", "beta"]);
+    expect(doc.tags).toEqual(["architecture", "domain"]);
   });
 
   it("creates multiple documents in one batch call", async () => {
     const result = await callTool("create_document", {
       items: [
         { title: "Batch Doc 1" },
-        { title: "Batch Doc 2", content: "content2", tags: ["x"] },
+        { title: "Batch Doc 2", content: "content2", tags: ["ui"] },
       ],
     });
     const docs = parseResult(result);
     expect(docs).toHaveLength(2);
     expect(docs[0].title).toBe("Batch Doc 1");
     expect(docs[1].title).toBe("Batch Doc 2");
-    expect(docs[1].tags).toEqual(["x"]);
+    expect(docs[1].tags).toEqual(["ui"]);
   });
 });
 
@@ -426,7 +426,7 @@ describe("get_document", () => {
   it("returns full document by id (title, content, tags, timestamps)", async () => {
     const [created] = parseResult(
       await callTool("create_document", {
-        items: [{ title: "Get Me Doc", content: "Full content", tags: ["info"] }],
+        items: [{ title: "Get Me Doc", content: "Full content", tags: ["guide"] }],
       })
     );
 
@@ -435,7 +435,7 @@ describe("get_document", () => {
     expect(doc.id).toBe(created.id);
     expect(doc.title).toBe("Get Me Doc");
     expect(doc.content).toBe("Full content");
-    expect(doc.tags).toEqual(["info"]);
+    expect(doc.tags).toEqual(["guide"]);
     expect(doc.created_at).toBeTruthy();
     expect(doc.updated_at).toBeTruthy();
   });
@@ -468,10 +468,10 @@ describe("list_documents", () => {
   });
 
   it("supports tag filter", async () => {
-    await callTool("create_document", { items: [{ title: "Tag Filter A", tags: ["unique-tag-filter"] }] });
-    await callTool("create_document", { items: [{ title: "Tag Filter B", tags: ["other-tag"] }] });
+    await callTool("create_document", { items: [{ title: "Tag Filter A", tags: ["infra"] }] });
+    await callTool("create_document", { items: [{ title: "Tag Filter B", tags: ["testing"] }] });
 
-    const listResult = await callTool("list_documents", { tag: "unique-tag-filter" });
+    const listResult = await callTool("list_documents", { tag: "infra" });
     const parsed = parseResult(listResult);
     expect(parsed.data.length).toBeGreaterThanOrEqual(1);
     expect(parsed.data.every((d: { title: string }) => d.title !== "Tag Filter B")).toBe(true);
@@ -508,20 +508,29 @@ describe("update_document", () => {
 
   it("replaces tags", async () => {
     const [created] = parseResult(
-      await callTool("create_document", { items: [{ title: "Tag Replace", tags: ["a", "b"] }] })
+      await callTool("create_document", { items: [{ title: "Tag Replace", tags: ["security", "performance"] }] })
     );
 
     await callTool("update_document", {
-      items: [{ id: created.id, tags: ["c"] }],
+      items: [{ id: created.id, tags: ["conventions"] }],
     });
 
     const doc = parseResult(await callTool("get_document", { id: created.id }));
-    expect(doc.tags).toEqual(["c"]);
+    expect(doc.tags).toEqual(["conventions"]);
   });
 
   it("rejects unknown id", async () => {
     const result = await callTool("update_document", {
       items: [{ id: "00000000000000000000000000", title: "Nope" }],
+    });
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe("create_document with invalid tag", () => {
+  it("returns error for invalid tag value", async () => {
+    const result = await callTool("create_document", {
+      items: [{ title: "Bad Tag", tags: ["not-a-valid-tag"] }],
     });
     expect(result.isError).toBe(true);
   });

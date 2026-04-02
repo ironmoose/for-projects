@@ -272,7 +272,7 @@ describe("Document Routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: [{ title: "Doc One", content: "Body one", tags: ["alpha", "beta"] }],
+        items: [{ title: "Doc One", content: "Body one", tags: ["architecture", "domain"] }],
       }),
     });
     expect(res.status).toBe(201);
@@ -280,7 +280,7 @@ describe("Document Routes", () => {
     expect(body).toBeArray();
     expect(body[0].title).toBe("Doc One");
     expect(body[0].content).toBe("Body one");
-    expect(body[0].tags.sort()).toEqual(["alpha", "beta"]);
+    expect(body[0].tags.sort()).toEqual(["architecture", "domain"]);
   });
 
   it("PATCH /documents batch updates with tag replacement", async () => {
@@ -288,7 +288,7 @@ describe("Document Routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: [{ title: "Patch Doc", content: "Original", tags: ["old"] }],
+        items: [{ title: "Patch Doc", content: "Original", tags: ["security"] }],
       }),
     });
     const [doc] = await create.json();
@@ -297,13 +297,13 @@ describe("Document Routes", () => {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: [{ id: doc.id, title: "Patched Doc", tags: ["new1", "new2"] }],
+        items: [{ id: doc.id, title: "Patched Doc", tags: ["ui", "data"] }],
       }),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
     expect(body.title).toBe("Patched Doc");
-    expect(body.tags.sort()).toEqual(["new1", "new2"]);
+    expect(body.tags.sort()).toEqual(["data", "ui"]);
   });
 
   it("GET /documents paginates via limit/offset", async () => {
@@ -334,16 +334,16 @@ describe("Document Routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: [{ title: "Tagged Doc", tags: ["unique-tag-filter"] }],
+        items: [{ title: "Tagged Doc", tags: ["troubleshooting"] }],
       }),
     });
 
-    const res = await req("/documents?tag=unique-tag-filter");
+    const res = await req("/documents?tag=troubleshooting");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toBeArray();
     expect(body.data.length).toBeGreaterThanOrEqual(1);
-    expect(body.data.every((d: any) => d.tags.includes("unique-tag-filter"))).toBe(true);
+    expect(body.data.every((d: any) => d.tags.includes("troubleshooting"))).toBe(true);
   });
 
   it("GET /documents filters by title", async () => {
@@ -368,7 +368,7 @@ describe("Document Routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: [{ title: "Full Doc", content: "Full content here", tags: ["ftag"] }],
+        items: [{ title: "Full Doc", content: "Full content here", tags: ["reference"] }],
       }),
     });
     const [doc] = await create.json();
@@ -379,7 +379,7 @@ describe("Document Routes", () => {
     expect(body.id).toBe(doc.id);
     expect(body.title).toBe("Full Doc");
     expect(body.content).toBe("Full content here");
-    expect(body.tags).toEqual(["ftag"]);
+    expect(body.tags).toEqual(["reference"]);
     expect(body.created_at).toBeTruthy();
     expect(body.updated_at).toBeTruthy();
   });
@@ -387,6 +387,17 @@ describe("Document Routes", () => {
   it("GET /documents/:id returns 404 for nonexistent id", async () => {
     const res = await req("/documents/00000000000000000000000000");
     expect(res.status).toBe(404);
+  });
+
+  it("POST /documents with invalid tag returns 400", async () => {
+    const res = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Bad Tag Doc", tags: ["invalid-tag"] }],
+      }),
+    });
+    expect(res.status).toBe(400);
   });
 
   it("DELETE /documents batch deletes", async () => {

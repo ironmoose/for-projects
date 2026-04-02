@@ -4,6 +4,11 @@ export const TASK_STATUSES = ['todo', 'in_progress', 'done', 'archived'] as cons
 export const EFFORT_LEVELS = ['trivial', 'low', 'medium', 'high', 'extreme'] as const;
 export const IMPACT_LEVELS = ['trivial', 'low', 'medium', 'high', 'extreme'] as const;
 export const TASK_CATEGORIES = ['feature', 'bugfix', 'refactor', 'test', 'perf', 'infra', 'docs', 'security', 'design', 'chore'] as const;
+export const TAG_NAMES = [
+  'ui', 'data', 'integration', 'infra', 'domain',
+  'architecture', 'conventions', 'guide', 'reference', 'decision', 'troubleshooting',
+  'security', 'performance', 'testing', 'accessibility',
+] as const;
 export const ENTITY_TYPES = ['project', 'task', 'document'] as const;
 export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
 
@@ -11,8 +16,15 @@ export type TaskStatus = typeof TASK_STATUSES[number];
 export type EffortLevel = typeof EFFORT_LEVELS[number];
 export type ImpactLevel = typeof IMPACT_LEVELS[number];
 export type TaskCategory = typeof TASK_CATEGORIES[number];
+export type TagName = typeof TAG_NAMES[number];
 export type EntityType = typeof ENTITY_TYPES[number];
 export type ActivityAction = typeof ACTIVITY_ACTIONS[number];
+
+export const TAG_CATEGORIES: Record<string, readonly TagName[]> = {
+  Domain: ['ui', 'data', 'integration', 'infra', 'domain'],
+  'Content Type': ['architecture', 'conventions', 'guide', 'reference', 'decision', 'troubleshooting'],
+  Concern: ['security', 'performance', 'testing', 'accessibility'],
+} as const;
 
 // -- Entity interfaces ------------------------------------------------------
 
@@ -104,12 +116,12 @@ export interface DocumentSummary {
   id: string;
   title: string;
   has_content: boolean;
-  tags: string[];
+  tags: TagName[];
   created_at: string;
   updated_at: string;
 }
 
-export function toDocumentSummary(doc: Document, tags: string[] = []): DocumentSummary {
+export function toDocumentSummary(doc: Document, tags: TagName[] = []): DocumentSummary {
   return {
     id: doc.id, title: doc.title,
     has_content: doc.content != null,
@@ -120,7 +132,7 @@ export function toDocumentSummary(doc: Document, tags: string[] = []): DocumentS
 
 export interface Tag {
   id: string;
-  name: string;
+  kind: TagName;
   created_at: string;
 }
 
