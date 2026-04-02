@@ -34,7 +34,6 @@ export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 export { PresenceCharm } from "./molecules/PresenceCharm";
 export { CollapsibleSection } from "./molecules/CollapsibleSection";
 export { TaskTableFilters } from "./molecules/TaskTableFilters";
-export { DocumentListItem } from "./molecules/DocumentListItem";
 export { DocumentSearchBar } from "./molecules/DocumentSearchBar";
 // Organisms
 export { TopBar } from "./organisms/TopBar";
@@ -46,12 +45,12 @@ export { ConfirmDialog } from "./organisms/ConfirmDialog";
 export { TaskTable } from "./organisms/TaskTable";
 export { CreateProjectOverlay } from "./organisms/CreateProjectOverlay";
 export { CreateTaskOverlay } from "./organisms/CreateTaskOverlay";
-export { DocumentViewer } from "./organisms/DocumentViewer";
+export { DocumentReaderModal } from "./organisms/DocumentReaderModal";
+export { DocumentTable } from "./organisms/DocumentTable";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";
 export { DetailPageLayout } from "./templates/DetailPageLayout";
-export { SidePanelLayout } from "./templates/SidePanelLayout";
 
 // Theme
 export { ThemeProvider, useTheme } from "./theme/ThemeContext";

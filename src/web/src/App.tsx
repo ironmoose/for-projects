@@ -40,9 +40,6 @@ export function App() {
   const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
   const projectId = projectIdMatch?.[1] ?? null;
 
-  const documentIdMatch = path.match(/^\/documents\/([^/]+)$/);
-  const documentId = documentIdMatch?.[1] ?? null;
-
   const galleryComponentMatch = path.match(/^\/gallery\/([^/]+)$/);
   const galleryComponent = galleryComponentMatch?.[1] ?? undefined;
 
@@ -72,13 +69,7 @@ export function App() {
 
   function renderView() {
     if (path.startsWith("/documents")) {
-      return (
-        <DocumentsPage
-          selectedDocumentId={documentId}
-          onOpenDocument={(dId) => navigate(`/documents/${dId}`)}
-          onBack={() => navigate("/documents")}
-        />
-      );
+      return <DocumentsPage />;
     }
     if (path.startsWith("/gallery")) {
       return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;

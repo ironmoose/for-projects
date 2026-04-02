@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
 import { Input } from "../atoms/Input";
 
 interface DocumentSearchBarProps {
@@ -10,7 +9,6 @@ interface DocumentSearchBarProps {
 }
 
 export function DocumentSearchBar({ title, tag, onTitleChange, onTagChange }: DocumentSearchBarProps) {
-  const { theme } = useTheme();
   const [localTitle, setLocalTitle] = useState(title);
   const [localTag, setLocalTag] = useState(tag);
   const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,26 +39,17 @@ export function DocumentSearchBar({ title, tag, onTitleChange, onTagChange }: Do
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: theme.spacing.md,
-        marginBottom: theme.spacing.lg,
-      }}
-    >
-      <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
+      <div style={{ minWidth: 180, flex: "1 1 180px" }}>
         <Input
-          label="Search title"
-          placeholder="Filter by title..."
+          placeholder="Search documents..."
           value={localTitle}
           onChange={(e) => handleTitleInput(e.target.value)}
         />
       </div>
-      <div style={{ flex: "0 1 200px", minWidth: 0 }}>
+      <div style={{ minWidth: 120, flex: "0 1 160px" }}>
         <Input
-          label="Filter tag"
-          placeholder="e.g. design"
+          placeholder="Filter by tag..."
           value={localTag}
           onChange={(e) => handleTagInput(e.target.value)}
         />
