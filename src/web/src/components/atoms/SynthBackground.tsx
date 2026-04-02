@@ -103,19 +103,19 @@ export function SynthBackground() {
         style={{
           position: "absolute",
           bottom: 0,
-          left: "-30%",
-          width: "160%",
-          height: "60%",
+          left: "-50%",
+          width: "200%",
+          height: "75%",
           transformOrigin: "center bottom",
-          transform: "perspective(350px) rotateX(50deg)",
+          transform: "perspective(500px) rotateX(55deg)",
           backgroundImage: `
-            linear-gradient(to right, rgba(0,240,255,0.25) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0,240,255,0.20) 1px, transparent 1px)
+            linear-gradient(to right, rgba(0,240,255,0.40) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0,240,255,0.35) 1px, transparent 1px)
           `,
-          backgroundSize: "48px 48px",
+          backgroundSize: "56px 56px",
           animation: "synth-grid-scroll 2.5s linear infinite",
-          maskImage: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 82%)",
-          WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 82%)",
+          maskImage: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 90%)",
+          WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 90%)",
         }}
       />
 
