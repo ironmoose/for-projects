@@ -14,7 +14,7 @@ export interface Paginated<T> {
 }
 
 export interface IProjectService {
-  list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<ProjectSummary>;
+  list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary>;
   get(id: string): Project;
   create(inputs: CreateProjectInput[]): Project[];
   update(inputs: UpdateProjectInput[]): Project[];
@@ -38,7 +38,7 @@ export interface ITaskDependencyService {
 }
 
 export interface IDocumentService {
-  list(filter?: { title?: string; tag?: string; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
+  list(filter?: { title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
   get(id: string): Document & { tags: string[] };
   create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[];
   update(inputs: UpdateDocumentInput[]): (Document & { tags: string[] })[];

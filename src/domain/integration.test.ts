@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
+import type { TagName } from "./entities";
 
 let ctx: AppContext;
 let tempDir: string;
@@ -349,7 +350,7 @@ describe("Document CRUD", () => {
   it("normalizes tags to lowercase", () => {
     const [doc] = ctx.documentService.create([{
       title: "Case Tag Doc",
-      tags: ["UI", "Data"],
+      tags: ["UI", "Data"] as string[] as TagName[],
     }]);
 
     expect(doc.tags).toContain("ui");

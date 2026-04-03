@@ -18,7 +18,8 @@
     "serve": "bun run build && bun run start",
     "test": "bun test",
     "prepublishOnly": "bun run build",
-    "prune": "bun scripts/prune-activity-log.ts"
+    "prune": "bun scripts/prune-activity-log.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.27.1",
