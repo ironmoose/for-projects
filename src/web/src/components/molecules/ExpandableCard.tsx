@@ -12,6 +12,7 @@ interface ExpandableCardProps {
   defaultOpen?: boolean;
   variant?: CardVariant;
   style?: React.CSSProperties;
+  headerAction?: ReactNode;
 }
 
 export function ExpandableCard({
@@ -20,6 +21,7 @@ export function ExpandableCard({
   defaultOpen = false,
   variant = "default",
   style,
+  headerAction,
 }: ExpandableCardProps) {
   const { theme } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
@@ -64,6 +66,8 @@ export function ExpandableCard({
         >
           {title}
         </span>
+        <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginLeft: "auto" }}>
+        {headerAction}
         <Icon
           name="chevron_right"
           size={18}
@@ -74,6 +78,7 @@ export function ExpandableCard({
             flexShrink: 0,
           }}
         />
+        </div>
       </div>
       <div
         style={{
