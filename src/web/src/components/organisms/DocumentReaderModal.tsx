@@ -1,13 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
 import { useDocument } from "../../hooks/useDocument";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Overlay } from "../atoms/Overlay";
+import { Button } from "../atoms/Button";
+import { Input } from "../atoms/Input";
+import { Textarea } from "../atoms/Textarea";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
 import { EmptyState } from "../molecules/EmptyState";
 import { Markdown } from "../molecules/Markdown";
+import { TAG_CATEGORIES } from "../../types";
+import type { TagName } from "../../types";
 
 interface DocumentReaderModalProps {
   documentId: string;
@@ -17,16 +22,60 @@ interface DocumentReaderModalProps {
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
-  const { document, notFound, loading } = useDocument(documentId);
+  const { document, notFound, loading, updateDocument } = useDocument(documentId);
   const reduced = useReducedMotion();
+
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const enterEditMode = useCallback(() => {
+    if (!document) return;
+    setEditTitle(document.title);
+    setEditContent(document.content ?? "");
+    setEditTags([...document.tags]);
+    setEditing(true);
+  }, [document]);
+
+  const cancelEdit = useCallback(() => {
+    setEditing(false);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    const contentValue = editTitle.trim() ? editContent.trim() || null : null;
+    const ok = await updateDocument({
+      title: editTitle.trim(),
+      content: contentValue,
+      tags: editTags,
+    });
+    setSaving(false);
+    if (ok) setEditing(false);
+  }, [editTitle, editContent, editTags, updateDocument]);
+
+  const toggleTag = useCallback((tag: string) => {
+    setEditTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }, []);
+
+  const saveDisabled = !editTitle.trim() || saving;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (editing) {
+          cancelEdit();
+        } else {
+          onClose();
+        }
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, editing, cancelEdit]);
 
   return (
     <>
@@ -105,30 +154,104 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 gap: theme.spacing.sm,
               }}
             >
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                <h2
-                  style={{
-                    margin: 0,
-                    flex: 1,
-                    minWidth: 0,
-                    fontFamily: theme.font.headline,
-                    fontSize: theme.font.size.xl,
-                    fontWeight: 800,
-                    letterSpacing: theme.font.letterSpacing.tight,
-                    color: theme.color.text,
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {document.title}
-                </h2>
-                <IconButton icon="close" size={18} onClick={onClose} aria-label="Close reader" />
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.sm }}>
+                {editing ? (
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Document title"
+                      style={{ fontSize: theme.font.size.lg, fontWeight: 700 }}
+                      aria-label="Document title"
+                    />
+                  </div>
+                ) : (
+                  <h2
+                    style={{
+                      margin: 0,
+                      flex: 1,
+                      minWidth: 0,
+                      fontFamily: theme.font.headline,
+                      fontSize: theme.font.size.xl,
+                      fontWeight: 800,
+                      letterSpacing: theme.font.letterSpacing.tight,
+                      color: theme.color.text,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {document.title}
+                  </h2>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, flexShrink: 0 }}>
+                  {!editing && (
+                    <IconButton icon="edit" size={18} onClick={enterEditMode} aria-label="Edit document" />
+                  )}
+                  <IconButton icon="close" size={18} onClick={editing ? cancelEdit : onClose} aria-label={editing ? "Cancel editing" : "Close reader"} />
+                </div>
               </div>
-              {document.tags.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs }}>
-                  {document.tags.map((tag) => (
-                    <TagChip key={tag} name={tag} />
+
+              {/* Tags section */}
+              {editing ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+                  {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
+                    <div key={category}>
+                      <div
+                        style={{
+                          fontSize: theme.font.size.xs,
+                          fontWeight: 700,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase" as const,
+                          color: theme.color.textFaint,
+                          marginBottom: theme.spacing.xs,
+                        }}
+                      >
+                        {category}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs }}>
+                        {tags.map((tag: TagName) => {
+                          const selected = editTags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleTag(tag)}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                fontSize: theme.font.size.xs,
+                                color: selected
+                                  ? (isSynth ? "var(--synth-glow)" : theme.color.primary)
+                                  : theme.color.textMuted,
+                                background: selected
+                                  ? theme.color.surfaceContainerHigh
+                                  : "transparent",
+                                borderRadius: theme.radius.full,
+                                padding: "2px 8px",
+                                border: `1px solid ${selected
+                                  ? (isSynth ? sg(27) : theme.color.primary)
+                                  : theme.color.borderSubtle}`,
+                                cursor: "pointer",
+                                fontFamily: theme.font.body,
+                                transition: "all 0.15s",
+                                ...(selected && isSynth ? { boxShadow: `0 0 6px ${sg(14)}` } : {}),
+                              }}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ))}
                 </div>
+              ) : (
+                document.tags.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs }}>
+                    {document.tags.map((tag) => (
+                      <TagChip key={tag} name={tag} />
+                    ))}
+                  </div>
+                )
               )}
             </div>
 
@@ -140,7 +263,16 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 padding: `${theme.spacing.xl} ${theme.spacing["3xl"]}`,
               }}
             >
-              {document.content ? (
+              {editing ? (
+                <Textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Document content (markdown supported)"
+                  rows={16}
+                  style={{ width: "100%", minHeight: 300, fontFamily: theme.font.mono }}
+                  aria-label="Document content"
+                />
+              ) : document.content ? (
                 <Markdown>{document.content}</Markdown>
               ) : (
                 <p
@@ -155,6 +287,32 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 </p>
               )}
             </div>
+
+            {/* Edit mode footer */}
+            {editing && (
+              <div
+                style={{
+                  flexShrink: 0,
+                  padding: `${theme.spacing.md} ${theme.spacing["3xl"]}`,
+                  borderTop: `1px solid ${theme.color.borderSubtle}`,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: theme.spacing.sm,
+                }}
+              >
+                <Button variant="ghost" onClick={cancelEdit} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  loading={saving}
+                  disabled={saveDisabled}
+                >
+                  Save
+                </Button>
+              </div>
+            )}
           </>
         )}
         </div>
