@@ -760,8 +760,8 @@ describe("Project Dependency Endpoints", () => {
     expect(body.error).toMatch(/items array/i);
   });
 
-  it("POST /projects/:id/dependencies with cycle returns 400", async () => {
-    // A already blocks B (from previous test), B blocks C is fine, but C blocks A would cycle
+  it("POST /projects/:id/dependencies with cycle succeeds", async () => {
+    // A already blocks B (from previous test), B blocks C, then C blocks A creates a cycle — now allowed
     await req(`/projects/${projectId}/dependencies`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -776,9 +776,12 @@ describe("Project Dependency Endpoints", () => {
         items: [{ source_task_id: taskCId, target_task_id: taskAId, dependency_type: "blocks" }],
       }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.error).toMatch(/cycle/i);
+    expect(body).toBeArray();
+    expect(body.length).toBe(1);
+    expect(body[0].source_task_id).toBe(taskCId);
+    expect(body[0].target_task_id).toBe(taskAId);
   });
 
   it("POST /projects/:id/dependencies with cross-project tasks returns 400", async () => {
@@ -941,8 +944,8 @@ describe("Task Dependency Routes", () => {
     expect(task.status).toBeTruthy();
   });
 
-  it("PATCH /tasks with add_dependencies creating a cycle returns 400", async () => {
-    // A blocks B already. Try to make B block A.
+  it("PATCH /tasks with add_dependencies creating a cycle succeeds", async () => {
+    // A blocks B already. Making B block A creates a cycle — now allowed.
     const res = await req("/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -953,9 +956,10 @@ describe("Task Dependency Routes", () => {
         }],
       }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toMatch(/cycle/i);
+    expect(body).toBeArray();
+    expect(body.length).toBe(1);
   });
 
   it("PATCH /tasks with add_dependencies for cross-project task returns 400", async () => {

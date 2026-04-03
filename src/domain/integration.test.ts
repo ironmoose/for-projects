@@ -853,15 +853,20 @@ describe("Task Dependency Service", () => {
     ).toThrow("dependencies must be within the same project");
   });
 
-  it("rejects cycle for blocks (A->B already exists, adding B->A)", () => {
-    expect(() =>
-      ctx.taskDependencyService.addDependencies(projectId, [
-        { source_task_id: taskB, target_task_id: taskA, dependency_type: "blocks" },
-      ])
-    ).toThrow("adding this dependency would create a cycle");
+  it("allows cyclic blocks edges (A->B already exists, adding B->A)", () => {
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskB, target_task_id: taskA, dependency_type: "blocks" },
+    ]);
+    expect(deps).toHaveLength(1);
+    expect(deps[0].dependency_type).toBe("blocks");
+    // Both tasks should now be is_blocked (mutual blocking, both still todo)
+    const depsA = ctx.taskDependencyService.getDependencies(taskA);
+    const depsB = ctx.taskDependencyService.getDependencies(taskB);
+    expect(depsA.is_blocked).toBe(true);
+    expect(depsB.is_blocked).toBe(true);
   });
 
-  it("rejects cycle for chains > 2 (X->Y->Z->X)", () => {
+  it("allows cyclic chains > 2 (X->Y->Z->X)", () => {
     // Use fresh tasks to avoid conflicts with earlier relates_to edges
     const [x] = ctx.taskService.create([{ project_id: projectId, title: "Chain X" }]);
     const [y] = ctx.taskService.create([{ project_id: projectId, title: "Chain Y" }]);
@@ -872,11 +877,17 @@ describe("Task Dependency Service", () => {
     ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: y.id, target_task_id: z.id, dependency_type: "blocks" },
     ]);
-    expect(() =>
-      ctx.taskDependencyService.addDependencies(projectId, [
-        { source_task_id: z.id, target_task_id: x.id, dependency_type: "blocks" },
-      ])
-    ).toThrow("adding this dependency would create a cycle");
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: z.id, target_task_id: x.id, dependency_type: "blocks" },
+    ]);
+    expect(deps).toHaveLength(1);
+    // All three tasks should be is_blocked
+    const depsX = ctx.taskDependencyService.getDependencies(x.id);
+    const depsY = ctx.taskDependencyService.getDependencies(y.id);
+    const depsZ = ctx.taskDependencyService.getDependencies(z.id);
+    expect(depsX.is_blocked).toBe(true);
+    expect(depsY.is_blocked).toBe(true);
+    expect(depsZ.is_blocked).toBe(true);
   });
 
   it("allows relates_to even if it would form a cycle in blocks graph", () => {
@@ -887,35 +898,40 @@ describe("Task Dependency Service", () => {
     expect(deps).toHaveLength(1);
   });
 
-  it("rejects batch cycle: [{A->B, blocks}, {B->A, blocks}]", () => {
+  it("allows batch cycle: [{A->B, blocks}, {B->A, blocks}]", () => {
     const [bA] = ctx.taskService.create([{ project_id: projectId, title: "Batch A" }]);
     const [bB] = ctx.taskService.create([{ project_id: projectId, title: "Batch B" }]);
-    expect(() =>
-      ctx.taskDependencyService.addDependencies(projectId, [
-        { source_task_id: bA.id, target_task_id: bB.id, dependency_type: "blocks" },
-        { source_task_id: bB.id, target_task_id: bA.id, dependency_type: "blocks" },
-      ])
-    ).toThrow("adding this dependency would create a cycle");
-    // Neither edge should be persisted
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: bA.id, target_task_id: bB.id, dependency_type: "blocks" },
+      { source_task_id: bB.id, target_task_id: bA.id, dependency_type: "blocks" },
+    ]);
+    expect(deps).toHaveLength(2);
+    // Both edges should be persisted and both tasks blocked
     const depsA = ctx.taskDependencyService.getDependencies(bA.id);
     const depsB = ctx.taskDependencyService.getDependencies(bB.id);
-    expect(depsA.blocks).toHaveLength(0);
-    expect(depsA.blocked_by).toHaveLength(0);
-    expect(depsB.blocks).toHaveLength(0);
-    expect(depsB.blocked_by).toHaveLength(0);
+    expect(depsA.blocked_by).toHaveLength(1);
+    expect(depsB.blocked_by).toHaveLength(1);
+    expect(depsA.is_blocked).toBe(true);
+    expect(depsB.is_blocked).toBe(true);
   });
 
-  it("rejects batch 3-node cycle: [{A->B, blocks}, {B->C, blocks}, {C->A, blocks}]", () => {
+  it("allows batch 3-node cycle: [{A->B, blocks}, {B->C, blocks}, {C->A, blocks}]", () => {
     const [c1] = ctx.taskService.create([{ project_id: projectId, title: "Cycle3 A" }]);
     const [c2] = ctx.taskService.create([{ project_id: projectId, title: "Cycle3 B" }]);
     const [c3] = ctx.taskService.create([{ project_id: projectId, title: "Cycle3 C" }]);
-    expect(() =>
-      ctx.taskDependencyService.addDependencies(projectId, [
-        { source_task_id: c1.id, target_task_id: c2.id, dependency_type: "blocks" },
-        { source_task_id: c2.id, target_task_id: c3.id, dependency_type: "blocks" },
-        { source_task_id: c3.id, target_task_id: c1.id, dependency_type: "blocks" },
-      ])
-    ).toThrow("adding this dependency would create a cycle");
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: c1.id, target_task_id: c2.id, dependency_type: "blocks" },
+      { source_task_id: c2.id, target_task_id: c3.id, dependency_type: "blocks" },
+      { source_task_id: c3.id, target_task_id: c1.id, dependency_type: "blocks" },
+    ]);
+    expect(deps).toHaveLength(3);
+    // All three tasks should be is_blocked
+    const d1 = ctx.taskDependencyService.getDependencies(c1.id);
+    const d2 = ctx.taskDependencyService.getDependencies(c2.id);
+    const d3 = ctx.taskDependencyService.getDependencies(c3.id);
+    expect(d1.is_blocked).toBe(true);
+    expect(d2.is_blocked).toBe(true);
+    expect(d3.is_blocked).toBe(true);
   });
 
   it("allows non-cyclic batch: [{A->B, blocks}, {B->C, blocks}]", () => {
@@ -956,26 +972,6 @@ describe("Task Dependency Service", () => {
     expect(graph.edges.length).toBeGreaterThanOrEqual(1);
     // B should be blocked (A->B blocks, A is still todo)
     expect(graph.blocked_task_ids).toContain(taskB);
-  });
-
-  it("getTopologicalOrder returns blockers before dependents", () => {
-    const order = ctx.taskDependencyService.getTopologicalOrder(projectId);
-    expect(order.length).toBeGreaterThanOrEqual(3);
-    const indexA = order.indexOf(taskA);
-    const indexB = order.indexOf(taskB);
-    // A should come before B (A blocks B)
-    expect(indexA).toBeLessThan(indexB);
-  });
-
-  it("topological sort puts tasks with no dependencies first", () => {
-    const [project2] = ctx.projectService.create([{ title: "Topo Test" }]);
-    const [t1] = ctx.taskService.create([{ project_id: project2.id, title: "Independent" }]);
-    const [t2] = ctx.taskService.create([{ project_id: project2.id, title: "Dependent" }]);
-    ctx.taskDependencyService.addDependencies(project2.id, [
-      { source_task_id: t1.id, target_task_id: t2.id, dependency_type: "blocks" },
-    ]);
-    const order = ctx.taskDependencyService.getTopologicalOrder(project2.id);
-    expect(order.indexOf(t1.id)).toBeLessThan(order.indexOf(t2.id));
   });
 
   it("removeDependencies removes specified pairs", () => {
@@ -1060,7 +1056,7 @@ describe("Task Dependency Service", () => {
     expect(again[0].dependency_type).toBe("blocks");
   });
 
-  it("upgrading relates_to to blocks triggers cycle detection", () => {
+  it("upgrading relates_to to blocks allows cycles", () => {
     const [p] = ctx.projectService.create([{ title: "Cycle Upgrade Test" }]);
     const [tA] = ctx.taskService.create([{ project_id: p.id, title: "CA" }]);
     const [tB] = ctx.taskService.create([{ project_id: p.id, title: "CB" }]);
@@ -1080,12 +1076,64 @@ describe("Task Dependency Service", () => {
     ]);
     expect(upgraded[0].dependency_type).toBe("blocks");
 
-    // Now C->A as blocks would create cycle A->B->C->A
-    expect(() =>
-      ctx.taskDependencyService.addDependencies(p.id, [
-        { source_task_id: tC.id, target_task_id: tA.id, dependency_type: "blocks" },
-      ])
-    ).toThrow("adding this dependency would create a cycle");
+    // C->A as blocks creates cycle A->B->C->A — now allowed
+    const cycleEdge = ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tC.id, target_task_id: tA.id, dependency_type: "blocks" },
+    ]);
+    expect(cycleEdge).toHaveLength(1);
+    expect(cycleEdge[0].dependency_type).toBe("blocks");
+  });
+
+  it("cyclic tasks are all is_blocked", () => {
+    const [p] = ctx.projectService.create([{ title: "Cycle Blocked Test" }]);
+    const [tA] = ctx.taskService.create([{ project_id: p.id, title: "CycBlk A" }]);
+    const [tB] = ctx.taskService.create([{ project_id: p.id, title: "CycBlk B" }]);
+    // A blocks B, B blocks A
+    ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+      { source_task_id: tB.id, target_task_id: tA.id, dependency_type: "blocks" },
+    ]);
+    const depsA = ctx.taskDependencyService.getDependencies(tA.id);
+    const depsB = ctx.taskDependencyService.getDependencies(tB.id);
+    expect(depsA.is_blocked).toBe(true);
+    expect(depsB.is_blocked).toBe(true);
+  });
+
+  it("get_dependency_graph includes cyclic edges", () => {
+    const [p] = ctx.projectService.create([{ title: "Cycle Graph Test" }]);
+    const [tA] = ctx.taskService.create([{ project_id: p.id, title: "CycGrph A" }]);
+    const [tB] = ctx.taskService.create([{ project_id: p.id, title: "CycGrph B" }]);
+    // Create 2-node cycle
+    ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+      { source_task_id: tB.id, target_task_id: tA.id, dependency_type: "blocks" },
+    ]);
+    const graph = ctx.taskDependencyService.getGraph(p.id);
+    expect(graph.edges).toHaveLength(2);
+    expect(graph.edges.some((e) => e.source_task_id === tA.id && e.target_task_id === tB.id)).toBe(true);
+    expect(graph.edges.some((e) => e.source_task_id === tB.id && e.target_task_id === tA.id)).toBe(true);
+    expect(graph.blocked_task_ids).toContain(tA.id);
+    expect(graph.blocked_task_ids).toContain(tB.id);
+  });
+
+  it("completing one task in a cycle unblocks the other", () => {
+    const [p] = ctx.projectService.create([{ title: "Cycle Unblock Test" }]);
+    const [tA] = ctx.taskService.create([{ project_id: p.id, title: "CycUnblk A" }]);
+    const [tB] = ctx.taskService.create([{ project_id: p.id, title: "CycUnblk B" }]);
+    // Create 2-node cycle
+    ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+      { source_task_id: tB.id, target_task_id: tA.id, dependency_type: "blocks" },
+    ]);
+    // Both blocked initially
+    expect(ctx.taskDependencyService.getDependencies(tA.id).is_blocked).toBe(true);
+    expect(ctx.taskDependencyService.getDependencies(tB.id).is_blocked).toBe(true);
+    // Mark A as done
+    ctx.taskService.update([{ id: tA.id, status: "done" }]);
+    // B should no longer be blocked (its only blocker A is done)
+    expect(ctx.taskDependencyService.getDependencies(tB.id).is_blocked).toBe(false);
+    // A is still blocked by B (B is still todo), but that's expected
+    expect(ctx.taskDependencyService.getDependencies(tA.id).is_blocked).toBe(true);
   });
 });
 

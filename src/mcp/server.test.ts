@@ -859,38 +859,8 @@ describe("get_ready_tasks", () => {
   });
 });
 
-describe("get_topological_order", () => {
-  it("returns tasks ordered with blockers before dependents", async () => {
-    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Topo Proj" }] }));
-    const [taskA, taskB, taskC] = parseResult(await callTool("create_task", {
-      items: [
-        { project_id: proj.id, title: "MCP Topo A" },
-        { project_id: proj.id, title: "MCP Topo B" },
-        { project_id: proj.id, title: "MCP Topo C" },
-      ],
-    }));
-
-    // A blocks B, B blocks C
-    await callTool("update_task", {
-      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
-    });
-    await callTool("update_task", {
-      items: [{ id: taskC.id, add_dependencies: [{ task_id: taskB.id, type: "blocks" }] }],
-    });
-
-    const ordered = parseResult(await callTool("get_topological_order", { project_id: proj.id }));
-    expect(ordered).toBeArray();
-    const ids = ordered.map((t: { id: string }) => t.id);
-    const indexA = ids.indexOf(taskA.id);
-    const indexB = ids.indexOf(taskB.id);
-    const indexC = ids.indexOf(taskC.id);
-    expect(indexA).toBeLessThan(indexB);
-    expect(indexB).toBeLessThan(indexC);
-  });
-});
-
 describe("dependency error cases via MCP", () => {
-  it("cycle detection via update_task returns isError: true", async () => {
+  it("cyclic blocks dependencies succeed via update_task", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Cycle Proj" }] }));
     const [taskA, taskB] = parseResult(await callTool("create_task", {
       items: [
@@ -904,12 +874,11 @@ describe("dependency error cases via MCP", () => {
       items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
     });
 
-    // Try B blocks A (would create cycle)
+    // B blocks A (creates cycle — now allowed)
     const result = await callTool("update_task", {
       items: [{ id: taskA.id, add_dependencies: [{ task_id: taskB.id, type: "blocks" }] }],
     });
-    expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/cycle/i);
+    expect(result.isError).toBeFalsy();
   });
 
   it("cross-project dependency via update_task returns isError: true", async () => {
