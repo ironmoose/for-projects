@@ -22,6 +22,7 @@ import {
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { Badge } from "../components/atoms/Badge";
 import { useProject } from "../hooks";
+import { useShortcut, useShortcutSuppression } from "../hooks/useKeyboardShortcuts";
 import { useWindowWidth } from "../hooks/useWindowWidth";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
@@ -49,6 +50,9 @@ function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "
 function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void }) {
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
+
+  // Suppress keyboard shortcuts while detail panel is open
+  useShortcutSuppression();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -251,6 +255,9 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
+
+  // Keyboard shortcut: "n" to create new task
+  useShortcut("n", "New task", () => setShowCreateTask(true), "Project");
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 

@@ -3,6 +3,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
 import { useDocument } from "../../hooks/useDocument";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 import { Overlay } from "../atoms/Overlay";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
@@ -19,6 +20,9 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
   const isSynth = themeName === "synth";
   const { document, notFound, loading } = useDocument(documentId);
   const reduced = useReducedMotion();
+
+  // Suppress keyboard shortcuts while modal is open
+  useShortcutSuppression();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

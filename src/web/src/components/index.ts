@@ -47,6 +47,7 @@ export { CreateProjectOverlay } from "./organisms/CreateProjectOverlay";
 export { CreateTaskOverlay } from "./organisms/CreateTaskOverlay";
 export { DocumentReaderModal } from "./organisms/DocumentReaderModal";
 export { DocumentTable } from "./organisms/DocumentTable";
+export { ShortcutHelpOverlay } from "./organisms/ShortcutHelpOverlay";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";
