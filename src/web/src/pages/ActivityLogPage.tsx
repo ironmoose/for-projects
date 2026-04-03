@@ -1,14 +1,18 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Badge,
   EmptyState,
+  Icon,
   ListPageLayout,
   PageHeader,
   Pagination,
   Select,
   useTheme,
 } from "../components";
+import { useToastContext } from "../components/ToastContext";
+import { DocumentReaderModal } from "../components/organisms/DocumentReaderModal";
 import { useActivityLog } from "../hooks/useActivityLog";
+import { fetchTask, ApiError } from "../api";
 import type { ActivityLog } from "../types";
 import { relativeTime, formatDate } from "../utils";
 
@@ -74,11 +78,27 @@ function SummaryCell({ summary }: { summary: string }) {
 // Table row
 // ---------------------------------------------------------------------------
 
-function LogRow({ log }: { log: ActivityLog }) {
+interface LogRowProps {
+  log: ActivityLog;
+  onClick: (() => void) | null;
+}
+
+function LogRow({ log, onClick }: LogRowProps) {
   const { theme } = useTheme();
+  const [hovered, setHovered] = useState(false);
+  const isClickable = onClick !== null;
 
   return (
-    <tr>
+    <tr
+      onClick={isClickable ? onClick : undefined}
+      onMouseEnter={isClickable ? () => setHovered(true) : undefined}
+      onMouseLeave={isClickable ? () => setHovered(false) : undefined}
+      style={{
+        cursor: isClickable ? "pointer" : "default",
+        background: hovered ? theme.color.surfaceContainerHigh : undefined,
+        transition: "background 120ms ease",
+      }}
+    >
       <td style={cellStyle(theme)}>
         <ActionBadge action={log.action} />
       </td>
@@ -93,7 +113,16 @@ function LogRow({ log }: { log: ActivityLog }) {
           color: theme.color.textFaint,
         }}
       >
-        {log.entity_id ? log.entity_id.slice(-8) : "--"}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: theme.spacing.xs }}>
+          {log.entity_id ? log.entity_id.slice(-8) : "--"}
+          {isClickable && (
+            <Icon
+              name="open_in_new"
+              size={14}
+              style={{ color: theme.color.textFaint, opacity: hovered ? 1 : 0.5 }}
+            />
+          )}
+        </span>
       </td>
       <td style={cellStyle(theme)}>
         <SummaryCell summary={log.summary} />
@@ -126,9 +155,15 @@ function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProper
 // Page
 // ---------------------------------------------------------------------------
 
-export function ActivityLogPage() {
+interface ActivityLogPageProps {
+  onNavigate: (path: string) => void;
+}
+
+export function ActivityLogPage({ onNavigate }: ActivityLogPageProps) {
   const { theme } = useTheme();
+  const { showToast } = useToastContext();
   const [entityType, setEntityType] = useState<string | undefined>(undefined);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
   const filter = useMemo(
     () => (entityType ? { entity_type: entityType } : undefined),
@@ -136,6 +171,50 @@ export function ActivityLogPage() {
   );
 
   const { logs, total, totalPages, page, setPage, loading } = useActivityLog(filter);
+
+  const handleRowClick = useCallback(
+    (log: ActivityLog) => {
+      if (!log.entity_id) return;
+
+      if (log.action === "deleted") {
+        showToast("This entity has been deleted", "warning");
+        return;
+      }
+
+      switch (log.entity_type) {
+        case "project":
+          onNavigate(`/projects/${log.entity_id}`);
+          break;
+        case "task":
+          fetchTask(log.entity_id)
+            .then((task) => {
+              onNavigate(`/projects/${task.project_id}`);
+            })
+            .catch((err) => {
+              if (err instanceof ApiError && err.status === 404) {
+                showToast("Task not found — it may have been deleted", "warning");
+              } else {
+                showToast("Failed to load task details", "error");
+              }
+            });
+          break;
+        case "document":
+          setSelectedDocumentId(log.entity_id);
+          break;
+        default:
+          break;
+      }
+    },
+    [onNavigate, showToast],
+  );
+
+  const getRowClickHandler = useCallback(
+    (log: ActivityLog): (() => void) | null => {
+      if (!log.entity_id) return null;
+      return () => handleRowClick(log);
+    },
+    [handleRowClick],
+  );
 
   return (
     <ListPageLayout>
@@ -208,7 +287,7 @@ export function ActivityLogPage() {
             </thead>
             <tbody>
               {logs.map((log) => (
-                <LogRow key={log.id} log={log} />
+                <LogRow key={log.id} log={log} onClick={getRowClickHandler(log)} />
               ))}
             </tbody>
           </table>
@@ -221,6 +300,13 @@ export function ActivityLogPage() {
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
+        />
+      )}
+
+      {selectedDocumentId && (
+        <DocumentReaderModal
+          documentId={selectedDocumentId}
+          onClose={() => setSelectedDocumentId(null)}
         />
       )}
     </ListPageLayout>
