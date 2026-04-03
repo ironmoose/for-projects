@@ -4,6 +4,7 @@ export interface CreateDocumentInput {
   title: string;
   content?: string;
   tags?: TagName[];
+  favorite?: boolean;
 }
 
 export interface UpdateDocumentInput {
@@ -11,6 +12,7 @@ export interface UpdateDocumentInput {
   title?: string;
   content?: string | null;
   tags?: TagName[];
+  favorite?: boolean;
 }
 
 export interface CreateProjectInput {

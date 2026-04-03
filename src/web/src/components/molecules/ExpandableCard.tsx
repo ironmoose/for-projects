@@ -67,7 +67,7 @@ export function ExpandableCard({
           {title}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginLeft: "auto", flexShrink: 0 }}>
-          {headerAction && (
+          {open && headerAction && (
             <span onClick={(e) => e.stopPropagation()}>
               {headerAction}
             </span>

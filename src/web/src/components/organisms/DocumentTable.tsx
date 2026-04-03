@@ -19,9 +19,10 @@ interface DocumentTableProps {
   selectedDocumentId: string | null;
   onSelectDocument: (id: string) => void;
   onDeleteDocument: (doc: DocumentSummary) => void;
+  onToggleFavorite: (doc: DocumentSummary) => void;
 }
 
-export function DocumentTable({ documents, selectedDocumentId, onSelectDocument, onDeleteDocument }: DocumentTableProps) {
+export function DocumentTable({ documents, selectedDocumentId, onSelectDocument, onDeleteDocument, onToggleFavorite }: DocumentTableProps) {
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
 
@@ -45,9 +46,9 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
       >
         <thead>
           <tr>
-            {["Title", "Tags", "Updated", ""].map((h) => (
+            {[{ key: "_fav", label: "" }, { key: "title", label: "Title" }, { key: "tags", label: "Tags" }, { key: "updated", label: "Updated" }, { key: "_actions", label: "" }].map(({ key, label: h }) => (
               <th
-                key={h || "_actions"}
+                key={key}
                 style={{
                   padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                   textAlign: "left",
@@ -79,6 +80,15 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
                 transition: "background 0.1s",
               }}
             >
+              <td style={{ ...cellStyle(theme), width: 32 }}>
+                <IconButton
+                  icon={doc.favorite ? "star" : "star_border"}
+                  size={16}
+                  onClick={(e) => { e.stopPropagation(); onToggleFavorite(doc); }}
+                  aria-label={doc.favorite ? "Remove from favorites" : "Add to favorites"}
+                  style={{ color: doc.favorite ? theme.color.warning : theme.color.textFaint }}
+                />
+              </td>
               <td style={{ ...cellStyle(theme), fontWeight: 500, maxWidth: 400 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span

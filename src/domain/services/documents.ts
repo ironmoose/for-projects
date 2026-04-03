@@ -17,7 +17,7 @@ export class DocumentService implements IDocumentService {
     private projectDocumentRepo?: ProjectDocumentRepository,
   ) {}
 
-  list(filter?: { title?: string; tag?: string; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
+  list(filter?: { title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
     // If filtering by project_id, get linked doc IDs first and intersect
     let docIds: string[] | undefined;
     if (filter?.project_id && this.projectDocumentRepo) {
@@ -69,6 +69,7 @@ export class DocumentService implements IDocumentService {
     const rows = inputs.map((input) => ({
       title: input.title,
       content: input.content ?? null,
+      favorite: input.favorite ? 1 : 0,
     }));
 
     const documents = this.documentRepo.insertMany(rows);

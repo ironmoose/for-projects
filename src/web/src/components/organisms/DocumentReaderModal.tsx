@@ -188,7 +188,16 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, flexShrink: 0 }}>
                   {!editing && (
-                    <IconButton icon="edit" size={18} onClick={enterEditMode} aria-label="Edit document" />
+                    <>
+                      <IconButton
+                        icon={document.favorite ? "star" : "star_border"}
+                        size={18}
+                        onClick={() => updateDocument({ favorite: !document.favorite })}
+                        aria-label={document.favorite ? "Remove from favorites" : "Add to favorites"}
+                        style={{ color: document.favorite ? theme.color.warning : theme.color.textMuted }}
+                      />
+                      <IconButton icon="edit" size={18} onClick={enterEditMode} aria-label="Edit document" />
+                    </>
                   )}
                   <IconButton icon="close" size={18} onClick={editing ? cancelEdit : onClose} aria-label={editing ? "Cancel editing" : "Close reader"} />
                 </div>

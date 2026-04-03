@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "../atoms/Input";
 import { Select } from "../atoms/Select";
+import { IconButton } from "../atoms/IconButton";
+import { useTheme } from "../theme/ThemeContext";
 import { TAG_NAMES } from "../../types";
 
 interface DocumentSearchBarProps {
   title: string;
   tag: string;
+  favorite: boolean;
   onTitleChange: (value: string) => void;
   onTagChange: (value: string) => void;
+  onFavoriteChange: (value: boolean) => void;
 }
 
 const tagOptions = [
@@ -15,9 +19,10 @@ const tagOptions = [
   ...TAG_NAMES.map((t) => ({ value: t, label: t })),
 ];
 
-export function DocumentSearchBar({ title, tag, onTitleChange, onTagChange }: DocumentSearchBarProps) {
+export function DocumentSearchBar({ title, tag, favorite, onTitleChange, onTagChange, onFavoriteChange }: DocumentSearchBarProps) {
   const [localTitle, setLocalTitle] = useState(title);
   const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     setLocalTitle(title);
@@ -47,6 +52,16 @@ export function DocumentSearchBar({ title, tag, onTitleChange, onTagChange }: Do
           onChange={(e) => onTagChange(e.target.value)}
         />
       </div>
+      <IconButton
+        icon={favorite ? "star" : "star_border"}
+        size={20}
+        onClick={() => onFavoriteChange(!favorite)}
+        aria-label={favorite ? "Show all documents" : "Show favorites only"}
+        style={{
+          color: favorite ? theme.color.warning : theme.color.textMuted,
+          flexShrink: 0,
+        }}
+      />
     </div>
   );
 }

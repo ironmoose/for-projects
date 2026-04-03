@@ -25,6 +25,7 @@ export function DocumentsPage() {
   const { showToast } = useToastContext();
   const [titleFilter, setTitleFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [favoriteFilter, setFavoriteFilter] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
@@ -32,9 +33,10 @@ export function DocumentsPage() {
   const filter = {
     ...(titleFilter ? { title: titleFilter } : {}),
     ...(tagFilter ? { tag: tagFilter } : {}),
+    ...(favoriteFilter ? { favorite: true as const } : {}),
   };
 
-  const { documents, loading, total, totalPages, page, setPage, create, remove } = useDocuments(
+  const { documents, loading, total, totalPages, page, setPage, create, update, remove } = useDocuments(
     Object.keys(filter).length > 0 ? filter : undefined,
   );
 
@@ -97,8 +99,10 @@ export function DocumentsPage() {
         <DocumentSearchBar
           title={titleFilter}
           tag={tagFilter}
+          favorite={favoriteFilter}
           onTitleChange={setTitleFilter}
           onTagChange={setTagFilter}
+          onFavoriteChange={setFavoriteFilter}
         />
 
         <div style={{ marginTop: theme.spacing.lg }}>
@@ -109,7 +113,7 @@ export function DocumentsPage() {
           ) : sorted.length === 0 ? (
             <EmptyState
               icon="description"
-              message={titleFilter || tagFilter
+              message={titleFilter || tagFilter || favoriteFilter
                 ? "No documents match your search."
                 : "No documents yet."}
               variant="card"
@@ -120,6 +124,7 @@ export function DocumentsPage() {
               selectedDocumentId={selectedDocumentId}
               onSelectDocument={(id) => setSelectedDocumentId(id)}
               onDeleteDocument={(doc) => setDeleteTarget(doc)}
+              onToggleFavorite={(doc) => update(doc.id, { favorite: !doc.favorite })}
             />
           )}
         </div>

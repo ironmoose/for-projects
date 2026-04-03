@@ -7,7 +7,7 @@ import { useThrottledCallback } from "./useThrottledCallback";
 
 const PAGE_SIZE = 20;
 
-export function useDocuments(filter?: { tag?: string; title?: string }) {
+export function useDocuments(filter?: { tag?: string; title?: string; favorite?: boolean }) {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -46,7 +46,7 @@ export function useDocuments(filter?: { tag?: string; title?: string }) {
 
   useEffect(() => {
     setPage(1);
-  }, [filter?.tag, filter?.title]);
+  }, [filter?.tag, filter?.title, filter?.favorite]);
 
   useEffect(() => {
     setLoading(true);
@@ -54,15 +54,15 @@ export function useDocuments(filter?: { tag?: string; title?: string }) {
     return subscribeEvents((event) => {
       if (event.entity_type === "document") throttledLoad();
     });
-  }, [subscribeEvents, throttledLoad, page, filter?.tag, filter?.title]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscribeEvents, throttledLoad, page, filter?.tag, filter?.title, filter?.favorite]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  async function create(input: { title: string; content?: string; tags?: string[] }) {
+  async function create(input: { title: string; content?: string; tags?: string[]; favorite?: boolean }) {
     await createDocuments([input]);
   }
 
-  async function update(id: string, input: { title?: string; content?: string | null; tags?: string[] }) {
+  async function update(id: string, input: { title?: string; content?: string | null; tags?: string[]; favorite?: boolean }) {
     await updateDocuments([{ id, ...input }]);
   }
 
