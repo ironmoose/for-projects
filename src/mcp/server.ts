@@ -52,13 +52,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_projects",
     {
-      description: "List projects with optional pagination. Returns { data, total } where data contains project summaries (id, title, timestamps).",
+      description: "List projects with optional pagination and title search. Returns { data, total } where data contains project summaries (id, title, timestamps).",
       inputSchema: {
+        title: z.string().max(255).optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ limit, offset }) => handle(() => projectService.list({ limit, offset }))
+    ({ title, limit, offset }) => handle(() => projectService.list({ title, offset, limit }))
   );
 
   server.registerTool(

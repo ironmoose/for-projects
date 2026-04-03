@@ -552,6 +552,19 @@ describe("create_document with invalid tag", () => {
   });
 });
 
+describe("list_projects with title filter", () => {
+  it("returns only projects matching title search", async () => {
+    await callTool("create_project", { items: [{ title: "McpProjTitleFilterUnique888" }] });
+    await callTool("create_project", { items: [{ title: "Unrelated MCP Project" }] });
+
+    const listResult = await callTool("list_projects", { title: "McpProjTitleFilterUnique888" });
+    const parsed = parseResult(listResult);
+    expect(parsed.data.length).toBe(1);
+    expect(parsed.data[0].title).toBe("McpProjTitleFilterUnique888");
+    expect(parsed.total).toBe(1);
+  });
+});
+
 describe("list_documents with title filter", () => {
   it("returns only documents matching title search", async () => {
     await callTool("create_document", { items: [{ title: "McpTitleFilterUnique999" }] });

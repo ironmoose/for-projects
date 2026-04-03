@@ -138,6 +138,21 @@ describe("Project Routes", () => {
     expect(summary.design).toBeUndefined();
   });
 
+  it("GET /projects filters by title", async () => {
+    await req("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "RouteTitleFilterUnique777" }] }),
+    });
+
+    const res = await req("/projects?title=RouteTitleFilterUnique777");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.total).toBe(1);
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].title).toBe("RouteTitleFilterUnique777");
+  });
+
   it("DELETE /projects deletes projects", async () => {
     const create = await req("/projects", {
       method: "POST",
