@@ -30,7 +30,7 @@ export interface ITaskService {
 }
 
 export interface ITaskDependencyService {
-  addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: string }[]): void;
+  addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: string }[]): TaskDependency[];
   removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void;
   getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean };
   getGraph(projectId: string): { edges: TaskDependency[]; blocked_task_ids: string[] };

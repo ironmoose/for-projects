@@ -39,6 +39,25 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
     return c.json({ tasks, edges, blocked_task_ids });
   });
 
+  // POST /api/projects/:id/dependencies
+  app.post("/:id/dependencies", async (c) => {
+    if (!depService) return c.json({ error: "dependency service not available" }, 500);
+    const projectId = c.req.param("id");
+    const body = await c.req.json<{ items: { source_task_id: string; target_task_id: string; dependency_type: string }[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
+    const results = depService.addDependencies(projectId, body.items);
+    return c.json(results, 201);
+  });
+
+  // DELETE /api/projects/:id/dependencies
+  app.delete("/:id/dependencies", async (c) => {
+    if (!depService) return c.json({ error: "dependency service not available" }, 500);
+    const body = await c.req.json<{ items: { source_task_id: string; target_task_id: string }[] }>();
+    if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
+    depService.removeDependencies(body.items);
+    return c.body(null, 204);
+  });
+
   // GET /api/projects/:id
   app.get("/:id", (c) => {
     return c.json(service.get(c.req.param("id")));

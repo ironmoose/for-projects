@@ -25,8 +25,8 @@ beforeAll(async () => {
   healthVersion = pkg.version;
 
   app = new Hono();
-  app.route("/projects", projectRoutes(ctx.projectService));
-  app.route("/tasks", taskRoutes(ctx.taskService));
+  app.route("/projects", projectRoutes(ctx.projectService, ctx.taskService, ctx.taskDependencyService));
+  app.route("/tasks", taskRoutes(ctx.taskService, ctx.taskDependencyService));
   app.route("/documents", documentRoutes(ctx.documentService));
 
   app.get("/health", (c) => {
@@ -706,6 +706,138 @@ describe("Batch Endpoint Validation", () => {
       body: JSON.stringify({ items: [{ id: task.id, status: "completed" }] }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Project Dependency Endpoints
+// ---------------------------------------------------------------------------
+
+describe("Project Dependency Endpoints", () => {
+  let projectId: string;
+  let taskAId: string;
+  let taskBId: string;
+  let taskCId: string;
+
+  beforeAll(async () => {
+    const [project] = ctx.projectService.create([{ title: "Dep Endpoint Project" }]);
+    projectId = project.id;
+    const tasks = ctx.taskService.create([
+      { project_id: projectId, title: "Dep Task A" },
+      { project_id: projectId, title: "Dep Task B" },
+      { project_id: projectId, title: "Dep Task C" },
+    ]);
+    taskAId = tasks[0].id;
+    taskBId = tasks[1].id;
+    taskCId = tasks[2].id;
+  });
+
+  it("POST /projects/:id/dependencies creates dependencies and returns 201", async () => {
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ source_task_id: taskAId, target_task_id: taskBId, dependency_type: "blocks" }],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toBeArray();
+    expect(body.length).toBe(1);
+    expect(body[0].source_task_id).toBe(taskAId);
+    expect(body[0].target_task_id).toBe(taskBId);
+    expect(body[0].dependency_type).toBe("blocks");
+  });
+
+  it("POST /projects/:id/dependencies with non-array items returns 400", async () => {
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: "not an array" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/items array/i);
+  });
+
+  it("POST /projects/:id/dependencies with cycle returns 400", async () => {
+    // A already blocks B (from previous test), B blocks C is fine, but C blocks A would cycle
+    await req(`/projects/${projectId}/dependencies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ source_task_id: taskBId, target_task_id: taskCId, dependency_type: "blocks" }],
+      }),
+    });
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ source_task_id: taskCId, target_task_id: taskAId, dependency_type: "blocks" }],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/cycle/i);
+  });
+
+  it("POST /projects/:id/dependencies with cross-project tasks returns 400", async () => {
+    const [otherProject] = ctx.projectService.create([{ title: "Other Dep Project" }]);
+    const [otherTask] = ctx.taskService.create([{ project_id: otherProject.id, title: "Other Task" }]);
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ source_task_id: taskAId, target_task_id: otherTask.id, dependency_type: "blocks" }],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/same project/i);
+  });
+
+  it("POST /projects/:id/dependencies with nonexistent task returns 404", async () => {
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ source_task_id: taskAId, target_task_id: "00000000000000000000000000", dependency_type: "blocks" }],
+      }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE /projects/:id/dependencies removes dependencies and returns 204", async () => {
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ source_task_id: taskAId, target_task_id: taskBId }],
+      }),
+    });
+    expect(res.status).toBe(204);
+  });
+
+  it("DELETE /projects/:id/dependencies with nonexistent edges is a no-op", async () => {
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ source_task_id: taskAId, target_task_id: "00000000000000000000000000" }],
+      }),
+    });
+    expect(res.status).toBe(204);
+  });
+
+  it("DELETE /projects/:id/dependencies with non-array items returns 400", async () => {
+    const res = await req(`/projects/${projectId}/dependencies`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: "not an array" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/items array/i);
   });
 });
 
