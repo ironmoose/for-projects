@@ -111,7 +111,7 @@ export async function createTasks(inputs: Array<{ project_id: string; title: str
   return res.json();
 }
 
-export async function updateTasks(inputs: Array<{ id: string; title?: string; plan?: string | null; description?: string | null; implementation?: string | null; acceptance_criteria?: string | null }>): Promise<Task[]> {
+export async function updateTasks(inputs: Array<{ id: string; title?: string; status?: string; effort?: string | null; impact?: string | null; category?: string | null; group_key?: string | null; plan?: string | null; description?: string | null; implementation?: string | null; acceptance_criteria?: string | null }>): Promise<Task[]> {
   const res = await apiFetch("/api/tasks", jsonPatch({ items: inputs }));
   return res.json();
 }

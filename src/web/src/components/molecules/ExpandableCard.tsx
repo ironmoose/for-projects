@@ -12,6 +12,7 @@ interface ExpandableCardProps {
   defaultOpen?: boolean;
   variant?: CardVariant;
   style?: React.CSSProperties;
+  headerAction?: ReactNode;
 }
 
 export function ExpandableCard({
@@ -20,6 +21,7 @@ export function ExpandableCard({
   defaultOpen = false,
   variant = "default",
   style,
+  headerAction,
 }: ExpandableCardProps) {
   const { theme } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
@@ -64,16 +66,23 @@ export function ExpandableCard({
         >
           {title}
         </span>
-        <Icon
-          name="chevron_right"
-          size={18}
-          style={{
-            color: theme.color.textMuted,
-            transform: open ? "rotate(90deg)" : "rotate(0deg)",
-            transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
-            flexShrink: 0,
-          }}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, flexShrink: 0 }}>
+          {headerAction && (
+            <span onClick={(e) => e.stopPropagation()}>
+              {headerAction}
+            </span>
+          )}
+          <Icon
+            name="chevron_right"
+            size={18}
+            style={{
+              color: theme.color.textMuted,
+              transform: open ? "rotate(90deg)" : "rotate(0deg)",
+              transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
+              flexShrink: 0,
+            }}
+          />
+        </div>
       </div>
       <div
         style={{
