@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sg } from "../components/theme/synthGlow";
 import {
   Button,
+  Card,
   Icon,
   IconButton,
   Input,
   Select,
   Markdown,
+  SectionLabel,
   Textarea,
   Stack,
   useTheme,
@@ -731,8 +733,9 @@ function TaskDetailPanel({
               </ExpandableCard>
             ))}
 
-            {/* Dependencies */}
-            <ExpandableCard title="Dependencies" defaultOpen variant="flat" style={{ marginBottom: theme.spacing.sm }}>
+            {/* Dependencies — always visible, not collapsible */}
+            <Card variant="flat" padding="md" style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.sm }}>
+              <SectionLabel style={{ marginBottom: theme.spacing.sm }}>Dependencies</SectionLabel>
               {depsLoading ? (
                 <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint }}>Loading dependencies...</p>
               ) : dependencies ? (
@@ -778,7 +781,7 @@ function TaskDetailPanel({
                   Dependencies not available
                 </p>
               )}
-            </ExpandableCard>
+            </Card>
 
             {/* Read-only metadata footer */}
             <div
