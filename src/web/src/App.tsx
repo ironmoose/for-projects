@@ -75,7 +75,7 @@ export function App() {
       return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;
     }
     if (path.startsWith("/activity")) {
-      return <ActivityLogPage />;
+      return <ActivityLogPage onNavigate={navigate} />;
     }
     if (path.startsWith("/themes")) {
       return <ThemesPage />;
