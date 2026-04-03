@@ -9,6 +9,7 @@ import {
   SectionLabel,
   StatusDot,
   MetaValue,
+  ProgressBar,
   Card,
   Stack,
   BackButton,
@@ -19,6 +20,7 @@ import {
   RowSkeleton,
   ExpandableCard,
 } from "../components";
+import type { ProgressBarSegment } from "../components";
 
 export function registerAllComponents(): void {
   // Atoms
@@ -167,6 +169,32 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Skeleton width={String(props.width)} height={Number(props.height)} />,
     codeTemplate: `<Skeleton width="200px" height={16} />`,
+  });
+
+  registerComponent({
+    name: "ProgressBar",
+    description: "Stacked horizontal bar showing proportional segments with optional hover tooltips.",
+    category: "atom",
+    propDefs: [
+      { name: "height", type: "number", defaultValue: 6 },
+    ],
+    render: (props) => (
+      <ProgressBar
+        height={Number(props.height)}
+        segments={[
+          { value: 3, color: "#8ba8b2", label: "todo" },
+          { value: 2, color: "#fcb97b", label: "in_progress" },
+          { value: 5, color: "#6dd58c", label: "done" },
+          { value: 1, color: "#5a7580", label: "archived" },
+        ] as ProgressBarSegment[]}
+        style={{ width: 240 }}
+      />
+    ),
+    variants: [
+      { name: "All Done", props: {} },
+      { name: "Mixed", props: {} },
+    ],
+    codeTemplate: `<ProgressBar segments={[{ value: 3, color: "green", label: "done" }]} height={6} />`,
   });
 
   // Molecules
