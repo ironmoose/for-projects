@@ -7,36 +7,6 @@ import type { TaskRepository } from "../repositories/tasks";
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
-function wouldCreateCycle(
-  existingEdges: TaskDependency[],
-  newEdge: { source_task_id: string; target_task_id: string },
-): boolean {
-  // Build adjacency list from existing 'blocks' edges + the proposed edge
-  const adj = new Map<string, Set<string>>();
-  for (const edge of existingEdges) {
-    if (edge.dependency_type !== "blocks") continue;
-    if (!adj.has(edge.source_task_id)) adj.set(edge.source_task_id, new Set());
-    adj.get(edge.source_task_id)!.add(edge.target_task_id);
-  }
-  // Add the proposed edge
-  if (!adj.has(newEdge.source_task_id)) adj.set(newEdge.source_task_id, new Set());
-  adj.get(newEdge.source_task_id)!.add(newEdge.target_task_id);
-
-  // DFS from target to see if we can reach source (which means a cycle)
-  const visited = new Set<string>();
-  const stack = [newEdge.target_task_id];
-  while (stack.length > 0) {
-    const node = stack.pop()!;
-    if (node === newEdge.source_task_id) return true;
-    if (visited.has(node)) continue;
-    visited.add(node);
-    for (const neighbor of adj.get(node) ?? []) {
-      stack.push(neighbor);
-    }
-  }
-  return false;
-}
-
 function topologicalSort(edges: TaskDependency[], taskIds: string[]): string[] {
   const inDegree = new Map<string, number>();
   const adj = new Map<string, string[]>();
@@ -73,7 +43,6 @@ export class TaskDependencyService implements ITaskDependencyService {
 
   addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: DependencyType }[]): TaskDependency[] {
     // Phase 1: Validate all inputs
-    const proposedEdges: TaskDependency[] = [];
     for (const dep of deps) {
       // Validate dependency_type
       if (!(DEPENDENCY_TYPES as readonly string[]).includes(dep.dependency_type)) {
@@ -95,15 +64,6 @@ export class TaskDependencyService implements ITaskDependencyService {
       // Both tasks must belong to the specified project
       if (sourceTask.project_id !== projectId || targetTask.project_id !== projectId) {
         throw new ServiceError("dependencies must be within the same project", 400);
-      }
-
-      // Cycle detection -- only for 'blocks' type
-      if (dep.dependency_type === "blocks") {
-        const existingEdges = this.depRepo.getGraphForProject(projectId);
-        if (wouldCreateCycle([...existingEdges, ...proposedEdges], dep)) {
-          throw new ServiceError("adding this dependency would create a cycle", 400);
-        }
-        proposedEdges.push({ source_task_id: dep.source_task_id, target_task_id: dep.target_task_id, dependency_type: dep.dependency_type, created_at: "" });
       }
     }
 
