@@ -1,9 +1,12 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 import { PresenceCharm } from "../molecules/PresenceCharm";
 import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
 import type { TaskSummary } from "../../types";
+import { TASK_STATUSES } from "../../types";
+import type { TaskStatus } from "../../types";
 
 const STATUS_LABELS: Record<string, string> = {
   todo: "todo",
@@ -30,11 +33,35 @@ interface TaskTableProps {
   selectedTaskId: string | null;
   onSelectTask: (id: string) => void;
   onDeleteTask: (task: TaskSummary) => void;
+  onUpdateTaskStatus?: (taskId: string, status: TaskStatus) => void;
 }
 
-export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask }: TaskTableProps) {
+export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, onUpdateTaskStatus }: TaskTableProps) {
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
+  const [statusDropdownTaskId, setStatusDropdownTaskId] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!statusDropdownTaskId) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setStatusDropdownTaskId(null);
+      }
+    }
+    window.addEventListener("click", handleClickOutside, true);
+    return () => window.removeEventListener("click", handleClickOutside, true);
+  }, [statusDropdownTaskId]);
+
+  const handleStatusSelect = useCallback(
+    (taskId: string, currentStatus: string, newStatus: TaskStatus) => {
+      setStatusDropdownTaskId(null);
+      if (newStatus === currentStatus) return;
+      onUpdateTaskStatus?.(taskId, newStatus);
+    },
+    [onUpdateTaskStatus],
+  );
 
   return (
     <div
@@ -111,10 +138,102 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask }:
                   </div>
                 </div>
               </td>
-              <td style={cellStyle(theme)}>
-                <Badge variant={statusBadgeVariant(task.status)}>
-                  {STATUS_LABELS[task.status] ?? task.status}
-                </Badge>
+              <td style={{ ...cellStyle(theme), position: "relative" }}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusDropdownTaskId(
+                      statusDropdownTaskId === task.id ? null : task.id,
+                    );
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setStatusDropdownTaskId(
+                        statusDropdownTaskId === task.id ? null : task.id,
+                      );
+                    }
+                  }}
+                  style={{ display: "inline-block", cursor: "pointer" }}
+                  aria-label="Change task status"
+                  aria-haspopup="listbox"
+                  aria-expanded={statusDropdownTaskId === task.id}
+                >
+                  <Badge variant={statusBadgeVariant(task.status)}>
+                    {STATUS_LABELS[task.status] ?? task.status}
+                  </Badge>
+                </div>
+                {statusDropdownTaskId === task.id && (
+                  <div
+                    ref={dropdownRef}
+                    role="listbox"
+                    aria-label="Status options"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      zIndex: 100,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      padding: theme.spacing.sm,
+                      background: theme.color.surfaceContainer,
+                      border: `1px solid ${isSynth ? sg(27) : theme.color.border}`,
+                      borderRadius: theme.radius.md,
+                      boxShadow: isSynth
+                        ? `0 0 12px ${sg(9)}`
+                        : theme.shadow.md,
+                      minWidth: 120,
+                    }}
+                  >
+                    {TASK_STATUSES.map((s) => (
+                      <div
+                        key={s}
+                        role="option"
+                        aria-selected={s === task.status}
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusSelect(task.id, task.status, s);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleStatusSelect(task.id, task.status, s);
+                          }
+                        }}
+                        style={{
+                          cursor: "pointer",
+                          padding: "2px 4px",
+                          borderRadius: theme.radius.sm,
+                          background:
+                            s === task.status
+                              ? `${theme.color.primary}18`
+                              : "transparent",
+                          transition: "background 100ms",
+                        }}
+                      >
+                        <Badge
+                          variant={statusBadgeVariant(s)}
+                          style={{
+                            opacity: s === task.status ? 1 : 0.7,
+                            outline:
+                              s === task.status
+                                ? `2px solid ${theme.color.primary}`
+                                : "none",
+                            outlineOffset: 1,
+                          }}
+                        >
+                          {STATUS_LABELS[s] ?? s}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </td>
               <td
                 style={{
