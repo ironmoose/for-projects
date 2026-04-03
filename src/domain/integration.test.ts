@@ -945,6 +945,81 @@ describe("Task Dependency Service", () => {
     const deletedLogs = logs.filter((l) => l.action === "deleted");
     expect(deletedLogs.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("upserts dependency_type when re-adding with different type (relates_to -> blocks)", () => {
+    const [p] = ctx.projectService.create([{ title: "Upsert Test" }]);
+    const [tA] = ctx.taskService.create([{ project_id: p.id, title: "UA" }]);
+    const [tB] = ctx.taskService.create([{ project_id: p.id, title: "UB" }]);
+
+    const first = ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "relates_to" },
+    ]);
+    expect(first[0].dependency_type).toBe("relates_to");
+    const firstCreatedAt = first[0].created_at;
+
+    const second = ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+    ]);
+    expect(second[0].dependency_type).toBe("blocks");
+    // created_at is refreshed by the UPSERT (may equal firstCreatedAt in fast tests)
+    expect(second[0].created_at).toBeTruthy();
+  });
+
+  it("upserts dependency_type when downgrading (blocks -> relates_to)", () => {
+    const [p] = ctx.projectService.create([{ title: "Downgrade Test" }]);
+    const [tA] = ctx.taskService.create([{ project_id: p.id, title: "DA" }]);
+    const [tB] = ctx.taskService.create([{ project_id: p.id, title: "DB" }]);
+
+    ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+    ]);
+    const downgraded = ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "relates_to" },
+    ]);
+    expect(downgraded[0].dependency_type).toBe("relates_to");
+  });
+
+  it("re-adding same type does not error", () => {
+    const [p] = ctx.projectService.create([{ title: "Same Type Test" }]);
+    const [tA] = ctx.taskService.create([{ project_id: p.id, title: "SA" }]);
+    const [tB] = ctx.taskService.create([{ project_id: p.id, title: "SB" }]);
+
+    ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+    ]);
+    const again = ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+    ]);
+    expect(again[0].dependency_type).toBe("blocks");
+  });
+
+  it("upgrading relates_to to blocks triggers cycle detection", () => {
+    const [p] = ctx.projectService.create([{ title: "Cycle Upgrade Test" }]);
+    const [tA] = ctx.taskService.create([{ project_id: p.id, title: "CA" }]);
+    const [tB] = ctx.taskService.create([{ project_id: p.id, title: "CB" }]);
+    const [tC] = ctx.taskService.create([{ project_id: p.id, title: "CC" }]);
+
+    // A blocks B
+    ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
+    ]);
+    // B relates_to C (no cycle concern)
+    ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tB.id, target_task_id: tC.id, dependency_type: "relates_to" },
+    ]);
+    // Upgrade B->C to blocks (should succeed — no cycle)
+    const upgraded = ctx.taskDependencyService.addDependencies(p.id, [
+      { source_task_id: tB.id, target_task_id: tC.id, dependency_type: "blocks" },
+    ]);
+    expect(upgraded[0].dependency_type).toBe("blocks");
+
+    // Now C->A as blocks would create cycle A->B->C->A
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(p.id, [
+        { source_task_id: tC.id, target_task_id: tA.id, dependency_type: "blocks" },
+      ])
+    ).toThrow("adding this dependency would create a cycle");
+  });
 });
 
 // ---------------------------------------------------------------------------
