@@ -176,6 +176,22 @@ describe("list_tasks", () => {
     expect(list.data.some((t: { title: string }) => t.title === "T1")).toBe(true);
   });
 
+  it("accepts comma-separated status filter", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Multi Status Proj" }] }));
+    await callTool("create_task", { items: [
+      { project_id: proj.id, title: "Todo Task", status: "todo" },
+      { project_id: proj.id, title: "In Progress Task", status: "in_progress" },
+      { project_id: proj.id, title: "Done Task", status: "done" },
+    ] });
+
+    const list = parseResult(await callTool("list_tasks", { project_id: proj.id, status: "todo,in_progress" }));
+    expect(list.data.length).toBe(2);
+    const statuses = list.data.map((t: { status: string }) => t.status);
+    expect(statuses).toContain("todo");
+    expect(statuses).toContain("in_progress");
+    expect(statuses).not.toContain("done");
+  });
+
   it("returns summary fields in list results", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Summary Fields Proj" }] }));
     await callTool("create_task", {

@@ -73,11 +73,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tasks",
     {
-      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, and/or category. Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, timestamps).",
+      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, and/or category. status accepts a single value or comma-separated values (e.g. \"in_progress,todo\"). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, timestamps).",
       inputSchema: {
         project_id: z.string().max(26).optional(),
         group_key: z.string().max(32).optional(),
-        status: z.enum([...TASK_STATUSES]).optional(),
+        status: z.string().max(100).optional(),
         effort: z.enum([...EFFORT_LEVELS]).optional(),
         impact: z.enum([...IMPACT_LEVELS]).optional(),
         category: z.enum([...TASK_CATEGORIES]).optional(),
