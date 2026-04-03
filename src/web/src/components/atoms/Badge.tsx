@@ -3,7 +3,7 @@ import { useTheme } from "../theme/ThemeContext";
 type BadgeVariant =
   | "active" | "archived" | "default"
   | "pending" | "running" | "complete" | "failed" | "skipped"
-  | "todo" | "in_progress" | "done";
+  | "todo" | "in_progress" | "done" | "warning";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -81,6 +81,10 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
     done: {
       background: `${theme.color.success}26`,
       color: theme.color.success,
+    },
+    warning: {
+      background: `${theme.color.warning}26`,
+      color: theme.color.warning,
     },
   };
 
