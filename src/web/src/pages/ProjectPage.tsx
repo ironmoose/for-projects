@@ -6,6 +6,7 @@ import {
   IconButton,
   Input,
   Markdown,
+  Textarea,
   Stack,
   useTheme,
   DetailPageLayout,
@@ -254,6 +255,10 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [titleValue, setTitleValue] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
 
+  type EditableField = "goal" | "requirements" | "design";
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
+  const [editValue, setEditValue] = useState("");
+
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
   useEffect(() => {
@@ -299,6 +304,25 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to delete task");
     }
+  }
+
+  function handleStartEdit(field: EditableField) {
+    if (!project) return;
+    setEditingField(field);
+    setEditValue(project[field] ?? "");
+  }
+
+  function handleCancelEdit() {
+    setEditingField(null);
+    setEditValue("");
+  }
+
+  async function handleSaveEdit() {
+    if (!editingField) return;
+    const trimmed = editValue.trim();
+    await updateProject({ [editingField]: trimmed || null });
+    setEditingField(null);
+    setEditValue("");
   }
 
   if (notFound) {
@@ -436,17 +460,76 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             { key: "goal" as const, label: "Goal", defaultOpen: true },
             { key: "requirements" as const, label: "Requirements", defaultOpen: false },
             { key: "design" as const, label: "Design", defaultOpen: false },
-          ]).map(({ key, label, defaultOpen }) => (
-            <ExpandableCard key={key} title={label} defaultOpen={isWide || defaultOpen} style={{ marginBottom: theme.spacing.xl }}>
-              {project[key] ? (
-                <Markdown>{project[key]}</Markdown>
-              ) : (
-                <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
-                  Not set
-                </p>
-              )}
-            </ExpandableCard>
-          ))}
+          ]).map(({ key, label, defaultOpen }) => {
+            const isEditing = editingField === key;
+            return (
+              <ExpandableCard
+                key={key}
+                title={label}
+                defaultOpen={isEditing || isWide || defaultOpen}
+                style={{ marginBottom: theme.spacing.xl }}
+                headerAction={
+                  !isEditing ? (
+                    <IconButton
+                      icon="edit"
+                      size={16}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleStartEdit(key);
+                      }}
+                      aria-label={`Edit ${label}`}
+                    />
+                  ) : undefined
+                }
+              >
+                {isEditing ? (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.stopPropagation();
+                        handleCancelEdit();
+                      }
+                    }}
+                  >
+                    <Textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      rows={8}
+                      style={{ width: "100%", boxSizing: "border-box", minHeight: 120 }}
+                      autoFocus
+                    />
+                    <Stack direction="row" gap="sm" justify="flex-end" style={{ marginTop: theme.spacing.sm }}>
+                      <Button
+                        variant="ghost"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleCancelEdit();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleSaveEdit();
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </Stack>
+                  </div>
+                ) : project[key] ? (
+                  <Markdown>{project[key]}</Markdown>
+                ) : (
+                  <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
+                    Not set
+                  </p>
+                )}
+              </ExpandableCard>
+            );
+          })}
 
           {/* Documents section */}
           {(project.documents ?? []).length > 0 && (
