@@ -6,7 +6,8 @@ export class TaskDependencyRepository {
 
   addDependencies(deps: { source_task_id: string; target_task_id: string; dependency_type: DependencyType }[]): TaskDependency[] {
     const stmt = this.db.query(
-      "INSERT OR IGNORE INTO task_dependencies (source_task_id, target_task_id, dependency_type, created_at) VALUES (?, ?, ?, ?)"
+      `INSERT INTO task_dependencies (source_task_id, target_task_id, dependency_type, created_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(source_task_id, target_task_id) DO UPDATE SET dependency_type = excluded.dependency_type, created_at = excluded.created_at`
     );
     const now = new Date().toISOString();
     for (const dep of deps) {
