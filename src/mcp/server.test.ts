@@ -536,6 +536,54 @@ describe("create_document with invalid tag", () => {
   });
 });
 
+describe("list_documents with title filter", () => {
+  it("returns only documents matching title search", async () => {
+    await callTool("create_document", { items: [{ title: "McpTitleFilterUnique999" }] });
+    await callTool("create_document", { items: [{ title: "Unrelated MCP Doc" }] });
+
+    const listResult = await callTool("list_documents", { title: "McpTitleFilterUnique999" });
+    const parsed = parseResult(listResult);
+    expect(parsed.data.length).toBeGreaterThanOrEqual(1);
+    expect(parsed.data.every((d: { title: string }) => d.title.includes("McpTitleFilterUnique999"))).toBe(true);
+  });
+});
+
+describe("update_document with tags=[] clears tags", () => {
+  it("clears all tags when updated with empty array", async () => {
+    const [created] = parseResult(
+      await callTool("create_document", { items: [{ title: "MCP Clear Tags Doc", tags: ["security", "ui"] }] })
+    );
+
+    expect(created.tags.length).toBe(2);
+
+    await callTool("update_document", {
+      items: [{ id: created.id, tags: [] }],
+    });
+
+    const doc = parseResult(await callTool("get_document", { id: created.id }));
+    expect(doc.tags).toEqual([]);
+  });
+});
+
+describe("batch create_document with distinct tag sets", () => {
+  it("creates multiple documents each with correct tags", async () => {
+    const docs = parseResult(
+      await callTool("create_document", {
+        items: [
+          { title: "MCP Batch Tag A", tags: ["architecture", "domain"] },
+          { title: "MCP Batch Tag B", tags: ["testing", "performance"] },
+        ],
+      })
+    );
+
+    expect(docs).toHaveLength(2);
+    expect(docs[0].title).toBe("MCP Batch Tag A");
+    expect(docs[0].tags.sort()).toEqual(["architecture", "domain"]);
+    expect(docs[1].title).toBe("MCP Batch Tag B");
+    expect(docs[1].tags.sort()).toEqual(["performance", "testing"]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Extended update_project (document attach/detach)
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { bootstrap, type AppContext } from "./bootstrap";
@@ -13,15 +13,39 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 let ctx: AppContext;
 let tempDir: string;
 let app: Hono;
+let healthStartedAt: number;
+let healthVersion: string;
 
 beforeAll(async () => {
+  healthStartedAt = Date.now();
   tempDir = mkdtempSync(join(tmpdir(), "route-test-"));
   ctx = await bootstrap(join(tempDir, "test.db"));
+
+  const pkg = JSON.parse(readFileSync(join(import.meta.dir, "../../package.json"), "utf-8")) as { version: string };
+  healthVersion = pkg.version;
 
   app = new Hono();
   app.route("/projects", projectRoutes(ctx.projectService));
   app.route("/tasks", taskRoutes(ctx.taskService));
   app.route("/documents", documentRoutes(ctx.documentService));
+
+  app.get("/health", (c) => {
+    let dbOk = false;
+    try {
+      const row = ctx.db.query("SELECT 1 AS ok").get() as { ok: number } | null;
+      dbOk = row?.ok === 1;
+    } catch {
+      dbOk = false;
+    }
+    return c.json({
+      status: dbOk ? "ok" : "degraded",
+      version: healthVersion,
+      uptime_seconds: Math.floor((Date.now() - healthStartedAt) / 1000),
+      database: dbOk ? "connected" : "unreachable",
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   app.onError((err, c) => {
     if (err instanceof SyntaxError) return c.json({ error: "invalid JSON body" }, 400);
     if (err instanceof ServiceError) return c.json({ error: err.message }, err.statusCode as ContentfulStatusCode);
@@ -420,6 +444,62 @@ describe("Document Routes", () => {
     const check = await req(`/documents/${doc.id}`);
     expect(check.status).toBe(404);
   });
+
+  it("PATCH /documents with tags=[] clears all tags", async () => {
+    const create = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Clear Tags Route Doc", tags: ["security", "ui"] }],
+      }),
+    });
+    const [doc] = await create.json();
+    expect(doc.tags.length).toBe(2);
+
+    const patchRes = await req("/documents", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ id: doc.id, tags: [] }],
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const getRes = await req(`/documents/${doc.id}`);
+    const body = await getRes.json();
+    expect(body.tags).toEqual([]);
+  });
+
+  it("GET /documents list returns summary without content", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "SummaryShapeDoc", content: "Hidden content" }],
+      }),
+    });
+
+    const res = await req("/documents?title=SummaryShapeDoc");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    const summary = body.data[0];
+    expect(summary.has_content).toBe(true);
+    expect(summary.content).toBeUndefined();
+    expect(summary.id).toBeTruthy();
+    expect(summary.title).toBe("SummaryShapeDoc");
+  });
+
+  it("POST /documents with missing title returns 400", async () => {
+    const res = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ content: "No title here" }],
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -511,5 +591,124 @@ describe("Extended Project Routes", () => {
       }] }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Batch Endpoint Validation
+// ---------------------------------------------------------------------------
+
+describe("Batch Endpoint Validation", () => {
+  it("POST /projects with non-array items returns 400", async () => {
+    const res = await req("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: "not an array" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/items array/i);
+  });
+
+  it("POST /tasks with non-array items returns 400", async () => {
+    const res = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: "not an array" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/items array/i);
+  });
+
+  it("POST /documents with non-array items returns 400", async () => {
+    const res = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: "not an array" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/items array/i);
+  });
+
+  it("PATCH /projects with non-array items returns 400", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: { not: "an array" } }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/items array/i);
+  });
+
+  it("POST /projects with invalid JSON returns 400", async () => {
+    const res = await req("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{this is not valid json",
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/invalid JSON/i);
+  });
+
+  it("POST /tasks with empty items array returns 201 with empty array", async () => {
+    const res = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [] }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toBeArray();
+    expect(body.length).toBe(0);
+  });
+
+  it("POST /documents with missing title returns 400", async () => {
+    const res = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{}] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("PATCH /tasks with invalid status enum returns 400", async () => {
+    // Create a valid task first
+    const [p] = ctx.projectService.create([{ title: "Enum Route Project" }]);
+    const createRes = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ project_id: p.id, title: "Enum task" }] }),
+    });
+    const [task] = await createRes.json();
+
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ id: task.id, status: "completed" }] }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Health Endpoint
+// ---------------------------------------------------------------------------
+
+describe("Health Endpoint", () => {
+  it("GET /health returns 200 with expected shape", async () => {
+    const res = await req("/health");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("ok");
+    expect(body.database).toBe("connected");
+    expect(typeof body.uptime_seconds).toBe("number");
+    expect(body.uptime_seconds).toBeGreaterThanOrEqual(0);
+    expect(body.version).toBe(healthVersion);
+    // Verify timestamp is ISO 8601
+    expect(new Date(body.timestamp).toISOString()).toBe(body.timestamp);
   });
 });

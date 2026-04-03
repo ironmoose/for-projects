@@ -29,8 +29,11 @@ export class Server {
   }
 
   async start(): Promise<void> {
+    const startedAt = Date.now();
     const { port, host, dbPath } = this.options;
     const ctx = await bootstrap(dbPath);
+    const pkg = JSON.parse(readFileSync(join(import.meta.dir, "../../package.json"), "utf-8")) as { version: string };
+    const version = pkg.version;
 
     const app = new Hono();
     const isAllowedOrigin = parseCorsOrigins(process.env.PM_CORS_ORIGINS);
@@ -55,7 +58,23 @@ export class Server {
     app.route("/api/tasks", taskRoutes(ctx.taskService));
     app.route("/api/documents", documentRoutes(ctx.documentService));
     app.route("/api/activity-log", activityLogRoutes(ctx.activityLogRepo));
-    app.get("/api/health", (c) => c.json({ status: "ok" }));
+    app.get("/api/health", (c) => {
+      let dbOk = false;
+      try {
+        const row = ctx.db.query("SELECT 1 AS ok").get() as { ok: number } | null;
+        dbOk = row?.ok === 1;
+      } catch {
+        dbOk = false;
+      }
+
+      return c.json({
+        status: dbOk ? "ok" : "degraded",
+        version,
+        uptime_seconds: Math.floor((Date.now() - startedAt) / 1000),
+        database: dbOk ? "connected" : "unreachable",
+        timestamp: new Date().toISOString(),
+      });
+    });
 
     // -- MCP --------------------------------------------------------
     app.use("/mcp", logger((str) => process.stderr.write(str + "\n")));

@@ -399,6 +399,97 @@ describe("Document CRUD", () => {
       ctx.documentService.update([{ id: doc.id, tags: ["not-a-tag"] as any }])
     ).toThrow(ServiceError);
   });
+
+  it("batch creates multiple documents in one call", () => {
+    const docs = ctx.documentService.create([
+      { title: "Batch Doc A", content: "Content A" },
+      { title: "Batch Doc B", content: "Content B" },
+      { title: "Batch Doc C" },
+    ]);
+
+    expect(docs).toHaveLength(3);
+    expect(docs[0].title).toBe("Batch Doc A");
+    expect(docs[0].content).toBe("Content A");
+    expect(docs[1].title).toBe("Batch Doc B");
+    expect(docs[1].content).toBe("Content B");
+    expect(docs[2].title).toBe("Batch Doc C");
+    expect(docs[2].id).toBeTruthy();
+  });
+
+  it("creates document with content=undefined defaults to null", () => {
+    const [doc] = ctx.documentService.create([{ title: "No Content Doc" }]);
+
+    expect(doc.content).toBeNull();
+  });
+
+  it("update with tags=[] clears all tags", () => {
+    const [doc] = ctx.documentService.create([{
+      title: "Clear Tags Doc",
+      tags: ["security", "ui"],
+    }]);
+
+    expect(doc.tags.length).toBe(2);
+
+    const [updated] = ctx.documentService.update([{
+      id: doc.id,
+      tags: [],
+    }]);
+
+    expect(updated.tags).toEqual([]);
+
+    const fetched = ctx.documentService.get(doc.id);
+    expect(fetched.tags).toEqual([]);
+  });
+
+  it("deletes multiple documents in one call", () => {
+    const docs = ctx.documentService.create([
+      { title: "Batch Del A" },
+      { title: "Batch Del B" },
+      { title: "Batch Del C" },
+    ]);
+
+    ctx.documentService.remove(docs.map((d) => d.id));
+
+    for (const doc of docs) {
+      expect(() => ctx.documentService.get(doc.id)).toThrow(ServiceError);
+    }
+  });
+
+  it("delete document cleans up entity_tags rows", () => {
+    const [doc] = ctx.documentService.create([{
+      title: "Tag Cleanup Doc",
+      tags: ["architecture", "guide"],
+    }]);
+
+    const beforeGet = ctx.documentService.get(doc.id);
+    expect(beforeGet.tags.length).toBe(2);
+
+    // Link to a project to verify cascade on that side too
+    const [project] = ctx.projectService.create([{ title: "Tag Cleanup Project" }]);
+    ctx.projectService.update([{ id: project.id, attach_documents: [doc.id] }]);
+
+    ctx.documentService.remove([doc.id]);
+
+    // Document is gone
+    expect(() => ctx.documentService.get(doc.id)).toThrow(ServiceError);
+
+    // Project-document link is also gone
+    const projectAfter = ctx.projectService.get(project.id);
+    expect(projectAfter.documents.some((d) => d.id === doc.id)).toBe(false);
+  });
+
+  it("lists documents filtered by project_id", () => {
+    const [project] = ctx.projectService.create([{ title: "Doc Filter Project" }]);
+    const [linkedDoc] = ctx.documentService.create([{ title: "Linked Doc for Filter" }]);
+    const [unlinkedDoc] = ctx.documentService.create([{ title: "Unlinked Doc for Filter" }]);
+
+    ctx.projectService.update([{ id: project.id, attach_documents: [linkedDoc.id] }]);
+
+    const result = ctx.documentService.list({ project_id: project.id });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((d) => d.id === linkedDoc.id)).toBe(true);
+    expect(result.data.some((d) => d.id === unlinkedDoc.id)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -503,5 +594,186 @@ describe("Project-Document Linking", () => {
 
     const after = ctx.projectService.get(project.id);
     expect(after.documents.some((d) => d.id === doc.id)).toBe(false);
+  });
+
+  it("attaches multiple documents in single update", () => {
+    const [project] = ctx.projectService.create([{ title: "Multi Attach Project" }]);
+    const [docA] = ctx.documentService.create([{ title: "Multi Attach Doc A" }]);
+    const [docB] = ctx.documentService.create([{ title: "Multi Attach Doc B" }]);
+
+    ctx.projectService.update([{
+      id: project.id,
+      attach_documents: [docA.id, docB.id],
+    }]);
+
+    const fetched = ctx.projectService.get(project.id);
+    expect(fetched.documents.some((d) => d.id === docA.id)).toBe(true);
+    expect(fetched.documents.some((d) => d.id === docB.id)).toBe(true);
+    expect(fetched.documents.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("detach nonexistent document link silently succeeds", () => {
+    const [project] = ctx.projectService.create([{ title: "Silent Detach Project" }]);
+    const [doc] = ctx.documentService.create([{ title: "Never Attached Doc" }]);
+
+    // Detach a doc that was never attached — should not throw
+    expect(() =>
+      ctx.projectService.update([{
+        id: project.id,
+        detach_documents: [doc.id],
+      }])
+    ).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Input Validation Edge Cases
+// ---------------------------------------------------------------------------
+
+describe("Input Validation Edge Cases", () => {
+  let projectId: string;
+
+  beforeAll(() => {
+    const [project] = ctx.projectService.create([{ title: "Validation Test Project" }]);
+    projectId = project.id;
+  });
+
+  // --- Invalid enum values ---
+
+  it("rejects task with invalid status enum", () => {
+    expect(() =>
+      ctx.taskService.create([{
+        project_id: projectId,
+        title: "Bad status",
+        status: "invalid" as any,
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects task with invalid effort enum", () => {
+    expect(() =>
+      ctx.taskService.create([{
+        project_id: projectId,
+        title: "Bad effort",
+        effort: "mega" as any,
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects task with invalid impact enum", () => {
+    expect(() =>
+      ctx.taskService.create([{
+        project_id: projectId,
+        title: "Bad impact",
+        impact: "none" as any,
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects task with invalid category enum", () => {
+    expect(() =>
+      ctx.taskService.create([{
+        project_id: projectId,
+        title: "Bad category",
+        category: "misc" as any,
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  // --- Field length limits ---
+
+  it("rejects task with group_key over 32 chars", () => {
+    expect(() =>
+      ctx.taskService.create([{
+        project_id: projectId,
+        title: "Long group_key",
+        group_key: "a".repeat(33),
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects task with plan over 50000 chars", () => {
+    expect(() =>
+      ctx.taskService.create([{
+        project_id: projectId,
+        title: "Long plan",
+        plan: "x".repeat(50001),
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects document with content over 50000 chars", () => {
+    expect(() =>
+      ctx.documentService.create([{
+        title: "Long content doc",
+        content: "x".repeat(50001),
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects project with goal over 50000 chars", () => {
+    expect(() =>
+      ctx.projectService.create([{
+        title: "Long goal project",
+        goal: "x".repeat(50001),
+      }])
+    ).toThrow(ServiceError);
+  });
+
+  // --- Boundary values ---
+
+  it("accepts title of exactly 255 chars", () => {
+    const title = "a".repeat(255);
+    const [project] = ctx.projectService.create([{ title }]);
+    expect(project.title).toBe(title);
+    expect(project.title.length).toBe(255);
+  });
+
+  it("rejects whitespace-only title", () => {
+    expect(() =>
+      ctx.projectService.create([{ title: "   " }])
+    ).toThrow(ServiceError);
+  });
+
+  // --- Mixed batch atomicity ---
+
+  it("rejects entire batch when any item fails validation", () => {
+    const countBefore = ctx.taskService.list({
+      project_id: projectId,
+      limit: 200,
+      offset: 0,
+    }).total;
+
+    expect(() =>
+      ctx.taskService.create([
+        { project_id: projectId, title: "Valid task in mixed batch" },
+        { project_id: projectId, title: "" },
+      ])
+    ).toThrow(ServiceError);
+
+    const countAfter = ctx.taskService.list({
+      project_id: projectId,
+      limit: 200,
+      offset: 0,
+    }).total;
+
+    // No tasks should have been persisted
+    expect(countAfter).toBe(countBefore);
+  });
+
+  // --- Invalid enum on update ---
+
+  it("rejects task update with invalid status enum", () => {
+    const [task] = ctx.taskService.create([{
+      project_id: projectId,
+      title: "Update enum test",
+    }]);
+
+    expect(() =>
+      ctx.taskService.update([{
+        id: task.id,
+        status: "completed" as any,
+      }])
+    ).toThrow(ServiceError);
   });
 });
