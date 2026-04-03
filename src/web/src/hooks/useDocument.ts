@@ -52,12 +52,14 @@ export function useDocument(documentId: string) {
     });
   }, [documentId, subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function updateDocument(input: { title?: string; content?: string | null; tags?: string[] }) {
-    if (!document) return;
+  async function updateDocument(input: { title?: string; content?: string | null; tags?: string[] }): Promise<boolean> {
+    if (!document) return false;
     try {
       await updateDocuments([{ id: document.id, ...input }]);
+      return true;
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to update document");
+      return false;
     }
   }
 
