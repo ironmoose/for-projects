@@ -12,3 +12,11 @@ export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";
 export { useEventDrivenAnimation } from "./useEventDrivenAnimation";
 export type { AnimationState } from "./useEventDrivenAnimation";
+export {
+  useKeyboardShortcutManager,
+  useShortcut,
+  useShortcutSuppression,
+  useRegisteredShortcuts,
+  KeyboardShortcutContext,
+} from "./useKeyboardShortcuts";
+export type { ShortcutEntry, KeyboardShortcutContextValue } from "./useKeyboardShortcuts";

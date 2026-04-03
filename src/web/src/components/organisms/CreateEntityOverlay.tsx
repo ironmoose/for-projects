@@ -3,6 +3,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
 import { Button } from "../atoms/Button";
 import { Overlay } from "../atoms/Overlay";
+import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 
 interface CreateEntityOverlayProps {
   title: string;
@@ -25,6 +26,9 @@ export function CreateEntityOverlay({
 }: CreateEntityOverlayProps) {
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
+
+  // Suppress keyboard shortcuts while this overlay is open
+  useShortcutSuppression();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

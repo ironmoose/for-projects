@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Button } from "../atoms/Button";
 import { Overlay } from "../atoms/Overlay";
+import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 
 interface ConfirmDialogProps {
   title: string;
@@ -21,6 +22,9 @@ export function ConfirmDialog({
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
   const [loading, setLoading] = useState(false);
+
+  // Suppress keyboard shortcuts while dialog is open
+  useShortcutSuppression();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

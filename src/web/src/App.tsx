@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   TopBar,
@@ -10,8 +10,14 @@ import {
   ErrorBoundary,
 } from "./components";
 import type { NavItem } from "./components";
+import { ShortcutHelpOverlay } from "./components/organisms/ShortcutHelpOverlay";
 import { useRealtimeEvents } from "./useRealtimeEvents";
 import { useHashRoute, useEventFanOut, EventSubscriptionContext } from "./hooks";
+import {
+  useKeyboardShortcutManager,
+  useShortcut,
+  KeyboardShortcutContext,
+} from "./hooks/useKeyboardShortcuts";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { GalleryPage } from "./pages/GalleryPage";
@@ -36,6 +42,7 @@ export function App() {
   const { path, navigate } = useHashRoute();
   const { onEvent, subscribeEvents } = useEventFanOut();
   const { connected } = useRealtimeEvents(onEvent);
+  const shortcutManager = useKeyboardShortcutManager();
 
   const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
   const projectId = projectIdMatch?.[1] ?? null;
@@ -55,7 +62,16 @@ export function App() {
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
 
-  // Gallery keyboard shortcut: Ctrl+Shift+G
+  const shortcutCtx = useMemo(
+    () => ({
+      register: shortcutManager.register,
+      getShortcuts: shortcutManager.getShortcuts,
+      suppressRef: shortcutManager.suppressRef,
+    }),
+    [shortcutManager.register, shortcutManager.getShortcuts, shortcutManager.suppressRef],
+  );
+
+  // Gallery keyboard shortcut: Ctrl+Shift+G (preserved — handled outside shortcut system since it uses modifiers)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.ctrlKey && e.shiftKey && e.key === "G") {
@@ -87,28 +103,49 @@ export function App() {
   }
 
   return (
-    <EventSubscriptionContext.Provider value={eventCtx}>
-      <AnimationStyles />
-      <SynthBackground />
-      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: theme.font.body }}>
-        <TopBar
-          trailing={<TrailingIndicators connected={connected} />}
-          navItems={navItems}
-          activePath={activePath}
-          onNavigate={navigate}
-        />
-        <DisconnectionBanner connected={connected} />
-        <main
-          role="main"
-          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, minHeight: 0 }}
-        >
-          <ErrorBoundary>
-            {renderView()}
-          </ErrorBoundary>
-        </main>
-      </div>
-    </EventSubscriptionContext.Provider>
+    <KeyboardShortcutContext.Provider value={shortcutCtx}>
+      <EventSubscriptionContext.Provider value={eventCtx}>
+        <AnimationStyles />
+        <SynthBackground />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: theme.font.body }}>
+          <TopBar
+            trailing={<TrailingIndicators connected={connected} />}
+            navItems={navItems}
+            activePath={activePath}
+            onNavigate={navigate}
+          />
+          <DisconnectionBanner connected={connected} />
+          <main
+            role="main"
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, minHeight: 0 }}
+          >
+            <ErrorBoundary>
+              {renderView()}
+            </ErrorBoundary>
+          </main>
+        </div>
+        <GlobalShortcuts navigate={navigate} />
+      </EventSubscriptionContext.Provider>
+    </KeyboardShortcutContext.Provider>
   );
+}
+
+// ---------------------------------------------------------------------------
+// GlobalShortcuts — registers app-wide shortcuts inside the context.
+// ---------------------------------------------------------------------------
+
+function GlobalShortcuts({ navigate }: { navigate: (path: string) => void }) {
+  const [showHelp, setShowHelp] = useState(false);
+
+  // "?" — toggle help overlay
+  useShortcut("?", "Show keyboard shortcuts", () => setShowHelp((prev) => !prev), "Global");
+
+  // Navigation sequences
+  useShortcut("g h", "Go to dashboard", () => navigate("/"), "Navigation");
+  useShortcut("g d", "Go to documents", () => navigate("/documents"), "Navigation");
+  useShortcut("g a", "Go to activity log", () => navigate("/activity"), "Navigation");
+
+  return showHelp ? <ShortcutHelpOverlay onClose={() => setShowHelp(false)} /> : null;
 }
 
 /** Renders inside EventSubscriptionContext so hooks can access it. */

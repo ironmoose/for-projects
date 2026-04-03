@@ -15,6 +15,7 @@ import type { ProgressBarSegment } from "../components";
 import { CreateProjectOverlay } from "../components/organisms/CreateProjectOverlay";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
+import { useShortcut } from "../hooks/useKeyboardShortcuts";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchTasks } from "../api";
 import type { ProjectSummary } from "../types";
@@ -128,6 +129,9 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
   const { showToast } = useToastContext();
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
+
+  // Keyboard shortcut: "n" to create new project
+  useShortcut("n", "New project", () => setShowCreateOverlay(true), "Dashboard");
 
   async function handleCreate(fields: { title: string; goal?: string; requirements?: string; design?: string }) {
     await create(fields);

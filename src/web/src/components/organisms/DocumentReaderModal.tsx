@@ -3,6 +3,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
 import { useDocument } from "../../hooks/useDocument";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 import { Overlay } from "../atoms/Overlay";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
@@ -30,6 +31,9 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
   const [editContent, setEditContent] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Suppress keyboard shortcuts while modal is open
+  useShortcutSuppression();
 
   const enterEditMode = useCallback(() => {
     if (!document) return;

@@ -27,6 +27,7 @@ import {
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { Badge } from "../components/atoms/Badge";
 import { useProject } from "../hooks";
+import { useShortcut, useShortcutSuppression } from "../hooks/useKeyboardShortcuts";
 import { useWindowWidth } from "../hooks/useWindowWidth";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
@@ -146,6 +147,9 @@ function TaskDetailPanel({
   // Group key editing state
   const [editingGroupKey, setEditingGroupKey] = useState(false);
   const [groupKeyValue, setGroupKeyValue] = useState(task.group_key ?? "");
+
+  // Suppress keyboard shortcuts while detail panel is open
+  useShortcutSuppression();
 
   // Sync title/groupKey when task prop changes
   useEffect(() => {
@@ -682,6 +686,9 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       titleInputRef.current.select();
     }
   }, [editingTitle]);
+
+  // Keyboard shortcut: "n" to create new task
+  useShortcut("n", "New task", () => setShowCreateTask(true), "Project");
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
