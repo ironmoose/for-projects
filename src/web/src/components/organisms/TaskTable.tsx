@@ -28,6 +28,8 @@ function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProper
   };
 }
 
+const COLUMN_COUNT = 7; // Title, Status, Category, Effort, Impact, Group, Actions
+
 interface TaskTableProps {
   tasks: TaskSummary[];
   selectedTaskId: string | null;
@@ -62,6 +64,250 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
     },
     [onUpdateTaskStatus],
   );
+
+  function renderTaskRow(task: TaskSummary): React.ReactNode {
+    return (
+      <tr
+        key={task.id}
+        onClick={() => onSelectTask(task.id)}
+        style={{
+          cursor: "pointer",
+          background: selectedTaskId === task.id ? theme.color.surfaceContainerHigh : undefined,
+          transition: "background 0.1s",
+        }}
+      >
+        <td style={{ ...cellStyle(theme), fontWeight: 500, maxWidth: 320 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {task.title}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+              <PresenceCharm active={task.has_plan} label="Plan" color={theme.color.success} />
+              <PresenceCharm active={task.has_description} label="Description" color={theme.color.info ?? theme.color.primary} />
+              <PresenceCharm active={task.has_implementation} label="Implementation" color={theme.color.tertiary} />
+              <PresenceCharm active={task.has_acceptance_criteria} label="Acceptance criteria" color={theme.color.warning ?? theme.color.secondary} />
+            </div>
+          </div>
+        </td>
+        <td style={{ ...cellStyle(theme), position: "relative" }}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              setStatusDropdownTaskId(
+                statusDropdownTaskId === task.id ? null : task.id,
+              );
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.stopPropagation();
+                e.preventDefault();
+                setStatusDropdownTaskId(
+                  statusDropdownTaskId === task.id ? null : task.id,
+                );
+              }
+            }}
+            style={{ display: "inline-block", cursor: "pointer" }}
+            aria-label="Change task status"
+            aria-haspopup="listbox"
+            aria-expanded={statusDropdownTaskId === task.id}
+          >
+            <Badge variant={statusBadgeVariant(task.status)}>
+              {STATUS_LABELS[task.status] ?? task.status}
+            </Badge>
+          </div>
+          {statusDropdownTaskId === task.id && (
+            <div
+              ref={dropdownRef}
+              role="listbox"
+              aria-label="Status options"
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                zIndex: 100,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                padding: theme.spacing.sm,
+                background: theme.color.surfaceContainer,
+                border: `1px solid ${isSynth ? sg(27) : theme.color.border}`,
+                borderRadius: theme.radius.md,
+                boxShadow: isSynth
+                  ? `0 0 12px ${sg(9)}`
+                  : theme.shadow.md,
+                minWidth: 120,
+              }}
+            >
+              {TASK_STATUSES.map((s) => (
+                <div
+                  key={s}
+                  role="option"
+                  aria-selected={s === task.status}
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusSelect(task.id, task.status, s);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleStatusSelect(task.id, task.status, s);
+                    }
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                    borderRadius: theme.radius.sm,
+                    background:
+                      s === task.status
+                        ? `${theme.color.primary}18`
+                        : "transparent",
+                    transition: "background 100ms",
+                  }}
+                >
+                  <Badge
+                    variant={statusBadgeVariant(s)}
+                    style={{
+                      opacity: s === task.status ? 1 : 0.7,
+                      outline:
+                        s === task.status
+                          ? `2px solid ${theme.color.primary}`
+                          : "none",
+                      outlineOffset: 1,
+                    }}
+                  >
+                    {STATUS_LABELS[s] ?? s}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </td>
+        <td
+          style={{
+            ...cellStyle(theme),
+            fontSize: theme.font.size.xs,
+            color: theme.color.textMuted,
+          }}
+        >
+          {task.category ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+        </td>
+        <td
+          style={{
+            ...cellStyle(theme),
+            fontSize: theme.font.size.xs,
+            color: theme.color.textMuted,
+          }}
+        >
+          {task.effort ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+        </td>
+        <td
+          style={{
+            ...cellStyle(theme),
+            fontSize: theme.font.size.xs,
+            color: theme.color.textMuted,
+          }}
+        >
+          {task.impact ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+        </td>
+        <td
+          style={{
+            ...cellStyle(theme),
+            fontSize: theme.font.size.xs,
+            color: theme.color.textMuted,
+          }}
+        >
+          {task.group_key ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+        </td>
+        <td style={{ ...cellStyle(theme), width: 32 }}>
+          <IconButton
+            icon="delete"
+            size={14}
+            onClick={(e) => { e.stopPropagation(); onDeleteTask(task); }}
+            aria-label="Delete task"
+          />
+        </td>
+      </tr>
+    );
+  }
+
+  function renderGroupHeaderRow(groupKey: string, colSpan: number): React.ReactNode {
+    return (
+      <tr key={`group-header-${groupKey}`} style={{ cursor: "default" }}>
+        <td
+          colSpan={colSpan}
+          style={{
+            padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+            background: theme.color.surfaceContainer,
+            borderBottom: `1px solid ${theme.color.border}`,
+            fontSize: theme.font.size.xxs,
+            fontWeight: 700,
+            letterSpacing: theme.font.letterSpacing.wide,
+            textTransform: "uppercase",
+            color: isSynth ? "var(--synth-glow)" : theme.color.textFaint,
+            maxWidth: 300,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            ...(isSynth ? { textShadow: `0 0 6px ${sg(20)}` } : {}),
+          }}
+        >
+          {groupKey}
+        </td>
+      </tr>
+    );
+  }
+
+  function renderGroupedRows(): React.ReactNode[] {
+    // Determine if we need group headers at all
+    const hasAnyGroup = tasks.some((t) => t.group_key !== null);
+    if (!hasAnyGroup) {
+      // No grouping — render flat list, identical to previous behavior
+      return tasks.map((task) => renderTaskRow(task));
+    }
+
+    // Collect unique group keys in order (tasks are pre-sorted by group_key)
+    const uniqueGroups: string[] = [];
+    const seen = new Set<string>();
+    for (const task of tasks) {
+      const key = task.group_key ?? "__other__";
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueGroups.push(key);
+      }
+    }
+
+    // Only one group and it's the "other" group — no headers needed
+    if (uniqueGroups.length === 1 && uniqueGroups[0] === "__other__") {
+      return tasks.map((task) => renderTaskRow(task));
+    }
+
+    const rows: React.ReactNode[] = [];
+    let lastGroup: string | undefined;
+
+    for (const task of tasks) {
+      const currentGroup = task.group_key ?? "__other__";
+      if (currentGroup !== lastGroup) {
+        const label = currentGroup === "__other__" ? "Other" : currentGroup;
+        rows.push(renderGroupHeaderRow(label, COLUMN_COUNT));
+        lastGroup = currentGroup;
+      }
+      rows.push(renderTaskRow(task));
+    }
+
+    return rows;
+  }
 
   return (
     <div
@@ -107,180 +353,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
           </tr>
         </thead>
         <tbody>
-          {tasks.map((task) => (
-            <tr
-              key={task.id}
-              onClick={() => onSelectTask(task.id)}
-              style={{
-                cursor: "pointer",
-                background: selectedTaskId === task.id ? theme.color.surfaceContainerHigh : undefined,
-                transition: "background 0.1s",
-              }}
-            >
-              <td style={{ ...cellStyle(theme), fontWeight: 500, maxWidth: 320 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {task.title}
-                  </span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-                    <PresenceCharm active={task.has_plan} label="Plan" color={theme.color.success} />
-                    <PresenceCharm active={task.has_description} label="Description" color={theme.color.info ?? theme.color.primary} />
-                    <PresenceCharm active={task.has_implementation} label="Implementation" color={theme.color.tertiary} />
-                    <PresenceCharm active={task.has_acceptance_criteria} label="Acceptance criteria" color={theme.color.warning ?? theme.color.secondary} />
-                  </div>
-                </div>
-              </td>
-              <td style={{ ...cellStyle(theme), position: "relative" }}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setStatusDropdownTaskId(
-                      statusDropdownTaskId === task.id ? null : task.id,
-                    );
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setStatusDropdownTaskId(
-                        statusDropdownTaskId === task.id ? null : task.id,
-                      );
-                    }
-                  }}
-                  style={{ display: "inline-block", cursor: "pointer" }}
-                  aria-label="Change task status"
-                  aria-haspopup="listbox"
-                  aria-expanded={statusDropdownTaskId === task.id}
-                >
-                  <Badge variant={statusBadgeVariant(task.status)}>
-                    {STATUS_LABELS[task.status] ?? task.status}
-                  </Badge>
-                </div>
-                {statusDropdownTaskId === task.id && (
-                  <div
-                    ref={dropdownRef}
-                    role="listbox"
-                    aria-label="Status options"
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      zIndex: 100,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                      padding: theme.spacing.sm,
-                      background: theme.color.surfaceContainer,
-                      border: `1px solid ${isSynth ? sg(27) : theme.color.border}`,
-                      borderRadius: theme.radius.md,
-                      boxShadow: isSynth
-                        ? `0 0 12px ${sg(9)}`
-                        : theme.shadow.md,
-                      minWidth: 120,
-                    }}
-                  >
-                    {TASK_STATUSES.map((s) => (
-                      <div
-                        key={s}
-                        role="option"
-                        aria-selected={s === task.status}
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatusSelect(task.id, task.status, s);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            handleStatusSelect(task.id, task.status, s);
-                          }
-                        }}
-                        style={{
-                          cursor: "pointer",
-                          padding: "2px 4px",
-                          borderRadius: theme.radius.sm,
-                          background:
-                            s === task.status
-                              ? `${theme.color.primary}18`
-                              : "transparent",
-                          transition: "background 100ms",
-                        }}
-                      >
-                        <Badge
-                          variant={statusBadgeVariant(s)}
-                          style={{
-                            opacity: s === task.status ? 1 : 0.7,
-                            outline:
-                              s === task.status
-                                ? `2px solid ${theme.color.primary}`
-                                : "none",
-                            outlineOffset: 1,
-                          }}
-                        >
-                          {STATUS_LABELS[s] ?? s}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </td>
-              <td
-                style={{
-                  ...cellStyle(theme),
-                  fontSize: theme.font.size.xs,
-                  color: theme.color.textMuted,
-                }}
-              >
-                {task.category ?? <span style={{ color: theme.color.textFaint }}>--</span>}
-              </td>
-              <td
-                style={{
-                  ...cellStyle(theme),
-                  fontSize: theme.font.size.xs,
-                  color: theme.color.textMuted,
-                }}
-              >
-                {task.effort ?? <span style={{ color: theme.color.textFaint }}>--</span>}
-              </td>
-              <td
-                style={{
-                  ...cellStyle(theme),
-                  fontSize: theme.font.size.xs,
-                  color: theme.color.textMuted,
-                }}
-              >
-                {task.impact ?? <span style={{ color: theme.color.textFaint }}>--</span>}
-              </td>
-              <td
-                style={{
-                  ...cellStyle(theme),
-                  fontSize: theme.font.size.xs,
-                  color: theme.color.textMuted,
-                }}
-              >
-                {task.group_key ?? <span style={{ color: theme.color.textFaint }}>--</span>}
-              </td>
-              <td style={{ ...cellStyle(theme), width: 32 }}>
-                <IconButton
-                  icon="delete"
-                  size={14}
-                  onClick={(e) => { e.stopPropagation(); onDeleteTask(task); }}
-                  aria-label="Delete task"
-                />
-              </td>
-            </tr>
-          ))}
+          {renderGroupedRows()}
         </tbody>
       </table>
     </div>
