@@ -19,7 +19,7 @@ export class ProjectRepository {
     return this.db.query("SELECT * FROM projects WHERE id = ?").get(id) as Project | null;
   }
 
-  findMany(filter?: { id?: string; limit?: number; offset?: number }): Project[] {
+  findMany(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Project[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
@@ -28,6 +28,10 @@ export class ProjectRepository {
     if (filter?.id) {
       conditions.push("id = ?");
       params.push(filter.id);
+    }
+    if (filter?.title) {
+      conditions.push("title LIKE ?");
+      params.push(`%${filter.title}%`);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
@@ -38,13 +42,17 @@ export class ProjectRepository {
       .all(...params) as Project[];
   }
 
-  count(filter?: { id?: string }): number {
+  count(filter?: { id?: string; title?: string }): number {
     const conditions: string[] = [];
     const params: string[] = [];
 
     if (filter?.id) {
       conditions.push("id = ?");
       params.push(filter.id);
+    }
+    if (filter?.title) {
+      conditions.push("title LIKE ?");
+      params.push(`%${filter.title}%`);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";

@@ -14,7 +14,10 @@ export function projectRoutes(service: IProjectService): Hono {
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-    return c.json(service.list({ limit, offset }));
+    const filter: { limit: number; offset: number; title?: string } = { limit, offset };
+    const title = c.req.query("title");
+    if (title) filter.title = title;
+    return c.json(service.list(filter));
   });
 
   // POST /api/projects

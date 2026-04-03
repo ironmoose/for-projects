@@ -19,7 +19,7 @@ export class ProjectService implements IProjectService {
     private tagRepo?: TagRepository,
   ) {}
 
-  list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<ProjectSummary> {
+  list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary> {
     return {
       data: this.repo.findMany(filter).map(toProjectSummary),
       total: this.repo.count(filter),

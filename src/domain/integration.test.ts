@@ -70,6 +70,24 @@ describe("Project CRUD", () => {
     expect(result.total).toBeGreaterThanOrEqual(1);
   });
 
+  it("lists projects filtered by title search", () => {
+    ctx.projectService.create([{ title: "UniqueProjSearchAlpha999" }]);
+    ctx.projectService.create([{ title: "UniqueProjSearchBeta999" }]);
+
+    const result = ctx.projectService.list({ title: "UniqueProjSearchAlpha999" });
+    expect(result.total).toBe(1);
+    expect(result.data.length).toBe(1);
+    expect(result.data[0].title).toBe("UniqueProjSearchAlpha999");
+  });
+
+  it("lists projects with partial title match", () => {
+    ctx.projectService.create([{ title: "PartialMatchProject123" }]);
+
+    const result = ctx.projectService.list({ title: "PartialMatch" });
+    expect(result.total).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((p) => p.title === "PartialMatchProject123")).toBe(true);
+  });
+
   it("rejects empty title", () => {
     expect(() => ctx.projectService.create([{ title: "" }])).toThrow(ServiceError);
   });
