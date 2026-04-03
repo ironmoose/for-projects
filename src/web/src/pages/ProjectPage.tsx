@@ -60,6 +60,15 @@ function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "
   return "default";
 }
 
+const graphStatusFilterOptions = [
+  { value: "in_progress,todo", label: "Active" },
+  { value: "", label: "All statuses" },
+  { value: "todo", label: "Todo" },
+  { value: "in_progress", label: "In progress" },
+  { value: "done", label: "Done" },
+  { value: "archived", label: "Archived" },
+];
+
 // ---------------------------------------------------------------------------
 // AddDependencySearch — inline search to add a dependency
 // ---------------------------------------------------------------------------
@@ -1035,6 +1044,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [editValue, setEditValue] = useState("");
   const [showDocPicker, setShowDocPicker] = useState(false);
 
+  const [graphStatusFilter, setGraphStatusFilter] = useState("in_progress,todo");
   const { graph, loading: graphLoading } = useDependencyGraph(projectId);
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
@@ -1232,11 +1242,20 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             title="Dependency Graph"
             defaultOpen={false}
             style={{ marginBottom: theme.spacing.xl }}
+            headerAction={
+              <Select
+                value={graphStatusFilter}
+                onChange={(e) => setGraphStatusFilter(e.target.value)}
+                options={graphStatusFilterOptions}
+                style={{ minWidth: 120, fontSize: theme.font.size.xs }}
+              />
+            }
           >
             <DependencyGraphView
               tasks={graph.tasks}
               edges={graph.edges}
               blockedTaskIds={graph.blockedTaskIds}
+              statusFilter={graphStatusFilter}
               onTaskClick={(taskId) => setSelectedTaskId(taskId)}
             />
           </ExpandableCard>
