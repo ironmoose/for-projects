@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { sg } from "../components/theme/synthGlow";
 import {
   Button,
   Icon,
   IconButton,
+  Input,
   Markdown,
   Stack,
   useTheme,
@@ -249,8 +250,18 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [deleteTaskTarget, setDeleteTaskTarget] = useState<TaskSummary | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>({ status: "in_progress,todo" });
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState("");
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
+
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingTitle]);
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -330,18 +341,81 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
         <Stack direction="row" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.xl }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2
-              style={{
-                margin: 0,
-                fontFamily: theme.font.headline,
-                fontSize: theme.font.size.xl,
-                fontWeight: 800,
-                letterSpacing: theme.font.letterSpacing.tight,
-                color: theme.color.text,
-              }}
-            >
-              {project.title}
-            </h2>
+            {editingTitle ? (
+              <Input
+                ref={titleInputRef}
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    (e.target as HTMLInputElement).blur();
+                  } else if (e.key === "Escape") {
+                    setEditingTitle(false);
+                  }
+                }}
+                onBlur={() => {
+                  const trimmed = titleValue.trim();
+                  if (trimmed && trimmed !== project.title) {
+                    updateProject({ title: trimmed });
+                  }
+                  setEditingTitle(false);
+                }}
+                aria-label="Edit project title"
+                style={{
+                  fontFamily: theme.font.headline,
+                  fontSize: theme.font.size.xl,
+                  fontWeight: 800,
+                  letterSpacing: theme.font.letterSpacing.tight,
+                  color: theme.color.text,
+                  width: "100%",
+                  padding: `0 ${theme.spacing.xs}`,
+                  border: `1px solid ${theme.color.primary}`,
+                  borderRadius: theme.radius.sm,
+                  background: theme.color.surfaceContainer,
+                  lineHeight: 1.3,
+                }}
+              />
+            ) : (
+              <Stack direction="row" align="center" gap="sm">
+                <h2
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setTitleValue(project.title);
+                    setEditingTitle(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setTitleValue(project.title);
+                      setEditingTitle(true);
+                    }
+                  }}
+                  style={{
+                    margin: 0,
+                    fontFamily: theme.font.headline,
+                    fontSize: theme.font.size.xl,
+                    fontWeight: 800,
+                    letterSpacing: theme.font.letterSpacing.tight,
+                    color: theme.color.text,
+                    cursor: "pointer",
+                  }}
+                  title="Click to edit title"
+                >
+                  {project.title}
+                </h2>
+                <IconButton
+                  icon="edit"
+                  size={16}
+                  onClick={() => {
+                    setTitleValue(project.title);
+                    setEditingTitle(true);
+                  }}
+                  aria-label="Edit project title"
+                />
+              </Stack>
+            )}
           </div>
         </Stack>
 
