@@ -4,12 +4,14 @@ import {
   Card,
   Icon,
   IconButton,
+  ProgressBar,
   useTheme,
   ListPageLayout,
   PageHeader,
   EmptyState,
   ConfirmDialog,
 } from "../components";
+import type { ProgressBarSegment } from "../components";
 import { CreateProjectOverlay } from "../components/organisms/CreateProjectOverlay";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
@@ -22,14 +24,18 @@ import { formatDate } from "../utils";
 // ProjectCard
 // ---------------------------------------------------------------------------
 
+type StatusCounts = Record<string, number>;
+
 function ProjectCard({
   project,
   taskCount,
+  statusCounts,
   onClick,
   onDelete,
 }: {
   project: ProjectSummary;
   taskCount: number;
+  statusCounts: StatusCounts;
   onClick: () => void;
   onDelete: () => void;
 }) {
@@ -75,6 +81,16 @@ function ProjectCard({
         <PresenceCharm active={project.has_design} label="Design" color={theme.color.tertiary} />
       </div>
 
+      {taskCount > 0 && (() => {
+        const segments: ProgressBarSegment[] = [
+          { value: statusCounts["done"] ?? 0, color: theme.color.success, label: "done" },
+          { value: statusCounts["in_progress"] ?? 0, color: theme.color.tertiary, label: "in progress" },
+          { value: statusCounts["todo"] ?? 0, color: theme.color.textMuted, label: "todo" },
+          { value: statusCounts["archived"] ?? 0, color: theme.color.textFaint, label: "archived" },
+        ];
+        return <ProgressBar segments={segments} height={6} />;
+      })()}
+
       <div
         style={{
           display: "flex",
@@ -118,18 +134,30 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
   }
 
   const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
+  const [statusCounts, setStatusCounts] = useState<Record<string, StatusCounts>>({});
 
   useEffect(() => {
     if (projects.length === 0) return;
     Promise.all(
       projects.map((p) =>
-        fetchTasks({ project_id: p.id, limit: 1 }).then((body) => [p.id, body.total] as const),
+        fetchTasks({ project_id: p.id, limit: 200 }).then(
+          (body) => [p.id, body.total, body.data] as const,
+        ),
       ),
     )
       .then((entries) => {
         const counts: Record<string, number> = {};
-        for (const [id, total] of entries) counts[id] = total;
+        const statuses: Record<string, StatusCounts> = {};
+        for (const [id, total, tasks] of entries) {
+          counts[id] = total;
+          const sc: StatusCounts = {};
+          for (const t of tasks) {
+            sc[t.status] = (sc[t.status] ?? 0) + 1;
+          }
+          statuses[id] = sc;
+        }
         setTaskCounts(counts);
+        setStatusCounts(statuses);
       })
       .catch(() => {});
   }, [projects]);
@@ -181,6 +209,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
             key={p.id}
             project={p}
             taskCount={taskCounts[p.id] ?? 0}
+            statusCounts={statusCounts[p.id] ?? {}}
             onClick={() => onOpenProject(p.id)}
             onDelete={() => setDeleteTarget(p)}
           />

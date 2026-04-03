@@ -14,6 +14,8 @@ export { AnimationStyles } from "./atoms/AnimationStyles";
 export { SynthBackground } from "./atoms/SynthBackground";
 export { Skeleton, CardSkeleton, RowSkeleton } from "./atoms/Skeleton";
 export { ActivityIndicator } from "./atoms/ActivityIndicator";
+export { ProgressBar } from "./atoms/ProgressBar";
+export type { ProgressBarSegment, ProgressBarProps } from "./atoms/ProgressBar";
 // Molecules
 export { Card } from "./molecules/Card";
 export { ExpandableCard } from "./molecules/ExpandableCard";
