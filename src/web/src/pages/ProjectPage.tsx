@@ -20,6 +20,8 @@ import {
   TaskTableFilters,
   Overlay,
   DocumentReaderModal,
+  CreateEntityOverlay,
+  TagChip,
 } from "../components";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { Badge } from "../components/atoms/Badge";
@@ -28,8 +30,8 @@ import { useWindowWidth } from "../hooks/useWindowWidth";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask, updateTasks } from "../api";
-import type { Task, TaskSummary, TaskStatus } from "../types";
+import { ApiError, fetchTask, updateTasks, fetchDocuments } from "../api";
+import type { Task, TaskSummary, TaskStatus, DocumentSummary } from "../types";
 import { formatDate } from "../utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -197,7 +199,7 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
 // DocumentRow — clickable row for linked documents
 // ---------------------------------------------------------------------------
 
-function DocumentRow({ title, isLast, onClick }: { title: string; isLast: boolean; onClick: () => void }) {
+function DocumentRow({ title, isLast, onClick, onDetach }: { title: string; isLast: boolean; onClick: () => void; onDetach: () => void }) {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
 
@@ -228,11 +230,152 @@ function DocumentRow({ title, isLast, onClick }: { title: string; isLast: boolea
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          flex: 1,
         }}
       >
         {title}
       </span>
+      <IconButton
+        icon="close"
+        size={14}
+        onClick={(e) => { e.stopPropagation(); onDetach(); }}
+        aria-label={`Detach ${title}`}
+      />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DocumentPickerOverlay
+// ---------------------------------------------------------------------------
+
+interface DocumentPickerOverlayProps {
+  linkedDocIds: Set<string>;
+  onSubmit: (attach: string[], detach: string[]) => Promise<void>;
+  onClose: () => void;
+}
+
+function DocumentPickerOverlay({ linkedDocIds, onSubmit, onClose }: DocumentPickerOverlayProps) {
+  const { theme } = useTheme();
+  const [allDocs, setAllDocs] = useState<DocumentSummary[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set(linkedDocIds));
+  const [titleSearch, setTitleSearch] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingDocs(true);
+    fetchDocuments({ limit: 200 })
+      .then((res) => { if (!cancelled) setAllDocs(res.data); })
+      .catch(() => { /* toast handled by caller context */ })
+      .finally(() => { if (!cancelled) setLoadingDocs(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = titleSearch
+    ? allDocs.filter((d) => d.title.toLowerCase().includes(titleSearch.toLowerCase()))
+    : allDocs;
+
+  function toggleDoc(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleSubmit() {
+    const attach: string[] = [];
+    const detach: string[] = [];
+    for (const id of selected) {
+      if (!linkedDocIds.has(id)) attach.push(id);
+    }
+    for (const id of linkedDocIds) {
+      if (!selected.has(id)) detach.push(id);
+    }
+    if (attach.length === 0 && detach.length === 0) {
+      onClose();
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSubmit(attach, detach);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <CreateEntityOverlay
+      title="Manage Documents"
+      onSubmit={handleSubmit}
+      onClose={onClose}
+      loading={submitting}
+      submitLabel="Save"
+      submitDisabled={loadingDocs}
+    >
+      <Input
+        value={titleSearch}
+        onChange={(e) => setTitleSearch(e.target.value)}
+        placeholder="Search by title..."
+        style={{ marginBottom: theme.spacing.sm }}
+      />
+      <div
+        style={{
+          maxHeight: 320,
+          overflowY: "auto",
+          border: `1px solid ${theme.color.borderSubtle}`,
+          borderRadius: theme.radius.md,
+          background: theme.color.surface,
+        }}
+      >
+        {loadingDocs ? (
+          <div style={{ padding: theme.spacing.lg, textAlign: "center", color: theme.color.textMuted, fontSize: theme.font.size.sm }}>
+            Loading documents...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: theme.spacing.lg, textAlign: "center", color: theme.color.textMuted, fontSize: theme.font.size.sm }}>
+            {allDocs.length === 0 ? "No documents exist yet." : "No documents match the search."}
+          </div>
+        ) : (
+          filtered.map((doc) => (
+            <label
+              key={doc.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: theme.spacing.sm,
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                cursor: "pointer",
+                borderBottom: `1px solid ${theme.color.borderSubtle}`,
+                fontSize: theme.font.size.sm,
+                color: theme.color.text,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(doc.id)}
+                onChange={() => toggleDoc(doc.id)}
+                style={{ flexShrink: 0 }}
+              />
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {doc.title}
+              </span>
+              {doc.tags.length > 0 && (
+                <span style={{ display: "flex", gap: theme.spacing.xs, flexShrink: 0 }}>
+                  {doc.tags.map((tag) => (
+                    <TagChip key={tag} name={tag} />
+                  ))}
+                </span>
+              )}
+            </label>
+          ))
+        )}
+      </div>
+    </CreateEntityOverlay>
   );
 }
 
@@ -258,6 +401,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   type EditableField = "goal" | "requirements" | "design";
   const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [showDocPicker, setShowDocPicker] = useState(false);
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
@@ -532,12 +676,11 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           })}
 
           {/* Documents section */}
-          {(project.documents ?? []).length > 0 && (
-            <div style={{ marginBottom: theme.spacing.xl }}>
+          <div style={{ marginBottom: theme.spacing.xl }}>
+            <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
               <h3
                 style={{
                   margin: 0,
-                  marginBottom: theme.spacing.md,
                   fontFamily: theme.font.headline,
                   fontSize: theme.font.size.lg,
                   fontWeight: 700,
@@ -546,6 +689,14 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
               >
                 Documents
               </h3>
+              <Button variant="ghost" onClick={() => setShowDocPicker(true)}>
+                <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+                  <Icon name="edit_note" size={16} />
+                  Manage Documents
+                </span>
+              </Button>
+            </Stack>
+            {(project.documents ?? []).length > 0 ? (
               <div
                 style={{
                   borderRadius: theme.radius.md,
@@ -560,11 +711,16 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                     title={doc.title}
                     isLast={idx === (project.documents ?? []).length - 1}
                     onClick={() => setSelectedDocumentId(doc.id)}
+                    onDetach={() => {
+                      updateProject({ detach_documents: [doc.id] }).catch(() => {});
+                    }}
                   />
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <EmptyState icon="description" message="No documents linked." />
+            )}
+          </div>
         </div>
 
         {/* Right column — tasks */}
@@ -653,6 +809,18 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         message={`Are you sure you want to delete "${deleteTaskTarget.title}"? This action cannot be undone.`}
         onConfirm={handleDeleteTask}
         onCancel={() => setDeleteTaskTarget(null)}
+      />
+    )}
+    {showDocPicker && (
+      <DocumentPickerOverlay
+        linkedDocIds={new Set((project.documents ?? []).map((d) => d.id))}
+        onSubmit={async (attach, detach) => {
+          const input: { attach_documents?: string[]; detach_documents?: string[] } = {};
+          if (attach.length > 0) input.attach_documents = attach;
+          if (detach.length > 0) input.detach_documents = detach;
+          await updateProject(input);
+        }}
+        onClose={() => setShowDocPicker(false)}
       />
     )}
   </>

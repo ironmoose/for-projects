@@ -83,7 +83,7 @@ export async function createProjects(inputs: Array<{ title: string; goal?: strin
   return res.json();
 }
 
-export async function updateProjects(inputs: Array<{ id: string; title?: string; goal?: string | null; requirements?: string | null; design?: string | null }>): Promise<Project[]> {
+export async function updateProjects(inputs: Array<{ id: string; title?: string; goal?: string | null; requirements?: string | null; design?: string | null; attach_documents?: string[]; detach_documents?: string[] }>): Promise<Project[]> {
   const res = await apiFetch("/api/projects", jsonPatch({ items: inputs }));
   return res.json();
 }

@@ -50,7 +50,7 @@ export function useProject(projectId: string) {
     });
   }, [projectId, subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function updateProject(input: { title?: string; goal?: string | null; requirements?: string | null; design?: string | null }) {
+  async function updateProject(input: { title?: string; goal?: string | null; requirements?: string | null; design?: string | null; attach_documents?: string[]; detach_documents?: string[] }) {
     if (!project) return;
     try {
       await updateProjects([{ id: project.id, ...input }]);
