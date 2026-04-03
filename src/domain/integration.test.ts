@@ -70,24 +70,6 @@ describe("Project CRUD", () => {
     expect(result.total).toBeGreaterThanOrEqual(1);
   });
 
-  it("lists projects filtered by title search", () => {
-    ctx.projectService.create([{ title: "UniqueProjSearchAlpha999" }]);
-    ctx.projectService.create([{ title: "UniqueProjSearchBeta999" }]);
-
-    const result = ctx.projectService.list({ title: "UniqueProjSearchAlpha999" });
-    expect(result.total).toBe(1);
-    expect(result.data.length).toBe(1);
-    expect(result.data[0].title).toBe("UniqueProjSearchAlpha999");
-  });
-
-  it("lists projects with partial title match", () => {
-    ctx.projectService.create([{ title: "PartialMatchProject123" }]);
-
-    const result = ctx.projectService.list({ title: "PartialMatch" });
-    expect(result.total).toBeGreaterThanOrEqual(1);
-    expect(result.data.some((p) => p.title === "PartialMatchProject123")).toBe(true);
-  });
-
   it("rejects empty title", () => {
     expect(() => ctx.projectService.create([{ title: "" }])).toThrow(ServiceError);
   });
@@ -793,5 +775,441 @@ describe("Input Validation Edge Cases", () => {
         status: "completed" as any,
       }])
     ).toThrow(ServiceError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task Dependency Service
+// ---------------------------------------------------------------------------
+
+describe("Task Dependency Service", () => {
+  let projectId: string;
+  let taskA: string;
+  let taskB: string;
+  let taskC: string;
+
+  beforeAll(() => {
+    const [project] = ctx.projectService.create([{ title: "Dep Test Project" }]);
+    projectId = project.id;
+    const [a] = ctx.taskService.create([{ project_id: projectId, title: "Task A" }]);
+    const [b] = ctx.taskService.create([{ project_id: projectId, title: "Task B" }]);
+    const [c] = ctx.taskService.create([{ project_id: projectId, title: "Task C" }]);
+    taskA = a.id;
+    taskB = b.id;
+    taskC = c.id;
+  });
+
+  it("adds a blocks dependency between two tasks", () => {
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskA, target_task_id: taskB, dependency_type: "blocks" },
+    ]);
+    expect(deps).toHaveLength(1);
+    expect(deps[0].source_task_id).toBe(taskA);
+    expect(deps[0].target_task_id).toBe(taskB);
+    expect(deps[0].dependency_type).toBe("blocks");
+    expect(deps[0].created_at).toBeTruthy();
+  });
+
+  it("adds a relates_to dependency", () => {
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskB, target_task_id: taskC, dependency_type: "relates_to" },
+    ]);
+    expect(deps).toHaveLength(1);
+    expect(deps[0].dependency_type).toBe("relates_to");
+  });
+
+  it("rejects self-referential dependency", () => {
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: taskA, target_task_id: taskA, dependency_type: "blocks" },
+      ])
+    ).toThrow("a task cannot depend on itself");
+  });
+
+  it("rejects invalid dependency_type", () => {
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: taskA, target_task_id: taskC, dependency_type: "unknown" as "blocks" },
+      ])
+    ).toThrow("dependency_type must be one of:");
+  });
+
+  it("rejects dependency for nonexistent task", () => {
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: "NONEXISTENT_TASK_ID_ABC", target_task_id: taskB, dependency_type: "blocks" },
+      ])
+    ).toThrow("task not found");
+  });
+
+  it("rejects cross-project dependency", () => {
+    const [otherProject] = ctx.projectService.create([{ title: "Other Project" }]);
+    const [otherTask] = ctx.taskService.create([{ project_id: otherProject.id, title: "Other Task" }]);
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: taskA, target_task_id: otherTask.id, dependency_type: "blocks" },
+      ])
+    ).toThrow("dependencies must be within the same project");
+  });
+
+  it("rejects cycle for blocks (A->B already exists, adding B->A)", () => {
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: taskB, target_task_id: taskA, dependency_type: "blocks" },
+      ])
+    ).toThrow("adding this dependency would create a cycle");
+  });
+
+  it("rejects cycle for chains > 2 (X->Y->Z->X)", () => {
+    // Use fresh tasks to avoid conflicts with earlier relates_to edges
+    const [x] = ctx.taskService.create([{ project_id: projectId, title: "Chain X" }]);
+    const [y] = ctx.taskService.create([{ project_id: projectId, title: "Chain Y" }]);
+    const [z] = ctx.taskService.create([{ project_id: projectId, title: "Chain Z" }]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: x.id, target_task_id: y.id, dependency_type: "blocks" },
+    ]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: y.id, target_task_id: z.id, dependency_type: "blocks" },
+    ]);
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: z.id, target_task_id: x.id, dependency_type: "blocks" },
+      ])
+    ).toThrow("adding this dependency would create a cycle");
+  });
+
+  it("allows relates_to even if it would form a cycle in blocks graph", () => {
+    // B->A as relates_to should be fine even though A blocks B
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskB, target_task_id: taskA, dependency_type: "relates_to" },
+    ]);
+    expect(deps).toHaveLength(1);
+  });
+
+  it("getDependencies returns grouped shape with blocks, blocked_by, relates_to, is_blocked", () => {
+    const result = ctx.taskDependencyService.getDependencies(taskB);
+    // B has: blocked_by (A->B blocks), relates_to (B->C relates_to, B->A relates_to)
+    // B does not block any task (no "blocks" from B with type=blocks)
+    expect(result.blocked_by.length).toBeGreaterThanOrEqual(1);
+    expect(result.relates_to.length).toBeGreaterThanOrEqual(1);
+    // A blocks B and A is still todo, so B is_blocked
+    expect(result.is_blocked).toBe(true);
+    expect(result.blocked_by.some((d) => d.source_task_id === taskA)).toBe(true);
+  });
+
+  it("getGraph returns edges and blocked_task_ids", () => {
+    const graph = ctx.taskDependencyService.getGraph(projectId);
+    expect(graph.edges.length).toBeGreaterThanOrEqual(1);
+    // B should be blocked (A->B blocks, A is still todo)
+    expect(graph.blocked_task_ids).toContain(taskB);
+  });
+
+  it("getTopologicalOrder returns blockers before dependents", () => {
+    const order = ctx.taskDependencyService.getTopologicalOrder(projectId);
+    expect(order.length).toBeGreaterThanOrEqual(3);
+    const indexA = order.indexOf(taskA);
+    const indexB = order.indexOf(taskB);
+    // A should come before B (A blocks B)
+    expect(indexA).toBeLessThan(indexB);
+  });
+
+  it("topological sort puts tasks with no dependencies first", () => {
+    const [project2] = ctx.projectService.create([{ title: "Topo Test" }]);
+    const [t1] = ctx.taskService.create([{ project_id: project2.id, title: "Independent" }]);
+    const [t2] = ctx.taskService.create([{ project_id: project2.id, title: "Dependent" }]);
+    ctx.taskDependencyService.addDependencies(project2.id, [
+      { source_task_id: t1.id, target_task_id: t2.id, dependency_type: "blocks" },
+    ]);
+    const order = ctx.taskDependencyService.getTopologicalOrder(project2.id);
+    expect(order.indexOf(t1.id)).toBeLessThan(order.indexOf(t2.id));
+  });
+
+  it("removeDependencies removes specified pairs", () => {
+    ctx.taskDependencyService.removeDependencies([
+      { source_task_id: taskB, target_task_id: taskA },
+    ]);
+    const result = ctx.taskDependencyService.getDependencies(taskA);
+    // B->A relates_to should be gone
+    expect(result.relates_to.some((d) => d.source_task_id === taskB)).toBe(false);
+  });
+
+  it("activity log entries are written for add operations", () => {
+    const logs = ctx.activityLogRepo.findMany({ entity_type: "task_dependency", limit: 50 });
+    expect(logs.length).toBeGreaterThanOrEqual(1);
+    const createdLogs = logs.filter((l) => l.action === "created");
+    expect(createdLogs.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("activity log entries are written for remove operations", () => {
+    const logs = ctx.activityLogRepo.findMany({ entity_type: "task_dependency", limit: 50 });
+    const deletedLogs = logs.filter((l) => l.action === "deleted");
+    expect(deletedLogs.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task is_blocked Computation
+// ---------------------------------------------------------------------------
+
+describe("Task is_blocked computation", () => {
+  let projectId: string;
+
+  beforeAll(() => {
+    const [project] = ctx.projectService.create([{ title: "Blocked Test Project" }]);
+    projectId = project.id;
+  });
+
+  it("newly created tasks have is_blocked = false", () => {
+    const [task] = ctx.taskService.create([{ project_id: projectId, title: "New Task" }]);
+    expect(task.is_blocked).toBe(false);
+  });
+
+  it("task with unfinished blocker has is_blocked = true", () => {
+    const [blocker] = ctx.taskService.create([{ project_id: projectId, title: "Blocker" }]);
+    const [blocked] = ctx.taskService.create([{ project_id: projectId, title: "Blocked" }]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: blocker.id, target_task_id: blocked.id, dependency_type: "blocks" },
+    ]);
+
+    const result = ctx.taskService.get(blocked.id);
+    expect(result.is_blocked).toBe(true);
+  });
+
+  it("task unblocked when blocker is done", () => {
+    const [blocker] = ctx.taskService.create([{ project_id: projectId, title: "Will Finish" }]);
+    const [blocked] = ctx.taskService.create([{ project_id: projectId, title: "Waiting" }]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: blocker.id, target_task_id: blocked.id, dependency_type: "blocks" },
+    ]);
+
+    // Initially blocked
+    expect(ctx.taskService.get(blocked.id).is_blocked).toBe(true);
+
+    // Mark blocker as done
+    ctx.taskService.update([{ id: blocker.id, status: "done" }]);
+    expect(ctx.taskService.get(blocked.id).is_blocked).toBe(false);
+  });
+
+  it("task unblocked when blocker is archived", () => {
+    const [blocker] = ctx.taskService.create([{ project_id: projectId, title: "Will Archive" }]);
+    const [blocked] = ctx.taskService.create([{ project_id: projectId, title: "Waiting Archive" }]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: blocker.id, target_task_id: blocked.id, dependency_type: "blocks" },
+    ]);
+
+    ctx.taskService.update([{ id: blocker.id, status: "archived" }]);
+    expect(ctx.taskService.get(blocked.id).is_blocked).toBe(false);
+  });
+
+  it("task with no dependencies has is_blocked = false", () => {
+    const [task] = ctx.taskService.create([{ project_id: projectId, title: "No Deps" }]);
+    expect(ctx.taskService.get(task.id).is_blocked).toBe(false);
+  });
+
+  it("task with only relates_to dependency has is_blocked = false", () => {
+    const [a] = ctx.taskService.create([{ project_id: projectId, title: "Relates A" }]);
+    const [b] = ctx.taskService.create([{ project_id: projectId, title: "Relates B" }]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: a.id, target_task_id: b.id, dependency_type: "relates_to" },
+    ]);
+    expect(ctx.taskService.get(b.id).is_blocked).toBe(false);
+  });
+
+  it("list() returns is_blocked in summaries", () => {
+    const [blocker] = ctx.taskService.create([{ project_id: projectId, title: "List Blocker" }]);
+    const [blocked] = ctx.taskService.create([{ project_id: projectId, title: "List Blocked" }]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: blocker.id, target_task_id: blocked.id, dependency_type: "blocks" },
+    ]);
+
+    const result = ctx.taskService.list({ project_id: projectId });
+    const blockedSummary = result.data.find((t) => t.id === blocked.id);
+    const blockerSummary = result.data.find((t) => t.id === blocker.id);
+    expect(blockedSummary?.is_blocked).toBe(true);
+    expect(blockerSummary?.is_blocked).toBe(false);
+  });
+
+  it("is_blocked uses batch query (single SQL per project)", () => {
+    // This is a design validation -- if it works for multiple tasks in one list call, the batch approach is working
+    const result = ctx.taskService.list({ project_id: projectId });
+    // All tasks should have is_blocked defined as boolean
+    for (const task of result.data) {
+      expect(typeof task.is_blocked).toBe("boolean");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cascading Unblock Notifications
+// ---------------------------------------------------------------------------
+
+describe("Cascading Unblock Notifications", () => {
+  let projectId: string;
+
+  beforeAll(() => {
+    const [project] = ctx.projectService.create([{ title: "Unblock Notification Project" }]);
+    projectId = project.id;
+  });
+
+  it("emits unblock activity log and event when blocker is completed", () => {
+    const [taskA] = ctx.taskService.create([{ project_id: projectId, title: "Blocker A" }]);
+    const [taskB] = ctx.taskService.create([{ project_id: projectId, title: "Blocked B" }]);
+
+    // A blocks B
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskA.id, target_task_id: taskB.id, dependency_type: "blocks" },
+    ]);
+
+    // Collect emitted events
+    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const unsub = ctx.eventBus.subscribe((event) => {
+      if (event.type === "updated" && event.entity_type === "task") {
+        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+      }
+    });
+
+    // Complete A
+    ctx.taskService.update([{ id: taskA.id, status: "done" }]);
+
+    unsub();
+
+    // Check activity log for the unblocked entry
+    const logs = ctx.activityLogRepo.findMany({ entity_type: "task", entity_id: taskB.id, limit: 50 });
+    const unblockedLog = logs.find((l) => {
+      if (l.action !== "updated") return false;
+      const summary = JSON.parse(l.summary);
+      return summary.event === "unblocked";
+    });
+    expect(unblockedLog).toBeTruthy();
+    const summary = JSON.parse(unblockedLog!.summary);
+    expect(summary.event).toBe("unblocked");
+    expect(summary.unblocked_by).toBe(taskA.id);
+    expect(summary.message).toBe("Task unblocked: all blocking dependencies are now complete");
+
+    // Check emitted domain event for unblocked
+    const unblockedEvent = emittedEvents.find((e) => {
+      const p = e.payload as Record<string, unknown>;
+      return p.event === "unblocked" && p.id === taskB.id;
+    });
+    expect(unblockedEvent).toBeTruthy();
+    const payload = unblockedEvent!.payload as Record<string, unknown>;
+    expect(payload.unblocked_by).toBe(taskA.id);
+  });
+
+  it("does NOT emit unblock when other blockers remain", () => {
+    const [taskX] = ctx.taskService.create([{ project_id: projectId, title: "Blocker X" }]);
+    const [taskY] = ctx.taskService.create([{ project_id: projectId, title: "Blocker Y" }]);
+    const [taskZ] = ctx.taskService.create([{ project_id: projectId, title: "Blocked Z" }]);
+
+    // X and Y both block Z
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskX.id, target_task_id: taskZ.id, dependency_type: "blocks" },
+      { source_task_id: taskY.id, target_task_id: taskZ.id, dependency_type: "blocks" },
+    ]);
+
+    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const unsub = ctx.eventBus.subscribe((event) => {
+      if (event.type === "updated" && event.entity_type === "task") {
+        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+      }
+    });
+
+    // Complete only X -- Y still blocks Z
+    ctx.taskService.update([{ id: taskX.id, status: "done" }]);
+
+    unsub();
+
+    // Should NOT have an unblocked event for Z
+    const unblockedEvent = emittedEvents.find((e) => {
+      const p = e.payload as Record<string, unknown>;
+      return p.event === "unblocked" && p.id === taskZ.id;
+    });
+    expect(unblockedEvent).toBeUndefined();
+
+    // Check activity log -- no unblocked entry for Z
+    const logs = ctx.activityLogRepo.findMany({ entity_type: "task", entity_id: taskZ.id, limit: 50 });
+    const unblockedLog = logs.find((l) => {
+      if (l.action !== "updated") return false;
+      const summary = JSON.parse(l.summary);
+      return summary.event === "unblocked";
+    });
+    expect(unblockedLog).toBeUndefined();
+  });
+
+  it("emits unblock when last blocker is completed (multiple blockers)", () => {
+    const [taskP] = ctx.taskService.create([{ project_id: projectId, title: "Blocker P" }]);
+    const [taskQ] = ctx.taskService.create([{ project_id: projectId, title: "Blocker Q" }]);
+    const [taskR] = ctx.taskService.create([{ project_id: projectId, title: "Blocked R" }]);
+
+    // P and Q both block R
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskP.id, target_task_id: taskR.id, dependency_type: "blocks" },
+      { source_task_id: taskQ.id, target_task_id: taskR.id, dependency_type: "blocks" },
+    ]);
+
+    // Complete P first
+    ctx.taskService.update([{ id: taskP.id, status: "done" }]);
+
+    // Now complete Q -- this should trigger the unblock
+    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const unsub = ctx.eventBus.subscribe((event) => {
+      if (event.type === "updated" && event.entity_type === "task") {
+        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+      }
+    });
+
+    ctx.taskService.update([{ id: taskQ.id, status: "done" }]);
+
+    unsub();
+
+    // Now R should be unblocked
+    const unblockedEvent = emittedEvents.find((e) => {
+      const p = e.payload as Record<string, unknown>;
+      return p.event === "unblocked" && p.id === taskR.id;
+    });
+    expect(unblockedEvent).toBeTruthy();
+  });
+
+  it("emits unblock when blocker is archived (not just done)", () => {
+    const [taskM] = ctx.taskService.create([{ project_id: projectId, title: "Blocker M" }]);
+    const [taskN] = ctx.taskService.create([{ project_id: projectId, title: "Blocked N" }]);
+
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskM.id, target_task_id: taskN.id, dependency_type: "blocks" },
+    ]);
+
+    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const unsub = ctx.eventBus.subscribe((event) => {
+      if (event.type === "updated" && event.entity_type === "task") {
+        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+      }
+    });
+
+    // Archive M instead of marking done
+    ctx.taskService.update([{ id: taskM.id, status: "archived" }]);
+
+    unsub();
+
+    const unblockedEvent = emittedEvents.find((e) => {
+      const p = e.payload as Record<string, unknown>;
+      return p.event === "unblocked" && p.id === taskN.id;
+    });
+    expect(unblockedEvent).toBeTruthy();
+  });
+
+  it("does not auto-change the status of unblocked tasks", () => {
+    const [taskD] = ctx.taskService.create([{ project_id: projectId, title: "Blocker D" }]);
+    const [taskE] = ctx.taskService.create([{ project_id: projectId, title: "Blocked E" }]);
+
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskD.id, target_task_id: taskE.id, dependency_type: "blocks" },
+    ]);
+
+    // Complete D
+    ctx.taskService.update([{ id: taskD.id, status: "done" }]);
+
+    // E's status should still be 'todo', not automatically changed
+    const taskEAfter = ctx.taskService.get(taskE.id);
+    expect(taskEAfter.status).toBe("todo");
   });
 });

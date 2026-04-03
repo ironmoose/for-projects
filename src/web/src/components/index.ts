@@ -37,6 +37,7 @@ export { PresenceCharm } from "./molecules/PresenceCharm";
 export { CollapsibleSection } from "./molecules/CollapsibleSection";
 export { TaskTableFilters } from "./molecules/TaskTableFilters";
 export { DocumentSearchBar } from "./molecules/DocumentSearchBar";
+export { DependencyChip } from "./molecules/DependencyChip";
 export { TagPicker } from "./molecules/TagPicker";
 // Organisms
 export { TopBar } from "./organisms/TopBar";
@@ -52,6 +53,8 @@ export { DocumentReaderModal } from "./organisms/DocumentReaderModal";
 export { DocumentTable } from "./organisms/DocumentTable";
 export { CreateDocumentOverlay } from "./organisms/CreateDocumentOverlay";
 export { ShortcutHelpOverlay } from "./organisms/ShortcutHelpOverlay";
+export { DependencyGraphView } from "./organisms/DependencyGraphView";
+export type { DependencyGraphViewProps } from "./organisms/DependencyGraphView";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

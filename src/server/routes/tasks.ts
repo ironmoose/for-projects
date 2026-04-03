@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import type {
   ITaskService,
+  ITaskDependencyService,
   CreateTaskInput,
   UpdateTaskInput,
 } from "../../domain";
 
-export function taskRoutes(service: ITaskService): Hono {
+export function taskRoutes(service: ITaskService, depService?: ITaskDependencyService): Hono {
   const app = new Hono();
 
   // GET /api/tasks
@@ -21,7 +22,8 @@ export function taskRoutes(service: ITaskService): Hono {
     const impact = c.req.query("impact");
     const category = c.req.query("category");
     const title = c.req.query("title");
-    const filter: { project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; limit: number; offset: number } = { limit, offset };
+    const blockedParam = c.req.query("blocked");
+    const filter: { project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean; limit: number; offset: number } = { limit, offset };
     if (project_id) filter.project_id = project_id;
     if (group_key) filter.group_key = group_key;
     if (status) filter.status = status;
@@ -29,6 +31,8 @@ export function taskRoutes(service: ITaskService): Hono {
     if (impact) filter.impact = impact;
     if (category) filter.category = category;
     if (title) filter.title = title;
+    if (blockedParam === "true") filter.blocked = true;
+    if (blockedParam === "false") filter.blocked = false;
     return c.json(service.list(filter));
   });
 
@@ -38,6 +42,12 @@ export function taskRoutes(service: ITaskService): Hono {
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const tasks = service.create(body.items);
     return c.json(tasks, 201);
+  });
+
+  // GET /api/tasks/:id/dependencies
+  app.get("/:id/dependencies", (c) => {
+    if (!depService) return c.json({ error: "dependency service not available" }, 500);
+    return c.json(depService.getDependencies(c.req.param("id")));
   });
 
   // GET /api/tasks/:id

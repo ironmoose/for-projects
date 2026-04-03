@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, TaskDependency, TaskDependencyDetail } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -14,7 +14,7 @@ export interface Paginated<T> {
 }
 
 export interface IProjectService {
-  list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary>;
+  list(filter?: { id?: string; limit?: number; offset?: number }): Paginated<ProjectSummary>;
   get(id: string): Project;
   create(inputs: CreateProjectInput[]): Project[];
   update(inputs: UpdateProjectInput[]): Project[];
@@ -22,15 +22,23 @@ export interface IProjectService {
 }
 
 export interface ITaskService {
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Paginated<TaskSummary>;
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary>;
   get(id: string): Task;
   create(inputs: CreateTaskInput[]): Task[];
   update(inputs: UpdateTaskInput[]): Task[];
   remove(ids: string[]): void;
 }
 
+export interface ITaskDependencyService {
+  addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: string }[]): void;
+  removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void;
+  getDependencies(taskId: string): { blocks: TaskDependencyDetail[]; blocked_by: TaskDependencyDetail[]; relates_to: TaskDependencyDetail[]; is_blocked: boolean };
+  getGraph(projectId: string): { edges: TaskDependency[]; blocked_task_ids: string[] };
+  getTopologicalOrder(projectId: string): string[];
+}
+
 export interface IDocumentService {
-  list(filter?: { title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
+  list(filter?: { title?: string; tag?: string; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
   get(id: string): Document & { tags: string[] };
   create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[];
   update(inputs: UpdateDocumentInput[]): (Document & { tags: string[] })[];

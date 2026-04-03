@@ -20,3 +20,5 @@ export {
   KeyboardShortcutContext,
 } from "./useKeyboardShortcuts";
 export type { ShortcutEntry, KeyboardShortcutContextValue } from "./useKeyboardShortcuts";
+export { useDependencyGraph } from "./useDependencyGraph";
+export type { DependencyGraph } from "./useDependencyGraph";

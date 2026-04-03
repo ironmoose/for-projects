@@ -7,15 +7,18 @@ import {
   EFFORT_LEVELS,
   IMPACT_LEVELS,
   TASK_CATEGORIES,
+  DEPENDENCY_TYPES,
   TAG_NAMES,
   type IProjectService,
   type ITaskService,
+  type ITaskDependencyService,
   type IDocumentService,
 } from "../domain";
 
 export interface McpServiceContext {
   projectService: IProjectService;
   taskService: ITaskService;
+  taskDependencyService: ITaskDependencyService;
   documentService: IDocumentService;
 }
 
@@ -40,7 +43,7 @@ function handle<T>(fn: () => T) {
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, documentService } = ctx;
+  const { projectService, taskService, taskDependencyService, documentService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -59,7 +62,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ title, limit, offset }) => handle(() => projectService.list({ title, offset, limit }))
+    ({ title, limit, offset }) => handle(() => projectService.list({ title, limit, offset }))
   );
 
   server.registerTool(
@@ -74,7 +77,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tasks",
     {
-      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, and/or category. status accepts a single value or comma-separated values (e.g. \"in_progress,todo\"). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, timestamps).",
+      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, category, and/or blocked. status accepts a single value or comma-separated values (e.g. \"in_progress,todo\"). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, is_blocked, timestamps). Use blocked=true to find tasks waiting on dependencies, blocked=false to find tasks ready to work on.",
       inputSchema: {
         project_id: z.string().max(26).optional(),
         group_key: z.string().max(32).optional(),
@@ -82,11 +85,12 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         effort: z.enum([...EFFORT_LEVELS]).optional(),
         impact: z.enum([...IMPACT_LEVELS]).optional(),
         category: z.enum([...TASK_CATEGORIES]).optional(),
+        blocked: z.boolean().optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ project_id, group_key, status, effort, impact, category, limit, offset }) => handle(() => taskService.list({ project_id, group_key, status, effort, impact, category, limit, offset }))
+    ({ project_id, group_key, status, effort, impact, category, blocked, limit, offset }) => handle(() => taskService.list({ project_id, group_key, status, effort, impact, category, blocked, limit, offset }))
   );
 
   server.registerTool(
@@ -163,7 +167,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed.",
+      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use add_dependencies to create dependency edges (each with task_id of the blocker/related task and type 'blocks' or 'relates_to'). Use remove_dependencies to remove edges by task_id. The current task becomes the target (blocked by / related to the specified task_id).",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
@@ -177,10 +181,80 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
+          add_dependencies: z.array(z.object({
+            task_id: z.string().max(26),
+            type: z.enum([...DEPENDENCY_TYPES]),
+          })).optional(),
+          remove_dependencies: z.array(z.object({
+            task_id: z.string().max(26),
+          })).optional(),
         })),
       },
     },
     ({ items }) => handle(() => taskService.update(items))
+  );
+
+  // -- Dependency graph tools -------------------------------------------
+
+  server.registerTool(
+    "get_dependency_graph",
+    {
+      description: "Get the full dependency graph for a project. Returns all dependency edges and task metadata. Use this to understand task ordering, find bottlenecks, and plan execution sequences.",
+      inputSchema: {
+        project_id: z.string().max(26),
+      },
+    },
+    ({ project_id }) => handle(() => {
+      const { edges, blocked_task_ids } = taskDependencyService.getGraph(project_id);
+      const { data: tasks } = taskService.list({ project_id, limit: 200 });
+      const blockedSet = new Set(blocked_task_ids);
+      return {
+        tasks: tasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          is_blocked: blockedSet.has(t.id),
+          group_key: t.group_key,
+        })),
+        edges: edges.map((e) => ({
+          source: e.source_task_id,
+          target: e.target_task_id,
+          type: e.dependency_type,
+        })),
+        blocked_task_ids,
+      };
+    })
+  );
+
+  server.registerTool(
+    "get_ready_tasks",
+    {
+      description: "Get tasks that are ready to work on: status is todo, not blocked by any incomplete dependencies. This is the primary tool for agents to find actionable work.",
+      inputSchema: {
+        project_id: z.string().max(26),
+      },
+    },
+    ({ project_id }) => handle(() => {
+      const { data: tasks } = taskService.list({ project_id, status: "todo", limit: 200 });
+      const blockedIds = new Set(taskDependencyService.getGraph(project_id).blocked_task_ids);
+      return tasks.filter((t) => !blockedIds.has(t.id));
+    })
+  );
+
+  server.registerTool(
+    "get_topological_order",
+    {
+      description: "Get tasks sorted in dependency order (blockers before dependents). Tasks with no dependencies come first. Use this to plan sequential execution of a project.",
+      inputSchema: {
+        project_id: z.string().max(26),
+      },
+    },
+    ({ project_id }) => handle(() => {
+      const orderedIds = taskDependencyService.getTopologicalOrder(project_id);
+      const { data: tasks } = taskService.list({ project_id, limit: 200 });
+      const taskMap = new Map(tasks.map((t) => [t.id, t]));
+      return orderedIds.map((id) => taskMap.get(id)).filter(Boolean);
+    })
   );
 
   // -- Documents -------------------------------------------------------

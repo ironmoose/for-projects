@@ -9,6 +9,9 @@ export const TAG_NAMES = [
   'architecture', 'conventions', 'guide', 'reference', 'decision', 'troubleshooting',
   'security', 'performance', 'testing', 'accessibility',
 ] as const;
+export const DEPENDENCY_TYPES = ['blocks', 'relates_to'] as const;
+export type DependencyType = typeof DEPENDENCY_TYPES[number];
+
 export const ENTITY_TYPES = ['project', 'task', 'document'] as const;
 export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
 
@@ -51,6 +54,7 @@ export interface Task {
   effort: EffortLevel | null;
   impact: ImpactLevel | null;
   category: TaskCategory | null;
+  is_blocked: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -76,6 +80,7 @@ export interface TaskSummary {
   impact: ImpactLevel | null;
   category: TaskCategory | null;
   group_key: string | null;
+  is_blocked: boolean;
   has_plan: boolean;
   has_description: boolean;
   has_implementation: boolean;
@@ -98,6 +103,7 @@ export function toTaskSummary(t: Task): TaskSummary {
   return {
     id: t.id, project_id: t.project_id, title: t.title, status: t.status,
     effort: t.effort, impact: t.impact, category: t.category, group_key: t.group_key,
+    is_blocked: t.is_blocked,
     has_plan: t.plan != null, has_description: t.description != null,
     has_implementation: t.implementation != null, has_acceptance_criteria: t.acceptance_criteria != null,
     created_at: t.created_at, updated_at: t.updated_at,
@@ -108,7 +114,6 @@ export interface Document {
   id: string;
   title: string;
   content: string | null;
-  favorite: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -117,7 +122,6 @@ export interface DocumentSummary {
   id: string;
   title: string;
   has_content: boolean;
-  favorite: boolean;
   tags: TagName[];
   created_at: string;
   updated_at: string;
@@ -127,7 +131,6 @@ export function toDocumentSummary(doc: Document, tags: TagName[] = []): Document
   return {
     id: doc.id, title: doc.title,
     has_content: doc.content != null,
-    favorite: doc.favorite,
     tags,
     created_at: doc.created_at, updated_at: doc.updated_at,
   };
@@ -137,6 +140,22 @@ export interface Tag {
   id: string;
   kind: TagName;
   created_at: string;
+}
+
+// -- Task dependencies ---------------------------------------------------
+
+export interface TaskDependency {
+  source_task_id: string;
+  target_task_id: string;
+  dependency_type: DependencyType;
+  created_at: string;
+}
+
+export interface TaskDependencyDetail extends TaskDependency {
+  source_task_title: string;
+  target_task_title: string;
+  source_task_status: TaskStatus;
+  target_task_status: TaskStatus;
 }
 
 // -- Activity log --------------------------------------------------------

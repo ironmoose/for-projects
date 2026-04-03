@@ -54,8 +54,8 @@ export class Server {
 
     // -- API (with logging) ----------------------------------------
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
-    app.route("/api/projects", projectRoutes(ctx.projectService));
-    app.route("/api/tasks", taskRoutes(ctx.taskService));
+    app.route("/api/projects", projectRoutes(ctx.projectService, ctx.taskService, ctx.taskDependencyService));
+    app.route("/api/tasks", taskRoutes(ctx.taskService, ctx.taskDependencyService));
     app.route("/api/documents", documentRoutes(ctx.documentService));
     app.route("/api/activity-log", activityLogRoutes(ctx.activityLogRepo));
     app.get("/api/health", (c) => {

@@ -14,3 +14,5 @@ export { ActivityLogRepository } from "./repositories/activity-log";
 export { DocumentRepository } from "./repositories/documents";
 export { TagRepository } from "./repositories/tags";
 export { ProjectDocumentRepository } from "./repositories/project-documents";
+export { TaskDependencyRepository } from "./repositories/task-dependencies";
+export { TaskDependencyService } from "./services/task-dependencies";

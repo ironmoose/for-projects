@@ -1,4 +1,4 @@
-import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName } from './entities';
+import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType } from './entities';
 
 export interface CreateDocumentInput {
   title: string;
@@ -58,4 +58,6 @@ export interface UpdateTaskInput {
   effort?: EffortLevel | null;
   impact?: ImpactLevel | null;
   category?: TaskCategory | null;
+  add_dependencies?: { task_id: string; type: DependencyType }[];
+  remove_dependencies?: { task_id: string }[];
 }

@@ -21,6 +21,7 @@ import {
   CardSkeleton,
   RowSkeleton,
   ExpandableCard,
+  DependencyChip,
 } from "../components";
 import type { TagName } from "../types";
 import type { ProgressBarSegment } from "../components";
@@ -316,6 +317,34 @@ export function registerAllComponents(): void {
     propDefs: [],
     render: () => <TagPickerDemo />,
     codeTemplate: `<TagPicker selected={selectedTags} onChange={setSelectedTags} />`,
+  });
+
+  registerComponent({
+    name: "DependencyChip",
+    description: "Clickable chip showing a task dependency with status dot and remove button.",
+    category: "molecule",
+    propDefs: [
+      { name: "taskTitle", type: "string", defaultValue: "Set up database migrations" },
+      { name: "taskStatus", type: "enum", defaultValue: "in_progress", options: ["todo", "in_progress", "done", "archived"] },
+      { name: "dependencyType", type: "enum", defaultValue: "blocks", options: ["blocks", "relates_to"] },
+    ],
+    render: (props) => (
+      <DependencyChip
+        taskId="01ABC123"
+        taskTitle={String(props.taskTitle)}
+        taskStatus={props.taskStatus as "todo" | "in_progress" | "done" | "archived"}
+        dependencyType={props.dependencyType as "blocks" | "relates_to"}
+        onClick={() => {}}
+        onRemove={() => {}}
+      />
+    ),
+    variants: [
+      { name: "Todo", props: { taskStatus: "todo", taskTitle: "Plan API endpoints" } },
+      { name: "In Progress", props: { taskStatus: "in_progress", taskTitle: "Build dependency graph" } },
+      { name: "Done", props: { taskStatus: "done", taskTitle: "Write unit tests" } },
+      { name: "Long Title", props: { taskTitle: "This is a very long task title that should be truncated with ellipsis" } },
+    ],
+    codeTemplate: `<DependencyChip taskId="..." taskTitle="Task name" taskStatus="todo" dependencyType="blocks" onClick={handleClick} onRemove={handleRemove} />`,
   });
 
   registerComponent({

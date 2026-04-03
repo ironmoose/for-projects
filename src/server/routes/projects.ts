@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import type {
   IProjectService,
+  ITaskService,
+  ITaskDependencyService,
   CreateProjectInput,
   UpdateProjectInput,
 } from "../../domain";
 
-export function projectRoutes(service: IProjectService): Hono {
+export function projectRoutes(service: IProjectService, taskService?: ITaskService, depService?: ITaskDependencyService): Hono {
   const app = new Hono();
 
   // GET /api/projects
@@ -26,6 +28,15 @@ export function projectRoutes(service: IProjectService): Hono {
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
     const projects = service.create(body.items);
     return c.json(projects, 201);
+  });
+
+  // GET /api/projects/:id/dependency-graph
+  app.get("/:id/dependency-graph", (c) => {
+    if (!depService || !taskService) return c.json({ error: "dependency service not available" }, 500);
+    const projectId = c.req.param("id");
+    const { edges, blocked_task_ids } = depService.getGraph(projectId);
+    const { data: tasks } = taskService.list({ project_id: projectId, limit: 200 });
+    return c.json({ tasks, edges, blocked_task_ids });
   });
 
   // GET /api/projects/:id

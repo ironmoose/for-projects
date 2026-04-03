@@ -1,11 +1,12 @@
 import { type Task, type TaskSummary, toTaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
-import type { ITaskService, Paginated } from "../services";
+import type { ITaskService, ITaskDependencyService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
+import type { TaskDependencyRepository } from "../repositories/task-dependencies";
 
 export class TaskService implements ITaskService {
   constructor(
@@ -13,19 +14,58 @@ export class TaskService implements ITaskService {
     private projectRepo: ProjectRepository,
     private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
+    private depRepo?: TaskDependencyRepository,
+    private depService?: ITaskDependencyService,
   ) {}
 
 
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Paginated<TaskSummary> {
-    return {
-      data: this.taskRepo.findMany(filter).map(toTaskSummary),
-      total: this.taskRepo.count(filter),
-    };
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary> {
+    const blockedFilter = filter?.blocked;
+    // Strip blocked from the filter before passing to repo
+    const repoFilter = filter ? { ...filter } : undefined;
+    if (repoFilter) delete (repoFilter as Record<string, unknown>).blocked;
+
+    const data = this.taskRepo.findMany(repoFilter).map((t) => {
+      const summary = toTaskSummary(t);
+      return summary;
+    });
+    let total = this.taskRepo.count(repoFilter);
+
+    // Compute is_blocked if we have the dependency repo
+    if (this.depRepo && filter?.project_id) {
+      const blockedIds = new Set(this.depRepo.getBlockedTaskIds(filter.project_id));
+      const enriched = data.map((s) => ({ ...s, is_blocked: blockedIds.has(s.id) }));
+
+      if (blockedFilter !== undefined) {
+        const filtered = enriched.filter((s) => s.is_blocked === blockedFilter);
+        return { data: filtered, total: filtered.length };
+      }
+      return { data: enriched, total };
+    }
+
+    // If no project_id but blocked filter requested, compute per-task
+    if (this.depRepo && blockedFilter !== undefined) {
+      // Need to compute is_blocked for each task individually - expensive but correct
+      const enriched = data.map((s) => {
+        const task = this.taskRepo.findById(s.id);
+        if (!task) return { ...s, is_blocked: false };
+        const blockedIds = new Set(this.depRepo!.getBlockedTaskIds(task.project_id));
+        return { ...s, is_blocked: blockedIds.has(s.id) };
+      });
+      const filtered = enriched.filter((s) => s.is_blocked === blockedFilter);
+      return { data: filtered, total: filtered.length };
+    }
+
+    return { data, total };
   }
 
-  get(id: string): Task {
+  get(id: string): Task & { is_blocked?: boolean } {
     const task = this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
+    if (this.depRepo) {
+      const blockedIds = new Set(this.depRepo.getBlockedTaskIds(task.project_id));
+      return { ...task, is_blocked: blockedIds.has(task.id) };
+    }
     return task;
   }
 
@@ -94,6 +134,10 @@ export class TaskService implements ITaskService {
       });
     }
     this.eventBus.emit({ type: "created", entity_type: "task", payload: tasks });
+    // Newly created tasks are never blocked
+    if (this.depRepo) {
+      return tasks.map((t) => ({ ...t, is_blocked: false }));
+    }
     return tasks;
   }
 
@@ -136,17 +180,96 @@ export class TaskService implements ITaskService {
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);
     }
 
-    const tasks = this.taskRepo.updateMany(inputs);
+    // Strip dependency arrays before passing to repo
+    const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, ...rest }) => rest);
+    const tasks = this.taskRepo.updateMany(repoInputs);
+
+    // Process dependency operations
+    if (this.depService) {
+      for (const input of inputs) {
+        const existing = this.taskRepo.findById(input.id);
+        if (!existing) continue;
+
+        if (input.add_dependencies && input.add_dependencies.length > 0) {
+          this.depService.addDependencies(
+            existing.project_id,
+            input.add_dependencies.map((d) => ({
+              source_task_id: d.task_id,
+              target_task_id: input.id,
+              dependency_type: d.type,
+            })),
+          );
+        }
+        if (input.remove_dependencies && input.remove_dependencies.length > 0) {
+          this.depService.removeDependencies(
+            input.remove_dependencies.map((d) => ({
+              source_task_id: d.task_id,
+              target_task_id: input.id,
+            })),
+          );
+        }
+      }
+    }
+
     for (const t of tasks) {
-      const fields = Object.keys(inputs.find((i) => i.id === t.id) ?? {}).filter((k) => k !== "id");
+      const input = inputs.find((i) => i.id === t.id);
+      const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies");
+      const added = input?.add_dependencies?.length ?? 0;
+      const removed = input?.remove_dependencies?.length ?? 0;
+      const summaryObj: Record<string, unknown> = { fields };
+      if (added > 0) summaryObj.added_dependencies = added;
+      if (removed > 0) summaryObj.removed_dependencies = removed;
       this.activityLog.insert({
         entity_type: "task",
         entity_id: t.id,
         action: "updated",
-        summary: JSON.stringify({ fields }),
+        summary: JSON.stringify(summaryObj),
       });
     }
     this.eventBus.emit({ type: "updated", entity_type: "task", payload: tasks });
+
+    // Post-update: check if completing tasks unblocks any dependents
+    if (this.depRepo) {
+      for (const task of tasks) {
+        const input = inputs.find((i) => i.id === task.id);
+        if (!input?.status) continue; // no status change in this update
+        if (input.status !== "done" && input.status !== "archived") continue;
+
+        // This task just completed. Check what it was blocking.
+        const dependents = this.depRepo.getDependenciesFrom(task.id)
+          .filter((d) => d.dependency_type === "blocks");
+
+        for (const dep of dependents) {
+          // Check if the dependent task is now fully unblocked (all blockers done/archived)
+          const blockers = this.depRepo.getDependenciesTo(dep.target_task_id)
+            .filter((d) => d.dependency_type === "blocks");
+          const allDone = blockers.every((b) => {
+            const blocker = this.taskRepo.findById(b.source_task_id);
+            return blocker && (blocker.status === "done" || blocker.status === "archived");
+          });
+
+          if (allDone) {
+            this.activityLog.insert({
+              entity_type: "task",
+              entity_id: dep.target_task_id,
+              action: "updated",
+              summary: JSON.stringify({
+                event: "unblocked",
+                unblocked_by: task.id,
+                message: "Task unblocked: all blocking dependencies are now complete",
+              }),
+            });
+
+            this.eventBus.emit({
+              type: "updated",
+              entity_type: "task",
+              payload: { id: dep.target_task_id, event: "unblocked", unblocked_by: task.id },
+            });
+          }
+        }
+      }
+    }
+
     return tasks;
   }
 

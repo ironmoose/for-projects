@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sg } from "../components/theme/synthGlow";
 import {
   Button,
@@ -23,6 +23,8 @@ import {
   DocumentReaderModal,
   CreateEntityOverlay,
   TagChip,
+  DependencyChip,
+  DependencyGraphView,
 } from "../components";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { Badge } from "../components/atoms/Badge";
@@ -31,8 +33,10 @@ import { useShortcut, useShortcutSuppression } from "../hooks/useKeyboardShortcu
 import { useWindowWidth } from "../hooks/useWindowWidth";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
+import { useDependencyGraph } from "../hooks/useDependencyGraph";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask, updateTasks, fetchDocuments } from "../api";
+import { ApiError, fetchTask, updateTasks, fetchDocuments, fetchTaskDependencies, fetchTasks, addTaskDependency, removeTaskDependency } from "../api";
+import type { TaskDependencies, DependencyDetail } from "../api";
 import type { Task, TaskSummary, TaskStatus, DocumentSummary } from "../types";
 import {
   TASK_STATUSES,
@@ -52,6 +56,238 @@ const STATUS_LABELS: Record<string, string> = {
 function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "archived" | "default" {
   if (status === "todo" || status === "in_progress" || status === "done" || status === "archived") return status;
   return "default";
+}
+
+// ---------------------------------------------------------------------------
+// AddDependencySearch — inline search to add a dependency
+// ---------------------------------------------------------------------------
+
+function AddDependencySearch({
+  projectId,
+  currentTaskId,
+  existingIds,
+  dependencyType,
+  onAdd,
+  onClose,
+}: {
+  projectId: string;
+  currentTaskId: string;
+  existingIds: Set<string>;
+  dependencyType: "blocks" | "relates_to";
+  onAdd: (targetTaskId: string) => void;
+  onClose: () => void;
+}) {
+  const { theme } = useTheme();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<TaskSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchTasks({ project_id: projectId, title: query.trim(), limit: 20 })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setResults(data.filter((t) => t.id !== currentTaskId && !existingIds.has(t.id)));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof ApiError ? err.message : "Search failed");
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [query, projectId, currentTaskId, existingIds]);
+
+  return (
+    <div style={{ marginTop: theme.spacing.xs }}>
+      <Input
+        autoFocus
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search tasks by title..."
+        style={{ fontSize: theme.font.size.xs, padding: "4px 8px" }}
+      />
+      {error && (
+        <p style={{ margin: `${theme.spacing.xs} 0 0`, fontSize: theme.font.size.xxs, color: theme.color.danger }}>
+          {error}
+        </p>
+      )}
+      {loading && (
+        <p style={{ margin: `${theme.spacing.xs} 0 0`, fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+          Searching...
+        </p>
+      )}
+      {!loading && query.trim() && results.length === 0 && !error && (
+        <p style={{ margin: `${theme.spacing.xs} 0 0`, fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+          No matching tasks
+        </p>
+      )}
+      {results.length > 0 && (
+        <div
+          style={{
+            marginTop: theme.spacing.xs,
+            border: `1px solid ${theme.color.borderSubtle}`,
+            borderRadius: theme.radius.md,
+            background: theme.color.surfaceContainer,
+            maxHeight: 150,
+            overflowY: "auto",
+          }}
+        >
+          {results.map((t) => (
+            <div
+              key={t.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onAdd(t.id)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onAdd(t.id); }}
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                fontSize: theme.font.size.xs,
+                color: theme.color.text,
+                cursor: "pointer",
+                borderBottom: `1px solid ${theme.color.borderSubtle}`,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = theme.color.surfaceContainerHigh; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            >
+              <Badge variant={statusBadgeVariant(t.status)} style={{ marginRight: theme.spacing.xs }}>
+                {STATUS_LABELS[t.status] ?? t.status}
+              </Badge>
+              {t.title}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DependencySection — renders one section (Blocked By / Blocks / Related)
+// ---------------------------------------------------------------------------
+
+function DependencySection({
+  title,
+  items,
+  dependencyType,
+  projectId,
+  currentTaskId,
+  allExistingIds,
+  onSelectTask,
+  onRemove,
+  onAdd,
+}: {
+  title: string;
+  items: DependencyDetail[];
+  dependencyType: "blocks" | "relates_to";
+  projectId: string;
+  currentTaskId: string;
+  allExistingIds: Set<string>;
+  onSelectTask: (id: string) => void;
+  onRemove: (item: DependencyDetail) => void;
+  onAdd: (targetTaskId: string, type: "blocks" | "relates_to") => void;
+}) {
+  const { theme } = useTheme();
+  const [showAdd, setShowAdd] = useState(false);
+
+  return (
+    <div style={{ marginBottom: theme.spacing.md }}>
+      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm, marginBottom: theme.spacing.xs }}>
+        <span
+          style={{
+            fontSize: theme.font.size.xxs,
+            fontWeight: 700,
+            color: theme.color.textMuted,
+            textTransform: "uppercase",
+            letterSpacing: theme.font.letterSpacing.wide,
+          }}
+        >
+          {title}
+        </span>
+        {items.length > 0 && (
+          <span
+            style={{
+              fontSize: theme.font.size.xxs,
+              fontWeight: 700,
+              color: theme.color.textFaint,
+              background: theme.color.surfaceContainerHigh,
+              borderRadius: theme.radius.full,
+              padding: "1px 6px",
+              lineHeight: 1.4,
+            }}
+          >
+            {items.length}
+          </span>
+        )}
+      </div>
+      {items.length > 0 ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs }}>
+          {items.map((dep) => (
+            <DependencyChip
+              key={dep.task_id}
+              taskId={dep.task_id}
+              taskTitle={dep.task_title}
+              taskStatus={dep.task_status}
+              dependencyType={dep.dependency_type}
+              onClick={() => onSelectTask(dep.task_id)}
+              onRemove={() => onRemove(dep)}
+            />
+          ))}
+        </div>
+      ) : (
+        <p
+          style={{
+            margin: 0,
+            fontSize: theme.font.size.xs,
+            color: theme.color.textFaint,
+            fontStyle: "italic",
+          }}
+        >
+          None
+        </p>
+      )}
+      {showAdd ? (
+        <AddDependencySearch
+          projectId={projectId}
+          currentTaskId={currentTaskId}
+          existingIds={allExistingIds}
+          dependencyType={dependencyType}
+          onAdd={(targetId) => { onAdd(targetId, dependencyType); setShowAdd(false); }}
+          onClose={() => setShowAdd(false)}
+        />
+      ) : (
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{
+            marginTop: theme.spacing.xs,
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            fontSize: theme.font.size.xxs,
+            color: theme.color.primary,
+            fontWeight: 600,
+            fontFamily: theme.font.body,
+          }}
+        >
+          + Add
+        </button>
+      )}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -128,10 +364,12 @@ function TaskDetailPanel({
   task,
   onClose,
   onUpdate,
+  taskTitles,
 }: {
   task: Task;
   onClose: () => void;
   onUpdate: (taskId: string, input: Record<string, string | null | undefined>) => Promise<void>;
+  taskTitles: Map<string, string>;
 }) {
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
@@ -150,6 +388,53 @@ function TaskDetailPanel({
 
   // Suppress keyboard shortcuts while detail panel is open
   useShortcutSuppression();
+
+  const { showToast } = useToastContext();
+
+  // Structured dependency state
+  const [dependencies, setDependencies] = useState<TaskDependencies | null>(null);
+  const [depsLoading, setDepsLoading] = useState(false);
+  const blockedByRef = useRef<HTMLDivElement>(null);
+
+  const loadDependencies = useCallback(() => {
+    setDepsLoading(true);
+    fetchTaskDependencies(task.id)
+      .then(setDependencies)
+      .catch(() => { setDependencies(null); })
+      .finally(() => setDepsLoading(false));
+  }, [task.id]);
+
+  useEffect(() => {
+    loadDependencies();
+  }, [loadDependencies]);
+
+  // All existing dependency task IDs (for excluding from search)
+  const allExistingIds = useMemo(() => {
+    if (!dependencies) return new Set<string>();
+    const ids = new Set<string>();
+    for (const d of dependencies.blocks) ids.add(d.task_id);
+    for (const d of dependencies.blocked_by) ids.add(d.task_id);
+    for (const d of dependencies.relates_to) ids.add(d.task_id);
+    return ids;
+  }, [dependencies]);
+
+  const handleRemoveDependency = useCallback(async (dep: DependencyDetail) => {
+    try {
+      await removeTaskDependency(task.id, dep.task_id, dep.dependency_type);
+      loadDependencies();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to remove dependency");
+    }
+  }, [task.id, loadDependencies, showToast]);
+
+  const handleAddDependency = useCallback(async (targetTaskId: string, type: "blocks" | "relates_to") => {
+    try {
+      await addTaskDependency(task.id, targetTaskId, type);
+      loadDependencies();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to add dependency");
+    }
+  }, [task.id, loadDependencies, showToast]);
 
   // Sync title/groupKey when task prop changes
   useEffect(() => {
@@ -446,6 +731,55 @@ function TaskDetailPanel({
               </ExpandableCard>
             ))}
 
+            {/* Dependencies */}
+            <ExpandableCard title="Dependencies" defaultOpen variant="flat" style={{ marginBottom: theme.spacing.sm }}>
+              {depsLoading ? (
+                <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint }}>Loading dependencies...</p>
+              ) : dependencies ? (
+                <>
+                  <div ref={blockedByRef}>
+                    <DependencySection
+                      title="Blocked By"
+                      items={dependencies.blocked_by}
+                      dependencyType="blocks"
+                      projectId={task.project_id}
+                      currentTaskId={task.id}
+                      allExistingIds={allExistingIds}
+                      onSelectTask={() => {}}
+                      onRemove={handleRemoveDependency}
+                      onAdd={handleAddDependency}
+                    />
+                  </div>
+                  <DependencySection
+                    title="Blocks"
+                    items={dependencies.blocks}
+                    dependencyType="blocks"
+                    projectId={task.project_id}
+                    currentTaskId={task.id}
+                    allExistingIds={allExistingIds}
+                    onSelectTask={() => {}}
+                    onRemove={handleRemoveDependency}
+                    onAdd={handleAddDependency}
+                  />
+                  <DependencySection
+                    title="Related"
+                    items={dependencies.relates_to}
+                    dependencyType="relates_to"
+                    projectId={task.project_id}
+                    currentTaskId={task.id}
+                    allExistingIds={allExistingIds}
+                    onSelectTask={() => {}}
+                    onRemove={handleRemoveDependency}
+                    onAdd={handleAddDependency}
+                  />
+                </>
+              ) : (
+                <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
+                  Dependencies not available
+                </p>
+              )}
+            </ExpandableCard>
+
             {/* Read-only metadata footer */}
             <div
               style={{
@@ -678,7 +1012,11 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [editValue, setEditValue] = useState("");
   const [showDocPicker, setShowDocPicker] = useState(false);
 
+  const { graph, loading: graphLoading } = useDependencyGraph(projectId);
+
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
+
+  const taskTitles = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
 
   useEffect(() => {
     if (editingTitle && titleInputRef.current) {
@@ -864,6 +1202,22 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             )}
           </div>
         </Stack>
+
+        {/* Dependency Graph (collapsible) */}
+        {!graphLoading && graph && graph.edges.length > 0 && (
+          <ExpandableCard
+            title="Dependency Graph"
+            defaultOpen={false}
+            style={{ marginBottom: theme.spacing.xl }}
+          >
+            <DependencyGraphView
+              tasks={graph.tasks}
+              edges={graph.edges}
+              blockedTaskIds={graph.blockedTaskIds}
+              onTaskClick={(taskId) => setSelectedTaskId(taskId)}
+            />
+          </ExpandableCard>
+        )}
 
         {/* Two-column area */}
         <div style={{
@@ -1074,6 +1428,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         task={selectedTask}
         onClose={handleClosePanel}
         onUpdate={updateTask}
+        taskTitles={taskTitles}
       />
     )}
     {selectedDocumentId && (
