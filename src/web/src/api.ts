@@ -118,9 +118,9 @@ export async function updateTasks(inputs: Array<{ id: string; title?: string; pl
 
 export interface TaskDependencyDetail {
   task_id: string;
-  title: string;
-  status: string;
-  dependency_type: string;
+  task_title: string;
+  task_status: TaskStatus;
+  dependency_type: "blocks" | "relates_to";
 }
 
 export interface TaskDependencies {
@@ -135,12 +135,7 @@ export async function fetchTaskDependencies(id: string): Promise<TaskDependencie
   return res.json();
 }
 
-export interface DependencyDetail {
-  task_id: string;
-  task_title: string;
-  task_status: TaskStatus;
-  dependency_type: "blocks" | "relates_to";
-}
+export type DependencyDetail = TaskDependencyDetail;
 
 export async function addTaskDependency(taskId: string, dependsOnTaskId: string, type: "blocks" | "relates_to"): Promise<Task> {
   const res = await apiFetch("/api/tasks", jsonPatch({

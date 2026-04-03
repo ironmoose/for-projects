@@ -66,7 +66,7 @@ export class TaskService implements ITaskService {
       const blockedIds = new Set(this.depRepo.getBlockedTaskIds(task.project_id));
       return { ...task, is_blocked: blockedIds.has(task.id) };
     }
-    return task;
+    return { ...task, is_blocked: false };
   }
 
   create(inputs: CreateTaskInput[]): Task[] {

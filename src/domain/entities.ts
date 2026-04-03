@@ -103,7 +103,7 @@ export function toTaskSummary(t: Task): TaskSummary {
   return {
     id: t.id, project_id: t.project_id, title: t.title, status: t.status,
     effort: t.effort, impact: t.impact, category: t.category, group_key: t.group_key,
-    is_blocked: t.is_blocked,
+    is_blocked: t.is_blocked ?? false,
     has_plan: t.plan != null, has_description: t.description != null,
     has_implementation: t.implementation != null, has_acceptance_criteria: t.acceptance_criteria != null,
     created_at: t.created_at, updated_at: t.updated_at,
@@ -156,6 +156,33 @@ export interface TaskDependencyDetail extends TaskDependency {
   target_task_title: string;
   source_task_status: TaskStatus;
   target_task_status: TaskStatus;
+}
+
+export interface NormalizedDependencyDetail {
+  task_id: string;
+  task_title: string;
+  task_status: TaskStatus;
+  dependency_type: DependencyType;
+}
+
+export function toNormalizedDependency(
+  detail: TaskDependencyDetail,
+  perspective: "source" | "target",
+): NormalizedDependencyDetail {
+  if (perspective === "target") {
+    return {
+      task_id: detail.target_task_id,
+      task_title: detail.target_task_title,
+      task_status: detail.target_task_status,
+      dependency_type: detail.dependency_type,
+    };
+  }
+  return {
+    task_id: detail.source_task_id,
+    task_title: detail.source_task_title,
+    task_status: detail.source_task_status,
+    dependency_type: detail.dependency_type,
+  };
 }
 
 // -- Activity log --------------------------------------------------------

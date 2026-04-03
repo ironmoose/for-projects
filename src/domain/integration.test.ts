@@ -894,7 +894,7 @@ describe("Task Dependency Service", () => {
     expect(result.relates_to.length).toBeGreaterThanOrEqual(1);
     // A blocks B and A is still todo, so B is_blocked
     expect(result.is_blocked).toBe(true);
-    expect(result.blocked_by.some((d) => d.source_task_id === taskA)).toBe(true);
+    expect(result.blocked_by.some((d) => d.task_id === taskA)).toBe(true);
   });
 
   it("getGraph returns edges and blocked_task_ids", () => {
@@ -930,20 +930,33 @@ describe("Task Dependency Service", () => {
     ]);
     const result = ctx.taskDependencyService.getDependencies(taskA);
     // B->A relates_to should be gone
-    expect(result.relates_to.some((d) => d.source_task_id === taskB)).toBe(false);
+    expect(result.relates_to.some((d) => d.task_id === taskB)).toBe(false);
   });
 
   it("activity log entries are written for add operations", () => {
-    const logs = ctx.activityLogRepo.findMany({ entity_type: "task_dependency", limit: 50 });
-    expect(logs.length).toBeGreaterThanOrEqual(1);
-    const createdLogs = logs.filter((l) => l.action === "created");
-    expect(createdLogs.length).toBeGreaterThanOrEqual(1);
+    const logs = ctx.activityLogRepo.findMany({ entity_type: "task", limit: 100 });
+    const depAddedLogs = logs.filter((l) => {
+      if (l.action !== "created") return false;
+      const summary = JSON.parse(l.summary);
+      return summary.event === "dependency_added";
+    });
+    expect(depAddedLogs.length).toBeGreaterThanOrEqual(1);
+    const summary = JSON.parse(depAddedLogs[0].summary);
+    expect(summary.source_task_id).toBeDefined();
+    expect(summary.target_task_id).toBeDefined();
+    expect(summary.dependency_type).toBeDefined();
+    expect(depAddedLogs[0].entity_id).not.toBeNull();
   });
 
   it("activity log entries are written for remove operations", () => {
-    const logs = ctx.activityLogRepo.findMany({ entity_type: "task_dependency", limit: 50 });
-    const deletedLogs = logs.filter((l) => l.action === "deleted");
-    expect(deletedLogs.length).toBeGreaterThanOrEqual(1);
+    const logs = ctx.activityLogRepo.findMany({ entity_type: "task", limit: 100 });
+    const depRemovedLogs = logs.filter((l) => {
+      if (l.action !== "deleted") return false;
+      const summary = JSON.parse(l.summary);
+      return summary.event === "dependency_removed";
+    });
+    expect(depRemovedLogs.length).toBeGreaterThanOrEqual(1);
+    expect(depRemovedLogs[0].entity_id).not.toBeNull();
   });
 });
 

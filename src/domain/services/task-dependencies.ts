@@ -1,5 +1,5 @@
-import type { TaskDependency, TaskDependencyDetail, DependencyType } from "../entities";
-import { DEPENDENCY_TYPES } from "../entities";
+import type { TaskDependency, TaskDependencyDetail, NormalizedDependencyDetail, DependencyType } from "../entities";
+import { DEPENDENCY_TYPES, toNormalizedDependency } from "../entities";
 import type { ITaskDependencyService } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskDependencyRepository } from "../repositories/task-dependencies";
@@ -111,10 +111,10 @@ export class TaskDependencyService implements ITaskDependencyService {
     // Phase 3: Side effects
     for (const dep of deps) {
       this.activityLog.insert({
-        entity_type: "task_dependency",
-        entity_id: null,
+        entity_type: "task",
+        entity_id: dep.target_task_id,
         action: "created",
-        summary: JSON.stringify({ source_task_id: dep.source_task_id, target_task_id: dep.target_task_id, dependency_type: dep.dependency_type }),
+        summary: JSON.stringify({ event: "dependency_added", source_task_id: dep.source_task_id, target_task_id: dep.target_task_id, dependency_type: dep.dependency_type }),
       });
     }
     this.eventBus.emit({ type: "updated", entity_type: "task", payload: deps });
@@ -127,27 +127,38 @@ export class TaskDependencyService implements ITaskDependencyService {
 
     for (const pair of pairs) {
       this.activityLog.insert({
-        entity_type: "task_dependency",
-        entity_id: null,
+        entity_type: "task",
+        entity_id: pair.target_task_id,
         action: "deleted",
-        summary: JSON.stringify({ source_task_id: pair.source_task_id, target_task_id: pair.target_task_id }),
+        summary: JSON.stringify({ event: "dependency_removed", source_task_id: pair.source_task_id, target_task_id: pair.target_task_id }),
       });
     }
     this.eventBus.emit({ type: "updated", entity_type: "task", payload: pairs });
   }
 
-  getDependencies(taskId: string): { blocks: TaskDependencyDetail[]; blocked_by: TaskDependencyDetail[]; relates_to: TaskDependencyDetail[]; is_blocked: boolean } {
+  getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean } {
     const from = this.depRepo.getDependenciesFrom(taskId);
     const to = this.depRepo.getDependenciesTo(taskId);
 
-    const blocks = from.filter((d) => d.dependency_type === "blocks");
-    const blocked_by = to.filter((d) => d.dependency_type === "blocks");
-    const relates_to = [
+    const rawBlocks = from.filter((d) => d.dependency_type === "blocks");
+    const rawBlockedBy = to.filter((d) => d.dependency_type === "blocks");
+    const rawRelatesTo = [
       ...from.filter((d) => d.dependency_type === "relates_to"),
       ...to.filter((d) => d.dependency_type === "relates_to"),
     ];
-    const is_blocked = blocked_by.some(
+    const is_blocked = rawBlockedBy.some(
       (d) => d.source_task_status !== "done" && d.source_task_status !== "archived",
+    );
+
+    // Normalize: blocks (from this task) -> show target task
+    const blocks = rawBlocks.map((d) => toNormalizedDependency(d, "target"));
+    // Normalize: blocked_by (to this task) -> show source task
+    const blocked_by = rawBlockedBy.map((d) => toNormalizedDependency(d, "source"));
+    // Normalize: relates_to (from = show target, to = show source)
+    const relates_to = rawRelatesTo.map((d) =>
+      d.source_task_id === taskId
+        ? toNormalizedDependency(d, "target")
+        : toNormalizedDependency(d, "source"),
     );
 
     return { blocks, blocked_by, relates_to, is_blocked };

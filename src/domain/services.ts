@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, TaskDependency, TaskDependencyDetail } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -32,7 +32,7 @@ export interface ITaskService {
 export interface ITaskDependencyService {
   addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: string }[]): void;
   removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void;
-  getDependencies(taskId: string): { blocks: TaskDependencyDetail[]; blocked_by: TaskDependencyDetail[]; relates_to: TaskDependencyDetail[]; is_blocked: boolean };
+  getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean };
   getGraph(projectId: string): { edges: TaskDependency[]; blocked_task_ids: string[] };
   getTopologicalOrder(projectId: string): string[];
 }
