@@ -5,6 +5,8 @@ import {
   EmptyState,
   Pagination,
   ConfirmDialog,
+  Button,
+  CreateDocumentOverlay,
 } from "../components";
 import { DocumentSearchBar } from "../components/molecules/DocumentSearchBar";
 import { DocumentTable } from "../components/organisms/DocumentTable";
@@ -25,13 +27,14 @@ export function DocumentsPage() {
   const [tagFilter, setTagFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [showCreateOverlay, setShowCreateOverlay] = useState(false);
 
   const filter = {
     ...(titleFilter ? { title: titleFilter } : {}),
     ...(tagFilter ? { tag: tagFilter } : {}),
   };
 
-  const { documents, loading, total, totalPages, page, setPage, remove } = useDocuments(
+  const { documents, loading, total, totalPages, page, setPage, create, remove } = useDocuments(
     Object.keys(filter).length > 0 ? filter : undefined,
   );
 
@@ -79,9 +82,14 @@ export function DocumentsPage() {
           title="Documents"
           subtitle="Browse and search your knowledge base."
           trailing={
-            <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
-              {total} document{total !== 1 ? "s" : ""}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.md }}>
+              <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
+                {total} document{total !== 1 ? "s" : ""}
+              </span>
+              <Button size="sm" onClick={() => setShowCreateOverlay(true)}>
+                New Document
+              </Button>
+            </div>
           }
           style={{ marginBottom: theme.spacing.xl }}
         />
@@ -139,6 +147,21 @@ export function DocumentsPage() {
           message={`Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {showCreateOverlay && (
+        <CreateDocumentOverlay
+          onCreated={async (fields) => {
+            try {
+              await create(fields);
+              showToast("Document created", "success");
+            } catch (err) {
+              showToast(err instanceof ApiError ? err.message : "Failed to create document");
+              throw err;
+            }
+          }}
+          onClose={() => setShowCreateOverlay(false)}
         />
       )}
     </div>

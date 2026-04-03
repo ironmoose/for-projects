@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { registerComponent } from "./registry";
 import {
   Button,
@@ -14,11 +15,18 @@ import {
   BackButton,
   EmptyState,
   TagChip,
+  TagPicker,
   Skeleton,
   CardSkeleton,
   RowSkeleton,
   ExpandableCard,
 } from "../components";
+import type { TagName } from "../types";
+
+function TagPickerDemo() {
+  const [selected, setSelected] = useState<TagName[]>(["ui", "conventions"]);
+  return <TagPicker selected={selected} onChange={setSelected} />;
+}
 
 export function registerAllComponents(): void {
   // Atoms
@@ -271,6 +279,15 @@ export function registerAllComponents(): void {
       />
     ),
     codeTemplate: `<TagChip name="frontend" onRemove={handleRemove} />`,
+  });
+
+  registerComponent({
+    name: "TagPicker",
+    description: "Multi-select tag picker grouped by category.",
+    category: "molecule",
+    propDefs: [],
+    render: () => <TagPickerDemo />,
+    codeTemplate: `<TagPicker selected={selectedTags} onChange={setSelectedTags} />`,
   });
 
   registerComponent({
