@@ -26,8 +26,8 @@ import { useWindowWidth } from "../hooks/useWindowWidth";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask } from "../api";
-import type { Task, TaskSummary } from "../types";
+import { ApiError, fetchTask, updateTasks } from "../api";
+import type { Task, TaskSummary, TaskStatus } from "../types";
 import { formatDate } from "../utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -269,6 +269,14 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     await addTask(fields);
   }
 
+  async function handleUpdateTaskStatus(taskId: string, status: TaskStatus) {
+    try {
+      await updateTasks([{ id: taskId, status }]);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to update task status", "error");
+    }
+  }
+
   async function handleDeleteTask() {
     if (!deleteTaskTarget) return;
     try {
@@ -446,6 +454,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 selectedTaskId={selectedTaskId}
                 onSelectTask={(id) => setSelectedTaskId(id)}
                 onDeleteTask={(task) => setDeleteTaskTarget(task)}
+                onUpdateTaskStatus={handleUpdateTaskStatus}
               />
             )}
           </div>
