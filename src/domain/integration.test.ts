@@ -886,6 +886,59 @@ describe("Task Dependency Service", () => {
     expect(deps).toHaveLength(1);
   });
 
+  it("rejects batch cycle: [{A->B, blocks}, {B->A, blocks}]", () => {
+    const [bA] = ctx.taskService.create([{ project_id: projectId, title: "Batch A" }]);
+    const [bB] = ctx.taskService.create([{ project_id: projectId, title: "Batch B" }]);
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: bA.id, target_task_id: bB.id, dependency_type: "blocks" },
+        { source_task_id: bB.id, target_task_id: bA.id, dependency_type: "blocks" },
+      ])
+    ).toThrow("adding this dependency would create a cycle");
+    // Neither edge should be persisted
+    const depsA = ctx.taskDependencyService.getDependencies(bA.id);
+    const depsB = ctx.taskDependencyService.getDependencies(bB.id);
+    expect(depsA.blocks).toHaveLength(0);
+    expect(depsA.blocked_by).toHaveLength(0);
+    expect(depsB.blocks).toHaveLength(0);
+    expect(depsB.blocked_by).toHaveLength(0);
+  });
+
+  it("rejects batch 3-node cycle: [{A->B, blocks}, {B->C, blocks}, {C->A, blocks}]", () => {
+    const [c1] = ctx.taskService.create([{ project_id: projectId, title: "Cycle3 A" }]);
+    const [c2] = ctx.taskService.create([{ project_id: projectId, title: "Cycle3 B" }]);
+    const [c3] = ctx.taskService.create([{ project_id: projectId, title: "Cycle3 C" }]);
+    expect(() =>
+      ctx.taskDependencyService.addDependencies(projectId, [
+        { source_task_id: c1.id, target_task_id: c2.id, dependency_type: "blocks" },
+        { source_task_id: c2.id, target_task_id: c3.id, dependency_type: "blocks" },
+        { source_task_id: c3.id, target_task_id: c1.id, dependency_type: "blocks" },
+      ])
+    ).toThrow("adding this dependency would create a cycle");
+  });
+
+  it("allows non-cyclic batch: [{A->B, blocks}, {B->C, blocks}]", () => {
+    const [n1] = ctx.taskService.create([{ project_id: projectId, title: "Chain1" }]);
+    const [n2] = ctx.taskService.create([{ project_id: projectId, title: "Chain2" }]);
+    const [n3] = ctx.taskService.create([{ project_id: projectId, title: "Chain3" }]);
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: n1.id, target_task_id: n2.id, dependency_type: "blocks" },
+      { source_task_id: n2.id, target_task_id: n3.id, dependency_type: "blocks" },
+    ]);
+    expect(deps).toHaveLength(2);
+  });
+
+  it("batch with relates_to does not trigger cycle detection", () => {
+    const [r1] = ctx.taskService.create([{ project_id: projectId, title: "Rel1" }]);
+    const [r2] = ctx.taskService.create([{ project_id: projectId, title: "Rel2" }]);
+    // Both directions as relates_to should be fine
+    const deps = ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: r1.id, target_task_id: r2.id, dependency_type: "relates_to" },
+      { source_task_id: r2.id, target_task_id: r1.id, dependency_type: "relates_to" },
+    ]);
+    expect(deps).toHaveLength(2);
+  });
+
   it("getDependencies returns grouped shape with blocks, blocked_by, relates_to, is_blocked", () => {
     const result = ctx.taskDependencyService.getDependencies(taskB);
     // B has: blocked_by (A->B blocks), relates_to (B->C relates_to, B->A relates_to)

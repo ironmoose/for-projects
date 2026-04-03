@@ -73,6 +73,7 @@ export class TaskDependencyService implements ITaskDependencyService {
 
   addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: DependencyType }[]): TaskDependency[] {
     // Phase 1: Validate all inputs
+    const proposedEdges: TaskDependency[] = [];
     for (const dep of deps) {
       // Validate dependency_type
       if (!(DEPENDENCY_TYPES as readonly string[]).includes(dep.dependency_type)) {
@@ -99,9 +100,10 @@ export class TaskDependencyService implements ITaskDependencyService {
       // Cycle detection -- only for 'blocks' type
       if (dep.dependency_type === "blocks") {
         const existingEdges = this.depRepo.getGraphForProject(projectId);
-        if (wouldCreateCycle(existingEdges, dep)) {
+        if (wouldCreateCycle([...existingEdges, ...proposedEdges], dep)) {
           throw new ServiceError("adding this dependency would create a cycle", 400);
         }
+        proposedEdges.push({ source_task_id: dep.source_task_id, target_task_id: dep.target_task_id, dependency_type: dep.dependency_type, created_at: "" });
       }
     }
 
