@@ -37,32 +37,6 @@ function wouldCreateCycle(
   return false;
 }
 
-function topologicalSort(edges: TaskDependency[], taskIds: string[]): string[] {
-  const inDegree = new Map<string, number>();
-  const adj = new Map<string, string[]>();
-  for (const id of taskIds) {
-    inDegree.set(id, 0);
-    adj.set(id, []);
-  }
-  for (const edge of edges) {
-    if (edge.dependency_type !== "blocks") continue;
-    adj.get(edge.source_task_id)?.push(edge.target_task_id);
-    inDegree.set(edge.target_task_id, (inDegree.get(edge.target_task_id) ?? 0) + 1);
-  }
-  const queue = taskIds.filter((id) => (inDegree.get(id) ?? 0) === 0);
-  const result: string[] = [];
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    result.push(node);
-    for (const neighbor of adj.get(node) ?? []) {
-      const deg = (inDegree.get(neighbor) ?? 1) - 1;
-      inDegree.set(neighbor, deg);
-      if (deg === 0) queue.push(neighbor);
-    }
-  }
-  return result;
-}
-
 export class TaskDependencyService implements ITaskDependencyService {
   constructor(
     private depRepo: TaskDependencyRepository,
@@ -170,14 +144,6 @@ export class TaskDependencyService implements ITaskDependencyService {
     const edges = this.depRepo.getGraphForProject(projectId);
     const blocked_task_ids = this.depRepo.getBlockedTaskIds(projectId);
     return { edges, blocked_task_ids };
-  }
-
-  getTopologicalOrder(projectId: string): string[] {
-    const edges = this.depRepo.getGraphForProject(projectId);
-    // Collect all unique task IDs from the edges and also include all project tasks
-    const tasks = this.taskRepo.findMany({ project_id: projectId, limit: 200 });
-    const taskIds = tasks.map((t) => t.id);
-    return topologicalSort(edges, taskIds);
   }
 
   isBlocked(taskId: string): boolean {

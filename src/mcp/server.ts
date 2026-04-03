@@ -241,22 +241,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     })
   );
 
-  server.registerTool(
-    "get_topological_order",
-    {
-      description: "Get tasks sorted in dependency order (blockers before dependents). Tasks with no dependencies come first. Use this to plan sequential execution of a project.",
-      inputSchema: {
-        project_id: z.string().max(26),
-      },
-    },
-    ({ project_id }) => handle(() => {
-      const orderedIds = taskDependencyService.getTopologicalOrder(project_id);
-      const { data: tasks } = taskService.list({ project_id, limit: 200 });
-      const taskMap = new Map(tasks.map((t) => [t.id, t]));
-      return orderedIds.map((id) => taskMap.get(id)).filter(Boolean);
-    })
-  );
-
   // -- Documents -------------------------------------------------------
 
   server.registerTool(
