@@ -137,20 +137,38 @@ export async function fetchTaskDependencies(id: string): Promise<TaskDependencie
 
 export type DependencyDetail = TaskDependencyDetail;
 
-export async function addTaskDependency(taskId: string, dependsOnTaskId: string, type: "blocks" | "relates_to"): Promise<Task> {
-  const res = await apiFetch("/api/tasks", jsonPatch({
-    items: [{ id: taskId, add_dependencies: [{ task_id: dependsOnTaskId, type }] }],
-  }));
-  const tasks: Task[] = await res.json();
-  return tasks[0];
+export async function addDependency(
+  projectId: string,
+  sourceTaskId: string,
+  targetTaskId: string,
+  dependencyType: "blocks" | "relates_to",
+): Promise<void> {
+  await apiFetch(
+    `/api/projects/${encodeURIComponent(projectId)}/dependencies`,
+    jsonPost({ items: [{ source_task_id: sourceTaskId, target_task_id: targetTaskId, dependency_type: dependencyType }] }),
+  );
 }
 
-export async function removeTaskDependency(taskId: string, dependsOnTaskId: string, type: "blocks" | "relates_to"): Promise<Task> {
-  const res = await apiFetch("/api/tasks", jsonPatch({
-    items: [{ id: taskId, remove_dependencies: [{ task_id: dependsOnTaskId, type }] }],
-  }));
-  const tasks: Task[] = await res.json();
-  return tasks[0];
+export async function removeDependency(
+  projectId: string,
+  sourceTaskId: string,
+  targetTaskId: string,
+): Promise<void> {
+  await apiFetch(
+    `/api/projects/${encodeURIComponent(projectId)}/dependencies`,
+    { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ source_task_id: sourceTaskId, target_task_id: targetTaskId }] }) },
+  );
+}
+
+export async function removeDependencyBothDirections(
+  projectId: string,
+  taskIdA: string,
+  taskIdB: string,
+): Promise<void> {
+  await apiFetch(
+    `/api/projects/${encodeURIComponent(projectId)}/dependencies`,
+    { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ source_task_id: taskIdA, target_task_id: taskIdB }, { source_task_id: taskIdB, target_task_id: taskIdA }] }) },
+  );
 }
 
 export async function deleteTasks(ids: string[]): Promise<void> {

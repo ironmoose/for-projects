@@ -37,7 +37,7 @@ import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useDependencyGraph } from "../hooks/useDependencyGraph";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask, updateTasks, fetchDocuments, fetchTaskDependencies, fetchTasks, addTaskDependency, removeTaskDependency } from "../api";
+import { ApiError, fetchTask, updateTasks, fetchDocuments, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
 import type { TaskDependencies, DependencyDetail } from "../api";
 import type { Task, TaskSummary, TaskStatus, DocumentSummary } from "../types";
 import {
@@ -181,10 +181,12 @@ function AddDependencySearch({
 // DependencySection — renders one section (Blocked By / Blocks / Related)
 // ---------------------------------------------------------------------------
 
+type DependencySectionType = "blocked_by" | "blocks" | "relates_to";
+
 function DependencySection({
   title,
   items,
-  dependencyType,
+  section,
   projectId,
   currentTaskId,
   allExistingIds,
@@ -194,13 +196,13 @@ function DependencySection({
 }: {
   title: string;
   items: DependencyDetail[];
-  dependencyType: "blocks" | "relates_to";
+  section: DependencySectionType;
   projectId: string;
   currentTaskId: string;
   allExistingIds: Set<string>;
   onSelectTask: (id: string) => void;
-  onRemove: (item: DependencyDetail) => void;
-  onAdd: (targetTaskId: string, type: "blocks" | "relates_to") => void;
+  onRemove: (item: DependencyDetail, section: DependencySectionType) => void;
+  onAdd: (targetTaskId: string, section: DependencySectionType) => void;
 }) {
   const { theme } = useTheme();
   const [showAdd, setShowAdd] = useState(false);
@@ -245,7 +247,7 @@ function DependencySection({
               taskStatus={dep.task_status}
               dependencyType={dep.dependency_type}
               onClick={() => onSelectTask(dep.task_id)}
-              onRemove={() => onRemove(dep)}
+              onRemove={() => onRemove(dep, section)}
             />
           ))}
         </div>
@@ -266,8 +268,8 @@ function DependencySection({
           projectId={projectId}
           currentTaskId={currentTaskId}
           existingIds={allExistingIds}
-          dependencyType={dependencyType}
-          onAdd={(targetId) => { onAdd(targetId, dependencyType); setShowAdd(false); }}
+          dependencyType={section === "relates_to" ? "relates_to" : "blocks"}
+          onAdd={(targetId) => { onAdd(targetId, section); setShowAdd(false); }}
           onClose={() => setShowAdd(false)}
         />
       ) : (
@@ -420,23 +422,41 @@ function TaskDetailPanel({
     return ids;
   }, [dependencies]);
 
-  const handleRemoveDependency = useCallback(async (dep: DependencyDetail) => {
+  const handleRemoveDependency = useCallback(async (dep: DependencyDetail, section: DependencySectionType) => {
     try {
-      await removeTaskDependency(task.id, dep.task_id, dep.dependency_type);
+      if (section === "blocked_by") {
+        // Edge is: dep.task_id blocks current task => source=dep.task_id, target=task.id
+        await removeDependency(task.project_id, dep.task_id, task.id);
+      } else if (section === "blocks") {
+        // Edge is: current task blocks dep.task_id => source=task.id, target=dep.task_id
+        await removeDependency(task.project_id, task.id, dep.task_id);
+      } else {
+        // relates_to: stored direction is arbitrary, try both
+        await removeDependencyBothDirections(task.project_id, task.id, dep.task_id);
+      }
       loadDependencies();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to remove dependency");
     }
-  }, [task.id, loadDependencies, showToast]);
+  }, [task.id, task.project_id, loadDependencies, showToast]);
 
-  const handleAddDependency = useCallback(async (targetTaskId: string, type: "blocks" | "relates_to") => {
+  const handleAddDependency = useCallback(async (targetTaskId: string, section: DependencySectionType) => {
     try {
-      await addTaskDependency(task.id, targetTaskId, type);
+      if (section === "blocked_by") {
+        // Selected task blocks current task => source=selected, target=current
+        await addDependency(task.project_id, targetTaskId, task.id, "blocks");
+      } else if (section === "blocks") {
+        // Current task blocks selected task => source=current, target=selected
+        await addDependency(task.project_id, task.id, targetTaskId, "blocks");
+      } else {
+        // relates_to: source=current, target=selected
+        await addDependency(task.project_id, task.id, targetTaskId, "relates_to");
+      }
       loadDependencies();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to add dependency");
     }
-  }, [task.id, loadDependencies, showToast]);
+  }, [task.id, task.project_id, loadDependencies, showToast]);
 
   // Sync title/groupKey when task prop changes
   useEffect(() => {
@@ -744,7 +764,7 @@ function TaskDetailPanel({
                     <DependencySection
                       title="Blocked By"
                       items={dependencies.blocked_by}
-                      dependencyType="blocks"
+                      section="blocked_by"
                       projectId={task.project_id}
                       currentTaskId={task.id}
                       allExistingIds={allExistingIds}
@@ -756,7 +776,7 @@ function TaskDetailPanel({
                   <DependencySection
                     title="Blocks"
                     items={dependencies.blocks}
-                    dependencyType="blocks"
+                    section="blocks"
                     projectId={task.project_id}
                     currentTaskId={task.id}
                     allExistingIds={allExistingIds}
@@ -767,7 +787,7 @@ function TaskDetailPanel({
                   <DependencySection
                     title="Related"
                     items={dependencies.relates_to}
-                    dependencyType="relates_to"
+                    section="relates_to"
                     projectId={task.project_id}
                     currentTaskId={task.id}
                     allExistingIds={allExistingIds}
