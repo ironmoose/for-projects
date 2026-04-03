@@ -229,15 +229,29 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_ready_tasks",
     {
-      description: "Get tasks that are ready to work on: status is todo, not blocked by any incomplete dependencies. This is the primary tool for agents to find actionable work.",
+      description: "Get tasks that are ready to work on: status is todo, not blocked by any incomplete dependencies. This is the primary tool for agents to find actionable work. When the result is empty but todo tasks exist, returns {tasks: [], diagnostics: {todo_count, blocked_todo_count, message}} to help diagnose blocked/cycle situations. Use get_dependency_graph to inspect further.",
       inputSchema: {
         project_id: z.string().max(26),
       },
     },
     ({ project_id }) => handle(() => {
-      const { data: tasks } = taskService.list({ project_id, status: "todo", limit: 200 });
-      const blockedIds = new Set(taskDependencyService.getGraph(project_id).blocked_task_ids);
-      return tasks.filter((t) => !blockedIds.has(t.id));
+      const { data: todoTasks } = taskService.list({ project_id, status: "todo", limit: 200 });
+      const { blocked_task_ids } = taskDependencyService.getGraph(project_id);
+      const blockedIds = new Set(blocked_task_ids);
+      const ready = todoTasks.filter((t) => !blockedIds.has(t.id));
+
+      if (ready.length === 0 && todoTasks.length > 0) {
+        const blockedTodoCount = todoTasks.filter((t) => blockedIds.has(t.id)).length;
+        return {
+          tasks: ready,
+          diagnostics: {
+            todo_count: todoTasks.length,
+            blocked_todo_count: blockedTodoCount,
+            message: `All ${todoTasks.length} todo task(s) are blocked by incomplete dependencies. This may indicate circular dependencies. Use get_dependency_graph to inspect.`,
+          },
+        };
+      }
+      return ready;
     })
   );
 

@@ -815,6 +815,48 @@ describe("get_ready_tasks", () => {
     expect(readyIds).toContain(taskC.id);
     expect(readyIds).not.toContain(taskB.id);
   });
+
+  it("returns diagnostics when all todo tasks are blocked", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Diag Proj" }] }));
+    const [blocker, taskA, taskB] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "Blocker (in_progress)", status: "in_progress" },
+        { project_id: proj.id, title: "Blocked A" },
+        { project_id: proj.id, title: "Blocked B" },
+      ],
+    }));
+
+    // blocker blocks both A and B; blocker is in_progress so both todo tasks are blocked
+    await callTool("update_task", {
+      items: [{ id: taskA.id, add_dependencies: [{ task_id: blocker.id, type: "blocks" }] }],
+    });
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: blocker.id, type: "blocks" }] }],
+    });
+
+    const result = parseResult(await callTool("get_ready_tasks", { project_id: proj.id }));
+    expect(result).toHaveProperty("tasks");
+    expect(result).toHaveProperty("diagnostics");
+    expect(result.tasks).toBeArray();
+    expect(result.tasks).toHaveLength(0);
+    expect(result.diagnostics.todo_count).toBe(2);
+    expect(result.diagnostics.blocked_todo_count).toBe(2);
+    expect(result.diagnostics.message).toContain("blocked");
+    expect(result.diagnostics.message).toContain("get_dependency_graph");
+  });
+
+  it("returns empty array without diagnostics when no todo tasks exist", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP No Todo Proj" }] }));
+    parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "Done task", status: "done" },
+      ],
+    }));
+
+    const result = parseResult(await callTool("get_ready_tasks", { project_id: proj.id }));
+    expect(result).toBeArray();
+    expect(result).toHaveLength(0);
+  });
 });
 
 describe("get_topological_order", () => {
