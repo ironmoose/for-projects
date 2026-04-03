@@ -66,18 +66,22 @@ export function ExpandableCard({
         >
           {title}
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginLeft: "auto" }}>
-        {headerAction}
-        <Icon
-          name="chevron_right"
-          size={18}
-          style={{
-            color: theme.color.textMuted,
-            transform: open ? "rotate(90deg)" : "rotate(0deg)",
-            transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
-            flexShrink: 0,
-          }}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginLeft: "auto", flexShrink: 0 }}>
+          {headerAction && (
+            <span onClick={(e) => e.stopPropagation()}>
+              {headerAction}
+            </span>
+          )}
+          <Icon
+            name="chevron_right"
+            size={18}
+            style={{
+              color: theme.color.textMuted,
+              transform: open ? "rotate(90deg)" : "rotate(0deg)",
+              transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
+              flexShrink: 0,
+            }}
+          />
         </div>
       </div>
       <div

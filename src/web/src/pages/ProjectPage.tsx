@@ -5,6 +5,7 @@ import {
   Icon,
   IconButton,
   Input,
+  Select,
   Markdown,
   Textarea,
   Stack,
@@ -32,6 +33,12 @@ import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchTask, updateTasks, fetchDocuments } from "../api";
 import type { Task, TaskSummary, TaskStatus, DocumentSummary } from "../types";
+import {
+  TASK_STATUSES,
+  EFFORT_LEVELS,
+  IMPACT_LEVELS,
+  TASK_CATEGORIES,
+} from "../types";
 import { formatDate } from "../utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -50,17 +57,117 @@ function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "
 // TaskDetailPanel
 // ---------------------------------------------------------------------------
 
-function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void }) {
+// ---------------------------------------------------------------------------
+// Select option helpers (mirrors CreateTaskOverlay pattern)
+// ---------------------------------------------------------------------------
+
+function toSelectOptions(
+  values: readonly string[],
+  noneLabel = "-- none --",
+): { value: string; label: string }[] {
+  return [
+    { value: "", label: noneLabel },
+    ...values.map((v) => ({
+      value: v,
+      label: v.replace(/_/g, " "),
+    })),
+  ];
+}
+
+const DETAIL_STATUS_OPTIONS = TASK_STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") }));
+const DETAIL_EFFORT_OPTIONS = toSelectOptions(EFFORT_LEVELS);
+const DETAIL_IMPACT_OPTIONS = toSelectOptions(IMPACT_LEVELS);
+const DETAIL_CATEGORY_OPTIONS = toSelectOptions(TASK_CATEGORIES);
+
+// ---------------------------------------------------------------------------
+// MetadataField — label + select/input for inline metadata editing
+// ---------------------------------------------------------------------------
+
+function MetadataField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  const { theme } = useTheme();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+      <label
+        style={{
+          fontSize: theme.font.size.xs,
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase" as const,
+          color: theme.color.textFaint,
+          fontFamily: theme.font.body,
+        }}
+      >
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Text field names we support editing
+// ---------------------------------------------------------------------------
+
+type EditableTextField = "description" | "plan" | "implementation" | "acceptance_criteria";
+
+const TEXT_FIELDS: { key: EditableTextField; label: string; defaultOpen: boolean }[] = [
+  { key: "description", label: "Description", defaultOpen: true },
+  { key: "plan", label: "Plan", defaultOpen: false },
+  { key: "implementation", label: "Implementation", defaultOpen: false },
+  { key: "acceptance_criteria", label: "Acceptance Criteria", defaultOpen: false },
+];
+
+function TaskDetailPanel({
+  task,
+  onClose,
+  onUpdate,
+}: {
+  task: Task;
+  onClose: () => void;
+  onUpdate: (taskId: string, input: Record<string, string | null | undefined>) => Promise<void>;
+}) {
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
 
+  // Title editing state
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(task.title);
+
+  // Text field editing state — only one at a time
+  const [editingTextField, setEditingTextField] = useState<EditableTextField | null>(null);
+  const [editTextValue, setEditTextValue] = useState("");
+
+  // Group key editing state
+  const [editingGroupKey, setEditingGroupKey] = useState(false);
+  const [groupKeyValue, setGroupKeyValue] = useState(task.group_key ?? "");
+
+  // Sync title/groupKey when task prop changes
+  useEffect(() => {
+    if (!editingTitle) setTitleValue(task.title);
+  }, [task.title, editingTitle]);
+
+  useEffect(() => {
+    if (!editingGroupKey) setGroupKeyValue(task.group_key ?? "");
+  }, [task.group_key, editingGroupKey]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (editingTitle) { setEditingTitle(false); setTitleValue(task.title); return; }
+        if (editingTextField) { setEditingTextField(null); return; }
+        if (editingGroupKey) { setEditingGroupKey(false); setGroupKeyValue(task.group_key ?? ""); return; }
+        onClose();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, editingTitle, editingTextField, editingGroupKey, task.title, task.group_key]);
 
   const emptyText = (label: string) => (
     <p
@@ -73,6 +180,59 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
     >
       No {label} yet
     </p>
+  );
+
+  // --- Metadata save handlers ---
+  async function handleMetadataChange(field: string, value: string) {
+    const sendValue = value === "" ? null : value;
+    await onUpdate(task.id, { [field]: sendValue });
+  }
+
+  // --- Title save ---
+  async function handleTitleSave() {
+    const trimmed = titleValue.trim();
+    if (!trimmed || trimmed === task.title) {
+      setEditingTitle(false);
+      setTitleValue(task.title);
+      return;
+    }
+    await onUpdate(task.id, { title: trimmed });
+    setEditingTitle(false);
+  }
+
+  // --- Group key save ---
+  async function handleGroupKeySave() {
+    const trimmed = groupKeyValue.trim();
+    const sendValue = trimmed === "" ? null : trimmed;
+    if (sendValue === (task.group_key ?? null)) {
+      setEditingGroupKey(false);
+      return;
+    }
+    await onUpdate(task.id, { group_key: sendValue });
+    setEditingGroupKey(false);
+  }
+
+  // --- Text field save ---
+  async function handleTextFieldSave() {
+    if (!editingTextField) return;
+    const trimmed = editTextValue.trim();
+    const sendValue = trimmed === "" ? null : trimmed;
+    await onUpdate(task.id, { [editingTextField]: sendValue });
+    setEditingTextField(null);
+  }
+
+  function startEditingTextField(key: EditableTextField) {
+    setEditingTextField(key);
+    setEditTextValue(task[key] ?? "");
+  }
+
+  const editButton = (key: EditableTextField) => (
+    <IconButton
+      icon="edit"
+      size={14}
+      onClick={() => startEditingTextField(key)}
+      aria-label={`Edit ${key.replace(/_/g, " ")}`}
+    />
   );
 
   return (
@@ -107,7 +267,7 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
             flexDirection: "column",
           }}
         >
-          {/* Header */}
+          {/* Header — editable title */}
           <div
             style={{
               padding: `${theme.spacing.xl} ${theme.spacing.xl} ${theme.spacing.lg}`,
@@ -117,27 +277,44 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
           >
             <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
               <div style={{ flex: 1, minWidth: 0 }}>
-                <h2
-                  style={{
-                    margin: 0,
-                    fontFamily: theme.font.headline,
-                    fontSize: theme.font.size.xl,
-                    fontWeight: 800,
-                    letterSpacing: theme.font.letterSpacing.tight,
-                    color: theme.color.text,
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {task.title}
-                </h2>
+                {editingTitle ? (
+                  <Input
+                    value={titleValue}
+                    onChange={(e) => setTitleValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); handleTitleSave(); }
+                      if (e.key === "Escape") { e.stopPropagation(); setEditingTitle(false); setTitleValue(task.title); }
+                    }}
+                    onBlur={handleTitleSave}
+                    autoFocus
+                    style={{
+                      fontFamily: theme.font.headline,
+                      fontSize: theme.font.size.xl,
+                      fontWeight: 800,
+                      letterSpacing: theme.font.letterSpacing.tight,
+                    }}
+                  />
+                ) : (
+                  <h2
+                    onClick={() => setEditingTitle(true)}
+                    style={{
+                      margin: 0,
+                      fontFamily: theme.font.headline,
+                      fontSize: theme.font.size.xl,
+                      fontWeight: 800,
+                      letterSpacing: theme.font.letterSpacing.tight,
+                      color: theme.color.text,
+                      lineHeight: 1.3,
+                      cursor: "pointer",
+                    }}
+                    title="Click to edit title"
+                  >
+                    {task.title}
+                  </h2>
+                )}
               </div>
               <IconButton icon="close" size={18} onClick={onClose} aria-label="Close detail panel" />
             </Stack>
-            <div style={{ marginTop: theme.spacing.sm }}>
-              <Badge variant={statusBadgeVariant(task.status)}>
-                {STATUS_LABELS[task.status] ?? task.status}
-              </Badge>
-            </div>
           </div>
 
           {/* Body */}
@@ -150,23 +327,122 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
               flexDirection: "column",
             }}
           >
-            <ExpandableCard title="Description" defaultOpen variant="flat" style={{ marginBottom: theme.spacing.sm }}>
-              {task.description ? <Markdown>{task.description}</Markdown> : emptyText("description")}
-            </ExpandableCard>
+            {/* Metadata — inline editable selects and group key input */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                gap: theme.spacing.md,
+                marginBottom: theme.spacing.lg,
+              }}
+            >
+              <MetadataField label="Status">
+                <Select
+                  options={DETAIL_STATUS_OPTIONS}
+                  value={task.status}
+                  onChange={(e) => handleMetadataChange("status", e.target.value)}
+                />
+              </MetadataField>
+              <MetadataField label="Effort">
+                <Select
+                  options={DETAIL_EFFORT_OPTIONS}
+                  value={task.effort ?? ""}
+                  onChange={(e) => handleMetadataChange("effort", e.target.value)}
+                />
+              </MetadataField>
+              <MetadataField label="Impact">
+                <Select
+                  options={DETAIL_IMPACT_OPTIONS}
+                  value={task.impact ?? ""}
+                  onChange={(e) => handleMetadataChange("impact", e.target.value)}
+                />
+              </MetadataField>
+              <MetadataField label="Category">
+                <Select
+                  options={DETAIL_CATEGORY_OPTIONS}
+                  value={task.category ?? ""}
+                  onChange={(e) => handleMetadataChange("category", e.target.value)}
+                />
+              </MetadataField>
+            </div>
 
-            <ExpandableCard title="Plan" defaultOpen={false} variant="flat" style={{ marginBottom: theme.spacing.sm }}>
-              {task.plan ? <Markdown>{task.plan}</Markdown> : emptyText("plan")}
-            </ExpandableCard>
+            {/* Group key — editable inline input */}
+            <div style={{ marginBottom: theme.spacing.lg }}>
+              <MetadataField label="Group Key">
+                {editingGroupKey ? (
+                  <Input
+                    value={groupKeyValue}
+                    onChange={(e) => setGroupKeyValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); handleGroupKeySave(); }
+                      if (e.key === "Escape") { e.stopPropagation(); setEditingGroupKey(false); setGroupKeyValue(task.group_key ?? ""); }
+                    }}
+                    onBlur={handleGroupKeySave}
+                    autoFocus
+                    placeholder="e.g. ui-crud-completeness"
+                  />
+                ) : (
+                  <span
+                    onClick={() => setEditingGroupKey(true)}
+                    style={{
+                      fontSize: theme.font.size.sm,
+                      color: task.group_key ? theme.color.text : theme.color.textFaint,
+                      fontStyle: task.group_key ? "normal" : "italic",
+                      cursor: "pointer",
+                      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                      borderRadius: theme.radius.lg,
+                      border: `1px solid transparent`,
+                      display: "inline-block",
+                    }}
+                    title="Click to edit group key"
+                  >
+                    {task.group_key ?? "No group key"}
+                  </span>
+                )}
+              </MetadataField>
+            </div>
 
-            <ExpandableCard title="Implementation" defaultOpen={false} variant="flat" style={{ marginBottom: theme.spacing.sm }}>
-              {task.implementation ? <Markdown>{task.implementation}</Markdown> : emptyText("implementation")}
-            </ExpandableCard>
+            {/* Text fields — each with edit button, only one editable at a time */}
+            {TEXT_FIELDS.map(({ key, label, defaultOpen }, idx) => (
+              <ExpandableCard
+                key={key}
+                title={label}
+                defaultOpen={defaultOpen}
+                variant="flat"
+                style={{ marginBottom: idx < TEXT_FIELDS.length - 1 ? theme.spacing.sm : 0 }}
+                headerAction={editingTextField !== key ? editButton(key) : undefined}
+              >
+                {editingTextField === key ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+                    <Textarea
+                      value={editTextValue}
+                      onChange={(e) => setEditTextValue(e.target.value)}
+                      autoFocus
+                      rows={8}
+                      placeholder={`Enter ${label.toLowerCase()}...`}
+                      style={{ width: "100%", boxSizing: "border-box" }}
+                    />
+                    <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setEditingTextField(null)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleTextFieldSave}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  task[key] ? <Markdown>{task[key]}</Markdown> : emptyText(label.toLowerCase())
+                )}
+              </ExpandableCard>
+            ))}
 
-            <ExpandableCard title="Acceptance Criteria" defaultOpen={false} variant="flat">
-              {task.acceptance_criteria ? <Markdown>{task.acceptance_criteria}</Markdown> : emptyText("acceptance criteria")}
-            </ExpandableCard>
-
-            {/* Metadata */}
+            {/* Read-only metadata footer */}
             <div
               style={{
                 marginTop: "auto",
@@ -175,14 +451,9 @@ function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void })
               }}
             >
               <MetadataTable
-                title="Metadata"
+                title="Info"
                 rows={[
                   { label: "ID", value: task.id },
-                  { label: "Status", value: STATUS_LABELS[task.status] ?? task.status },
-                  ...(task.group_key ? [{ label: "Group", value: task.group_key }] : []),
-                  ...(task.effort ? [{ label: "Effort", value: task.effort }] : []),
-                  ...(task.impact ? [{ label: "Impact", value: task.impact }] : []),
-                  ...(task.category ? [{ label: "Category", value: task.category }] : []),
                   { label: "Created", value: formatDate(task.created_at) },
                   { label: "Updated", value: formatDate(task.updated_at) },
                 ]}
@@ -387,7 +658,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const isWide = windowWidth >= theme.breakpoint.md;
-  const { project, notFound, updateProject, addTask, deleteTask } = useProject(projectId);
+  const { project, notFound, updateProject, addTask, updateTask, deleteTask } = useProject(projectId);
   const { showToast } = useToastContext();
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -795,6 +1066,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       <TaskDetailPanel
         task={selectedTask}
         onClose={handleClosePanel}
+        onUpdate={updateTask}
       />
     )}
     {selectedDocumentId && (

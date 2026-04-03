@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ApiError, fetchProject as apiFetchProject, createTasks, updateProjects, deleteTasks } from "../api";
+import { ApiError, fetchProject as apiFetchProject, createTasks, updateTasks, updateProjects, deleteTasks } from "../api";
 import type { Project, DocumentSummary } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
@@ -64,9 +64,18 @@ export function useProject(projectId: string) {
     await createTasks([{ project_id: project.id, ...input }]);
   }
 
+  async function updateTask(taskId: string, input: Record<string, string | null | undefined>) {
+    try {
+      await updateTasks([{ id: taskId, ...input }]);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to update task");
+      throw err;
+    }
+  }
+
   async function deleteTask(taskId: string) {
     await deleteTasks([taskId]);
   }
 
-  return { project, notFound, loading, updateProject, addTask, deleteTask };
+  return { project, notFound, loading, updateProject, addTask, updateTask, deleteTask };
 }
