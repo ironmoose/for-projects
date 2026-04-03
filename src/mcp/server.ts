@@ -239,6 +239,41 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ items }) => handle(() => documentService.update(items))
   );
 
+  // -- Delete tools ----------------------------------------------------
+
+  server.registerTool(
+    "delete_project",
+    {
+      description: "Permanently delete projects by ID. This is destructive and cannot be undone. Deleting a project cascades to all its tasks. Pass an `ids` array of project ID strings.",
+      inputSchema: {
+        ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ ids }) => handle(() => { projectService.remove(ids); return { deleted: ids.length }; })
+  );
+
+  server.registerTool(
+    "delete_task",
+    {
+      description: "Permanently delete tasks by ID. This is destructive and cannot be undone. Pass an `ids` array of task ID strings.",
+      inputSchema: {
+        ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ ids }) => handle(() => { taskService.remove(ids); return { deleted: ids.length }; })
+  );
+
+  server.registerTool(
+    "delete_document",
+    {
+      description: "Permanently delete documents by ID. This is destructive and cannot be undone. Deleting a document removes its tags and any project associations. Pass an `ids` array of document ID strings.",
+      inputSchema: {
+        ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ ids }) => handle(() => { documentService.remove(ids); return { deleted: ids.length }; })
+  );
+
   return server;
 }
 

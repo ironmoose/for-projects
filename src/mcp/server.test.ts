@@ -648,9 +648,95 @@ describe("deleted tools are not registered", () => {
     expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
   });
 
-  it("delete_document is not found", async () => {
-    const result = await callTool("delete_document", { id: "fake" });
-    expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
+});
+
+// ---------------------------------------------------------------------------
+// Delete tools
+// ---------------------------------------------------------------------------
+
+describe("delete_project", () => {
+  it("deletes a project and returns count", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Delete Me Proj" }] }));
+
+    const result = await callTool("delete_project", { ids: [proj.id] });
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+
+    // Verify it's gone
+    const getResult = await callTool("get_project", { id: proj.id });
+    expect(getResult.isError).toBe(true);
+    expect(getErrorText(getResult)).toMatch(/not found/i);
+  });
+
+  it("does not error when deleting non-existent id", async () => {
+    const result = await callTool("delete_project", { ids: ["00000000000000000000000000"] });
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(result.isError).toBeUndefined();
+  });
+
+  it("cascades to tasks when project is deleted", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Cascade Proj" }] }));
+    const [task] = parseResult(await callTool("create_task", { items: [{ project_id: proj.id, title: "Cascade Task" }] }));
+
+    await callTool("delete_project", { ids: [proj.id] });
+
+    const taskResult = await callTool("get_task", { id: task.id });
+    expect(taskResult.isError).toBe(true);
+    expect(getErrorText(taskResult)).toMatch(/not found/i);
+  });
+});
+
+describe("delete_task", () => {
+  it("deletes a task and returns count", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Del Task Proj" }] }));
+    const [task] = parseResult(await callTool("create_task", { items: [{ project_id: proj.id, title: "Delete Me Task" }] }));
+
+    const result = await callTool("delete_task", { ids: [task.id] });
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+
+    const getResult = await callTool("get_task", { id: task.id });
+    expect(getResult.isError).toBe(true);
+    expect(getErrorText(getResult)).toMatch(/not found/i);
+  });
+
+  it("does not error when deleting non-existent id", async () => {
+    const result = await callTool("delete_task", { ids: ["00000000000000000000000000"] });
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(result.isError).toBeUndefined();
+  });
+});
+
+describe("delete_document", () => {
+  it("deletes a document and returns count", async () => {
+    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Delete Me Doc", tags: ["security"] }] }));
+
+    const result = await callTool("delete_document", { ids: [doc.id] });
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+
+    const getResult = await callTool("get_document", { id: doc.id });
+    expect(getResult.isError).toBe(true);
+    expect(getErrorText(getResult)).toMatch(/not found/i);
+  });
+
+  it("does not error when deleting non-existent id", async () => {
+    const result = await callTool("delete_document", { ids: ["00000000000000000000000000"] });
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(result.isError).toBeUndefined();
+  });
+
+  it("cleans up project associations when document is deleted", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Assoc Proj" }] }));
+    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Assoc Doc" }] }));
+    await callTool("update_project", { items: [{ id: proj.id, attach_documents: [doc.id] }] });
+
+    await callTool("delete_document", { ids: [doc.id] });
+
+    const project = parseResult(await callTool("get_project", { id: proj.id }));
+    expect(project.documents.every((d: { id: string }) => d.id !== doc.id)).toBe(true);
   });
 });
