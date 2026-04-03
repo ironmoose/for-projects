@@ -842,6 +842,210 @@ describe("Project Dependency Endpoints", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Task Dependency Routes (via PATCH /tasks and GET endpoints)
+// ---------------------------------------------------------------------------
+
+describe("Task Dependency Routes", () => {
+  let projectId: string;
+  let taskAId: string;
+  let taskBId: string;
+  let taskCId: string;
+
+  beforeAll(async () => {
+    const [project] = ctx.projectService.create([{ title: "Task Dep Route Project" }]);
+    projectId = project.id;
+    const tasks = ctx.taskService.create([
+      { project_id: projectId, title: "Dep Route Task A" },
+      { project_id: projectId, title: "Dep Route Task B" },
+      { project_id: projectId, title: "Dep Route Task C" },
+    ]);
+    taskAId = tasks[0].id;
+    taskBId = tasks[1].id;
+    taskCId = tasks[2].id;
+  });
+
+  it("PATCH /tasks with add_dependencies creates dependency and returns 200", async () => {
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskBId,
+          add_dependencies: [{ task_id: taskAId, type: "blocks" }],
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.id).toBe(taskBId);
+  });
+
+  it("PATCH /tasks with remove_dependencies removes dependency and returns 200", async () => {
+    // First add a dependency to remove
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskAId, target_task_id: taskCId, dependency_type: "blocks" },
+    ]);
+
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskCId,
+          remove_dependencies: [{ task_id: taskAId }],
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    // Verify the dependency is gone
+    const depRes = await req(`/tasks/${taskCId}/dependencies`);
+    const deps = await depRes.json();
+    expect(deps.blocked_by.every((d: { task_id: string }) => d.task_id !== taskAId)).toBe(true);
+  });
+
+  it("GET /tasks/:id/dependencies returns correct shape with blocks, blocked_by, relates_to, is_blocked", async () => {
+    const res = await req(`/tasks/${taskBId}/dependencies`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.blocks).toBeArray();
+    expect(body.blocked_by).toBeArray();
+    expect(body.relates_to).toBeArray();
+    expect(typeof body.is_blocked).toBe("boolean");
+  });
+
+  it("GET /tasks/:id/dependencies items have task_id, task_title, task_status, dependency_type", async () => {
+    // taskB is blocked by taskA (from earlier test)
+    const res = await req(`/tasks/${taskBId}/dependencies`);
+    const body = await res.json();
+    expect(body.blocked_by.length).toBeGreaterThanOrEqual(1);
+    const dep = body.blocked_by[0];
+    expect(dep.task_id).toBeTruthy();
+    expect(dep.task_title).toBeTruthy();
+    expect(dep.task_status).toBeTruthy();
+    expect(dep.dependency_type).toBeTruthy();
+  });
+
+  it("GET /projects/:id/dependency-graph returns tasks, edges, blocked_task_ids", async () => {
+    const res = await req(`/projects/${projectId}/dependency-graph`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tasks).toBeArray();
+    expect(body.edges).toBeArray();
+    expect(body.blocked_task_ids).toBeArray();
+    expect(body.tasks.length).toBeGreaterThanOrEqual(3);
+    // Verify task shape in graph
+    const task = body.tasks[0];
+    expect(task.id).toBeTruthy();
+    expect(task.title).toBeTruthy();
+    expect(task.status).toBeTruthy();
+  });
+
+  it("PATCH /tasks with add_dependencies creating a cycle returns 400", async () => {
+    // A blocks B already. Try to make B block A.
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskAId,
+          add_dependencies: [{ task_id: taskBId, type: "blocks" }],
+        }],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/cycle/i);
+  });
+
+  it("PATCH /tasks with add_dependencies for cross-project task returns 400", async () => {
+    const [otherProject] = ctx.projectService.create([{ title: "Other Route Dep Project" }]);
+    const [otherTask] = ctx.taskService.create([{ project_id: otherProject.id, title: "Other Route Task" }]);
+
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskBId,
+          add_dependencies: [{ task_id: otherTask.id, type: "blocks" }],
+        }],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/same project/i);
+  });
+
+  it("PATCH /tasks with add_dependencies referencing nonexistent task returns 404", async () => {
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskBId,
+          add_dependencies: [{ task_id: "00000000000000000000000000", type: "blocks" }],
+        }],
+      }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE /tasks cleans up dependency rows via CASCADE", async () => {
+    // Create fresh tasks for this test
+    const [depA] = ctx.taskService.create([{ project_id: projectId, title: "CASCADE Source" }]);
+    const [depB] = ctx.taskService.create([{ project_id: projectId, title: "CASCADE Target" }]);
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: depA.id, target_task_id: depB.id, dependency_type: "blocks" },
+    ]);
+
+    // Verify the dependency exists
+    const beforeRes = await req(`/tasks/${depB.id}/dependencies`);
+    const beforeBody = await beforeRes.json();
+    expect(beforeBody.blocked_by.length).toBe(1);
+
+    // Delete the source task
+    const deleteRes = await req("/tasks", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [depA.id] }),
+    });
+    expect(deleteRes.status).toBe(204);
+
+    // Verify the dependency is gone
+    const afterRes = await req(`/tasks/${depB.id}/dependencies`);
+    const afterBody = await afterRes.json();
+    expect(afterBody.blocked_by.length).toBe(0);
+    expect(afterBody.is_blocked).toBe(false);
+  });
+
+  it("PATCH /tasks with add_dependencies relates_to type succeeds", async () => {
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskCId,
+          add_dependencies: [{ task_id: taskBId, type: "relates_to" }],
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    const depRes = await req(`/tasks/${taskCId}/dependencies`);
+    const deps = await depRes.json();
+    expect(deps.relates_to.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("GET /projects/:id/dependency-graph blocked_task_ids includes blocked tasks", async () => {
+    // taskB is blocked by taskA (which is still todo), so should appear in blocked_task_ids
+    const res = await req(`/projects/${projectId}/dependency-graph`);
+    const body = await res.json();
+    expect(body.blocked_task_ids).toContain(taskBId);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Health Endpoint
 // ---------------------------------------------------------------------------
 

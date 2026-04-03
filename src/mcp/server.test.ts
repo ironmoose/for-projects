@@ -680,6 +680,211 @@ describe("deleted tools are not registered", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Dependency operations via MCP
+// ---------------------------------------------------------------------------
+
+describe("update_task with add_dependencies", () => {
+  it("creates a dependency via update_task add_dependencies", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Dep Proj" }] }));
+    const [taskA, taskB] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "MCP Dep A" },
+        { project_id: proj.id, title: "MCP Dep B" },
+      ],
+    }));
+
+    const result = await callTool("update_task", {
+      items: [{
+        id: taskB.id,
+        add_dependencies: [{ task_id: taskA.id, type: "blocks" }],
+      }],
+    });
+    expect(result.isError).toBeUndefined();
+    const [updated] = parseResult(result);
+    expect(updated.id).toBe(taskB.id);
+
+    // Verify via get_dependency_graph
+    const graph = parseResult(await callTool("get_dependency_graph", { project_id: proj.id }));
+    expect(graph.edges.some((e: { source: string; target: string }) => e.source === taskA.id && e.target === taskB.id)).toBe(true);
+    expect(graph.blocked_task_ids).toContain(taskB.id);
+  });
+});
+
+describe("update_task with remove_dependencies", () => {
+  it("removes a dependency via update_task remove_dependencies", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Remove Dep Proj" }] }));
+    const [taskA, taskB] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "MCP Remove A" },
+        { project_id: proj.id, title: "MCP Remove B" },
+      ],
+    }));
+
+    // Add dependency first
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
+    });
+
+    // Remove dependency
+    const result = await callTool("update_task", {
+      items: [{ id: taskB.id, remove_dependencies: [{ task_id: taskA.id }] }],
+    });
+    expect(result.isError).toBeUndefined();
+
+    // Verify edge is gone
+    const graph = parseResult(await callTool("get_dependency_graph", { project_id: proj.id }));
+    expect(graph.edges.some((e: { source: string; target: string }) => e.source === taskA.id && e.target === taskB.id)).toBe(false);
+    expect(graph.blocked_task_ids).not.toContain(taskB.id);
+  });
+});
+
+describe("get_dependency_graph", () => {
+  it("returns tasks, edges, and blocked_task_ids for a project", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Graph Proj" }] }));
+    const [taskA, taskB, taskC] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "MCP Graph A" },
+        { project_id: proj.id, title: "MCP Graph B" },
+        { project_id: proj.id, title: "MCP Graph C" },
+      ],
+    }));
+
+    // A blocks B, B blocks C
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
+    });
+    await callTool("update_task", {
+      items: [{ id: taskC.id, add_dependencies: [{ task_id: taskB.id, type: "blocks" }] }],
+    });
+
+    const graph = parseResult(await callTool("get_dependency_graph", { project_id: proj.id }));
+
+    // Verify tasks array
+    expect(graph.tasks).toBeArray();
+    expect(graph.tasks.length).toBe(3);
+    const taskIds = graph.tasks.map((t: { id: string }) => t.id);
+    expect(taskIds).toContain(taskA.id);
+    expect(taskIds).toContain(taskB.id);
+    expect(taskIds).toContain(taskC.id);
+
+    // Verify each task has expected fields
+    for (const t of graph.tasks) {
+      expect(t.id).toBeTruthy();
+      expect(t.title).toBeTruthy();
+      expect(t.status).toBeTruthy();
+      expect(typeof t.is_blocked).toBe("boolean");
+    }
+
+    // Verify edges
+    expect(graph.edges).toBeArray();
+    expect(graph.edges.length).toBe(2);
+    for (const e of graph.edges) {
+      expect(e.source).toBeTruthy();
+      expect(e.target).toBeTruthy();
+      expect(e.type).toBeTruthy();
+    }
+
+    // Verify blocked_task_ids
+    expect(graph.blocked_task_ids).toBeArray();
+    expect(graph.blocked_task_ids).toContain(taskB.id);
+    expect(graph.blocked_task_ids).toContain(taskC.id);
+    expect(graph.blocked_task_ids).not.toContain(taskA.id);
+  });
+});
+
+describe("get_ready_tasks", () => {
+  it("excludes blocked tasks and returns only unblocked todo tasks", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Ready Proj" }] }));
+    const [taskA, taskB, taskC] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "MCP Ready A" },
+        { project_id: proj.id, title: "MCP Ready B" },
+        { project_id: proj.id, title: "MCP Ready C" },
+      ],
+    }));
+
+    // A blocks B (so B is blocked, A and C are ready)
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
+    });
+
+    const ready = parseResult(await callTool("get_ready_tasks", { project_id: proj.id }));
+    expect(ready).toBeArray();
+    const readyIds = ready.map((t: { id: string }) => t.id);
+    expect(readyIds).toContain(taskA.id);
+    expect(readyIds).toContain(taskC.id);
+    expect(readyIds).not.toContain(taskB.id);
+  });
+});
+
+describe("get_topological_order", () => {
+  it("returns tasks ordered with blockers before dependents", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Topo Proj" }] }));
+    const [taskA, taskB, taskC] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "MCP Topo A" },
+        { project_id: proj.id, title: "MCP Topo B" },
+        { project_id: proj.id, title: "MCP Topo C" },
+      ],
+    }));
+
+    // A blocks B, B blocks C
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
+    });
+    await callTool("update_task", {
+      items: [{ id: taskC.id, add_dependencies: [{ task_id: taskB.id, type: "blocks" }] }],
+    });
+
+    const ordered = parseResult(await callTool("get_topological_order", { project_id: proj.id }));
+    expect(ordered).toBeArray();
+    const ids = ordered.map((t: { id: string }) => t.id);
+    const indexA = ids.indexOf(taskA.id);
+    const indexB = ids.indexOf(taskB.id);
+    const indexC = ids.indexOf(taskC.id);
+    expect(indexA).toBeLessThan(indexB);
+    expect(indexB).toBeLessThan(indexC);
+  });
+});
+
+describe("dependency error cases via MCP", () => {
+  it("cycle detection via update_task returns isError: true", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Cycle Proj" }] }));
+    const [taskA, taskB] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "MCP Cycle A" },
+        { project_id: proj.id, title: "MCP Cycle B" },
+      ],
+    }));
+
+    // A blocks B
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
+    });
+
+    // Try B blocks A (would create cycle)
+    const result = await callTool("update_task", {
+      items: [{ id: taskA.id, add_dependencies: [{ task_id: taskB.id, type: "blocks" }] }],
+    });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/cycle/i);
+  });
+
+  it("cross-project dependency via update_task returns isError: true", async () => {
+    const [proj1] = parseResult(await callTool("create_project", { items: [{ title: "MCP Cross1" }] }));
+    const [proj2] = parseResult(await callTool("create_project", { items: [{ title: "MCP Cross2" }] }));
+    const [task1] = parseResult(await callTool("create_task", { items: [{ project_id: proj1.id, title: "Cross T1" }] }));
+    const [task2] = parseResult(await callTool("create_task", { items: [{ project_id: proj2.id, title: "Cross T2" }] }));
+
+    const result = await callTool("update_task", {
+      items: [{ id: task1.id, add_dependencies: [{ task_id: task2.id, type: "blocks" }] }],
+    });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/same project/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Delete tools
 // ---------------------------------------------------------------------------
 
