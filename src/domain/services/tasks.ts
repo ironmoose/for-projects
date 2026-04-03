@@ -43,17 +43,23 @@ export class TaskService implements ITaskService {
       return { data: enriched, total };
     }
 
-    // If no project_id but blocked filter requested, compute per-task
-    if (this.depRepo && blockedFilter !== undefined) {
-      // Need to compute is_blocked for each task individually - expensive but correct
+    // If no project_id, compute is_blocked per-task (grouped by project for efficiency)
+    if (this.depRepo) {
+      const blockedIdCache = new Map<string, Set<string>>();
       const enriched = data.map((s) => {
         const task = this.taskRepo.findById(s.id);
         if (!task) return { ...s, is_blocked: false };
-        const blockedIds = new Set(this.depRepo!.getBlockedTaskIds(task.project_id));
-        return { ...s, is_blocked: blockedIds.has(s.id) };
+        if (!blockedIdCache.has(task.project_id)) {
+          blockedIdCache.set(task.project_id, new Set(this.depRepo!.getBlockedTaskIds(task.project_id)));
+        }
+        return { ...s, is_blocked: blockedIdCache.get(task.project_id)!.has(s.id) };
       });
-      const filtered = enriched.filter((s) => s.is_blocked === blockedFilter);
-      return { data: filtered, total: filtered.length };
+
+      if (blockedFilter !== undefined) {
+        const filtered = enriched.filter((s) => s.is_blocked === blockedFilter);
+        return { data: filtered, total: filtered.length };
+      }
+      return { data: enriched, total };
     }
 
     return { data, total };

@@ -1373,11 +1373,12 @@ describe("Dependency Edge Cases", () => {
     // List without project_id (global list)
     const result = ctx.taskService.list({ limit: 200 });
     expect(result.data.length).toBeGreaterThan(0);
-    // Every task should have is_blocked as a defined value (could be boolean or undefined depending on path)
     const blockedTask = result.data.find((t) => t.id === blocked.id);
     const blockerTask = result.data.find((t) => t.id === blocker.id);
     expect(blockedTask).toBeTruthy();
     expect(blockerTask).toBeTruthy();
+    expect(blockedTask!.is_blocked).toBe(true);
+    expect(blockerTask!.is_blocked).toBe(false);
   });
 
   it("task deletion via CASCADE removes dependency rows", () => {
