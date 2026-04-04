@@ -1,6 +1,6 @@
-import { type Task, type TaskSummary, type GraphTaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
+import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentReferenceSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
-import type { ITaskService, ITaskDependencyService, Paginated } from "../services";
+import type { ITaskService, ITaskDependencyService, IDocumentReferenceService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
@@ -16,6 +16,7 @@ export class TaskService implements ITaskService {
     private eventBus: EventBus,
     private depRepo?: TaskDependencyRepository,
     private depService?: ITaskDependencyService,
+    private docRefService?: IDocumentReferenceService,
   ) {}
 
 
@@ -64,13 +65,14 @@ export class TaskService implements ITaskService {
     return this.taskRepo.findGraphSummaries(projectId, status);
   }
 
-  get(id: string): Task & { is_blocked?: boolean } {
+  get(id: string): Task & { is_blocked?: boolean; documents: DocumentReferenceSummary[] } {
     const task = this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
+    const documents = this.docRefService?.getReferencesForEntity('task', id) ?? [];
     if (this.depRepo) {
-      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id) };
+      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id), documents };
     }
-    return { ...task, is_blocked: false };
+    return { ...task, is_blocked: false, documents };
   }
 
   create(inputs: CreateTaskInput[]): Task[] {
@@ -85,17 +87,8 @@ export class TaskService implements ITaskService {
       if (input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
       }
-      if (input.plan !== undefined && input.plan.length > 50000) {
-        throw new ServiceError("plan must be 50000 characters or fewer", 400);
-      }
-      if (input.description !== undefined && input.description.length > 50000) {
-        throw new ServiceError("description must be 50000 characters or fewer", 400);
-      }
-      if (input.implementation !== undefined && input.implementation.length > 50000) {
-        throw new ServiceError("implementation must be 50000 characters or fewer", 400);
-      }
-      if (input.acceptance_criteria !== undefined && input.acceptance_criteria.length > 50000) {
-        throw new ServiceError("acceptance_criteria must be 50000 characters or fewer", 400);
+      if (input.summary !== undefined && input.summary.length > 1000) {
+        throw new ServiceError("summary must be 1000 characters or fewer", 400);
       }
       if (input.group_key !== undefined && input.group_key.length > 32) {
         throw new ServiceError("group_key must be 32 characters or fewer", 400);
@@ -117,10 +110,7 @@ export class TaskService implements ITaskService {
     const rows = inputs.map((input) => ({
       project_id: input.project_id,
       title: input.title,
-      plan: input.plan ?? null,
-      description: input.description ?? null,
-      implementation: input.implementation ?? null,
-      acceptance_criteria: input.acceptance_criteria ?? null,
+      summary: input.summary ?? null,
       group_key: input.group_key ?? null,
       status: input.status ?? "todo",
       effort: input.effort ?? null,
@@ -154,17 +144,8 @@ export class TaskService implements ITaskService {
       if (input.title !== undefined && input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
       }
-      if (input.plan !== undefined && input.plan !== null && input.plan.length > 50000) {
-        throw new ServiceError("plan must be 50000 characters or fewer", 400);
-      }
-      if (input.description !== undefined && input.description !== null && input.description.length > 50000) {
-        throw new ServiceError("description must be 50000 characters or fewer", 400);
-      }
-      if (input.implementation !== undefined && input.implementation !== null && input.implementation.length > 50000) {
-        throw new ServiceError("implementation must be 50000 characters or fewer", 400);
-      }
-      if (input.acceptance_criteria !== undefined && input.acceptance_criteria !== null && input.acceptance_criteria.length > 50000) {
-        throw new ServiceError("acceptance_criteria must be 50000 characters or fewer", 400);
+      if (input.summary !== undefined && input.summary !== null && input.summary.length > 1000) {
+        throw new ServiceError("summary must be 1000 characters or fewer", 400);
       }
       if (input.group_key !== undefined && input.group_key !== null && input.group_key.length > 32) {
         throw new ServiceError("group_key must be 32 characters or fewer", 400);
@@ -198,8 +179,8 @@ export class TaskService implements ITaskService {
       }
     }
 
-    // Strip dependency arrays before passing to repo
-    const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, ...rest }) => rest);
+    // Strip dependency arrays and documents from repo input
+    const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, documents, ...rest }) => rest);
     const tasks = this.taskRepo.updateMany(repoInputs);
 
     this.eventBus.beginBatch();
@@ -231,9 +212,16 @@ export class TaskService implements ITaskService {
         }
       }
 
+      // Process document references via merge-patch
+      for (const input of inputs) {
+        if (input.documents) {
+          this.docRefService?.applyMergePatch('task', input.id, input.documents);
+        }
+      }
+
       for (const t of tasks) {
         const input = inputs.find((i) => i.id === t.id);
-        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies");
+        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies" && k !== "documents");
         const added = input?.add_dependencies?.length ?? 0;
         const removed = input?.remove_dependencies?.length ?? 0;
         const summaryObj: Record<string, unknown> = { fields };
@@ -306,6 +294,9 @@ export class TaskService implements ITaskService {
   }
 
   remove(ids: string[]): void {
+    for (const id of ids) {
+      this.docRefService?.removeAllForEntity('task', id);
+    }
     this.taskRepo.deleteMany(ids);
     for (const id of ids) {
       this.activityLog.insert({
