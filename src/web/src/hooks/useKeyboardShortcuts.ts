@@ -165,16 +165,16 @@ export function useShortcut(
 // Call at mount of any overlay/modal.
 // ---------------------------------------------------------------------------
 
-export function useShortcutSuppression() {
+export function useShortcutSuppression(active = true) {
   const ctx = useContext(KeyboardShortcutContext);
 
   useEffect(() => {
-    if (!ctx) return;
+    if (!ctx || !active) return;
     (ctx.suppressRef as React.MutableRefObject<number>).current += 1;
     return () => {
       (ctx.suppressRef as React.MutableRefObject<number>).current -= 1;
     };
-  }, [ctx]);
+  }, [ctx, active]);
 }
 
 // ---------------------------------------------------------------------------

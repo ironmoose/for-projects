@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 import { PresenceCharm } from "../molecules/PresenceCharm";
+import { tableWrapperStyle, tableHeaderStyle, cellStyle } from "../molecules/tableUtils";
 import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
 import type { TaskSummary } from "../../types";
@@ -18,14 +19,6 @@ const STATUS_LABELS: Record<string, string> = {
 function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "archived" | "default" {
   if (status === "todo" || status === "in_progress" || status === "done" || status === "archived") return status;
   return "default";
-}
-
-function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProperties {
-  return {
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    borderBottom: `1px solid ${theme.color.border}`,
-    verticalAlign: "middle",
-  };
 }
 
 const COLUMN_COUNT = 7; // Title, Status, Category, Effort, Impact, Group, Actions
@@ -311,13 +304,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
 
   return (
     <div
-      style={{
-        overflowX: "auto",
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${isSynth ? sg(20) : theme.color.border}`,
-        background: theme.color.surface,
-        ...(isSynth ? { boxShadow: `0 0 12px ${sg(7)}` } : {}),
-      }}
+      style={tableWrapperStyle(theme, isSynth)}
     >
       <table
         style={{
@@ -332,20 +319,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             {["Title", "Status", "Category", "Effort", "Impact", "Group", ""].map((h) => (
               <th
                 key={h || "_actions"}
-                style={{
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  textAlign: "left",
-                  fontWeight: 600,
-                  fontSize: theme.font.size.xxs,
-                  color: isSynth ? "var(--synth-glow)" : theme.color.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: theme.font.letterSpacing.wide,
-                  borderBottom: isSynth
-                    ? `2px solid ${sg(27)}`
-                    : `2px solid ${theme.color.border}`,
-                  whiteSpace: "nowrap",
-                  ...(isSynth ? { textShadow: `0 0 8px ${sg(27)}` } : {}),
-                }}
+                style={tableHeaderStyle(theme, isSynth)}
               >
                 {h}
               </th>

@@ -1,6 +1,7 @@
 import { type SelectHTMLAttributes, useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
+import { FieldWrapper, baseFieldStyle } from "./fieldUtils";
 
 interface SelectOption {
   value: string;
@@ -24,20 +25,13 @@ export function Select({ options, style, onFocus, onBlur, ...props }: SelectProp
         : {};
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+    <FieldWrapper>
       <select
         onFocus={(e) => { setFocused(true); onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         style={{
-          padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-          border: `1px solid ${theme.color.borderSubtle}`,
-          borderRadius: theme.radius.lg,
-          fontFamily: theme.font.body,
-          fontSize: theme.font.size.sm,
-          background: theme.color.surfaceContainerHigh,
-          color: theme.color.text,
+          ...baseFieldStyle(theme),
           cursor: "pointer",
-          transition: "border-color 0.15s, box-shadow 0.2s",
           ...synthStyles,
           ...style,
         }}
@@ -49,6 +43,6 @@ export function Select({ options, style, onFocus, onBlur, ...props }: SelectProp
           </option>
         ))}
       </select>
-    </div>
+    </FieldWrapper>
   );
 }

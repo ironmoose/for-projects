@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Icon } from "../atoms/Icon";
+import { SectionLabel } from "../atoms/SectionLabel";
 
 interface CollapsibleSectionProps {
   label: string;
@@ -34,18 +35,7 @@ export function CollapsibleSection({
           justifyContent: "space-between",
         }}
       >
-        <span
-          style={{
-            display: "block",
-            fontSize: theme.font.size.xxs,
-            fontWeight: 700,
-            letterSpacing: theme.font.letterSpacing.wide,
-            textTransform: "uppercase",
-            color: theme.color.textFaint,
-          }}
-        >
-          {label}
-        </span>
+        <SectionLabel>{label}</SectionLabel>
         <Icon
           name="chevron_right"
           size={14}

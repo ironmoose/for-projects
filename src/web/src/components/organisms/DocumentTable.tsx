@@ -1,18 +1,10 @@
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
 import { PresenceCharm } from "../molecules/PresenceCharm";
+import { tableWrapperStyle, tableHeaderStyle, cellStyle } from "../molecules/tableUtils";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import type { DocumentSummary } from "../../types";
 import { formatDate } from "../../utils";
-
-function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProperties {
-  return {
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    borderBottom: `1px solid ${theme.color.border}`,
-    verticalAlign: "middle",
-  };
-}
 
 interface DocumentTableProps {
   documents: DocumentSummary[];
@@ -28,13 +20,7 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
 
   return (
     <div
-      style={{
-        overflowX: "auto",
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${isSynth ? sg(20) : theme.color.border}`,
-        background: theme.color.surface,
-        ...(isSynth ? { boxShadow: `0 0 12px ${sg(7)}` } : {}),
-      }}
+      style={tableWrapperStyle(theme, isSynth)}
     >
       <table
         style={{
@@ -49,20 +35,7 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
             {[{ key: "_fav", label: "" }, { key: "title", label: "Title" }, { key: "tags", label: "Tags" }, { key: "updated", label: "Updated" }, { key: "_actions", label: "" }].map(({ key, label: h }) => (
               <th
                 key={key}
-                style={{
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  textAlign: "left",
-                  fontWeight: 600,
-                  fontSize: theme.font.size.xxs,
-                  color: isSynth ? "var(--synth-glow)" : theme.color.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: theme.font.letterSpacing.wide,
-                  borderBottom: isSynth
-                    ? `2px solid ${sg(27)}`
-                    : `2px solid ${theme.color.border}`,
-                  whiteSpace: "nowrap",
-                  ...(isSynth ? { textShadow: `0 0 8px ${sg(27)}` } : {}),
-                }}
+                style={tableHeaderStyle(theme, isSynth)}
               >
                 {h}
               </th>
