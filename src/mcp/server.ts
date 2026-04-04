@@ -261,7 +261,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_documents",
     {
-      description: "List document summaries and tags, optionally filtered by tag, title, project_id, or favorite status. Returns { data, total } where data contains document summaries (id, title, has_content, favorite, tags, timestamps). Valid tag values — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility. Documents marked as favorite are high-value references — when setting up a new project, use `list_documents` with `favorite: true` to find documents the user wants auto-attached to relevant projects.",
+      description: "List document summaries and tags, optionally filtered by tag, title, project_id, or favorite status. Returns { data, total } where data contains document summaries (id, title, summary, has_content, favorite, tags, timestamps). Valid tag values — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility. Documents marked as favorite are high-value references — when setting up a new project, use `list_documents` with `favorite: true` to find documents the user wants auto-attached to relevant projects.",
       inputSchema: {
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
@@ -277,7 +277,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_document",
     {
-      description: "Retrieve a single document by ID with full markdown content, tags, and favorite status.",
+      description: "Retrieve a single document by ID with full markdown content, summary, tags, and favorite status.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => documentService.get(id))
@@ -286,10 +286,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_document",
     {
-      description: "Create documents. Pass an `items` array of objects, each with a required title, optional content (markdown), optional tags array, and optional favorite boolean. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
+      description: "Create documents. Pass an `items` array of objects, each with a required title, optional summary (max 500 chars), optional content (markdown), optional tags array, and optional favorite boolean. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
       inputSchema: {
         items: z.array(z.object({
           title: z.string().max(255),
+          summary: z.string().max(500).optional(),
           content: z.string().max(50000).optional(),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
           favorite: z.boolean().optional(),
@@ -307,6 +308,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
+          summary: z.string().max(500).optional(),
           content: z.string().max(50000).optional(),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
           favorite: z.boolean().optional(),

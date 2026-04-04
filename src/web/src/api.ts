@@ -189,12 +189,12 @@ export async function fetchDocument(id: string): Promise<Document & { tags: stri
   return res.json();
 }
 
-export async function createDocuments(inputs: Array<{ title: string; content?: string; tags?: string[] }>): Promise<(Document & { tags: string[] })[]> {
+export async function createDocuments(inputs: Array<{ title: string; summary?: string; content?: string; tags?: string[] }>): Promise<(Document & { tags: string[] })[]> {
   const res = await apiFetch("/api/documents", jsonPost({ items: inputs }));
   return res.json();
 }
 
-export async function updateDocuments(inputs: Array<{ id: string; title?: string; content?: string | null; tags?: string[] }>): Promise<(Document & { tags: string[] })[]> {
+export async function updateDocuments(inputs: Array<{ id: string; title?: string; summary?: string | null; content?: string | null; tags?: string[] }>): Promise<(Document & { tags: string[] })[]> {
   const res = await apiFetch("/api/documents", jsonPatch({ items: inputs }));
   return res.json();
 }

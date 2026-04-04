@@ -2,6 +2,7 @@ import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, Depen
 
 export interface CreateDocumentInput {
   title: string;
+  summary?: string;
   content?: string;
   tags?: TagName[];
   favorite?: boolean;
@@ -10,6 +11,7 @@ export interface CreateDocumentInput {
 export interface UpdateDocumentInput {
   id: string;
   title?: string;
+  summary?: string | null;
   content?: string | null;
   tags?: TagName[];
   favorite?: boolean;

@@ -113,6 +113,7 @@ export function toTaskSummary(t: Task): TaskSummary {
 export interface Document {
   id: string;
   title: string;
+  summary: string | null;
   content: string | null;
   favorite: boolean;
   created_at: string;
@@ -122,6 +123,7 @@ export interface Document {
 export interface DocumentSummary {
   id: string;
   title: string;
+  summary: string | null;
   has_content: boolean;
   favorite: boolean;
   tags: TagName[];
@@ -132,6 +134,7 @@ export interface DocumentSummary {
 export function toDocumentSummary(doc: Document, tags: TagName[] = []): DocumentSummary {
   return {
     id: doc.id, title: doc.title,
+    summary: doc.summary,
     has_content: doc.content != null,
     favorite: doc.favorite,
     tags,

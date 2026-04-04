@@ -537,6 +537,90 @@ describe("Batch Tag Fetching", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Document Summary Field
+// ---------------------------------------------------------------------------
+
+describe("Document Summary Field", () => {
+  it("creates document with summary", () => {
+    const [doc] = ctx.documentService.create([{
+      title: "Doc With Summary",
+      summary: "A short summary",
+      content: "Full content here",
+    }]);
+
+    expect(doc.summary).toBe("A short summary");
+    expect(doc.content).toBe("Full content here");
+  });
+
+  it("creates document without summary defaults to null", () => {
+    const [doc] = ctx.documentService.create([{ title: "No Summary Doc" }]);
+
+    expect(doc.summary).toBeNull();
+  });
+
+  it("updates summary", () => {
+    const [doc] = ctx.documentService.create([{ title: "Update Summary Doc" }]);
+    const [updated] = ctx.documentService.update([{
+      id: doc.id,
+      summary: "New summary",
+    }]);
+
+    expect(updated.summary).toBe("New summary");
+  });
+
+  it("sets summary to null to clear it", () => {
+    const [doc] = ctx.documentService.create([{
+      title: "Clear Summary Doc",
+      summary: "Will be cleared",
+    }]);
+    expect(doc.summary).toBe("Will be cleared");
+
+    const [updated] = ctx.documentService.update([{
+      id: doc.id,
+      summary: null,
+    }]);
+
+    expect(updated.summary).toBeNull();
+  });
+
+  it("summary appears in list results", () => {
+    const [doc] = ctx.documentService.create([{
+      title: "SummaryListTestUnique999",
+      summary: "Listed summary",
+    }]);
+
+    const result = ctx.documentService.list({ title: "SummaryListTestUnique999" });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    const found = result.data.find((d) => d.id === doc.id);
+    expect(found).toBeTruthy();
+    expect(found!.summary).toBe("Listed summary");
+  });
+
+  it("summary appears in get results", () => {
+    const [doc] = ctx.documentService.create([{
+      title: "Summary Get Doc",
+      summary: "Get summary",
+    }]);
+
+    const fetched = ctx.documentService.get(doc.id);
+    expect(fetched.summary).toBe("Get summary");
+  });
+
+  it("rejects summary over 500 characters on create", () => {
+    expect(() =>
+      ctx.documentService.create([{ title: "Long Summary", summary: "x".repeat(501) }])
+    ).toThrow(ServiceError);
+  });
+
+  it("rejects summary over 500 characters on update", () => {
+    const [doc] = ctx.documentService.create([{ title: "Update Long Summary" }]);
+    expect(() =>
+      ctx.documentService.update([{ id: doc.id, summary: "x".repeat(501) }])
+    ).toThrow(ServiceError);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Project-Document Linking
 // ---------------------------------------------------------------------------
 
