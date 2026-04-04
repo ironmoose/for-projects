@@ -52,6 +52,14 @@ export function useProjectTasks(projectId: string, filter?: TaskFilter) {
         offset: (page - 1) * PAGE_SIZE,
       });
       const sorted = body.data.sort((a, b) => {
+        // Sort by group_key first (nulls last), then by status priority within each group
+        const ga = a.group_key;
+        const gb = b.group_key;
+        if (ga !== gb) {
+          if (ga === null) return 1;
+          if (gb === null) return -1;
+          return ga.localeCompare(gb);
+        }
         const pa = STATUS_PRIORITY[a.status] ?? 99;
         const pb = STATUS_PRIORITY[b.status] ?? 99;
         return pa - pb;

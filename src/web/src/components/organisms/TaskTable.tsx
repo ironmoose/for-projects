@@ -21,7 +21,7 @@ function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "
   return "default";
 }
 
-const COLUMN_COUNT = 7; // Title, Status, Category, Effort, Impact, Group, Actions
+const COLUMN_COUNT = 6; // Title, Status, Category, Effort, Impact, Actions
 
 interface TaskTableProps {
   tasks: TaskSummary[];
@@ -214,15 +214,6 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
         >
           {task.impact ?? <span style={{ color: theme.color.textFaint }}>--</span>}
         </td>
-        <td
-          style={{
-            ...cellStyle(theme),
-            fontSize: theme.font.size.xs,
-            color: theme.color.textMuted,
-          }}
-        >
-          {task.group_key ?? <span style={{ color: theme.color.textFaint }}>--</span>}
-        </td>
         <td style={{ ...cellStyle(theme), width: 32 }}>
           <IconButton
             icon="delete"
@@ -316,7 +307,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
       >
         <thead>
           <tr>
-            {["Title", "Status", "Category", "Effort", "Impact", "Group", ""].map((h) => (
+            {["Title", "Status", "Category", "Effort", "Impact", ""].map((h) => (
               <th
                 key={h || "_actions"}
                 style={tableHeaderStyle(theme, isSynth)}
