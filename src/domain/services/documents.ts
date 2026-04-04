@@ -53,6 +53,9 @@ export class DocumentService implements IDocumentService {
       if (input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
       }
+      if (input.summary !== undefined && input.summary.length > 500) {
+        throw new ServiceError("summary must be 500 characters or fewer", 400);
+      }
       if (input.content !== undefined && input.content.length > 50000) {
         throw new ServiceError("content must be 50000 characters or fewer", 400);
       }
@@ -68,6 +71,7 @@ export class DocumentService implements IDocumentService {
 
     const rows = inputs.map((input) => ({
       title: input.title,
+      summary: input.summary ?? null,
       content: input.content ?? null,
       favorite: input.favorite ? 1 : 0,
     }));
@@ -104,6 +108,9 @@ export class DocumentService implements IDocumentService {
       }
       if (input.title !== undefined && input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
+      }
+      if (input.summary !== undefined && input.summary !== null && input.summary.length > 500) {
+        throw new ServiceError("summary must be 500 characters or fewer", 400);
       }
       if (input.content !== undefined && input.content !== null && input.content.length > 50000) {
         throw new ServiceError("content must be 50000 characters or fewer", 400);

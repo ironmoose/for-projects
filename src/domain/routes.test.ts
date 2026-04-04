@@ -515,6 +515,75 @@ describe("Document Routes", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("POST /documents with summary returns summary in response", async () => {
+    const res = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Summary Route Doc", summary: "A brief summary", content: "Full body" }],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const [doc] = await res.json();
+    expect(doc.summary).toBe("A brief summary");
+    expect(doc.content).toBe("Full body");
+  });
+
+  it("PATCH /documents with summary returns updated summary", async () => {
+    const create = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Patch Summary Doc" }],
+      }),
+    });
+    const [doc] = await create.json();
+    expect(doc.summary).toBeNull();
+
+    const res = await req("/documents", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ id: doc.id, summary: "Updated summary" }],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const [updated] = await res.json();
+    expect(updated.summary).toBe("Updated summary");
+  });
+
+  it("GET /documents list includes summary field", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "SummaryInListRouteDoc", summary: "Listed summary" }],
+      }),
+    });
+
+    const res = await req("/documents?title=SummaryInListRouteDoc");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data[0].summary).toBe("Listed summary");
+  });
+
+  it("GET /documents/:id returns summary", async () => {
+    const create = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "Get Summary Doc", summary: "Get me" }],
+      }),
+    });
+    const [doc] = await create.json();
+
+    const res = await req(`/documents/${doc.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.summary).toBe("Get me");
+  });
 });
 
 // ---------------------------------------------------------------------------

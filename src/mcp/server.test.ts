@@ -552,6 +552,63 @@ describe("create_document with invalid tag", () => {
   });
 });
 
+describe("document summary field via MCP", () => {
+  it("create_document with summary returns summary in response", async () => {
+    const result = await callTool("create_document", {
+      items: [{ title: "MCP Summary Doc", summary: "Short summary", content: "Full content" }],
+    });
+    const [doc] = parseResult(result);
+    expect(doc.summary).toBe("Short summary");
+    expect(doc.content).toBe("Full content");
+  });
+
+  it("create_document without summary defaults to null", async () => {
+    const result = await callTool("create_document", {
+      items: [{ title: "MCP No Summary Doc" }],
+    });
+    const [doc] = parseResult(result);
+    expect(doc.summary).toBeNull();
+  });
+
+  it("update_document with summary", async () => {
+    const [created] = parseResult(
+      await callTool("create_document", { items: [{ title: "MCP Update Summary Doc" }] })
+    );
+    expect(created.summary).toBeNull();
+
+    const [updated] = parseResult(
+      await callTool("update_document", {
+        items: [{ id: created.id, summary: "Added summary" }],
+      })
+    );
+    expect(updated.summary).toBe("Added summary");
+  });
+
+  it("list_documents includes summary in each document summary", async () => {
+    await callTool("create_document", {
+      items: [{ title: "McpSummaryListUnique777", summary: "Listed summary" }],
+    });
+
+    const listResult = await callTool("list_documents", { title: "McpSummaryListUnique777" });
+    const parsed = parseResult(listResult);
+    expect(parsed.data.length).toBeGreaterThanOrEqual(1);
+    const found = parsed.data.find((d: { title: string }) => d.title === "McpSummaryListUnique777");
+    expect(found).toBeTruthy();
+    expect(found.summary).toBe("Listed summary");
+  });
+
+  it("get_document includes summary", async () => {
+    const [created] = parseResult(
+      await callTool("create_document", {
+        items: [{ title: "MCP Get Summary Doc", summary: "Get me summary" }],
+      })
+    );
+
+    const doc = parseResult(await callTool("get_document", { id: created.id }));
+    expect(doc.summary).toBe("Get me summary");
+  });
+});
+
 describe("list_projects with title filter", () => {
   it("returns only projects matching title search", async () => {
     await callTool("create_project", { items: [{ title: "McpProjTitleFilterUnique888" }] });

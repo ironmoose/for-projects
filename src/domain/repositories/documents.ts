@@ -5,6 +5,7 @@ import type { Document, DocumentSummary } from "../entities";
 export interface DocumentRow {
   id: string;
   title: string;
+  summary: string | null;
   content: string | null;
   favorite: number;
   created_at: string;
@@ -53,7 +54,7 @@ export class DocumentRepository {
     params.push(limit, offset);
 
     const rows = this.db
-      .query(`SELECT d.id, d.title, (d.content IS NOT NULL) as has_content, d.favorite, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
+      .query(`SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content, d.favorite, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
       .all(...params) as (Omit<DocumentSummary, "has_content" | "favorite" | "tags"> & { has_content: number; favorite: number })[];
     return rows.map((r) => ({ ...r, has_content: !!r.has_content, favorite: !!r.favorite, tags: [] as string[] })) as DocumentSummary[];
   }
@@ -93,7 +94,7 @@ export class DocumentRepository {
 
   insertMany(rows: Omit<DocumentRow, "id" | "created_at" | "updated_at">[]): Document[] {
     const stmt = this.db.query(
-      "INSERT INTO documents (id, title, content, favorite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO documents (id, title, summary, content, favorite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
     const now = new Date().toISOString();
     const ids: string[] = [];
@@ -101,13 +102,13 @@ export class DocumentRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.title, row.content ?? null, row.favorite ?? 0, now, now);
+      stmt.run(id, row.title, row.summary ?? null, row.content ?? null, row.favorite ?? 0, now, now);
     }
 
     return ids.map((id) => this.findById(id)!);
   }
 
-  updateMany(rows: { id: string; title?: string; content?: string | null; favorite?: boolean }[]): Document[] {
+  updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; favorite?: boolean }[]): Document[] {
     const now = new Date().toISOString();
     const results: Document[] = [];
 
@@ -116,12 +117,13 @@ export class DocumentRepository {
       if (!existing) continue;
 
       const title = row.title !== undefined ? row.title : existing.title;
+      const summary = row.summary !== undefined ? row.summary : existing.summary;
       const content = row.content !== undefined ? row.content : existing.content;
       const favorite = row.favorite !== undefined ? (row.favorite ? 1 : 0) : (existing.favorite ? 1 : 0);
 
       this.db
-        .query("UPDATE documents SET title = ?, content = ?, favorite = ?, updated_at = ? WHERE id = ?")
-        .run(title, content, favorite, now, row.id);
+        .query("UPDATE documents SET title = ?, summary = ?, content = ?, favorite = ?, updated_at = ? WHERE id = ?")
+        .run(title, summary, content, favorite, now, row.id);
 
       results.push(this.findById(row.id)!);
     }
