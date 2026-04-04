@@ -4,7 +4,7 @@ import type { IDocumentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { DocumentRepository } from "../repositories/documents";
 import type { TagRepository } from "../repositories/tags";
-import type { ProjectDocumentRepository } from "../repositories/project-documents";
+import type { DocumentReferenceRepository } from "../repositories/document-references";
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
@@ -14,15 +14,15 @@ export class DocumentService implements IDocumentService {
     private tagRepo: TagRepository,
     private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
-    private projectDocumentRepo?: ProjectDocumentRepository,
+    private docRefRepo?: DocumentReferenceRepository,
   ) {}
 
   list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
     // If filtering by project_id, get linked doc IDs first and intersect
     let docIds: string[] | undefined;
-    if (filter?.project_id && this.projectDocumentRepo) {
-      const linked = this.projectDocumentRepo.getDocumentsForProject(filter.project_id);
-      docIds = linked.map((d) => d.id);
+    if (filter?.project_id && this.docRefRepo) {
+      const refs = this.docRefRepo.getReferencesForEntity('project', filter.project_id);
+      docIds = [...new Set(refs.map((r) => r.document_id))];
       if (docIds.length === 0) return { data: [], total: 0 };
     }
 
@@ -154,6 +154,7 @@ export class DocumentService implements IDocumentService {
 
   remove(ids: string[]): void {
     for (const id of ids) {
+      this.docRefRepo?.removeAllForDocument(id);
       this.tagRepo.removeTagsForEntity("document", id);
     }
     this.documentRepo.deleteMany(ids);
