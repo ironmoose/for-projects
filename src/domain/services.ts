@@ -37,7 +37,7 @@ export interface ITaskDependencyService {
 }
 
 export interface IDocumentService {
-  list(filter?: { title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
+  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
   get(id: string): Document & { tags: string[] };
   create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[];
   update(inputs: UpdateDocumentInput[]): (Document & { tags: string[] })[];

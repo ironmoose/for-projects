@@ -584,6 +584,60 @@ describe("Document Routes", () => {
     const body = await res.json();
     expect(body.summary).toBe("Get me");
   });
+
+  it("GET /documents?search= matches title", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "RouteSearchTitleXYZ" }],
+      }),
+    });
+
+    const res = await req("/documents?search=RouteSearchTitle");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data.some((d: { title: string }) => d.title === "RouteSearchTitleXYZ")).toBe(true);
+  });
+
+  it("GET /documents?search= matches summary", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "RouteSearchSummaryDoc", summary: "unique_route_summary_term" }],
+      }),
+    });
+
+    const res = await req("/documents?search=unique_route_summary_term");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data.some((d: { title: string }) => d.title === "RouteSearchSummaryDoc")).toBe(true);
+  });
+
+  it("GET /documents?search= returns empty for no match", async () => {
+    const res = await req("/documents?search=zzz_no_route_match_999");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.length).toBe(0);
+  });
+
+  it("GET /documents supports both search and title together", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ title: "DualFilterDoc", summary: "dual filter summary xyz" }],
+      }),
+    });
+
+    const res = await req("/documents?search=dual+filter&title=DualFilterDoc");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

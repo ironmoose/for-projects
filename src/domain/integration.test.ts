@@ -621,6 +621,82 @@ describe("Document Summary Field", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Document Search (search parameter — title OR summary)
+// ---------------------------------------------------------------------------
+
+describe("Document Search", () => {
+  it("search matches documents by title only (summary is null)", () => {
+    ctx.documentService.create([{ title: "Zebra Unique Title" }]);
+    const result = ctx.documentService.list({ search: "Zebra Unique" });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((d) => d.title === "Zebra Unique Title")).toBe(true);
+  });
+
+  it("search matches documents by summary only (title does not match)", () => {
+    ctx.documentService.create([{ title: "Unrelated Name AAA", summary: "quantum flux capacitor" }]);
+    const result = ctx.documentService.list({ search: "quantum flux" });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((d) => d.title === "Unrelated Name AAA")).toBe(true);
+  });
+
+  it("search matches documents where both title and summary match", () => {
+    ctx.documentService.create([{ title: "Photon Doc BBB", summary: "photon energy levels" }]);
+    const result = ctx.documentService.list({ search: "photon" });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((d) => d.title === "Photon Doc BBB")).toBe(true);
+  });
+
+  it("search returns empty when neither title nor summary matches", () => {
+    const result = ctx.documentService.list({ search: "zzzyyyxxx_nomatch_999" });
+    expect(result.data.length).toBe(0);
+    expect(result.total).toBe(0);
+  });
+
+  it("search with NULL summary still finds by title", () => {
+    ctx.documentService.create([{ title: "Nullsum Searchable CCC" }]);
+    const result = ctx.documentService.list({ search: "Nullsum Searchable" });
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((d) => d.title === "Nullsum Searchable CCC")).toBe(true);
+  });
+
+  it("search is case-insensitive", () => {
+    ctx.documentService.create([{ title: "CaseSensDoc DDD", summary: "UPPERCASE SUMMARY" }]);
+    const byTitle = ctx.documentService.list({ search: "caseSensDOC" });
+    expect(byTitle.data.some((d) => d.title === "CaseSensDoc DDD")).toBe(true);
+    const bySummary = ctx.documentService.list({ search: "uppercase summary" });
+    expect(bySummary.data.some((d) => d.title === "CaseSensDoc DDD")).toBe(true);
+  });
+
+  it("search supports partial matching (substring)", () => {
+    ctx.documentService.create([{ title: "Partial Match EEE", summary: "abcdefghij" }]);
+    const result = ctx.documentService.list({ search: "cdefg" });
+    expect(result.data.some((d) => d.title === "Partial Match EEE")).toBe(true);
+  });
+
+  it("search and title can coexist (AND logic)", () => {
+    ctx.documentService.create([{ title: "Combo FFF Doc", summary: "special combo summary" }]);
+    // Both match
+    const both = ctx.documentService.list({ search: "combo", title: "Combo FFF" });
+    expect(both.data.some((d) => d.title === "Combo FFF Doc")).toBe(true);
+    // search matches but title filter does not
+    const mismatch = ctx.documentService.list({ search: "combo", title: "zzz_no_title_match" });
+    expect(mismatch.data.some((d) => d.title === "Combo FFF Doc")).toBe(false);
+  });
+
+  it("existing title filter continues to work independently", () => {
+    ctx.documentService.create([{ title: "TitleOnly GGG Filter" }]);
+    const result = ctx.documentService.list({ title: "TitleOnly GGG" });
+    expect(result.data.some((d) => d.title === "TitleOnly GGG Filter")).toBe(true);
+  });
+
+  it("search total count is consistent with data", () => {
+    ctx.documentService.create([{ title: "CountCheck HHH", summary: "countcheck unique" }]);
+    const result = ctx.documentService.list({ search: "countcheck unique" });
+    expect(result.total).toBe(result.data.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Project-Document Linking
 // ---------------------------------------------------------------------------
 
