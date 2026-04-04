@@ -1068,7 +1068,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [showDocPicker, setShowDocPicker] = useState(false);
 
   const [graphStatusFilter, setGraphStatusFilter] = useState("in_progress,todo");
-  const { graph, loading: graphLoading } = useDependencyGraph(projectId);
+  const { graph, loading: graphLoading } = useDependencyGraph(projectId, graphStatusFilter || undefined);
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
@@ -1319,7 +1319,6 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
               tasks={graph.tasks}
               edges={graph.edges}
               blockedTaskIds={graph.blockedTaskIds}
-              statusFilter={graphStatusFilter}
               onTaskClick={(taskId) => setSelectedTaskId(taskId)}
             />
           </ExpandableCard>

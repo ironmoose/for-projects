@@ -21,7 +21,6 @@ export interface DependencyGraphViewProps {
   edges: DependencyEdge[];
   blockedTaskIds: string[];
   onTaskClick: (taskId: string) => void;
-  statusFilter?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -509,39 +508,23 @@ export function DependencyGraphView({
   edges,
   blockedTaskIds,
   onTaskClick,
-  statusFilter,
 }: DependencyGraphViewProps) {
   const { theme } = useTheme();
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
 
-  // Filter tasks and edges by status when a filter is active
-  const { filteredTasks, filteredEdges, filteredBlockedTaskIds } = useMemo(() => {
-    if (!statusFilter) {
-      return { filteredTasks: tasks, filteredEdges: edges, filteredBlockedTaskIds: blockedTaskIds };
-    }
-    const allowedStatuses = new Set(statusFilter.split(","));
-    const visibleTasks = tasks.filter((t) => allowedStatuses.has(t.status));
-    const visibleIds = new Set(visibleTasks.map((t) => t.id));
-    const visibleEdges = edges.filter(
-      (e) => visibleIds.has(e.source_task_id) && visibleIds.has(e.target_task_id),
-    );
-    const visibleBlocked = blockedTaskIds.filter((id) => visibleIds.has(id));
-    return { filteredTasks: visibleTasks, filteredEdges: visibleEdges, filteredBlockedTaskIds: visibleBlocked };
-  }, [tasks, edges, blockedTaskIds, statusFilter]);
-
-  const blockedSet = useMemo(() => new Set(filteredBlockedTaskIds), [filteredBlockedTaskIds]);
+  const blockedSet = useMemo(() => new Set(blockedTaskIds), [blockedTaskIds]);
 
   // Compute DFS-based levels with back-edge detection
   const { levelGroups, positions, backEdges, cycleNodeIds, svgWidth, svgHeight } = useMemo(() => {
-    const taskIds = filteredTasks.map((t) => t.id);
-    const result = computeLevelsDFS(taskIds, filteredEdges);
+    const taskIds = tasks.map((t) => t.id);
+    const result = computeLevelsDFS(taskIds, edges);
 
     // Group tasks by level
     const groups: string[][] = [];
     for (let l = 0; l <= result.maxLevel; l++) {
       groups.push([]);
     }
-    for (const task of filteredTasks) {
+    for (const task of tasks) {
       const level = result.levels.get(task.id) ?? 0;
       groups[level].push(task.id);
     }
@@ -568,28 +551,28 @@ export function DependencyGraphView({
       svgWidth: width,
       svgHeight: height,
     };
-  }, [filteredTasks, filteredEdges]);
+  }, [tasks, edges]);
 
   const taskMap = useMemo(() => {
     const map = new Map<string, GraphNode>();
-    for (const t of filteredTasks) map.set(t.id, t);
+    for (const t of tasks) map.set(t.id, t);
     return map;
-  }, [filteredTasks]);
+  }, [tasks]);
 
   // Connected task IDs for highlight on hover
   const connectedIds = useMemo(() => {
     if (!hoveredTaskId) return null;
     const ids = new Set<string>();
     ids.add(hoveredTaskId);
-    for (const edge of filteredEdges) {
+    for (const edge of edges) {
       if (edge.source_task_id === hoveredTaskId) ids.add(edge.target_task_id);
       if (edge.target_task_id === hoveredTaskId) ids.add(edge.source_task_id);
     }
     return ids;
-  }, [hoveredTaskId, filteredEdges]);
+  }, [hoveredTaskId, edges]);
 
   // Empty state
-  if (filteredEdges.length === 0) {
+  if (edges.length === 0) {
     return (
       <EmptyState
         icon="account_tree"
@@ -618,7 +601,7 @@ export function DependencyGraphView({
       >
         {/* SVG arrow overlay */}
         <ArrowOverlay
-          edges={filteredEdges}
+          edges={edges}
           positions={positions}
           backEdges={backEdges}
           highlightedTaskId={hoveredTaskId}
