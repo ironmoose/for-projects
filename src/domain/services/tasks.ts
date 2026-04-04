@@ -1,4 +1,4 @@
-import { type Task, type TaskSummary, toTaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
+import { type Task, type TaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
 import type { ITaskService, ITaskDependencyService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -25,10 +25,7 @@ export class TaskService implements ITaskService {
     const repoFilter = filter ? { ...filter } : undefined;
     if (repoFilter) delete (repoFilter as Record<string, unknown>).blocked;
 
-    const data = this.taskRepo.findMany(repoFilter).map((t) => {
-      const summary = toTaskSummary(t);
-      return summary;
-    });
+    const data = this.taskRepo.findManySummary(repoFilter);
     let total = this.taskRepo.count(repoFilter);
 
     // Compute is_blocked if we have the dependency repo

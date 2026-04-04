@@ -1,4 +1,4 @@
-import { type Project, type ProjectSummary, type DocumentSummary, toProjectSummary } from "../entities";
+import { type Project, type ProjectSummary, type DocumentSummary } from "../entities";
 import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
 import type { IProjectService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -21,7 +21,7 @@ export class ProjectService implements IProjectService {
 
   list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary> {
     return {
-      data: this.repo.findMany(filter).map(toProjectSummary),
+      data: this.repo.findManySummary(filter),
       total: this.repo.count(filter),
     };
   }
