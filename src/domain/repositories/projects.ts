@@ -90,7 +90,19 @@ export class ProjectRepository {
       stmt.run(id, row.title, row.goal ?? null, row.requirements ?? null, row.design ?? null, now, now);
     }
 
-    return ids.map((id) => this.findById(id)!);
+    const results: Project[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      results.push({
+        id: ids[i],
+        title: rows[i].title,
+        goal: rows[i].goal ?? null,
+        requirements: rows[i].requirements ?? null,
+        design: rows[i].design ?? null,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+    return results;
   }
 
   updateMany(rows: { id: string; title?: string; goal?: string | null; requirements?: string | null; design?: string | null }[]): Project[] {
@@ -110,7 +122,15 @@ export class ProjectRepository {
         .query("UPDATE projects SET title = ?, goal = ?, requirements = ?, design = ?, updated_at = ? WHERE id = ?")
         .run(title, goal, requirements, design, now, row.id);
 
-      results.push(this.findById(row.id)!);
+      results.push({
+        id: row.id,
+        title,
+        goal,
+        requirements,
+        design,
+        created_at: existing.created_at,
+        updated_at: now,
+      });
     }
 
     return results;

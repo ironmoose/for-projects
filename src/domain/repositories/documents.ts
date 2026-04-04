@@ -113,7 +113,19 @@ export class DocumentRepository {
       stmt.run(id, row.title, row.summary ?? null, row.content ?? null, row.favorite ?? 0, now, now);
     }
 
-    return ids.map((id) => this.findById(id)!);
+    const results: Document[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      results.push({
+        id: ids[i],
+        title: rows[i].title,
+        summary: rows[i].summary ?? null,
+        content: rows[i].content ?? null,
+        favorite: !!rows[i].favorite,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+    return results;
   }
 
   updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; favorite?: boolean }[]): Document[] {
@@ -133,7 +145,15 @@ export class DocumentRepository {
         .query("UPDATE documents SET title = ?, summary = ?, content = ?, favorite = ?, updated_at = ? WHERE id = ?")
         .run(title, summary, content, favorite, now, row.id);
 
-      results.push(this.findById(row.id)!);
+      results.push({
+        id: row.id,
+        title,
+        summary,
+        content,
+        favorite: !!favorite,
+        created_at: existing.created_at,
+        updated_at: now,
+      });
     }
 
     return results;
