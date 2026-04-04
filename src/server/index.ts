@@ -73,8 +73,28 @@ export class Server {
         uptime_seconds: Math.floor((Date.now() - startedAt) / 1000),
         database: dbOk ? "connected" : "unreachable",
         timestamp: new Date().toISOString(),
+        activity_log_count: ctx.activityLogRepo.countAll(),
       });
     });
+
+    // -- Activity log retention ------------------------------------
+    let retentionDays = parseInt(process.env.PM_ACTIVITY_LOG_RETENTION_DAYS ?? "30", 10);
+    if (Number.isNaN(retentionDays)) retentionDays = 30;
+
+    if (retentionDays > 0) {
+      const retentionMs = retentionDays * 24 * 60 * 60 * 1000;
+
+      function runRetention() {
+        const cutoff = new Date(Date.now() - retentionMs).toISOString();
+        const deleted = ctx.activityLogRepo.deleteOlderThan(cutoff);
+        if (deleted > 0) {
+          process.stderr.write(`[retention] Deleted ${deleted} activity log entries older than ${retentionDays} days\n`);
+        }
+      }
+
+      runRetention();
+      setInterval(runRetention, 24 * 60 * 60 * 1000);
+    }
 
     // -- MCP --------------------------------------------------------
     app.use("/mcp", logger((str) => process.stderr.write(str + "\n")));

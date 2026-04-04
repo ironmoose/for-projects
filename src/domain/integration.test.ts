@@ -1492,3 +1492,47 @@ describe("Dependency Edge Cases", () => {
     expect(depsA.blocks.some((d) => d.task_id === taskB.id)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Activity Log Retention
+// ---------------------------------------------------------------------------
+
+describe("Activity Log Retention", () => {
+  it("countAll returns correct count", () => {
+    const countBefore = ctx.activityLogRepo.countAll();
+    // Creating a project generates an activity log entry
+    ctx.projectService.create([{ title: "Retention Count Test" }]);
+    const countAfter = ctx.activityLogRepo.countAll();
+    expect(countAfter).toBe(countBefore + 1);
+  });
+
+  it("deleteOlderThan removes only entries before cutoff", () => {
+    // Insert a backdated entry directly via the db
+    const oldDate = "2020-01-01T00:00:00.000Z";
+    ctx.db
+      .query(
+        "INSERT INTO activity_log (id, entity_type, entity_id, action, summary, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .run("retention-old-1", "test", null, "created", "{}", oldDate);
+    ctx.db
+      .query(
+        "INSERT INTO activity_log (id, entity_type, entity_id, action, summary, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .run("retention-old-2", "test", null, "created", "{}", "2020-06-15T00:00:00.000Z");
+
+    const countBefore = ctx.activityLogRepo.countAll();
+
+    // Use a cutoff that is after the old entries but before any recent ones
+    const cutoff = "2021-01-01T00:00:00.000Z";
+    const deleted = ctx.activityLogRepo.deleteOlderThan(cutoff);
+
+    expect(deleted).toBe(2);
+    expect(ctx.activityLogRepo.countAll()).toBe(countBefore - 2);
+  });
+
+  it("deleteOlderThan returns 0 when no entries match", () => {
+    // Use a very old cutoff that predates all entries
+    const deleted = ctx.activityLogRepo.deleteOlderThan("1970-01-01T00:00:00.000Z");
+    expect(deleted).toBe(0);
+  });
+});
