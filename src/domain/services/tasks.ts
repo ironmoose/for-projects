@@ -147,6 +147,7 @@ export class TaskService implements ITaskService {
   }
 
   update(inputs: UpdateTaskInput[]): Task[] {
+    const completingProjectIds = new Set<string>();
     for (const input of inputs) {
       if (input.title !== undefined && !input.title.trim()) {
         throw new ServiceError("title cannot be empty", 400);
@@ -183,6 +184,19 @@ export class TaskService implements ITaskService {
       }
       const existing = this.taskRepo.findById(input.id);
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);
+      // Track project IDs for tasks being completed (for unblock detection)
+      if (this.depRepo && (input.status === "done" || input.status === "archived")) {
+        completingProjectIds.add(existing.project_id);
+      }
+    }
+
+    // Capture blocked state before update for unblock detection (one query per project)
+    let blockedBefore: Map<string, Set<string>> | undefined;
+    if (this.depRepo && completingProjectIds.size > 0) {
+      blockedBefore = new Map();
+      for (const pid of completingProjectIds) {
+        blockedBefore.set(pid, new Set(this.depRepo.getBlockedTaskIds(pid)));
+      }
     }
 
     // Strip dependency arrays before passing to repo
@@ -235,34 +249,32 @@ export class TaskService implements ITaskService {
       }
       this.eventBus.emit({ type: "updated", entity_type: "task", ids: tasks.map((t) => t.id) });
 
-      // Post-update: check if completing tasks unblocks any dependents
-      if (this.depRepo) {
+      // Post-update: check if completing tasks unblocked any dependents
+      // Uses before/after comparison of getBlockedTaskIds() instead of N+1 per-dependent queries
+      if (blockedBefore && blockedBefore.size > 0 && this.depRepo) {
+        // Identify a completing task per project for the activity log attribution
+        const completedTaskByProject = new Map<string, string>();
         for (const task of tasks) {
           const input = inputs.find((i) => i.id === task.id);
-          if (!input?.status) continue; // no status change in this update
+          if (!input?.status) continue;
           if (input.status !== "done" && input.status !== "archived") continue;
+          if (!completedTaskByProject.has(task.project_id)) {
+            completedTaskByProject.set(task.project_id, task.id);
+          }
+        }
 
-          // This task just completed. Check what it was blocking.
-          const dependents = this.depRepo.getDependenciesFrom(task.id)
-            .filter((d) => d.dependency_type === "blocks");
-
-          for (const dep of dependents) {
-            // Check if the dependent task is now fully unblocked (all blockers done/archived)
-            const blockers = this.depRepo.getDependenciesTo(dep.target_task_id)
-              .filter((d) => d.dependency_type === "blocks");
-            const allDone = blockers.every((b) => {
-              const blocker = this.taskRepo.findById(b.source_task_id);
-              return blocker && (blocker.status === "done" || blocker.status === "archived");
-            });
-
-            if (allDone) {
+        for (const [projectId, beforeSet] of blockedBefore) {
+          const blockedAfter = new Set(this.depRepo.getBlockedTaskIds(projectId));
+          for (const taskId of beforeSet) {
+            if (!blockedAfter.has(taskId)) {
+              // This task was blocked before the update but is no longer blocked
               this.activityLog.insert({
                 entity_type: "task",
-                entity_id: dep.target_task_id,
+                entity_id: taskId,
                 action: "updated",
                 summary: JSON.stringify({
                   event: "unblocked",
-                  unblocked_by: task.id,
+                  unblocked_by: completedTaskByProject.get(projectId) ?? tasks[0].id,
                   message: "Task unblocked: all blocking dependencies are now complete",
                 }),
               });
@@ -270,7 +282,7 @@ export class TaskService implements ITaskService {
               this.eventBus.emit({
                 type: "updated",
                 entity_type: "task",
-                ids: [dep.target_task_id],
+                ids: [taskId],
               });
             }
           }
