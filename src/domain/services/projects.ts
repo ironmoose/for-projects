@@ -1,11 +1,8 @@
-import { type Project, type ProjectSummary, type DocumentSummary } from "../entities";
+import { type Project, type ProjectSummary, type DocumentReferenceSummary } from "../entities";
 import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
-import type { IProjectService, Paginated } from "../services";
+import type { IProjectService, IDocumentReferenceService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { ProjectRepository } from "../repositories/projects";
-import type { DocumentRepository } from "../repositories/documents";
-import type { ProjectDocumentRepository } from "../repositories/project-documents";
-import type { TagRepository } from "../repositories/tags";
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
@@ -14,9 +11,7 @@ export class ProjectService implements IProjectService {
     private repo: ProjectRepository,
     private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
-    private documentRepo?: DocumentRepository,
-    private projectDocumentRepo?: ProjectDocumentRepository,
-    private tagRepo?: TagRepository,
+    private docRefService: IDocumentReferenceService,
   ) {}
 
   list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary> {
@@ -26,15 +21,10 @@ export class ProjectService implements IProjectService {
     };
   }
 
-  get(id: string): Project & { documents: DocumentSummary[] } {
+  get(id: string): Project & { documents: DocumentReferenceSummary[] } {
     const project = this.repo.findById(id);
     if (!project) throw new ServiceError("project not found", 404);
-    const rawDocs = this.projectDocumentRepo?.getDocumentsForProject(id) ?? [];
-    const tagMap = this.tagRepo?.getTagsForEntities("document", rawDocs.map((d) => d.id));
-    const documents = rawDocs.map((doc) => ({
-      ...doc,
-      tags: tagMap?.get(doc.id) ?? [],
-    }));
+    const documents = this.docRefService.getReferencesForEntity("project", id);
     return { ...project, documents };
   }
 
@@ -46,22 +36,14 @@ export class ProjectService implements IProjectService {
       if (input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
       }
-      if (input.goal !== undefined && input.goal.length > 50000) {
-        throw new ServiceError("goal must be 50000 characters or fewer", 400);
-      }
-      if (input.requirements !== undefined && input.requirements.length > 50000) {
-        throw new ServiceError("requirements must be 50000 characters or fewer", 400);
-      }
-      if (input.design !== undefined && input.design.length > 50000) {
-        throw new ServiceError("design must be 50000 characters or fewer", 400);
+      if (input.summary !== undefined && input.summary.length > 1000) {
+        throw new ServiceError("summary must be 1000 characters or fewer", 400);
       }
     }
 
     const rows = inputs.map((input) => ({
       title: input.title,
-      goal: input.goal ?? null,
-      requirements: input.requirements ?? null,
-      design: input.design ?? null,
+      summary: input.summary ?? null,
     }));
 
     const projects = this.repo.insertMany(rows);
@@ -85,66 +67,32 @@ export class ProjectService implements IProjectService {
       if (input.title !== undefined && input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
       }
-      if (input.goal !== undefined && input.goal !== null && input.goal.length > 50000) {
-        throw new ServiceError("goal must be 50000 characters or fewer", 400);
-      }
-      if (input.requirements !== undefined && input.requirements !== null && input.requirements.length > 50000) {
-        throw new ServiceError("requirements must be 50000 characters or fewer", 400);
-      }
-      if (input.design !== undefined && input.design !== null && input.design.length > 50000) {
-        throw new ServiceError("design must be 50000 characters or fewer", 400);
+      if (input.summary !== undefined && input.summary !== null && input.summary.length > 1000) {
+        throw new ServiceError("summary must be 1000 characters or fewer", 400);
       }
       const existing = this.repo.findById(input.id);
       if (!existing) throw new ServiceError(`project not found: ${input.id}`, 404);
-
-      // Validate attach/detach documents
-      if (input.attach_documents && input.detach_documents) {
-        const overlap = input.attach_documents.filter((id) => input.detach_documents!.includes(id));
-        if (overlap.length > 0) {
-          throw new ServiceError("cannot attach and detach the same document", 400);
-        }
-      }
-      if (input.attach_documents) {
-        for (const docId of input.attach_documents) {
-          const doc = this.documentRepo?.findById(docId);
-          if (!doc) throw new ServiceError(`document not found: ${docId}`, 404);
-        }
-      }
-      if (input.detach_documents) {
-        for (const docId of input.detach_documents) {
-          const doc = this.documentRepo?.findById(docId);
-          if (!doc) throw new ServiceError(`document not found: ${docId}`, 404);
-        }
-      }
     }
 
-    // Strip attach/detach from repo input
-    const repoInputs = inputs.map(({ attach_documents, detach_documents, ...rest }) => rest);
+    // Strip documents from repo input
+    const repoInputs = inputs.map(({ documents, ...rest }) => rest);
     const projects = this.repo.updateMany(repoInputs);
 
-    // Handle document link/unlink operations
+    // Process document references merge-patch
     for (const input of inputs) {
-      if (input.attach_documents && input.attach_documents.length > 0) {
-        this.projectDocumentRepo?.linkDocuments(input.id, input.attach_documents);
-      }
-      if (input.detach_documents && input.detach_documents.length > 0) {
-        this.projectDocumentRepo?.unlinkDocuments(input.id, input.detach_documents);
+      if (input.documents) {
+        this.docRefService.applyMergePatch("project", input.id, input.documents);
       }
     }
 
     for (const p of projects) {
       const input = inputs.find((i) => i.id === p.id);
-      const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "attach_documents" && k !== "detach_documents");
-      const attached = input?.attach_documents?.length ?? 0;
-      const detached = input?.detach_documents?.length ?? 0;
-      const summaryObj: Record<string, unknown> = { fields };
-      if (attached > 0) summaryObj.attached_documents = attached;
-      if (detached > 0) summaryObj.detached_documents = detached;
+      const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "documents");
       this.activityLog.insert({
         entity_type: "project",
         entity_id: p.id,
         action: "updated",
-        summary: JSON.stringify(summaryObj),
+        summary: JSON.stringify({ fields }),
       });
     }
     this.eventBus.emit({ type: "updated", entity_type: "project", ids: projects.map((p) => p.id) });
@@ -152,6 +100,9 @@ export class ProjectService implements IProjectService {
   }
 
   remove(ids: string[]): void {
+    for (const id of ids) {
+      this.docRefService.removeAllForEntity("project", id);
+    }
     this.repo.deleteMany(ids);
     for (const id of ids) {
       this.activityLog.insert({
