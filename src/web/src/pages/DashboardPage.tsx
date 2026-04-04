@@ -78,7 +78,7 @@ function ProjectCard({
 
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <PresenceCharm active={project.has_goal} label="Goal" color={theme.color.success} />
-        <PresenceCharm active={project.has_requirements} label="Requirements" color={theme.color.info ?? theme.color.primary} />
+        <PresenceCharm active={project.has_requirements} label="Requirements" color={theme.color.primary} />
         <PresenceCharm active={project.has_design} label="Design" color={theme.color.tertiary} />
       </div>
 
