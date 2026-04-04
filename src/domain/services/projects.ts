@@ -73,7 +73,7 @@ export class ProjectService implements IProjectService {
         summary: JSON.stringify({ title: p.title }),
       });
     }
-    this.eventBus.emit({ type: "created", entity_type: "project", payload: projects });
+    this.eventBus.emit({ type: "created", entity_type: "project", ids: projects.map((p) => p.id) });
     return projects;
   }
 
@@ -147,7 +147,7 @@ export class ProjectService implements IProjectService {
         summary: JSON.stringify(summaryObj),
       });
     }
-    this.eventBus.emit({ type: "updated", entity_type: "project", payload: projects });
+    this.eventBus.emit({ type: "updated", entity_type: "project", ids: projects.map((p) => p.id) });
     return projects;
   }
 

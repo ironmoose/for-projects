@@ -136,7 +136,7 @@ export class TaskService implements ITaskService {
         summary: JSON.stringify({ title: t.title, project_id: t.project_id }),
       });
     }
-    this.eventBus.emit({ type: "created", entity_type: "task", payload: tasks });
+    this.eventBus.emit({ type: "created", entity_type: "task", ids: tasks.map((t) => t.id) });
     // Newly created tasks are never blocked
     if (this.depRepo) {
       return tasks.map((t) => ({ ...t, is_blocked: false }));
@@ -229,7 +229,7 @@ export class TaskService implements ITaskService {
         summary: JSON.stringify(summaryObj),
       });
     }
-    this.eventBus.emit({ type: "updated", entity_type: "task", payload: tasks });
+    this.eventBus.emit({ type: "updated", entity_type: "task", ids: tasks.map((t) => t.id) });
 
     // Post-update: check if completing tasks unblocks any dependents
     if (this.depRepo) {
@@ -266,7 +266,7 @@ export class TaskService implements ITaskService {
             this.eventBus.emit({
               type: "updated",
               entity_type: "task",
-              payload: { id: dep.target_task_id, event: "unblocked", unblocked_by: task.id },
+              ids: [dep.target_task_id],
             });
           }
         }

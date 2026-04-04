@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from "react";
 export interface DomainEvent {
   type: "created" | "updated" | "deleted";
   entity_type: string;
-  payload?: unknown;
-  ids?: string[];
+  ids: string[];
 }
 
 export function useRealtimeEvents(onEvent: (event: DomainEvent) => void): { connected: boolean } {

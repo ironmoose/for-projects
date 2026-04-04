@@ -1,7 +1,8 @@
-export type DomainEvent =
-  | { type: 'created'; entity_type: string; payload: unknown }
-  | { type: 'updated'; entity_type: string; payload: unknown }
-  | { type: 'deleted'; entity_type: string; ids: string[] };
+export type DomainEvent = {
+  type: 'created' | 'updated' | 'deleted';
+  entity_type: string;
+  ids: string[];
+};
 
 type Listener = (event: DomainEvent) => void;
 

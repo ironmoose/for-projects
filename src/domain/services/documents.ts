@@ -95,7 +95,7 @@ export class DocumentService implements IDocumentService {
         summary: JSON.stringify({ title: doc.title }),
       });
     }
-    this.eventBus.emit({ type: "created", entity_type: "document", payload: results });
+    this.eventBus.emit({ type: "created", entity_type: "document", ids: results.map((r) => r.id) });
     return results;
   }
 
@@ -148,7 +148,7 @@ export class DocumentService implements IDocumentService {
         summary: JSON.stringify({ fields }),
       });
     }
-    this.eventBus.emit({ type: "updated", entity_type: "document", payload: results });
+    this.eventBus.emit({ type: "updated", entity_type: "document", ids: results.map((r) => r.id) });
     return results;
   }
 

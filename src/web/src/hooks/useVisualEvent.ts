@@ -18,7 +18,7 @@ export function useVisualEvent(
   useEffect(() => {
     return subscribeEvents((event) => {
       if (event.entity_type !== entityType) return;
-      if (entityId != null && (event.payload as Record<string, unknown> | undefined)?.id !== entityId) return;
+      if (entityId != null && !event.ids.includes(entityId)) return;
       callbackRef.current(event);
     });
   }, [subscribeEvents, entityType, entityId]);

@@ -53,7 +53,7 @@ export class TaskDependencyService implements ITaskDependencyService {
         summary: JSON.stringify({ event: "dependency_added", source_task_id: dep.source_task_id, target_task_id: dep.target_task_id, dependency_type: dep.dependency_type }),
       });
     }
-    this.eventBus.emit({ type: "updated", entity_type: "task", payload: deps });
+    this.eventBus.emit({ type: "updated", entity_type: "task", ids: [...new Set(deps.flatMap((d) => [d.source_task_id, d.target_task_id]))] });
 
     return results;
   }
@@ -69,7 +69,7 @@ export class TaskDependencyService implements ITaskDependencyService {
         summary: JSON.stringify({ event: "dependency_removed", source_task_id: pair.source_task_id, target_task_id: pair.target_task_id }),
       });
     }
-    this.eventBus.emit({ type: "updated", entity_type: "task", payload: pairs });
+    this.eventBus.emit({ type: "updated", entity_type: "task", ids: [...new Set(pairs.flatMap((p) => [p.source_task_id, p.target_task_id]))] });
   }
 
   getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean } {

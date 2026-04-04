@@ -1454,10 +1454,10 @@ describe("Cascading Unblock Notifications", () => {
     ]);
 
     // Collect emitted events
-    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const emittedEvents: { type: string; entity_type: string; ids: string[] }[] = [];
     const unsub = ctx.eventBus.subscribe((event) => {
       if (event.type === "updated" && event.entity_type === "task") {
-        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+        emittedEvents.push(event as { type: string; entity_type: string; ids: string[] });
       }
     });
 
@@ -1479,14 +1479,11 @@ describe("Cascading Unblock Notifications", () => {
     expect(summary.unblocked_by).toBe(taskA.id);
     expect(summary.message).toBe("Task unblocked: all blocking dependencies are now complete");
 
-    // Check emitted domain event for unblocked
+    // Check emitted domain event for unblocked -- now uses ids-only envelope
     const unblockedEvent = emittedEvents.find((e) => {
-      const p = e.payload as Record<string, unknown>;
-      return p.event === "unblocked" && p.id === taskB.id;
+      return e.ids.includes(taskB.id);
     });
     expect(unblockedEvent).toBeTruthy();
-    const payload = unblockedEvent!.payload as Record<string, unknown>;
-    expect(payload.unblocked_by).toBe(taskA.id);
   });
 
   it("does NOT emit unblock when other blockers remain", () => {
@@ -1500,10 +1497,10 @@ describe("Cascading Unblock Notifications", () => {
       { source_task_id: taskY.id, target_task_id: taskZ.id, dependency_type: "blocks" },
     ]);
 
-    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const emittedEvents: { type: string; entity_type: string; ids: string[] }[] = [];
     const unsub = ctx.eventBus.subscribe((event) => {
       if (event.type === "updated" && event.entity_type === "task") {
-        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+        emittedEvents.push(event as { type: string; entity_type: string; ids: string[] });
       }
     });
 
@@ -1513,10 +1510,7 @@ describe("Cascading Unblock Notifications", () => {
     unsub();
 
     // Should NOT have an unblocked event for Z
-    const unblockedEvent = emittedEvents.find((e) => {
-      const p = e.payload as Record<string, unknown>;
-      return p.event === "unblocked" && p.id === taskZ.id;
-    });
+    const unblockedEvent = emittedEvents.find((e) => e.ids.includes(taskZ.id));
     expect(unblockedEvent).toBeUndefined();
 
     // Check activity log -- no unblocked entry for Z
@@ -1544,10 +1538,10 @@ describe("Cascading Unblock Notifications", () => {
     ctx.taskService.update([{ id: taskP.id, status: "done" }]);
 
     // Now complete Q -- this should trigger the unblock
-    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const emittedEvents: { type: string; entity_type: string; ids: string[] }[] = [];
     const unsub = ctx.eventBus.subscribe((event) => {
       if (event.type === "updated" && event.entity_type === "task") {
-        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+        emittedEvents.push(event as { type: string; entity_type: string; ids: string[] });
       }
     });
 
@@ -1556,10 +1550,7 @@ describe("Cascading Unblock Notifications", () => {
     unsub();
 
     // Now R should be unblocked
-    const unblockedEvent = emittedEvents.find((e) => {
-      const p = e.payload as Record<string, unknown>;
-      return p.event === "unblocked" && p.id === taskR.id;
-    });
+    const unblockedEvent = emittedEvents.find((e) => e.ids.includes(taskR.id));
     expect(unblockedEvent).toBeTruthy();
   });
 
@@ -1571,10 +1562,10 @@ describe("Cascading Unblock Notifications", () => {
       { source_task_id: taskM.id, target_task_id: taskN.id, dependency_type: "blocks" },
     ]);
 
-    const emittedEvents: { type: string; entity_type: string; payload: unknown }[] = [];
+    const emittedEvents: { type: string; entity_type: string; ids: string[] }[] = [];
     const unsub = ctx.eventBus.subscribe((event) => {
       if (event.type === "updated" && event.entity_type === "task") {
-        emittedEvents.push(event as { type: string; entity_type: string; payload: unknown });
+        emittedEvents.push(event as { type: string; entity_type: string; ids: string[] });
       }
     });
 
@@ -1583,10 +1574,7 @@ describe("Cascading Unblock Notifications", () => {
 
     unsub();
 
-    const unblockedEvent = emittedEvents.find((e) => {
-      const p = e.payload as Record<string, unknown>;
-      return p.event === "unblocked" && p.id === taskN.id;
-    });
+    const unblockedEvent = emittedEvents.find((e) => e.ids.includes(taskN.id));
     expect(unblockedEvent).toBeTruthy();
   });
 
