@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Task, TaskSummary } from "../entities";
+import type { Task, TaskSummary, TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from "../entities";
 
 export interface TaskRow {
   id: string;
@@ -128,7 +128,27 @@ export class TaskRepository {
       stmt.run(id, row.project_id, row.title, row.plan ?? null, row.description ?? null, row.implementation ?? null, row.acceptance_criteria ?? null, row.group_key ?? null, row.status, row.effort ?? null, row.impact ?? null, row.category ?? null, now, now);
     }
 
-    return ids.map((id) => this.findById(id)!);
+    const results: Task[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      results.push({
+        id: ids[i],
+        project_id: rows[i].project_id,
+        title: rows[i].title,
+        plan: rows[i].plan ?? null,
+        description: rows[i].description ?? null,
+        implementation: rows[i].implementation ?? null,
+        acceptance_criteria: rows[i].acceptance_criteria ?? null,
+        group_key: rows[i].group_key ?? null,
+        status: rows[i].status as TaskStatus,
+        effort: (rows[i].effort ?? null) as EffortLevel | null,
+        impact: (rows[i].impact ?? null) as ImpactLevel | null,
+        category: (rows[i].category ?? null) as TaskCategory | null,
+        is_blocked: false,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+    return results;
   }
 
   updateMany(rows: { id: string; title?: string; plan?: string | null; description?: string | null; implementation?: string | null; acceptance_criteria?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null }[]): Task[] {
@@ -154,7 +174,23 @@ export class TaskRepository {
         .query("UPDATE tasks SET title = ?, plan = ?, description = ?, implementation = ?, acceptance_criteria = ?, group_key = ?, status = ?, effort = ?, impact = ?, category = ?, updated_at = ? WHERE id = ?")
         .run(title, plan, description, implementation, acceptance_criteria, group_key, status, effort, impact, category, now, row.id);
 
-      results.push(this.findById(row.id)!);
+      results.push({
+        id: row.id,
+        project_id: existing.project_id,
+        title,
+        plan,
+        description,
+        implementation,
+        acceptance_criteria,
+        group_key,
+        status: status as TaskStatus,
+        effort: (effort ?? null) as EffortLevel | null,
+        impact: (impact ?? null) as ImpactLevel | null,
+        category: (category ?? null) as TaskCategory | null,
+        is_blocked: existing.is_blocked ?? false,
+        created_at: existing.created_at,
+        updated_at: now,
+      });
     }
 
     return results;
