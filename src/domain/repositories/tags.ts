@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Tag, EntityType } from "../entities";
+import type { Tag, EntityType, TagName } from "../entities";
 
 export class TagRepository {
   constructor(private db: Database) {}
@@ -33,6 +33,34 @@ export class TagRepository {
       this.db.exec("ROLLBACK");
       throw e;
     }
+  }
+
+  getTagsForEntities(entityType: EntityType, entityIds: string[]): Map<string, TagName[]> {
+    if (entityIds.length === 0) return new Map();
+
+    const CHUNK_SIZE = 100;
+    const result = new Map<string, TagName[]>();
+
+    for (let i = 0; i < entityIds.length; i += CHUNK_SIZE) {
+      const chunk = entityIds.slice(i, i + CHUNK_SIZE);
+      const placeholders = chunk.map(() => "?").join(", ");
+      const rows = this.db
+        .query(
+          `SELECT et.entity_id, t.kind FROM entity_tags et JOIN tags t ON t.id = et.tag_id WHERE et.entity_type = ? AND et.entity_id IN (${placeholders}) ORDER BY t.kind`,
+        )
+        .all(entityType, ...chunk) as { entity_id: string; kind: TagName }[];
+
+      for (const row of rows) {
+        let tags = result.get(row.entity_id);
+        if (!tags) {
+          tags = [];
+          result.set(row.entity_id, tags);
+        }
+        tags.push(row.kind);
+      }
+    }
+
+    return result;
   }
 
   getTagsForEntity(entityType: EntityType, entityId: string): Tag[] {

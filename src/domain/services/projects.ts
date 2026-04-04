@@ -30,10 +30,11 @@ export class ProjectService implements IProjectService {
     const project = this.repo.findById(id);
     if (!project) throw new ServiceError("project not found", 404);
     const rawDocs = this.projectDocumentRepo?.getDocumentsForProject(id) ?? [];
-    const documents = rawDocs.map((doc) => {
-      const tags = this.tagRepo?.getTagsForEntity("document", doc.id).map((t) => t.kind) ?? [];
-      return { ...doc, tags };
-    });
+    const tagMap = this.tagRepo?.getTagsForEntities("document", rawDocs.map((d) => d.id));
+    const documents = rawDocs.map((doc) => ({
+      ...doc,
+      tags: tagMap?.get(doc.id) ?? [],
+    }));
     return { ...project, documents };
   }
 

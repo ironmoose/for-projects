@@ -494,6 +494,49 @@ describe("Document CRUD", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Batch Tag Fetching (N+1 fix)
+// ---------------------------------------------------------------------------
+
+describe("Batch Tag Fetching", () => {
+  it("getTagsForEntities returns correct tags for multiple documents", () => {
+    const { TagRepository } = require("./repositories/tags");
+    const tagRepo = new TagRepository(ctx.db);
+
+    const [doc1] = ctx.documentService.create([{ title: "Batch Tag Doc 1", tags: ["ui", "data"] }]);
+    const [doc2] = ctx.documentService.create([{ title: "Batch Tag Doc 2", tags: ["security"] }]);
+    const [doc3] = ctx.documentService.create([{ title: "Batch Tag Doc 3" }]);
+
+    const tagMap = tagRepo.getTagsForEntities("document", [doc1.id, doc2.id, doc3.id]);
+
+    expect(tagMap.get(doc1.id)?.sort()).toEqual(["data", "ui"]);
+    expect(tagMap.get(doc2.id)).toEqual(["security"]);
+    expect(tagMap.get(doc3.id)).toBeUndefined(); // no tags = not in map
+  });
+
+  it("getTagsForEntities returns empty Map for empty input", () => {
+    const { TagRepository } = require("./repositories/tags");
+    const tagRepo = new TagRepository(ctx.db);
+
+    const tagMap = tagRepo.getTagsForEntities("document", []);
+    expect(tagMap.size).toBe(0);
+  });
+
+  it("DocumentService.list() returns correct tags on each document summary", () => {
+    const [d1] = ctx.documentService.create([{ title: "List Tag A", tags: ["architecture"] }]);
+    const [d2] = ctx.documentService.create([{ title: "List Tag B", tags: ["conventions", "guide"] }]);
+
+    const result = ctx.documentService.list({ title: "List Tag" });
+    expect(result.data.length).toBe(2);
+
+    const a = result.data.find((d) => d.id === d1.id);
+    const b = result.data.find((d) => d.id === d2.id);
+
+    expect(a?.tags).toEqual(["architecture"]);
+    expect(b?.tags?.sort()).toEqual(["conventions", "guide"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Project-Document Linking
 // ---------------------------------------------------------------------------
 
