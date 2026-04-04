@@ -1,5 +1,4 @@
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import { IconButton } from "../atoms/IconButton";
 
 interface TagChipProps {
@@ -10,8 +9,7 @@ interface TagChipProps {
 }
 
 export function TagChip({ name, prefix, onRemove, style }: TagChipProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
 
   return (
     <span
@@ -20,13 +18,13 @@ export function TagChip({ name, prefix, onRemove, style }: TagChipProps) {
         alignItems: "center",
         gap: 4,
         fontSize: theme.font.size.xs,
-        color: isSynth ? "var(--synth-glow)" : theme.color.primary,
+        color: theme.glow.accentColor !== theme.color.textMuted ? theme.glow.accentColor : theme.color.primary,
         background: theme.color.surfaceContainerHigh,
         borderRadius: theme.radius.full,
         padding: "2px 8px",
-        ...(isSynth ? {
-          border: `1px solid ${sg(27)}`,
-          boxShadow: `0 0 6px ${sg(14)}`,
+        ...(theme.glow.animated ? {
+          border: `1px solid ${theme.glow.borderMedium}`,
+          boxShadow: `0 0 6px ${theme.glow.borderLight}`,
         } : {}),
         ...style,
       }}

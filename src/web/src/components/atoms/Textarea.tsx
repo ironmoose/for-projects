@@ -1,23 +1,19 @@
 import { type TextareaHTMLAttributes, useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
 }
 
 export function Textarea({ label, style, id, onFocus, onBlur, ...props }: TextareaProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [focused, setFocused] = useState(false);
   const textareaId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
 
-  const synthFocusStyles: React.CSSProperties =
-    isSynth && focused
-      ? { borderColor: sg(53), boxShadow: `0 0 12px ${sg(19)}, inset 0 0 6px ${sg(5)}` }
-      : isSynth
-        ? { borderColor: sg(14), boxShadow: `0 0 4px ${sg(6)}` }
-        : {};
+  const glowStyles: React.CSSProperties = {
+    borderColor: focused ? theme.glow.borderStrong : theme.glow.borderLight,
+    boxShadow: focused ? theme.glow.focusRing : theme.glow.focusRingSubtle,
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
@@ -52,7 +48,7 @@ export function Textarea({ label, style, id, onFocus, onBlur, ...props }: Textar
           color: theme.color.text,
           transition: "border-color 0.15s, box-shadow 0.2s",
           resize: "vertical",
-          ...synthFocusStyles,
+          ...glowStyles,
           ...style,
         }}
         {...props}

@@ -2,7 +2,6 @@ import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
 import { PresenceCharm } from "../molecules/PresenceCharm";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import type { DocumentSummary } from "../../types";
 import { formatDate } from "../../utils";
 
@@ -23,17 +22,16 @@ interface DocumentTableProps {
 }
 
 export function DocumentTable({ documents, selectedDocumentId, onSelectDocument, onDeleteDocument, onToggleFavorite }: DocumentTableProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
 
   return (
     <div
       style={{
         overflowX: "auto",
         borderRadius: theme.radius.lg,
-        border: `1px solid ${isSynth ? sg(20) : theme.color.border}`,
+        border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
         background: theme.color.surface,
-        ...(isSynth ? { boxShadow: `0 0 12px ${sg(7)}` } : {}),
+        boxShadow: theme.glow.animated ? theme.glow.shadowLg : "none",
       }}
     >
       <table
@@ -54,14 +52,12 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
                   textAlign: "left",
                   fontWeight: 600,
                   fontSize: theme.font.size.xxs,
-                  color: isSynth ? "var(--synth-glow)" : theme.color.textMuted,
+                  color: theme.glow.animated ? theme.glow.accentColor : theme.color.textMuted,
                   textTransform: "uppercase",
                   letterSpacing: theme.font.letterSpacing.wide,
-                  borderBottom: isSynth
-                    ? `2px solid ${sg(27)}`
-                    : `2px solid ${theme.color.border}`,
+                  borderBottom: `2px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
                   whiteSpace: "nowrap",
-                  ...(isSynth ? { textShadow: `0 0 8px ${sg(27)}` } : {}),
+                  textShadow: theme.glow.textShadow,
                 }}
               >
                 {h}

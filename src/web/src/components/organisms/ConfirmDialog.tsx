@@ -19,8 +19,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
 
   // Suppress keyboard shortcuts while dialog is open
@@ -63,10 +62,8 @@ export function ConfirmDialog({
             pointerEvents: "auto",
             background: theme.color.surfaceContainer,
             borderRadius: theme.radius.lg,
-            boxShadow: isSynth
-              ? `0 0 25px ${theme.color.danger}25, 0 0 50px ${theme.color.tertiary}10, 0 8px 40px rgba(0,0,0,0.5)`
-              : theme.shadow.lg,
-            border: `1px solid ${isSynth ? `${theme.color.danger}44` : theme.color.borderSubtle}`,
+            boxShadow: theme.glow.animated ? theme.glow.dangerShadow : theme.shadow.lg,
+            border: `1px solid ${theme.glow.dangerBorder}`,
             width: "100%",
             maxWidth: 400,
             display: "flex",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { sg } from "../components/theme/synthGlow";
+
 import {
   Button,
   Card,
@@ -384,8 +384,7 @@ function TaskDetailPanel({
   onUpdate: (taskId: string, input: Record<string, string | null | undefined>) => Promise<void>;
   taskTitles: Map<string, string>;
 }) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
 
   // Title editing state
   const [editingTitle, setEditingTitle] = useState(false);
@@ -575,10 +574,8 @@ function TaskDetailPanel({
             pointerEvents: "auto",
             background: theme.color.surfaceContainer,
             borderRadius: theme.radius.lg,
-            boxShadow: isSynth
-              ? `0 0 30px ${sg(19)}, 0 0 60px ${sg(9)}, 0 8px 40px rgba(0,0,0,0.5)`
-              : theme.shadow.lg,
-            border: `1px solid ${isSynth ? sg(27) : theme.color.borderSubtle}`,
+            boxShadow: theme.glow.animated ? theme.glow.shadowXl : theme.shadow.lg,
+            border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
             width: "100%",
             maxWidth: 1000,
             minHeight: "50vh",

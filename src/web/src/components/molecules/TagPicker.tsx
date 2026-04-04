@@ -1,5 +1,4 @@
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TAG_CATEGORIES } from "../../types";
 import type { TagName } from "../../types";
@@ -11,8 +10,7 @@ interface TagPickerProps {
 }
 
 export function TagPicker({ selected, onChange, style }: TagPickerProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
 
   function toggle(tag: TagName) {
     if (selected.includes(tag)) {
@@ -49,7 +47,7 @@ export function TagPicker({ selected, onChange, style }: TagPickerProps) {
                     fontSize: theme.font.size.xs,
                     fontFamily: theme.font.body,
                     color: isSelected
-                      ? (isSynth ? "var(--synth-glow)" : theme.color.primary)
+                      ? (theme.glow.accentColor !== theme.color.textMuted ? theme.glow.accentColor : theme.color.primary)
                       : theme.color.textMuted,
                     background: isSelected
                       ? theme.color.surfaceContainerHigh
@@ -58,11 +56,11 @@ export function TagPicker({ selected, onChange, style }: TagPickerProps) {
                     padding: "2px 10px",
                     cursor: "pointer",
                     border: isSelected
-                      ? `1px solid ${isSynth ? sg(40) : theme.color.primary}`
+                      ? `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.primary}`
                       : `1px solid ${theme.color.borderSubtle}`,
                     transition: "all 0.15s ease",
-                    ...(isSynth && isSelected
-                      ? { boxShadow: `0 0 6px ${sg(14)}` }
+                    ...(theme.glow.animated && isSelected
+                      ? { boxShadow: `0 0 6px ${theme.glow.borderLight}` }
                       : {}),
                   }}
                   aria-pressed={isSelected}

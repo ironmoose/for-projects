@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 
 interface ChartCardProps {
   title: string;
@@ -9,17 +8,16 @@ interface ChartCardProps {
 }
 
 export function ChartCard({ title, children, style }: ChartCardProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
 
   return (
     <div
       style={{
         background: theme.color.surfaceContainer,
-        border: `1px solid ${isSynth ? sg(16) : theme.color.borderSubtle}`,
+        border: `1px solid ${theme.glow.borderLight}`,
         borderRadius: theme.radius.xl,
         padding: theme.spacing.lg,
-        ...(isSynth ? { boxShadow: `0 0 10px ${sg(7)}` } : {}),
+        boxShadow: theme.glow.animated ? `0 0 10px ${theme.glow.borderSubtle}` : "none",
         display: "flex",
         flexDirection: "column",
         gap: theme.spacing.sm,
@@ -30,11 +28,11 @@ export function ChartCard({ title, children, style }: ChartCardProps) {
         style={{
           fontSize: theme.font.size.xs,
           fontFamily: theme.font.body,
-          color: isSynth ? "var(--synth-glow)" : theme.color.textMuted,
+          color: theme.glow.accentColor,
           fontWeight: 600,
           letterSpacing: theme.font.letterSpacing.wide,
           textTransform: "uppercase",
-          ...(isSynth ? { textShadow: `0 0 8px ${sg(27)}` } : {}),
+          textShadow: theme.glow.textShadow,
         }}
       >
         {title}

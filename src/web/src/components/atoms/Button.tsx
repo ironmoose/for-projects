@@ -1,7 +1,6 @@
 import { type ButtonHTMLAttributes, useState } from "react";
 import { type Theme } from "../theme/theme";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 
 type ButtonVariant = "primary" | "ghost" | "danger" | "icon";
 type ButtonSize = "sm" | "md";
@@ -12,22 +11,24 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
-function getVariantStyles(theme: Theme, isSynth: boolean): Record<ButtonVariant, React.CSSProperties> {
+function getVariantStyles(theme: Theme): Record<ButtonVariant, React.CSSProperties> {
   return {
     primary: {
       background: theme.color.primaryContainer,
       color: theme.color.onPrimaryContainer,
       borderWidth: 1,
       borderStyle: "solid",
-      borderColor: isSynth ? sg(40) : theme.color.primaryContainer,
-      ...(isSynth ? { boxShadow: `0 0 12px ${sg(20)}, inset 0 0 12px ${sg(7)}` } : {}),
+      borderColor: theme.glow.borderStrong !== theme.color.border ? theme.glow.borderMedium : theme.color.primaryContainer,
+      boxShadow: theme.glow.animated
+        ? `0 0 12px ${theme.glow.borderMedium}, inset 0 0 12px ${theme.glow.borderSubtle}`
+        : "none",
     },
     ghost: {
       background: "transparent",
       color: theme.color.textMuted,
       borderWidth: 1,
       borderStyle: "solid",
-      borderColor: isSynth ? sg(20) : theme.color.borderSubtle,
+      borderColor: theme.glow.borderMedium !== theme.color.border ? theme.glow.borderMedium : theme.color.borderSubtle,
     },
     danger: {
       background: "transparent",
@@ -35,7 +36,7 @@ function getVariantStyles(theme: Theme, isSynth: boolean): Record<ButtonVariant,
       borderWidth: 1,
       borderStyle: "solid",
       borderColor: `${theme.color.danger}44`,
-      ...(isSynth ? { boxShadow: `0 0 8px ${theme.color.danger}22` } : {}),
+      boxShadow: theme.glow.animated ? `0 0 8px ${theme.color.danger}22` : "none",
     },
     icon: {
       background: "transparent",
@@ -56,8 +57,7 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
 
   const sizeStyles: Record<ButtonSize, React.CSSProperties> = {
@@ -67,12 +67,12 @@ export function Button({
 
   const isDisabled = disabled || loading;
 
-  const synthHoverGlow: React.CSSProperties =
-    isSynth && hovered && !isDisabled && variant === "primary"
-      ? { boxShadow: `0 0 20px ${sg(33)}, 0 0 40px ${sg(14)}, inset 0 0 15px ${sg(9)}`, borderColor: sg(67) }
-      : isSynth && hovered && !isDisabled && variant === "ghost"
-        ? { borderColor: sg(40), boxShadow: `0 0 10px ${sg(14)}` }
-        : isSynth && hovered && !isDisabled && variant === "danger"
+  const hoverGlow: React.CSSProperties =
+    hovered && !isDisabled && variant === "primary" && theme.glow.animated
+      ? { boxShadow: `0 0 20px ${theme.glow.borderMedium}, 0 0 40px ${theme.glow.borderLight}, inset 0 0 15px ${theme.glow.borderSubtle}`, borderColor: theme.glow.borderStrong }
+      : hovered && !isDisabled && variant === "ghost" && theme.glow.animated
+        ? { borderColor: theme.glow.borderMedium, boxShadow: `0 0 10px ${theme.glow.borderLight}` }
+        : hovered && !isDisabled && variant === "danger" && theme.glow.animated
           ? { boxShadow: `0 0 16px ${theme.color.danger}33`, borderColor: `${theme.color.danger}66` }
           : {};
 
@@ -88,9 +88,9 @@ export function Button({
         letterSpacing: "0.01em",
         transition: "background 0.15s, opacity 0.15s, border-color 0.15s, filter 0.15s, box-shadow 0.2s",
         opacity: isDisabled ? 0.6 : 1,
-        ...getVariantStyles(theme, isSynth)[variant],
+        ...getVariantStyles(theme)[variant],
         ...(variant !== "icon" ? sizeStyles[size] : {}),
-        ...synthHoverGlow,
+        ...hoverGlow,
         ...style,
       }}
       disabled={isDisabled}
