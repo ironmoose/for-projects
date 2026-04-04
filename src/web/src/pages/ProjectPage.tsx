@@ -1021,6 +1021,22 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
+  // Fetch all group keys for the group filter dropdown (unfiltered by group_key)
+  const [groupKeys, setGroupKeys] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchTasks({ project_id: projectId, limit: 200 }).then((body) => {
+      if (cancelled) return;
+      const keys = [...new Set(
+        body.data
+          .map((t) => t.group_key)
+          .filter((k): k is string => k != null && k !== ""),
+      )].sort();
+      setGroupKeys(keys);
+    }).catch(() => { /* toast handled by useProjectTasks */ });
+    return () => { cancelled = true; };
+  }, [projectId, tasks]); // re-derive when tasks change (WebSocket-driven refetch updates tasks)
+
   const taskTitles = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
 
   useEffect(() => {
@@ -1398,7 +1414,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             </span>
           </Button>
 
-          <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} />
+          <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} groupKeys={groupKeys} />
 
           <div style={{ marginTop: theme.spacing.lg }}>
             {tasksLoading ? (

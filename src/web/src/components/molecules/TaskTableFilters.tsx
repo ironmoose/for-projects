@@ -35,9 +35,10 @@ const impactOptions = toFilterOptions(IMPACT_LEVELS, "All impacts");
 interface TaskTableFiltersProps {
   filter: TaskFilter;
   onChange: (f: TaskFilter) => void;
+  groupKeys?: string[];
 }
 
-export function TaskTableFilters({ filter, onChange }: TaskTableFiltersProps) {
+export function TaskTableFilters({ filter, onChange, groupKeys }: TaskTableFiltersProps) {
   const [titleInput, setTitleInput] = useState(filter.title ?? "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -92,6 +93,17 @@ export function TaskTableFilters({ filter, onChange }: TaskTableFiltersProps) {
         options={impactOptions}
         style={{ minWidth: 120 }}
       />
+      {groupKeys && groupKeys.length > 0 && (
+        <Select
+          value={filter.group_key ?? ""}
+          onChange={(e) => onChange({ ...filter, group_key: e.target.value || undefined })}
+          options={[
+            { value: "", label: "All groups" },
+            ...groupKeys.map((k) => ({ value: k, label: k })),
+          ]}
+          style={{ minWidth: 120 }}
+        />
+      )}
     </div>
   );
 }
