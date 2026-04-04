@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, fetchDependencyGraph } from "../api";
-import type { DependencyEdge, DependencyGraphResponse } from "../api";
-import type { TaskSummary } from "../types";
+import type { DependencyEdge, DependencyGraphResponse, GraphNode } from "../api";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export interface DependencyGraph {
-  tasks: TaskSummary[];
+  tasks: GraphNode[];
   edges: DependencyEdge[];
   blockedTaskIds: string[];
 }

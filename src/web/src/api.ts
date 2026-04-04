@@ -218,8 +218,14 @@ export interface DependencyEdge {
   dependency_type: "blocks" | "relates_to";
 }
 
+export interface GraphNode {
+  id: string;
+  title: string;
+  status: TaskStatus;
+}
+
 export interface DependencyGraphResponse {
-  tasks: TaskSummary[];
+  tasks: GraphNode[];
   edges: DependencyEdge[];
   blocked_task_ids: string[];
 }

@@ -37,7 +37,11 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
     const status = c.req.query("status");
     const { edges, blocked_task_ids } = depService.getGraph(projectId, status || undefined);
     const { data: tasks } = taskService.list({ project_id: projectId, status: status || undefined, limit: 200 });
-    return c.json({ tasks, edges, blocked_task_ids });
+    return c.json({
+      tasks: tasks.map((t) => ({ id: t.id, title: t.title, status: t.status })),
+      edges,
+      blocked_task_ids,
+    });
   });
 
   // POST /api/projects/:id/dependencies

@@ -3,7 +3,8 @@ import { useTheme } from "../theme/ThemeContext";
 import { StatusDot } from "../atoms/StatusDot";
 import { Badge } from "../atoms/Badge";
 import { EmptyState } from "../molecules/EmptyState";
-import type { TaskSummary, TaskStatus } from "../../types";
+import type { TaskStatus } from "../../types";
+import type { GraphNode } from "../../api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,7 +17,7 @@ export interface DependencyEdge {
 }
 
 export interface DependencyGraphViewProps {
-  tasks: TaskSummary[];
+  tasks: GraphNode[];
   edges: DependencyEdge[];
   blockedTaskIds: string[];
   onTaskClick: (taskId: string) => void;
@@ -217,7 +218,7 @@ function TaskCard({
   onClick,
   style,
 }: {
-  task: TaskSummary;
+  task: GraphNode;
   isBlocked: boolean;
   isInCycle: boolean;
   isHighlighted: boolean;
@@ -570,7 +571,7 @@ export function DependencyGraphView({
   }, [filteredTasks, filteredEdges]);
 
   const taskMap = useMemo(() => {
-    const map = new Map<string, TaskSummary>();
+    const map = new Map<string, GraphNode>();
     for (const t of filteredTasks) map.set(t.id, t);
     return map;
   }, [filteredTasks]);
