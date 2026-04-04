@@ -202,6 +202,25 @@ export function toNormalizedDependency(
   };
 }
 
+// -- Document references -------------------------------------------------
+
+export const DOCUMENT_REFERENCE_TYPES = ['context', 'spec', 'guide'] as const;
+export type DocumentReferenceType = typeof DOCUMENT_REFERENCE_TYPES[number];
+
+export interface DocumentReference {
+  entity_type: EntityType;
+  entity_id: string;
+  document_id: string;
+  type: DocumentReferenceType;
+  created_at: string;
+}
+
+export interface DocumentReferenceSummary {
+  document_id: string;
+  document_title: string;
+  types: DocumentReferenceType[];
+}
+
 // -- Activity log --------------------------------------------------------
 
 export interface ActivityLog {

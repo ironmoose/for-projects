@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceType, EntityType } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -36,6 +36,14 @@ export interface ITaskDependencyService {
   removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void;
   getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean };
   getGraph(projectId: string, statusFilter?: string[]): { edges: TaskDependency[]; blocked_task_ids: string[] };
+}
+
+export interface IDocumentReferenceService {
+  applyMergePatch(entityType: EntityType, entityId: string, documents: Record<string, { type: DocumentReferenceType }[] | null>): void;
+  getReferencesForEntity(entityType: EntityType, entityId: string): DocumentReferenceSummary[];
+  getEntitiesForDocument(documentId: string): DocumentReference[];
+  removeAllForEntity(entityType: EntityType, entityId: string): void;
+  removeAllForDocument(documentId: string): void;
 }
 
 export interface IDocumentService {
