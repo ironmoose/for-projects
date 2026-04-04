@@ -100,15 +100,15 @@ export class TaskDependencyService implements ITaskDependencyService {
     return { blocks, blocked_by, relates_to, is_blocked };
   }
 
-  getGraph(projectId: string, statusFilter?: string): { edges: TaskDependency[]; blocked_task_ids: string[] } {
+  getGraph(projectId: string, statusFilter?: string[]): { edges: TaskDependency[]; blocked_task_ids: string[] } {
     const allEdges = this.depRepo.getGraphForProject(projectId);
     const blocked_task_ids = this.depRepo.getBlockedTaskIds(projectId);
 
-    if (!statusFilter) {
+    if (!statusFilter || statusFilter.length === 0) {
       return { edges: allEdges, blocked_task_ids };
     }
 
-    const allowedStatuses = new Set(statusFilter.split(",").map((s) => s.trim()));
+    const allowedStatuses = new Set(statusFilter);
     const tasks = this.taskRepo.findMany({ project_id: projectId });
     const visibleTaskIds = new Set(
       tasks.filter((t) => allowedStatuses.has(t.status)).map((t) => t.id),
