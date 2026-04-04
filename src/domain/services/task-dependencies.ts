@@ -123,7 +123,6 @@ export class TaskDependencyService implements ITaskDependencyService {
   isBlocked(taskId: string): boolean {
     const task = this.taskRepo.findById(taskId);
     if (!task) throw new ServiceError(`task not found: ${taskId}`, 404);
-    const blockedIds = this.depRepo.getBlockedTaskIds(task.project_id);
-    return blockedIds.includes(taskId);
+    return this.depRepo.isTaskBlocked(taskId);
   }
 }
