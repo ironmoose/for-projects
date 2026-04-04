@@ -15,7 +15,7 @@ export interface Paginated<T> {
 
 export interface IProjectService {
   list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary>;
-  get(id: string): Project;
+  get(id: string): Project & { documents: DocumentReferenceSummary[] };
   create(inputs: CreateProjectInput[]): Project[];
   update(inputs: UpdateProjectInput[]): Project[];
   remove(ids: string[]): void;
