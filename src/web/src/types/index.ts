@@ -9,6 +9,9 @@ export type {
   TaskSummary,
   Document,
   DocumentSummary,
+  DocumentReference,
+  DocumentReferenceSummary,
+  DocumentReferenceType,
   ActivityLog,
   TaskStatus,
   EffortLevel,
@@ -28,4 +31,5 @@ export {
   ACTIVITY_ACTIONS,
   TAG_NAMES,
   TAG_CATEGORIES,
+  DOCUMENT_REFERENCE_TYPES,
 } from '@domain/entities';

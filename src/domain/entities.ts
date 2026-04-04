@@ -12,6 +12,9 @@ export const TAG_NAMES = [
 export const DEPENDENCY_TYPES = ['blocks', 'relates_to'] as const;
 export type DependencyType = typeof DEPENDENCY_TYPES[number];
 
+export const DOCUMENT_REFERENCE_TYPES = ['goal', 'plan', 'requirements', 'design', 'reference', 'note'] as const;
+export type DocumentReferenceType = typeof DOCUMENT_REFERENCE_TYPES[number];
+
 export const ENTITY_TYPES = ['project', 'task', 'document'] as const;
 export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
 
@@ -34,9 +37,7 @@ export const TAG_CATEGORIES: Record<string, readonly TagName[]> = {
 export interface Project {
   id: string;
   title: string;
-  goal: string | null;
-  requirements: string | null;
-  design: string | null;
+  summary: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -45,10 +46,7 @@ export interface Task {
   id: string;
   project_id: string;
   title: string;
-  plan: string | null;
-  description: string | null;
-  implementation: string | null;
-  acceptance_criteria: string | null;
+  summary: string | null;
   group_key: string | null;
   status: TaskStatus;
   effort: EffortLevel | null;
@@ -59,14 +57,19 @@ export interface Task {
   updated_at: string;
 }
 
+export interface DocumentReference {
+  entity_type: EntityType;
+  entity_id: string;
+  document_id: string;
+  type: DocumentReferenceType;
+}
+
 // -- Summary types (projections for list responses) -----------------------
 
 export interface ProjectSummary {
   id: string;
   title: string;
-  has_goal: boolean;
-  has_requirements: boolean;
-  has_design: boolean;
+  summary: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -75,16 +78,13 @@ export interface TaskSummary {
   id: string;
   project_id: string;
   title: string;
+  summary: string | null;
   status: TaskStatus;
   effort: EffortLevel | null;
   impact: ImpactLevel | null;
   category: TaskCategory | null;
   group_key: string | null;
   is_blocked: boolean;
-  has_plan: boolean;
-  has_description: boolean;
-  has_implementation: boolean;
-  has_acceptance_criteria: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -101,19 +101,16 @@ export interface GraphTaskSummary {
 
 export function toProjectSummary(p: Project): ProjectSummary {
   return {
-    id: p.id, title: p.title,
-    has_goal: p.goal != null, has_requirements: p.requirements != null, has_design: p.design != null,
+    id: p.id, title: p.title, summary: p.summary,
     created_at: p.created_at, updated_at: p.updated_at,
   };
 }
 
 export function toTaskSummary(t: Task): TaskSummary {
   return {
-    id: t.id, project_id: t.project_id, title: t.title, status: t.status,
-    effort: t.effort, impact: t.impact, category: t.category, group_key: t.group_key,
-    is_blocked: t.is_blocked ?? false,
-    has_plan: t.plan != null, has_description: t.description != null,
-    has_implementation: t.implementation != null, has_acceptance_criteria: t.acceptance_criteria != null,
+    id: t.id, project_id: t.project_id, title: t.title, summary: t.summary,
+    status: t.status, effort: t.effort, impact: t.impact, category: t.category,
+    group_key: t.group_key, is_blocked: t.is_blocked ?? false,
     created_at: t.created_at, updated_at: t.updated_at,
   };
 }
@@ -137,6 +134,12 @@ export interface DocumentSummary {
   tags: TagName[];
   created_at: string;
   updated_at: string;
+}
+
+export interface DocumentReferenceSummary {
+  document_id: string;
+  document_title: string;
+  type: DocumentReferenceType;
 }
 
 export function toDocumentSummary(doc: Document, tags: TagName[] = []): DocumentSummary {
