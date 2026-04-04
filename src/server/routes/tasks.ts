@@ -44,6 +44,13 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
     return c.json(tasks, 201);
   });
 
+  // GET /api/tasks/status-counts
+  app.get("/status-counts", (c) => {
+    const raw = c.req.query("project_ids") ?? "";
+    const projectIds = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    return c.json(service.statusCounts(projectIds));
+  });
+
   // GET /api/tasks/:id/dependencies
   app.get("/:id/dependencies", (c) => {
     if (!depService) return c.json({ error: "dependency service not available" }, 500);

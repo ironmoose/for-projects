@@ -171,6 +171,11 @@ export async function removeDependencyBothDirections(
   );
 }
 
+export async function fetchTaskStatusCounts(projectIds: string[]): Promise<Record<string, { total: number; counts: Record<string, number> }>> {
+  const res = await apiFetch(`/api/tasks/status-counts${qs({ project_ids: projectIds.join(",") })}`);
+  return res.json();
+}
+
 export async function deleteTasks(ids: string[]): Promise<void> {
   await apiFetch("/api/tasks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }

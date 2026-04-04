@@ -26,6 +26,7 @@ export interface ITaskService {
   get(id: string): Task;
   create(inputs: CreateTaskInput[]): Task[];
   update(inputs: UpdateTaskInput[]): Task[];
+  statusCounts(projectIds: string[]): Record<string, { total: number; counts: Record<string, number> }>;
   remove(ids: string[]): void;
 }
 
