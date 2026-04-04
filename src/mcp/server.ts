@@ -207,7 +207,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     },
     ({ project_id, status }) => handle(() => {
       const { edges, blocked_task_ids } = taskDependencyService.getGraph(project_id, status);
-      const { data: tasks } = taskService.list({ project_id, status, limit: 200 });
+      const tasks = taskService.listGraphSummaries(project_id, status);
       const blockedSet = new Set(blocked_task_ids);
       return {
         tasks: tasks.map((t) => ({

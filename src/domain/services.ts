@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -23,6 +23,7 @@ export interface IProjectService {
 
 export interface ITaskService {
   list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary>;
+  listGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[];
   get(id: string): Task;
   create(inputs: CreateTaskInput[]): Task[];
   update(inputs: UpdateTaskInput[]): Task[];

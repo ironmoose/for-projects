@@ -37,7 +37,7 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
     const rawStatus = c.req.query("status");
     const status = rawStatus ? rawStatus.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
     const { edges, blocked_task_ids } = depService.getGraph(projectId, status);
-    const { data: tasks } = taskService.list({ project_id: projectId, status, limit: 200 });
+    const tasks = taskService.listGraphSummaries(projectId, status);
     return c.json({
       tasks: tasks.map((t) => ({ id: t.id, title: t.title, status: t.status })),
       edges,

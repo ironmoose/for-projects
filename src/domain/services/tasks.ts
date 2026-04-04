@@ -1,4 +1,4 @@
-import { type Task, type TaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
+import { type Task, type TaskSummary, type GraphTaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
 import type { ITaskService, ITaskDependencyService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -58,6 +58,10 @@ export class TaskService implements ITaskService {
     }
 
     return { data, total };
+  }
+
+  listGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[] {
+    return this.taskRepo.findGraphSummaries(projectId, status);
   }
 
   get(id: string): Task & { is_blocked?: boolean } {

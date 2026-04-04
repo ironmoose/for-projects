@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Task, TaskSummary, TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from "../entities";
+import type { Task, TaskSummary, GraphTaskSummary, TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from "../entities";
 
 export interface TaskRow {
   id: string;
@@ -102,6 +102,19 @@ export class TaskRepository {
       has_acceptance_criteria: !!r.has_acceptance_criteria,
       is_blocked: !!r.is_blocked,
     })) as TaskSummary[];
+  }
+
+  /** Lightweight query for dependency graph -- no TEXT columns, no LIMIT. */
+  findGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[] {
+    if (status && status.length > 0) {
+      const placeholders = status.map(() => "?").join(", ");
+      return this.db
+        .query(`SELECT id, title, status, group_key FROM tasks WHERE project_id = ? AND status IN (${placeholders}) ORDER BY created_at ASC`)
+        .all(projectId, ...status) as GraphTaskSummary[];
+    }
+    return this.db
+      .query("SELECT id, title, status, group_key FROM tasks WHERE project_id = ? ORDER BY created_at ASC")
+      .all(projectId) as GraphTaskSummary[];
   }
 
   count(filter?: TaskFilter): number {

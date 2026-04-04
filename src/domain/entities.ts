@@ -89,6 +89,14 @@ export interface TaskSummary {
   updated_at: string;
 }
 
+/** Lightweight projection for dependency graph -- no TEXT columns. */
+export interface GraphTaskSummary {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  group_key: string | null;
+}
+
 // -- Summary mappers -----------------------------------------------------
 
 export function toProjectSummary(p: Project): ProjectSummary {
