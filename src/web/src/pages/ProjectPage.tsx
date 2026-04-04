@@ -35,6 +35,8 @@ import { useWindowWidth } from "../hooks/useWindowWidth";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useDependencyGraph } from "../hooks/useDependencyGraph";
+import { useEventSubscription } from "../hooks/useEventSubscription";
+import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchTask, updateTasks, fetchDocuments, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
 import type { TaskDependencies, DependencyDetail } from "../api";
@@ -868,27 +870,63 @@ interface DocumentPickerOverlayProps {
   onClose: () => void;
 }
 
+const DOC_PICKER_PAGE_SIZE = 50;
+
 function DocumentPickerOverlay({ linkedDocIds, onSubmit, onClose }: DocumentPickerOverlayProps) {
   const { theme } = useTheme();
   const [allDocs, setAllDocs] = useState<DocumentSummary[]>([]);
+  const [totalDocs, setTotalDocs] = useState(0);
   const [loadingDocs, setLoadingDocs] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set(linkedDocIds));
   const [titleSearch, setTitleSearch] = useState("");
+  const [debouncedTitle, setDebouncedTitle] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Debounce title search input (300ms)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedTitle(titleSearch);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [titleSearch]);
+
+  // Fetch documents server-side with title filter
   useEffect(() => {
     let cancelled = false;
     setLoadingDocs(true);
-    fetchDocuments({ limit: 200 })
-      .then((res) => { if (!cancelled) setAllDocs(res.data); })
+    const params: { limit: number; title?: string } = { limit: DOC_PICKER_PAGE_SIZE };
+    if (debouncedTitle.trim()) params.title = debouncedTitle.trim();
+    fetchDocuments(params)
+      .then((res) => {
+        if (cancelled) return;
+        setAllDocs(res.data);
+        setTotalDocs(res.total);
+      })
       .catch(() => { /* toast handled by caller context */ })
       .finally(() => { if (!cancelled) setLoadingDocs(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [debouncedTitle]);
 
-  const filtered = titleSearch
-    ? allDocs.filter((d) => d.title.toLowerCase().includes(titleSearch.toLowerCase()))
-    : allDocs;
+  function handleLoadMore() {
+    setLoadingMore(true);
+    const params: { limit: number; offset: number; title?: string } = {
+      limit: DOC_PICKER_PAGE_SIZE,
+      offset: allDocs.length,
+    };
+    if (debouncedTitle.trim()) params.title = debouncedTitle.trim();
+    fetchDocuments(params)
+      .then((res) => {
+        setAllDocs((prev) => [...prev, ...res.data]);
+        setTotalDocs(res.total);
+      })
+      .catch(() => { /* toast handled by caller context */ })
+      .finally(() => setLoadingMore(false));
+  }
+
+  const filtered = allDocs;
 
   function toggleDoc(id: string) {
     setSelected((prev) => {
@@ -954,38 +992,51 @@ function DocumentPickerOverlay({ linkedDocIds, onSubmit, onClose }: DocumentPick
             {allDocs.length === 0 ? "No documents exist yet." : "No documents match the search."}
           </div>
         ) : (
-          filtered.map((doc) => (
-            <label
-              key={doc.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: theme.spacing.sm,
-                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                cursor: "pointer",
-                borderBottom: `1px solid ${theme.color.borderSubtle}`,
-                fontSize: theme.font.size.sm,
-                color: theme.color.text,
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={selected.has(doc.id)}
-                onChange={() => toggleDoc(doc.id)}
-                style={{ flexShrink: 0 }}
-              />
-              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {doc.title}
-              </span>
-              {doc.tags.length > 0 && (
-                <span style={{ display: "flex", gap: theme.spacing.xs, flexShrink: 0 }}>
-                  {doc.tags.map((tag) => (
-                    <TagChip key={tag} name={tag} />
-                  ))}
+          <>
+            {filtered.map((doc) => (
+              <label
+                key={doc.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: theme.spacing.sm,
+                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                  cursor: "pointer",
+                  borderBottom: `1px solid ${theme.color.borderSubtle}`,
+                  fontSize: theme.font.size.sm,
+                  color: theme.color.text,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.has(doc.id)}
+                  onChange={() => toggleDoc(doc.id)}
+                  style={{ flexShrink: 0 }}
+                />
+                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {doc.title}
                 </span>
-              )}
-            </label>
-          ))
+                {doc.tags.length > 0 && (
+                  <span style={{ display: "flex", gap: theme.spacing.xs, flexShrink: 0 }}>
+                    {doc.tags.map((tag) => (
+                      <TagChip key={tag} name={tag} />
+                    ))}
+                  </span>
+                )}
+              </label>
+            ))}
+            {allDocs.length < totalDocs && (
+              <div style={{ padding: theme.spacing.sm, textAlign: "center" }}>
+                <Button
+                  variant="ghost"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? "Loading..." : `Load more (${allDocs.length} of ${totalDocs})`}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </CreateEntityOverlay>
@@ -1021,21 +1072,28 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
-  // Fetch all group keys for the group filter dropdown (unfiltered by group_key)
-  const [groupKeys, setGroupKeys] = useState<string[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    fetchTasks({ project_id: projectId, limit: 200 }).then((body) => {
-      if (cancelled) return;
-      const keys = [...new Set(
-        body.data
-          .map((t) => t.group_key)
-          .filter((k): k is string => k != null && k !== ""),
-      )].sort();
-      setGroupKeys(keys);
-    }).catch(() => { /* toast handled by useProjectTasks */ });
-    return () => { cancelled = true; };
-  }, [projectId, tasks]); // re-derive when tasks change (WebSocket-driven refetch updates tasks)
+  // Accumulate group keys from paginated tasks — grows monotonically, resets on project change
+  const groupKeySetRef = useRef<Set<string>>(new Set());
+  const prevProjectIdRef = useRef(projectId);
+
+  // Reset accumulated keys when navigating to a different project
+  if (prevProjectIdRef.current !== projectId) {
+    groupKeySetRef.current = new Set();
+    prevProjectIdRef.current = projectId;
+  }
+
+  // Add any new group keys from the current page of tasks
+  for (const t of tasks) {
+    if (t.group_key != null && t.group_key !== "") {
+      groupKeySetRef.current.add(t.group_key);
+    }
+  }
+
+  const groupKeys = useMemo(
+    () => [...groupKeySetRef.current].sort(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tasks, projectId],
+  );
 
   const taskTitles = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
 
@@ -1050,15 +1108,33 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   useShortcut("n", "New task", () => setShowCreateTask(true), "Project");
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { subscribeEvents } = useEventSubscription();
+  const selectedTaskIdRef = useRef(selectedTaskId);
+  selectedTaskIdRef.current = selectedTaskId;
+
+  const loadSelectedTask = useCallback((taskId: string) => {
+    let cancelled = false;
+    fetchTask(taskId)
+      .then((t) => { if (!cancelled && selectedTaskIdRef.current === taskId) setSelectedTask(t); })
+      .catch(() => { if (!cancelled && selectedTaskIdRef.current === taskId) setSelectedTask(null); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const throttledLoadSelected = useThrottledCallback(() => {
+    const id = selectedTaskIdRef.current;
+    if (id) loadSelectedTask(id);
+  }, 200);
 
   useEffect(() => {
     if (!selectedTaskId) { setSelectedTask(null); return; }
-    let cancelled = false;
-    fetchTask(selectedTaskId)
-      .then((t) => { if (!cancelled) setSelectedTask(t); })
-      .catch(() => { if (!cancelled) setSelectedTask(null); });
-    return () => { cancelled = true; };
-  }, [selectedTaskId, tasks]);
+    const cancelFetch = loadSelectedTask(selectedTaskId);
+    const unsubscribe = subscribeEvents((event) => {
+      if (event.entity_type === "task" && selectedTaskIdRef.current) {
+        throttledLoadSelected();
+      }
+    });
+    return () => { cancelFetch(); unsubscribe(); };
+  }, [selectedTaskId, subscribeEvents, loadSelectedTask, throttledLoadSelected]);
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
 
