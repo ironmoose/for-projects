@@ -261,8 +261,9 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_documents",
     {
-      description: "List document summaries and tags, optionally filtered by tag, title, project_id, or favorite status. Returns { data, total } where data contains document summaries (id, title, summary, has_content, favorite, tags, timestamps). Valid tag values — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility. Documents marked as favorite are high-value references — when setting up a new project, use `list_documents` with `favorite: true` to find documents the user wants auto-attached to relevant projects.",
+      description: "List document summaries and tags, optionally filtered by tag, title, search, project_id, or favorite status. Use `search` to search across both title and summary fields (OR logic, case-insensitive, partial match). Returns { data, total } where data contains document summaries (id, title, summary, has_content, favorite, tags, timestamps). Valid tag values — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility. Documents marked as favorite are high-value references — when setting up a new project, use `list_documents` with `favorite: true` to find documents the user wants auto-attached to relevant projects.",
       inputSchema: {
+        search: z.string().max(500).optional(),
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
         project_id: z.string().max(26).optional(),
@@ -271,7 +272,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ tag, title, project_id, favorite, limit, offset }) => handle(() => documentService.list({ tag, title, project_id, favorite, limit, offset }))
+    ({ search, tag, title, project_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, project_id, favorite, limit, offset }))
   );
 
   server.registerTool(

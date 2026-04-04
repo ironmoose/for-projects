@@ -16,10 +16,12 @@ export function documentRoutes(service: IDocumentService): Hono {
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const tag = c.req.query("tag");
     const title = c.req.query("title");
+    const search = c.req.query("search");
     const project_id = c.req.query("project_id");
     const rawFav = c.req.query("favorite");
     const favorite = rawFav === "true" ? true : rawFav === "false" ? false : undefined;
-    const filter: { tag?: string; title?: string; favorite?: boolean; project_id?: string; limit: number; offset: number } = { limit, offset };
+    const filter: { search?: string; tag?: string; title?: string; favorite?: boolean; project_id?: string; limit: number; offset: number } = { limit, offset };
+    if (search) filter.search = search;
     if (tag) filter.tag = tag;
     if (title) filter.title = title;
     if (favorite !== undefined) filter.favorite = favorite;

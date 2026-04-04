@@ -634,6 +634,33 @@ describe("list_documents with title filter", () => {
   });
 });
 
+describe("list_documents with search filter", () => {
+  it("search matches by title", async () => {
+    await callTool("create_document", { items: [{ title: "McpSearchTitleMatch111" }] });
+    const result = parseResult(await callTool("list_documents", { search: "McpSearchTitleMatch111" }));
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((d: { title: string }) => d.title === "McpSearchTitleMatch111")).toBe(true);
+  });
+
+  it("search matches by summary", async () => {
+    await callTool("create_document", { items: [{ title: "McpSearchSummaryDoc222", summary: "mcp_unique_summary_needle" }] });
+    const result = parseResult(await callTool("list_documents", { search: "mcp_unique_summary_needle" }));
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data.some((d: { title: string }) => d.title === "McpSearchSummaryDoc222")).toBe(true);
+  });
+
+  it("search returns empty for no match", async () => {
+    const result = parseResult(await callTool("list_documents", { search: "zzz_mcp_no_match_888" }));
+    expect(result.data.length).toBe(0);
+  });
+
+  it("search with null summary still finds by title", async () => {
+    await callTool("create_document", { items: [{ title: "McpNullSumSearch333" }] });
+    const result = parseResult(await callTool("list_documents", { search: "McpNullSumSearch333" }));
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe("update_document with tags=[] clears tags", () => {
   it("clears all tags when updated with empty array", async () => {
     const [created] = parseResult(

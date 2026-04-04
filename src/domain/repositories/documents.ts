@@ -24,13 +24,17 @@ export class DocumentRepository {
     return row ? toDocument(row) : null;
   }
 
-  findMany(filter?: { title?: string; tag?: string; favorite?: boolean; doc_ids?: string[]; limit?: number; offset?: number }): DocumentSummary[] {
+  findMany(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; doc_ids?: string[]; limit?: number; offset?: number }): DocumentSummary[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
     const params: (string | number)[] = [];
     let join = "";
 
+    if (filter?.search) {
+      conditions.push("(d.title LIKE ? OR d.summary LIKE ?)");
+      params.push(`%${filter.search}%`, `%${filter.search}%`);
+    }
     if (filter?.title) {
       conditions.push("d.title LIKE ?");
       params.push(`%${filter.title}%`);
@@ -59,11 +63,15 @@ export class DocumentRepository {
     return rows.map((r) => ({ ...r, has_content: !!r.has_content, favorite: !!r.favorite, tags: [] as string[] })) as DocumentSummary[];
   }
 
-  count(filter?: { title?: string; tag?: string; favorite?: boolean; doc_ids?: string[] }): number {
+  count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; doc_ids?: string[] }): number {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
     let join = "";
 
+    if (filter?.search) {
+      conditions.push("(d.title LIKE ? OR d.summary LIKE ?)");
+      params.push(`%${filter.search}%`, `%${filter.search}%`);
+    }
     if (filter?.title) {
       conditions.push("d.title LIKE ?");
       params.push(`%${filter.title}%`);
