@@ -219,8 +219,8 @@ export interface DependencyGraphResponse {
   blocked_task_ids: string[];
 }
 
-export async function fetchDependencyGraph(projectId: string): Promise<DependencyGraphResponse> {
-  const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/dependency-graph`);
+export async function fetchDependencyGraph(projectId: string, status?: string): Promise<DependencyGraphResponse> {
+  const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/dependency-graph${qs({ status })}`);
   return res.json();
 }
 

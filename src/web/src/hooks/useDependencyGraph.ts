@@ -12,7 +12,7 @@ export interface DependencyGraph {
   blockedTaskIds: string[];
 }
 
-export function useDependencyGraph(projectId: string) {
+export function useDependencyGraph(projectId: string, statusFilter?: string) {
   const [graph, setGraph] = useState<DependencyGraph | null>(null);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
@@ -22,7 +22,7 @@ export function useDependencyGraph(projectId: string) {
 
   const load = useCallback(async () => {
     try {
-      const data: DependencyGraphResponse = await fetchDependencyGraph(projectId);
+      const data: DependencyGraphResponse = await fetchDependencyGraph(projectId, statusFilter || undefined);
       setGraph({
         tasks: data.tasks,
         edges: data.edges,
@@ -38,7 +38,7 @@ export function useDependencyGraph(projectId: string) {
     } finally {
       setLoading(false);
     }
-  }, [projectId, showToast]);
+  }, [projectId, statusFilter, showToast]);
 
   loadRef.current = load;
 

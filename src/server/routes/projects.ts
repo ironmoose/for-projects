@@ -34,8 +34,9 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
   app.get("/:id/dependency-graph", (c) => {
     if (!depService || !taskService) return c.json({ error: "dependency service not available" }, 500);
     const projectId = c.req.param("id");
-    const { edges, blocked_task_ids } = depService.getGraph(projectId);
-    const { data: tasks } = taskService.list({ project_id: projectId, limit: 200 });
+    const status = c.req.query("status");
+    const { edges, blocked_task_ids } = depService.getGraph(projectId, status || undefined);
+    const { data: tasks } = taskService.list({ project_id: projectId, status: status || undefined, limit: 200 });
     return c.json({ tasks, edges, blocked_task_ids });
   });
 

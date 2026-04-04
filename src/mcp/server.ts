@@ -199,14 +199,15 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_dependency_graph",
     {
-      description: "Get the full dependency graph for a project. Returns all dependency edges and task metadata. Use this to understand task ordering, find bottlenecks, and plan execution sequences.",
+      description: "Get the dependency graph for a project. Returns dependency edges and task metadata. Optionally filter by status (comma-separated, e.g. \"todo,in_progress\") to see only tasks with matching statuses and edges between them. blocked_task_ids is always computed from the full graph regardless of status filter. Use this to understand task ordering, find bottlenecks, and plan execution sequences.",
       inputSchema: {
         project_id: z.string().max(26),
+        status: z.string().max(100).optional(),
       },
     },
-    ({ project_id }) => handle(() => {
-      const { edges, blocked_task_ids } = taskDependencyService.getGraph(project_id);
-      const { data: tasks } = taskService.list({ project_id, limit: 200 });
+    ({ project_id, status }) => handle(() => {
+      const { edges, blocked_task_ids } = taskDependencyService.getGraph(project_id, status);
+      const { data: tasks } = taskService.list({ project_id, status, limit: 200 });
       const blockedSet = new Set(blocked_task_ids);
       return {
         tasks: tasks.map((t) => ({
