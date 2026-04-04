@@ -176,7 +176,7 @@ describe("list_tasks", () => {
     expect(list.data.some((t: { title: string }) => t.title === "T1")).toBe(true);
   });
 
-  it("accepts comma-separated status filter", async () => {
+  it("accepts status filter as array", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Multi Status Proj" }] }));
     await callTool("create_task", { items: [
       { project_id: proj.id, title: "Todo Task", status: "todo" },
@@ -184,7 +184,7 @@ describe("list_tasks", () => {
       { project_id: proj.id, title: "Done Task", status: "done" },
     ] });
 
-    const list = parseResult(await callTool("list_tasks", { project_id: proj.id, status: "todo,in_progress" }));
+    const list = parseResult(await callTool("list_tasks", { project_id: proj.id, status: ["todo", "in_progress"] }));
     expect(list.data.length).toBe(2);
     const statuses = list.data.map((t: { status: string }) => t.status);
     expect(statuses).toContain("todo");

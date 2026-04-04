@@ -19,7 +19,7 @@ export class TaskService implements ITaskService {
   ) {}
 
 
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary> {
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary> {
     const blockedFilter = filter?.blocked;
     // Strip blocked from the filter before passing to repo
     const repoFilter = filter ? { ...filter } : undefined;

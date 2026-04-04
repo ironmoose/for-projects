@@ -77,11 +77,11 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tasks",
     {
-      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, category, and/or blocked. status accepts a single value or comma-separated values (e.g. \"in_progress,todo\"). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, is_blocked, timestamps). Use blocked=true to find tasks waiting on dependencies, blocked=false to find tasks ready to work on.",
+      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, category, and/or blocked. status accepts an array of status values (e.g. [\"in_progress\", \"todo\"]). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, is_blocked, timestamps). Use blocked=true to find tasks waiting on dependencies, blocked=false to find tasks ready to work on.",
       inputSchema: {
         project_id: z.string().max(26).optional(),
         group_key: z.string().max(32).optional(),
-        status: z.string().max(100).optional(),
+        status: z.array(z.enum([...TASK_STATUSES])).optional(),
         effort: z.enum([...EFFORT_LEVELS]).optional(),
         impact: z.enum([...IMPACT_LEVELS]).optional(),
         category: z.enum([...TASK_CATEGORIES]).optional(),
@@ -199,10 +199,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_dependency_graph",
     {
-      description: "Get the dependency graph for a project. Returns dependency edges and task metadata. Optionally filter by status (comma-separated, e.g. \"todo,in_progress\") to see only tasks with matching statuses and edges between them. blocked_task_ids is always computed from the full graph regardless of status filter. Use this to understand task ordering, find bottlenecks, and plan execution sequences.",
+      description: "Get the dependency graph for a project. Returns dependency edges and task metadata. Optionally filter by status (array of values, e.g. [\"todo\", \"in_progress\"]) to see only tasks with matching statuses and edges between them. blocked_task_ids is always computed from the full graph regardless of status filter. Use this to understand task ordering, find bottlenecks, and plan execution sequences.",
       inputSchema: {
         project_id: z.string().max(26),
-        status: z.string().max(100).optional(),
+        status: z.array(z.enum([...TASK_STATUSES])).optional(),
       },
     },
     ({ project_id, status }) => handle(() => {
@@ -236,7 +236,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ project_id }) => handle(() => {
-      const { data: todoTasks } = taskService.list({ project_id, status: "todo", limit: 200 });
+      const { data: todoTasks } = taskService.list({ project_id, status: ["todo"], limit: 200 });
       const { blocked_task_ids } = taskDependencyService.getGraph(project_id);
       const blockedIds = new Set(blocked_task_ids);
       const ready = todoTasks.filter((t) => !blockedIds.has(t.id));

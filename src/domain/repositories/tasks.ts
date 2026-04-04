@@ -19,7 +19,7 @@ export interface TaskRow {
   updated_at: string;
 }
 
-type TaskFilter = { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string };
+type TaskFilter = { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string };
 
 export class TaskRepository {
   constructor(private db: Database) {}
@@ -40,13 +40,12 @@ export class TaskRepository {
       conditions.push("group_key = ?");
       params.push(filter.group_key);
     }
-    if (filter?.status) {
-      const statuses = filter.status.split(",");
-      if (statuses.length === 1) {
-        conditions.push("status = ?"); params.push(statuses[0]);
+    if (filter?.status && filter.status.length > 0) {
+      if (filter.status.length === 1) {
+        conditions.push("status = ?"); params.push(filter.status[0]);
       } else {
-        conditions.push(`status IN (${statuses.map(() => "?").join(", ")})`);
-        params.push(...statuses);
+        conditions.push(`status IN (${filter.status.map(() => "?").join(", ")})`);
+        params.push(...filter.status);
       }
     }
     if (filter?.effort) {

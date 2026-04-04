@@ -17,13 +17,14 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const project_id = c.req.query("project_id");
     const group_key = c.req.query("group_key");
-    const status = c.req.query("status");
+    const rawStatus = c.req.query("status");
+    const status = rawStatus ? rawStatus.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
     const effort = c.req.query("effort");
     const impact = c.req.query("impact");
     const category = c.req.query("category");
     const title = c.req.query("title");
     const blockedParam = c.req.query("blocked");
-    const filter: { project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean; limit: number; offset: number } = { limit, offset };
+    const filter: { project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean; limit: number; offset: number } = { limit, offset };
     if (project_id) filter.project_id = project_id;
     if (group_key) filter.group_key = group_key;
     if (status) filter.status = status;

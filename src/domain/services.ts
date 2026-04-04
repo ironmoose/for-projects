@@ -22,7 +22,7 @@ export interface IProjectService {
 }
 
 export interface ITaskService {
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary>;
+  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary>;
   get(id: string): Task;
   create(inputs: CreateTaskInput[]): Task[];
   update(inputs: UpdateTaskInput[]): Task[];
@@ -34,7 +34,7 @@ export interface ITaskDependencyService {
   addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: string }[]): TaskDependency[];
   removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void;
   getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean };
-  getGraph(projectId: string, statusFilter?: string): { edges: TaskDependency[]; blocked_task_ids: string[] };
+  getGraph(projectId: string, statusFilter?: string[]): { edges: TaskDependency[]; blocked_task_ids: string[] };
 }
 
 export interface IDocumentService {
