@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import { useDocument } from "../../hooks/useDocument";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
@@ -21,8 +20,7 @@ interface DocumentReaderModalProps {
 }
 
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const { document, notFound, loading, updateDocument } = useDocument(documentId);
   const reduced = useReducedMotion();
 
@@ -108,10 +106,8 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
             flexDirection: "column",
             background: theme.color.surface,
             borderRadius: theme.radius.lg,
-            boxShadow: isSynth
-              ? `0 0 30px ${sg(19)}, 0 0 60px ${sg(9)}, 0 8px 40px rgba(0,0,0,0.5)`
-              : theme.shadow.lg,
-            border: `1px solid ${isSynth ? sg(27) : theme.color.borderSubtle}`,
+            boxShadow: theme.glow.animated ? theme.glow.shadowXl : theme.shadow.lg,
+            border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
             animation: reduced ? undefined : `fade-in-up 200ms ${theme.animation.easing.decelerate}`,
           }}
         >
@@ -233,7 +229,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                                 alignItems: "center",
                                 fontSize: theme.font.size.xs,
                                 color: selected
-                                  ? (isSynth ? "var(--synth-glow)" : theme.color.primary)
+                                  ? (theme.glow.accentColor !== theme.color.textMuted ? theme.glow.accentColor : theme.color.primary)
                                   : theme.color.textMuted,
                                 background: selected
                                   ? theme.color.surfaceContainerHigh
@@ -241,12 +237,12 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                                 borderRadius: theme.radius.full,
                                 padding: "2px 8px",
                                 border: `1px solid ${selected
-                                  ? (isSynth ? sg(27) : theme.color.primary)
+                                  ? (theme.glow.animated ? theme.glow.borderMedium : theme.color.primary)
                                   : theme.color.borderSubtle}`,
                                 cursor: "pointer",
                                 fontFamily: theme.font.body,
                                 transition: "all 0.15s",
-                                ...(selected && isSynth ? { boxShadow: `0 0 6px ${sg(14)}` } : {}),
+                                ...(selected && theme.glow.animated ? { boxShadow: `0 0 6px ${theme.glow.borderLight}` } : {}),
                               }}
                             >
                               {tag}

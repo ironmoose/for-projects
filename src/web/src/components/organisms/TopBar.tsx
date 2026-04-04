@@ -1,5 +1,4 @@
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 
 export interface NavItem {
   label: string;
@@ -61,15 +60,13 @@ export function TopBar({
   onNavigate,
   breadcrumb,
 }: TopBarProps) {
-  const { theme, themeName } = useTheme();
+  const { theme } = useTheme();
 
   injectTopBarStyles();
 
-  const isSynth = themeName === "synth";
-
   const cssVars = {
     "--topbar-text": theme.color.text,
-    "--topbar-primary": isSynth ? "var(--synth-glow)" : theme.color.primary,
+    "--topbar-primary": theme.glow.accentColor !== theme.color.textMuted ? theme.glow.accentColor : theme.color.primary,
   } as React.CSSProperties;
 
   return (
@@ -85,13 +82,11 @@ export function TopBar({
         height: 48,
         padding: `0 ${theme.spacing.xl}`,
         boxSizing: "border-box",
-        background: isSynth ? `${theme.color.surfaceContainer}dd` : `${theme.color.surfaceContainer}cc`,
+        background: theme.glow.animated ? `${theme.color.surfaceContainer}dd` : `${theme.color.surfaceContainer}cc`,
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        borderBottom: isSynth
-          ? `1px solid ${sg(27)}`
-          : `1px solid ${theme.color.borderSubtle}`,
-        ...(isSynth ? { boxShadow: `0 2px 20px ${sg(10)}, 0 1px 0 ${sg(20)}` } : {}),
+        borderBottom: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
+        boxShadow: theme.glow.animated ? `0 2px 20px ${theme.glow.borderSubtle}, 0 1px 0 ${theme.glow.borderMedium}` : "none",
         ...cssVars,
       }}
     >

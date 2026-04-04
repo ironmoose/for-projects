@@ -3,7 +3,6 @@ import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 import { PresenceCharm } from "../molecules/PresenceCharm";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import type { TaskSummary } from "../../types";
 import { TASK_STATUSES } from "../../types";
 import type { TaskStatus } from "../../types";
@@ -39,8 +38,7 @@ interface TaskTableProps {
 }
 
 export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, onUpdateTaskStatus }: TaskTableProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [statusDropdownTaskId, setStatusDropdownTaskId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -140,11 +138,9 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
                 gap: 4,
                 padding: theme.spacing.sm,
                 background: theme.color.surfaceContainer,
-                border: `1px solid ${isSynth ? sg(27) : theme.color.border}`,
+                border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
                 borderRadius: theme.radius.md,
-                boxShadow: isSynth
-                  ? `0 0 12px ${sg(9)}`
-                  : theme.shadow.md,
+                boxShadow: theme.glow.animated ? theme.glow.shadowLg : theme.shadow.md,
                 minWidth: 120,
               }}
             >
@@ -255,12 +251,12 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             fontWeight: 700,
             letterSpacing: theme.font.letterSpacing.wide,
             textTransform: "uppercase",
-            color: isSynth ? "var(--synth-glow)" : theme.color.textFaint,
+            color: theme.glow.animated ? theme.glow.accentColor : theme.color.textFaint,
             maxWidth: 300,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            ...(isSynth ? { textShadow: `0 0 6px ${sg(20)}` } : {}),
+            textShadow: theme.glow.animated ? `0 0 6px ${theme.glow.borderMedium}` : "none",
           }}
         >
           {groupKey}
@@ -314,9 +310,9 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
       style={{
         overflowX: "auto",
         borderRadius: theme.radius.lg,
-        border: `1px solid ${isSynth ? sg(20) : theme.color.border}`,
+        border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
         background: theme.color.surface,
-        ...(isSynth ? { boxShadow: `0 0 12px ${sg(7)}` } : {}),
+        boxShadow: theme.glow.animated ? theme.glow.shadowLg : "none",
       }}
     >
       <table
@@ -337,14 +333,12 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
                   textAlign: "left",
                   fontWeight: 600,
                   fontSize: theme.font.size.xxs,
-                  color: isSynth ? "var(--synth-glow)" : theme.color.textMuted,
+                  color: theme.glow.animated ? theme.glow.accentColor : theme.color.textMuted,
                   textTransform: "uppercase",
                   letterSpacing: theme.font.letterSpacing.wide,
-                  borderBottom: isSynth
-                    ? `2px solid ${sg(27)}`
-                    : `2px solid ${theme.color.border}`,
+                  borderBottom: `2px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
                   whiteSpace: "nowrap",
-                  ...(isSynth ? { textShadow: `0 0 8px ${sg(27)}` } : {}),
+                  textShadow: theme.glow.textShadow,
                 }}
               >
                 {h}

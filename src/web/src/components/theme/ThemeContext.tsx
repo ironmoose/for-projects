@@ -50,12 +50,12 @@ export function ThemeProvider({ children, forcedTheme, isolated }: ThemeProvider
 
     // Toggle data-synth on <html> for CSS glow cycling
     const root = document.documentElement;
-    if (effectiveName === "synth") {
+    if (t.glow.animated) {
       root.setAttribute("data-synth", "");
     } else {
       root.removeAttribute("data-synth");
     }
-  }, [t, isolated, effectiveName]);
+  }, [t, isolated]);
 
   return (
     <ThemeContext.Provider value={{ theme: t, themeName: effectiveName, setTheme }}>

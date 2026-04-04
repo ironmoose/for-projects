@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import { StatusDot } from "../atoms/StatusDot";
 import { IconButton } from "../atoms/IconButton";
 import type { TaskStatus } from "../../types";
@@ -22,8 +21,7 @@ const STATUS_COLORS: Record<TaskStatus, (theme: ReturnType<typeof useTheme>["the
 };
 
 export function DependencyChip({ taskTitle, taskStatus, onRemove, onClick }: DependencyChipProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
 
   const statusColor = STATUS_COLORS[taskStatus]?.(theme) ?? theme.color.textMuted;
@@ -49,12 +47,8 @@ export function DependencyChip({ taskTitle, taskStatus, onRemove, onClick }: Dep
         cursor: "pointer",
         transition: `background ${theme.motion.fast} ${theme.motion.easing}`,
         maxWidth: 220,
-        ...(isSynth ? {
-          border: `1px solid ${sg(20)}`,
-          boxShadow: `0 0 4px ${sg(9)}`,
-        } : {
-          border: `1px solid ${theme.color.borderSubtle}`,
-        }),
+        border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
+        boxShadow: theme.glow.shadowSm,
       }}
     >
       <StatusDot color={statusColor} size={7} />

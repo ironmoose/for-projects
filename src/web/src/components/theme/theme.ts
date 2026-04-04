@@ -1,3 +1,5 @@
+import { sg } from "./synthGlow";
+
 export interface Theme {
   name: string;
   label: string;
@@ -44,6 +46,32 @@ export interface Theme {
     sm: string;
     md: string;
     lg: string;
+  };
+  glow: {
+    // Whether the glow CSS animation (--synth-glow cycling) is active
+    animated: boolean;
+    // Accent color for glow-aware headings/labels
+    accentColor: string;
+    // Border colors at various intensities
+    borderSubtle: string;
+    borderLight: string;
+    borderMedium: string;
+    borderStrong: string;
+    // Box shadows at various sizes
+    shadowSm: string;
+    shadowMd: string;
+    shadowLg: string;
+    shadowXl: string;
+    // Text shadow for glow headings
+    textShadow: string;
+    // Focus ring styles for inputs
+    focusRing: string;
+    focusRingSubtle: string;
+    // Hover intensified glow (buttons, cards)
+    hoverShadow: string;
+    // Danger-specific glow for confirm dialogs
+    dangerShadow: string;
+    dangerBorder: string;
   };
   radius: {
     sm: number;
@@ -202,6 +230,28 @@ const shared: Pick<Theme, "radius" | "spacing" | "font" | "motion" | "animation"
   },
 };
 
+/** Glow tokens for non-glow themes: everything is transparent/none/fallback. */
+function noGlow(color: { borderSubtle: string; border: string; primary: string; textMuted: string; danger: string }): Theme["glow"] {
+  return {
+    animated: false,
+    accentColor: color.textMuted,
+    borderSubtle: color.borderSubtle,
+    borderLight: color.borderSubtle,
+    borderMedium: color.border,
+    borderStrong: color.border,
+    shadowSm: "none",
+    shadowMd: "none",
+    shadowLg: "none",
+    shadowXl: "none",
+    textShadow: "none",
+    focusRing: "none",
+    focusRingSubtle: "none",
+    hoverShadow: "none",
+    dangerShadow: "none",
+    dangerBorder: `${color.danger}44`,
+  };
+}
+
 export const themes: Record<string, Theme> = {
   // Dark teal — derived from the Stitch MD3 palette, inverted to dark
   deepTeal: {
@@ -240,6 +290,7 @@ export const themes: Record<string, Theme> = {
       md: "0 4px 20px rgba(0,0,0,0.3)",
       lg: "0 8px 40px rgba(0,0,0,0.4)",
     },
+    glow: noGlow({ borderSubtle: "#162d33", border: "#1e383f", primary: "#8bd1e8", textMuted: "#8ba8b2", danger: "#ffb4ab" }),
   },
 
   // Warm ember — dark amber/orange
@@ -279,6 +330,7 @@ export const themes: Record<string, Theme> = {
       md: "0 4px 20px rgba(0,0,0,0.35)",
       lg: "0 8px 40px rgba(0,0,0,0.45)",
     },
+    glow: noGlow({ borderSubtle: "#241c18", border: "#2e2520", primary: "#e87040", textMuted: "#a89280", danger: "#ffb4ab" }),
   },
 
   // Cool nord — arctic dark
@@ -318,6 +370,7 @@ export const themes: Record<string, Theme> = {
       md: "0 4px 20px rgba(0,0,0,0.25)",
       lg: "0 8px 40px rgba(0,0,0,0.35)",
     },
+    glow: noGlow({ borderSubtle: "#353c4a", border: "#3d4556", primary: "#88c0d0", textMuted: "#8892a4", danger: "#bf616a" }),
   },
 
   // Synthwave — neon-soaked retrowave
@@ -356,6 +409,24 @@ export const themes: Record<string, Theme> = {
       sm: "0 0 8px rgba(0, 240, 255, 0.25), 0 1px 4px rgba(0, 0, 0, 0.4)",
       md: "0 0 20px rgba(0, 240, 255, 0.20), 0 0 40px rgba(255, 45, 149, 0.10), 0 4px 20px rgba(0, 0, 0, 0.4)",
       lg: "0 0 30px rgba(0, 240, 255, 0.25), 0 0 60px rgba(255, 45, 149, 0.15), 0 8px 40px rgba(0, 0, 0, 0.5)",
+    },
+    glow: {
+      animated: true,
+      accentColor: "var(--synth-glow)",
+      borderSubtle: sg(10),
+      borderLight: sg(16),
+      borderMedium: sg(27),
+      borderStrong: sg(53),
+      shadowSm: `0 0 4px ${sg(6)}`,
+      shadowMd: `0 0 8px ${sg(8)}`,
+      shadowLg: `0 0 12px ${sg(9)}`,
+      shadowXl: `0 0 30px ${sg(19)}, 0 0 60px ${sg(9)}, 0 8px 40px rgba(0,0,0,0.5)`,
+      textShadow: `0 0 8px ${sg(27)}`,
+      focusRing: `0 0 12px ${sg(19)}, inset 0 0 6px ${sg(5)}`,
+      focusRingSubtle: `0 0 4px ${sg(6)}`,
+      hoverShadow: `0 0 15px ${sg(15)}, 0 0 30px ${sg(6)}`,
+      dangerShadow: `0 0 25px #ff408025, 0 0 50px #ff2d9510, 0 8px 40px rgba(0,0,0,0.5)`,
+      dangerBorder: "#ff408044",
     },
   },
 };

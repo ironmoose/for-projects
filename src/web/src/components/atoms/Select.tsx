@@ -1,6 +1,5 @@
 import { type SelectHTMLAttributes, useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 
 interface SelectOption {
   value: string;
@@ -12,16 +11,13 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export function Select({ options, style, onFocus, onBlur, ...props }: SelectProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [focused, setFocused] = useState(false);
 
-  const synthStyles: React.CSSProperties =
-    isSynth && focused
-      ? { borderColor: sg(53), boxShadow: `0 0 12px ${sg(19)}` }
-      : isSynth
-        ? { borderColor: sg(14), boxShadow: `0 0 4px ${sg(6)}` }
-        : {};
+  const glowStyles: React.CSSProperties = {
+    borderColor: focused ? theme.glow.borderStrong : theme.glow.borderLight,
+    boxShadow: focused ? theme.glow.focusRing : theme.glow.focusRingSubtle,
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
@@ -38,7 +34,7 @@ export function Select({ options, style, onFocus, onBlur, ...props }: SelectProp
           color: theme.color.text,
           cursor: "pointer",
           transition: "border-color 0.15s, box-shadow 0.2s",
-          ...synthStyles,
+          ...glowStyles,
           ...style,
         }}
         {...props}

@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import { Button } from "../atoms/Button";
 import { Overlay } from "../atoms/Overlay";
 import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
@@ -24,8 +23,7 @@ export function CreateEntityOverlay({
   submitLabel = "Create",
   children,
 }: CreateEntityOverlayProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
 
   // Suppress keyboard shortcuts while this overlay is open
   useShortcutSuppression();
@@ -58,10 +56,8 @@ export function CreateEntityOverlay({
             pointerEvents: "auto",
             background: theme.color.surfaceContainer,
             borderRadius: theme.radius.lg,
-            boxShadow: isSynth
-              ? `0 0 30px ${sg(19)}, 0 0 60px ${sg(9)}, 0 8px 40px rgba(0,0,0,0.5)`
-              : theme.shadow.lg,
-            border: `1px solid ${isSynth ? sg(27) : theme.color.borderSubtle}`,
+            boxShadow: theme.glow.animated ? theme.glow.shadowXl : theme.shadow.lg,
+            border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
             width: "100%",
             maxWidth: 480,
             display: "flex",
