@@ -44,12 +44,10 @@ export class TaskService implements ITaskService {
     if (this.depRepo) {
       const blockedIdCache = new Map<string, Set<string>>();
       const enriched = data.map((s) => {
-        const task = this.taskRepo.findById(s.id);
-        if (!task) return { ...s, is_blocked: false };
-        if (!blockedIdCache.has(task.project_id)) {
-          blockedIdCache.set(task.project_id, new Set(this.depRepo!.getBlockedTaskIds(task.project_id)));
+        if (!blockedIdCache.has(s.project_id)) {
+          blockedIdCache.set(s.project_id, new Set(this.depRepo!.getBlockedTaskIds(s.project_id)));
         }
-        return { ...s, is_blocked: blockedIdCache.get(task.project_id)!.has(s.id) };
+        return { ...s, is_blocked: blockedIdCache.get(s.project_id)!.has(s.id) };
       });
 
       if (blockedFilter !== undefined) {
