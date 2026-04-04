@@ -1,0 +1,2 @@
+ALTER TABLE projects ADD COLUMN summary TEXT;
+ALTER TABLE tasks ADD COLUMN summary TEXT;
