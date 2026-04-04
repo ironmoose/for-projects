@@ -58,11 +58,11 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  async function create(input: { title: string; content?: string; tags?: string[]; favorite?: boolean }) {
+  async function create(input: { title: string; summary?: string; content?: string; tags?: string[]; favorite?: boolean }) {
     await createDocuments([input]);
   }
 
-  async function update(id: string, input: { title?: string; content?: string | null; tags?: string[]; favorite?: boolean }) {
+  async function update(id: string, input: { title?: string; summary?: string | null; content?: string | null; tags?: string[]; favorite?: boolean }) {
     await updateDocuments([{ id, ...input }]);
   }
 

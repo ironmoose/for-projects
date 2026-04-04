@@ -8,13 +8,14 @@ import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import type { TagName } from "../../types";
 
 interface CreateDocumentOverlayProps {
-  onCreated: (fields: { title: string; content?: string; tags?: string[] }) => Promise<void>;
+  onCreated: (fields: { title: string; summary?: string; content?: string; tags?: string[] }) => Promise<void>;
   onClose: () => void;
 }
 
 export function CreateDocumentOverlay({ onCreated, onClose }: CreateDocumentOverlayProps) {
   const { theme } = useTheme();
   const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
   const [selectedTags, setSelectedTags] = useState<TagName[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,7 @@ export function CreateDocumentOverlay({ onCreated, onClose }: CreateDocumentOver
     try {
       await onCreated({
         title: title.trim(),
+        summary: summary.trim() || undefined,
         content: content.trim() || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
       });
@@ -63,6 +65,14 @@ export function CreateDocumentOverlay({ onCreated, onClose }: CreateDocumentOver
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Document title..."
+        />
+
+        <Input
+          label="Summary"
+          id="document-summary"
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="Brief description (optional)"
         />
 
         <Textarea

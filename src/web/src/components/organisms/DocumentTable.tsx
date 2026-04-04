@@ -90,18 +90,35 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
                 />
               </td>
               <td style={{ ...cellStyle(theme), fontWeight: 500, maxWidth: 400 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {doc.title}
-                  </span>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span
+                      style={{
+                        display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {doc.title}
+                    </span>
+                    {doc.summary && (
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: theme.font.size.xs,
+                          color: theme.color.textMuted,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          marginTop: 2,
+                          fontWeight: 400,
+                        }}
+                      >
+                        {doc.summary}
+                      </span>
+                    )}
+                  </div>
                   <PresenceCharm active={doc.has_content} label="Content" color={theme.color.success} />
                 </div>
               </td>
