@@ -109,7 +109,7 @@ export class TaskDependencyService implements ITaskDependencyService {
     }
 
     const allowedStatuses = new Set(statusFilter);
-    const tasks = this.taskRepo.findMany({ project_id: projectId });
+    const tasks = this.taskRepo.findGraphSummaries(projectId);
     const visibleTaskIds = new Set(
       tasks.filter((t) => allowedStatuses.has(t.status)).map((t) => t.id),
     );
