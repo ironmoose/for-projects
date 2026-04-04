@@ -5,9 +5,7 @@ import type { Project, ProjectSummary } from "../entities";
 export interface ProjectRow {
   id: string;
   title: string;
-  goal: string | null;
-  requirements: string | null;
-  design: string | null;
+  summary: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,16 +53,9 @@ export class ProjectRepository {
     const { where, params } = this.buildWhereClause(filter);
     params.push(limit, offset);
 
-    const rows = this.db
-      .query(`SELECT id, title, (goal IS NOT NULL) AS has_goal, (requirements IS NOT NULL) AS has_requirements, (design IS NOT NULL) AS has_design, created_at, updated_at FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-      .all(...params) as (Omit<ProjectSummary, "has_goal" | "has_requirements" | "has_design"> & { has_goal: number; has_requirements: number; has_design: number })[];
-
-    return rows.map((r) => ({
-      ...r,
-      has_goal: !!r.has_goal,
-      has_requirements: !!r.has_requirements,
-      has_design: !!r.has_design,
-    })) as ProjectSummary[];
+    return this.db
+      .query(`SELECT id, title, summary, created_at, updated_at FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+      .all(...params) as ProjectSummary[];
   }
 
   count(filter?: ProjectFilter): number {
@@ -79,7 +70,7 @@ export class ProjectRepository {
 
   insertMany(rows: Omit<ProjectRow, "id" | "created_at" | "updated_at">[]): Project[] {
     const stmt = this.db.query(
-      "INSERT INTO projects (id, title, goal, requirements, design, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO projects (id, title, summary, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
     );
     const now = new Date().toISOString();
     const ids: string[] = [];
@@ -87,7 +78,7 @@ export class ProjectRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.title, row.goal ?? null, row.requirements ?? null, row.design ?? null, now, now);
+      stmt.run(id, row.title, row.summary ?? null, now, now);
     }
 
     const results: Project[] = [];
@@ -95,9 +86,7 @@ export class ProjectRepository {
       results.push({
         id: ids[i],
         title: rows[i].title,
-        goal: rows[i].goal ?? null,
-        requirements: rows[i].requirements ?? null,
-        design: rows[i].design ?? null,
+        summary: rows[i].summary ?? null,
         created_at: now,
         updated_at: now,
       });
@@ -105,7 +94,7 @@ export class ProjectRepository {
     return results;
   }
 
-  updateMany(rows: { id: string; title?: string; goal?: string | null; requirements?: string | null; design?: string | null }[]): Project[] {
+  updateMany(rows: { id: string; title?: string; summary?: string | null }[]): Project[] {
     const now = new Date().toISOString();
     const results: Project[] = [];
 
@@ -114,20 +103,16 @@ export class ProjectRepository {
       if (!existing) continue;
 
       const title = row.title !== undefined ? row.title : existing.title;
-      const goal = row.goal !== undefined ? row.goal : existing.goal;
-      const requirements = row.requirements !== undefined ? row.requirements : existing.requirements;
-      const design = row.design !== undefined ? row.design : existing.design;
+      const summary = row.summary !== undefined ? row.summary : existing.summary;
 
       this.db
-        .query("UPDATE projects SET title = ?, goal = ?, requirements = ?, design = ?, updated_at = ? WHERE id = ?")
-        .run(title, goal, requirements, design, now, row.id);
+        .query("UPDATE projects SET title = ?, summary = ?, updated_at = ? WHERE id = ?")
+        .run(title, summary, now, row.id);
 
       results.push({
         id: row.id,
         title,
-        goal,
-        requirements,
-        design,
+        summary,
         created_at: existing.created_at,
         updated_at: now,
       });
