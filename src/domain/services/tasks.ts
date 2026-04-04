@@ -187,93 +187,98 @@ export class TaskService implements ITaskService {
     const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, ...rest }) => rest);
     const tasks = this.taskRepo.updateMany(repoInputs);
 
-    // Process dependency operations
-    if (this.depService) {
-      for (const input of inputs) {
-        const existing = this.taskRepo.findById(input.id);
-        if (!existing) continue;
+    this.eventBus.beginBatch();
+    try {
+      // Process dependency operations
+      if (this.depService) {
+        for (const input of inputs) {
+          const existing = this.taskRepo.findById(input.id);
+          if (!existing) continue;
 
-        if (input.add_dependencies && input.add_dependencies.length > 0) {
-          this.depService.addDependencies(
-            existing.project_id,
-            input.add_dependencies.map((d) => ({
-              source_task_id: d.task_id,
-              target_task_id: input.id,
-              dependency_type: d.type,
-            })),
-          );
-        }
-        if (input.remove_dependencies && input.remove_dependencies.length > 0) {
-          this.depService.removeDependencies(
-            input.remove_dependencies.map((d) => ({
-              source_task_id: d.task_id,
-              target_task_id: input.id,
-            })),
-          );
-        }
-      }
-    }
-
-    for (const t of tasks) {
-      const input = inputs.find((i) => i.id === t.id);
-      const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies");
-      const added = input?.add_dependencies?.length ?? 0;
-      const removed = input?.remove_dependencies?.length ?? 0;
-      const summaryObj: Record<string, unknown> = { fields };
-      if (added > 0) summaryObj.added_dependencies = added;
-      if (removed > 0) summaryObj.removed_dependencies = removed;
-      this.activityLog.insert({
-        entity_type: "task",
-        entity_id: t.id,
-        action: "updated",
-        summary: JSON.stringify(summaryObj),
-      });
-    }
-    this.eventBus.emit({ type: "updated", entity_type: "task", ids: tasks.map((t) => t.id) });
-
-    // Post-update: check if completing tasks unblocks any dependents
-    if (this.depRepo) {
-      for (const task of tasks) {
-        const input = inputs.find((i) => i.id === task.id);
-        if (!input?.status) continue; // no status change in this update
-        if (input.status !== "done" && input.status !== "archived") continue;
-
-        // This task just completed. Check what it was blocking.
-        const dependents = this.depRepo.getDependenciesFrom(task.id)
-          .filter((d) => d.dependency_type === "blocks");
-
-        for (const dep of dependents) {
-          // Check if the dependent task is now fully unblocked (all blockers done/archived)
-          const blockers = this.depRepo.getDependenciesTo(dep.target_task_id)
-            .filter((d) => d.dependency_type === "blocks");
-          const allDone = blockers.every((b) => {
-            const blocker = this.taskRepo.findById(b.source_task_id);
-            return blocker && (blocker.status === "done" || blocker.status === "archived");
-          });
-
-          if (allDone) {
-            this.activityLog.insert({
-              entity_type: "task",
-              entity_id: dep.target_task_id,
-              action: "updated",
-              summary: JSON.stringify({
-                event: "unblocked",
-                unblocked_by: task.id,
-                message: "Task unblocked: all blocking dependencies are now complete",
-              }),
-            });
-
-            this.eventBus.emit({
-              type: "updated",
-              entity_type: "task",
-              ids: [dep.target_task_id],
-            });
+          if (input.add_dependencies && input.add_dependencies.length > 0) {
+            this.depService.addDependencies(
+              existing.project_id,
+              input.add_dependencies.map((d) => ({
+                source_task_id: d.task_id,
+                target_task_id: input.id,
+                dependency_type: d.type,
+              })),
+            );
+          }
+          if (input.remove_dependencies && input.remove_dependencies.length > 0) {
+            this.depService.removeDependencies(
+              input.remove_dependencies.map((d) => ({
+                source_task_id: d.task_id,
+                target_task_id: input.id,
+              })),
+            );
           }
         }
       }
-    }
 
-    return tasks;
+      for (const t of tasks) {
+        const input = inputs.find((i) => i.id === t.id);
+        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies");
+        const added = input?.add_dependencies?.length ?? 0;
+        const removed = input?.remove_dependencies?.length ?? 0;
+        const summaryObj: Record<string, unknown> = { fields };
+        if (added > 0) summaryObj.added_dependencies = added;
+        if (removed > 0) summaryObj.removed_dependencies = removed;
+        this.activityLog.insert({
+          entity_type: "task",
+          entity_id: t.id,
+          action: "updated",
+          summary: JSON.stringify(summaryObj),
+        });
+      }
+      this.eventBus.emit({ type: "updated", entity_type: "task", ids: tasks.map((t) => t.id) });
+
+      // Post-update: check if completing tasks unblocks any dependents
+      if (this.depRepo) {
+        for (const task of tasks) {
+          const input = inputs.find((i) => i.id === task.id);
+          if (!input?.status) continue; // no status change in this update
+          if (input.status !== "done" && input.status !== "archived") continue;
+
+          // This task just completed. Check what it was blocking.
+          const dependents = this.depRepo.getDependenciesFrom(task.id)
+            .filter((d) => d.dependency_type === "blocks");
+
+          for (const dep of dependents) {
+            // Check if the dependent task is now fully unblocked (all blockers done/archived)
+            const blockers = this.depRepo.getDependenciesTo(dep.target_task_id)
+              .filter((d) => d.dependency_type === "blocks");
+            const allDone = blockers.every((b) => {
+              const blocker = this.taskRepo.findById(b.source_task_id);
+              return blocker && (blocker.status === "done" || blocker.status === "archived");
+            });
+
+            if (allDone) {
+              this.activityLog.insert({
+                entity_type: "task",
+                entity_id: dep.target_task_id,
+                action: "updated",
+                summary: JSON.stringify({
+                  event: "unblocked",
+                  unblocked_by: task.id,
+                  message: "Task unblocked: all blocking dependencies are now complete",
+                }),
+              });
+
+              this.eventBus.emit({
+                type: "updated",
+                entity_type: "task",
+                ids: [dep.target_task_id],
+              });
+            }
+          }
+        }
+      }
+
+      return tasks;
+    } finally {
+      this.eventBus.flushBatch();
+    }
   }
 
   remove(ids: string[]): void {
