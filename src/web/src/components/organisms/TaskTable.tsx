@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 import { PresenceCharm } from "../molecules/PresenceCharm";
+import { tableWrapperStyle, tableHeaderStyle, cellStyle } from "../molecules/tableUtils";
 import { useTheme } from "../theme/ThemeContext";
+import { sg } from "../theme/synthGlow";
 import type { TaskSummary } from "../../types";
 import { TASK_STATUSES } from "../../types";
 import type { TaskStatus } from "../../types";
@@ -19,14 +21,6 @@ function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "
   return "default";
 }
 
-function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProperties {
-  return {
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    borderBottom: `1px solid ${theme.color.border}`,
-    verticalAlign: "middle",
-  };
-}
-
 const COLUMN_COUNT = 7; // Title, Status, Category, Effort, Impact, Group, Actions
 
 interface TaskTableProps {
@@ -38,7 +32,8 @@ interface TaskTableProps {
 }
 
 export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, onUpdateTaskStatus }: TaskTableProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
   const [statusDropdownTaskId, setStatusDropdownTaskId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -138,9 +133,11 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
                 gap: 4,
                 padding: theme.spacing.sm,
                 background: theme.color.surfaceContainer,
-                border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
+                border: `1px solid ${isSynth ? sg(27) : theme.color.border}`,
                 borderRadius: theme.radius.md,
-                boxShadow: theme.glow.animated ? theme.glow.shadowLg : theme.shadow.md,
+                boxShadow: isSynth
+                  ? `0 0 12px ${sg(9)}`
+                  : theme.shadow.md,
                 minWidth: 120,
               }}
             >
@@ -251,12 +248,12 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             fontWeight: 700,
             letterSpacing: theme.font.letterSpacing.wide,
             textTransform: "uppercase",
-            color: theme.glow.animated ? theme.glow.accentColor : theme.color.textFaint,
+            color: isSynth ? "var(--synth-glow)" : theme.color.textFaint,
             maxWidth: 300,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            textShadow: theme.glow.animated ? `0 0 6px ${theme.glow.borderMedium}` : "none",
+            ...(isSynth ? { textShadow: `0 0 6px ${sg(20)}` } : {}),
           }}
         >
           {groupKey}
@@ -307,13 +304,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
 
   return (
     <div
-      style={{
-        overflowX: "auto",
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
-        background: theme.color.surface,
-        boxShadow: theme.glow.animated ? theme.glow.shadowLg : "none",
-      }}
+      style={tableWrapperStyle(theme, isSynth)}
     >
       <table
         style={{
@@ -328,18 +319,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             {["Title", "Status", "Category", "Effort", "Impact", "Group", ""].map((h) => (
               <th
                 key={h || "_actions"}
-                style={{
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  textAlign: "left",
-                  fontWeight: 600,
-                  fontSize: theme.font.size.xxs,
-                  color: theme.glow.animated ? theme.glow.accentColor : theme.color.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: theme.font.letterSpacing.wide,
-                  borderBottom: `2px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
-                  whiteSpace: "nowrap",
-                  textShadow: theme.glow.textShadow,
-                }}
+                style={tableHeaderStyle(theme, isSynth)}
               >
                 {h}
               </th>

@@ -1,8 +1,6 @@
-import { useEffect } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Button } from "../atoms/Button";
-import { Overlay } from "../atoms/Overlay";
-import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
+import { ModalShell } from "./ModalShell";
 
 interface CreateEntityOverlayProps {
   title: string;
@@ -25,76 +23,35 @@ export function CreateEntityOverlay({
 }: CreateEntityOverlayProps) {
   const { theme } = useTheme();
 
-  // Suppress keyboard shortcuts while this overlay is open
-  useShortcutSuppression();
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   return (
-    <>
-      <Overlay onClick={onClose} zIndex={200} style={{ background: "rgba(0,0,0,0.5)" }} />
-      <div
+    <ModalShell onClose={onClose} maxWidth={480}>
+      <h2
         style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 201,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
+          margin: 0,
+          fontFamily: theme.font.body,
+          fontSize: theme.font.size.lg,
+          fontWeight: 600,
+          color: theme.color.text,
         }}
       >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            pointerEvents: "auto",
-            background: theme.color.surfaceContainer,
-            borderRadius: theme.radius.lg,
-            boxShadow: theme.glow.animated ? theme.glow.shadowXl : theme.shadow.lg,
-            border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
-            width: "100%",
-            maxWidth: 480,
-            display: "flex",
-            flexDirection: "column",
-            gap: theme.spacing.lg,
-            padding: theme.spacing.xl,
-          }}
+        {title}
+      </h2>
+
+      {children}
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: theme.spacing.sm }}>
+        <Button variant="ghost" onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={onSubmit}
+          loading={loading}
+          disabled={submitDisabled}
         >
-          <h2
-            style={{
-              margin: 0,
-              fontFamily: theme.font.body,
-              fontSize: theme.font.size.lg,
-              fontWeight: 600,
-              color: theme.color.text,
-            }}
-          >
-            {title}
-          </h2>
-
-          {children}
-
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: theme.spacing.sm }}>
-            <Button variant="ghost" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={onSubmit}
-              loading={loading}
-              disabled={submitDisabled}
-            >
-              {submitLabel}
-            </Button>
-          </div>
-        </div>
+          {submitLabel}
+        </Button>
       </div>
-    </>
+    </ModalShell>
   );
 }

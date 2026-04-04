@@ -1,17 +1,10 @@
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
 import { PresenceCharm } from "../molecules/PresenceCharm";
+import { tableWrapperStyle, tableHeaderStyle, cellStyle } from "../molecules/tableUtils";
 import { useTheme } from "../theme/ThemeContext";
 import type { DocumentSummary } from "../../types";
 import { formatDate } from "../../utils";
-
-function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProperties {
-  return {
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    borderBottom: `1px solid ${theme.color.border}`,
-    verticalAlign: "middle",
-  };
-}
 
 interface DocumentTableProps {
   documents: DocumentSummary[];
@@ -22,17 +15,12 @@ interface DocumentTableProps {
 }
 
 export function DocumentTable({ documents, selectedDocumentId, onSelectDocument, onDeleteDocument, onToggleFavorite }: DocumentTableProps) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
+  const isSynth = themeName === "synth";
 
   return (
     <div
-      style={{
-        overflowX: "auto",
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
-        background: theme.color.surface,
-        boxShadow: theme.glow.animated ? theme.glow.shadowLg : "none",
-      }}
+      style={tableWrapperStyle(theme, isSynth)}
     >
       <table
         style={{
@@ -47,18 +35,7 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
             {[{ key: "_fav", label: "" }, { key: "title", label: "Title" }, { key: "tags", label: "Tags" }, { key: "updated", label: "Updated" }, { key: "_actions", label: "" }].map(({ key, label: h }) => (
               <th
                 key={key}
-                style={{
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  textAlign: "left",
-                  fontWeight: 600,
-                  fontSize: theme.font.size.xxs,
-                  color: theme.glow.animated ? theme.glow.accentColor : theme.color.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: theme.font.letterSpacing.wide,
-                  borderBottom: `2px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
-                  whiteSpace: "nowrap",
-                  textShadow: theme.glow.textShadow,
-                }}
+                style={tableHeaderStyle(theme, isSynth)}
               >
                 {h}
               </th>
@@ -86,35 +63,18 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
                 />
               </td>
               <td style={{ ...cellStyle(theme), fontWeight: 500, maxWidth: 400 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span
-                      style={{
-                        display: "block",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {doc.title}
-                    </span>
-                    {doc.summary && (
-                      <span
-                        style={{
-                          display: "block",
-                          fontSize: theme.font.size.xs,
-                          color: theme.color.textMuted,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          marginTop: 2,
-                          fontWeight: 400,
-                        }}
-                      >
-                        {doc.summary}
-                      </span>
-                    )}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {doc.title}
+                  </span>
                   <PresenceCharm active={doc.has_content} label="Content" color={theme.color.success} />
                 </div>
               </td>

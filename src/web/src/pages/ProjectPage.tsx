@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import {
   Button,
   Card,
@@ -21,7 +20,6 @@ import {
   Pagination,
   TaskTable,
   TaskTableFilters,
-  Overlay,
   DocumentReaderModal,
   CreateEntityOverlay,
   TagChip,
@@ -29,6 +27,7 @@ import {
   DependencyGraphView,
 } from "../components";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
+import { ModalShell } from "../components/organisms/ModalShell";
 import { Badge } from "../components/atoms/Badge";
 import { useProject } from "../hooks";
 import { useShortcut, useShortcutSuppression } from "../hooks/useKeyboardShortcuts";
@@ -555,35 +554,13 @@ function TaskDetailPanel({
   );
 
   return (
-    <>
-      <Overlay onClick={onClose} zIndex={200} style={{ background: "rgba(0,0,0,0.5)" }} />
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 201,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
-        }}
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            pointerEvents: "auto",
-            background: theme.color.surfaceContainer,
-            borderRadius: theme.radius.lg,
-            boxShadow: theme.glow.animated ? theme.glow.shadowXl : theme.shadow.lg,
-            border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
-            width: "100%",
-            maxWidth: 1000,
-            minHeight: "50vh",
-            maxHeight: "75vh",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+    <ModalShell
+      onClose={onClose}
+      maxWidth={1000}
+      maxHeight="75vh"
+      handleEscape={false}
+      style={{ gap: 0, padding: 0, minHeight: "50vh" }}
+    >
           {/* Header — editable title */}
           <div
             style={{
@@ -827,9 +804,7 @@ function TaskDetailPanel({
               />
             </div>
           </div>
-        </div>
-      </div>
-    </>
+    </ModalShell>
   );
 }
 
