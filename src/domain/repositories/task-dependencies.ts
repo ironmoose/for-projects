@@ -74,4 +74,16 @@ export class TaskDependencyRepository {
     ).all(projectId) as { target_task_id: string }[];
     return rows.map((r) => r.target_task_id);
   }
+
+  isTaskBlocked(taskId: string): boolean {
+    const row = this.db.query(
+      `SELECT 1 FROM task_dependencies td
+       JOIN tasks st ON st.id = td.source_task_id
+       WHERE td.target_task_id = ?
+         AND td.dependency_type = 'blocks'
+         AND st.status NOT IN ('done', 'archived')
+       LIMIT 1`
+    ).get(taskId) as Record<string, number> | null;
+    return row !== null;
+  }
 }

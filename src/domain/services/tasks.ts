@@ -68,8 +68,7 @@ export class TaskService implements ITaskService {
     const task = this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
     if (this.depRepo) {
-      const blockedIds = new Set(this.depRepo.getBlockedTaskIds(task.project_id));
-      return { ...task, is_blocked: blockedIds.has(task.id) };
+      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id) };
     }
     return { ...task, is_blocked: false };
   }
