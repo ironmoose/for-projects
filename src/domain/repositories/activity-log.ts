@@ -72,4 +72,17 @@ export class ActivityLogRepository {
         .get(...params) as { total: number }
     ).total;
   }
+
+  countAll(): number {
+    return (
+      this.db.query("SELECT COUNT(*) as total FROM activity_log").get() as { total: number }
+    ).total;
+  }
+
+  deleteOlderThan(cutoffDate: string): number {
+    const result = this.db
+      .query("DELETE FROM activity_log WHERE created_at < ?")
+      .run(cutoffDate);
+    return result.changes;
+  }
 }
