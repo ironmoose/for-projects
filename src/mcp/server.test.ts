@@ -943,6 +943,145 @@ describe("get_ready_tasks", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// get_dependency_graph status filtering
+// ---------------------------------------------------------------------------
+
+describe("get_dependency_graph status filtering", () => {
+  let proj: { id: string };
+  let taskA: { id: string }; // todo — blocks taskB
+  let taskB: { id: string }; // in_progress — blocked by taskA
+  let taskC: { id: string }; // done — blocks taskD
+  let taskD: { id: string }; // todo — blocked by taskC (but C is done)
+
+  beforeAll(async () => {
+    [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Graph Filter Proj" }] }));
+    [taskA, taskB, taskC, taskD] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "GF Task A" },
+        { project_id: proj.id, title: "GF Task B", status: "in_progress" },
+        { project_id: proj.id, title: "GF Task C", status: "done" },
+        { project_id: proj.id, title: "GF Task D" },
+      ],
+    }));
+
+    // A blocks B
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
+    });
+    // C blocks D
+    await callTool("update_task", {
+      items: [{ id: taskD.id, add_dependencies: [{ task_id: taskC.id, type: "blocks" }] }],
+    });
+    // B relates_to C
+    await callTool("update_task", {
+      items: [{ id: taskC.id, add_dependencies: [{ task_id: taskB.id, type: "relates_to" }] }],
+    });
+  });
+
+  it("get_dependency_graph with status param filters tasks and edges", async () => {
+    const graph = parseResult(await callTool("get_dependency_graph", { project_id: proj.id, status: ["todo"] }));
+    // Only todo tasks: A and D
+    expect(graph.tasks.every((t: { status: string }) => t.status === "todo")).toBe(true);
+    const taskIds = graph.tasks.map((t: { id: string }) => t.id);
+    expect(taskIds).toContain(taskA.id);
+    expect(taskIds).toContain(taskD.id);
+    expect(taskIds).not.toContain(taskB.id);
+    expect(taskIds).not.toContain(taskC.id);
+
+    // Edges should only connect visible tasks
+    const taskIdSet = new Set(taskIds);
+    for (const e of graph.edges) {
+      expect(taskIdSet.has(e.source)).toBe(true);
+      expect(taskIdSet.has(e.target)).toBe(true);
+    }
+  });
+
+  it("get_dependency_graph without status returns all tasks (backward compatible)", async () => {
+    const graph = parseResult(await callTool("get_dependency_graph", { project_id: proj.id }));
+    expect(graph.tasks.length).toBe(4);
+    const taskIds = graph.tasks.map((t: { id: string }) => t.id);
+    expect(taskIds).toContain(taskA.id);
+    expect(taskIds).toContain(taskB.id);
+    expect(taskIds).toContain(taskC.id);
+    expect(taskIds).toContain(taskD.id);
+    expect(graph.edges.length).toBe(3);
+  });
+
+  it("blocked_task_ids computed from full graph even with status filter", async () => {
+    const graph = parseResult(await callTool("get_dependency_graph", { project_id: proj.id, status: ["todo"] }));
+    // B is blocked by incomplete A — should appear in blocked_task_ids even though B is filtered out
+    expect(graph.blocked_task_ids).toContain(taskB.id);
+    // D's only blocker (C) is done — D should NOT be blocked
+    expect(graph.blocked_task_ids).not.toContain(taskD.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// get_ready_tasks status param
+// ---------------------------------------------------------------------------
+
+describe("get_ready_tasks status param", () => {
+  it("get_ready_tasks with status param filters by provided status", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Ready Status Proj" }] }));
+    const [taskA, taskB, taskC] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "Ready IP A", status: "in_progress" },
+        { project_id: proj.id, title: "Ready IP B", status: "in_progress" },
+        { project_id: proj.id, title: "Ready Todo C" }, // todo — should not appear
+      ],
+    }));
+
+    // A blocks B (so B is blocked in_progress, A is unblocked in_progress)
+    await callTool("update_task", {
+      items: [{ id: taskB.id, add_dependencies: [{ task_id: taskA.id, type: "blocks" }] }],
+    });
+
+    const ready = parseResult(await callTool("get_ready_tasks", { project_id: proj.id, status: ["in_progress"] }));
+    expect(ready).toBeArray();
+    const readyIds = ready.map((t: { id: string }) => t.id);
+    expect(readyIds).toContain(taskA.id);
+    expect(readyIds).not.toContain(taskB.id); // blocked
+    expect(readyIds).not.toContain(taskC.id); // wrong status
+  });
+
+  it("get_ready_tasks without status defaults to todo (backward compatible)", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Ready Default Proj" }] }));
+    parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "Default Todo" },
+        { project_id: proj.id, title: "Default IP", status: "in_progress" },
+      ],
+    }));
+
+    const ready = parseResult(await callTool("get_ready_tasks", { project_id: proj.id }));
+    expect(ready).toBeArray();
+    expect(ready.length).toBe(1);
+    expect(ready[0].status).toBe("todo");
+  });
+
+  it("get_ready_tasks diagnostics message reflects the provided status value", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Ready Diag Proj" }] }));
+    const [blocker, taskA] = parseResult(await callTool("create_task", {
+      items: [
+        { project_id: proj.id, title: "Blocker" },
+        { project_id: proj.id, title: "Blocked IP", status: "in_progress" },
+      ],
+    }));
+
+    // blocker blocks taskA
+    await callTool("update_task", {
+      items: [{ id: taskA.id, add_dependencies: [{ task_id: blocker.id, type: "blocks" }] }],
+    });
+
+    const result = parseResult(await callTool("get_ready_tasks", { project_id: proj.id, status: ["in_progress"] }));
+    expect(result).toHaveProperty("tasks");
+    expect(result).toHaveProperty("diagnostics");
+    expect(result.tasks).toHaveLength(0);
+    expect(result.diagnostics.message).toContain("in_progress");
+  });
+});
+
 describe("dependency error cases via MCP", () => {
   it("cyclic blocks dependencies succeed via update_task", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "MCP Cycle Proj" }] }));

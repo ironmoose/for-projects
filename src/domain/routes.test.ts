@@ -1235,6 +1235,113 @@ describe("Task Dependency Routes", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Dependency Graph Status Filtering
+// ---------------------------------------------------------------------------
+
+describe("Dependency Graph Status Filtering", () => {
+  let projectId: string;
+  let taskAId: string; // todo — blocks taskB
+  let taskBId: string; // in_progress — blocked by taskA
+  let taskCId: string; // done — blocks taskD
+  let taskDId: string; // todo — blocked by taskC (but taskC is done, so not actually blocked)
+
+  beforeAll(() => {
+    const [project] = ctx.projectService.create([{ title: "Dep Graph Filter Project" }]);
+    projectId = project.id;
+
+    // Create tasks — all default to "todo"
+    const tasks = ctx.taskService.create([
+      { project_id: projectId, title: "Filter Task A" },
+      { project_id: projectId, title: "Filter Task B" },
+      { project_id: projectId, title: "Filter Task C" },
+      { project_id: projectId, title: "Filter Task D" },
+    ]);
+    taskAId = tasks[0].id;
+    taskBId = tasks[1].id;
+    taskCId = tasks[2].id;
+    taskDId = tasks[3].id;
+
+    // Set statuses: B -> in_progress, C -> done
+    ctx.taskService.update([{ id: taskBId, status: "in_progress" }]);
+    ctx.taskService.update([{ id: taskCId, status: "done" }]);
+
+    // A blocks B
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskAId, target_task_id: taskBId, dependency_type: "blocks" },
+    ]);
+    // C blocks D
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskCId, target_task_id: taskDId, dependency_type: "blocks" },
+    ]);
+    // B relates_to C
+    ctx.taskDependencyService.addDependencies(projectId, [
+      { source_task_id: taskBId, target_task_id: taskCId, dependency_type: "relates_to" },
+    ]);
+  });
+
+  it("GET /projects/:id/dependency-graph?status=todo returns only todo tasks", async () => {
+    const res = await req(`/projects/${projectId}/dependency-graph?status=todo`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tasks.every((t: { status: string }) => t.status === "todo")).toBe(true);
+    const taskIds = body.tasks.map((t: { id: string }) => t.id);
+    expect(taskIds).toContain(taskAId);
+    expect(taskIds).toContain(taskDId);
+    expect(taskIds).not.toContain(taskBId);
+    expect(taskIds).not.toContain(taskCId);
+  });
+
+  it("GET /projects/:id/dependency-graph?status=todo edges only connect visible tasks", async () => {
+    const res = await req(`/projects/${projectId}/dependency-graph?status=todo`);
+    const body = await res.json();
+    const taskIds = new Set(body.tasks.map((t: { id: string }) => t.id));
+    for (const edge of body.edges) {
+      expect(taskIds.has(edge.source_task_id)).toBe(true);
+      expect(taskIds.has(edge.target_task_id)).toBe(true);
+    }
+  });
+
+  it("GET /projects/:id/dependency-graph?status=todo,in_progress returns tasks with either status", async () => {
+    const res = await req(`/projects/${projectId}/dependency-graph?status=todo,in_progress`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const statuses = new Set(body.tasks.map((t: { status: string }) => t.status));
+    for (const s of statuses) {
+      expect(["todo", "in_progress"]).toContain(s);
+    }
+    const taskIds = body.tasks.map((t: { id: string }) => t.id);
+    expect(taskIds).toContain(taskAId);
+    expect(taskIds).toContain(taskBId);
+    expect(taskIds).toContain(taskDId);
+    expect(taskIds).not.toContain(taskCId);
+  });
+
+  it("GET /projects/:id/dependency-graph without status returns all tasks (backward compatible)", async () => {
+    const res = await req(`/projects/${projectId}/dependency-graph`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tasks.length).toBe(4);
+    const taskIds = body.tasks.map((t: { id: string }) => t.id);
+    expect(taskIds).toContain(taskAId);
+    expect(taskIds).toContain(taskBId);
+    expect(taskIds).toContain(taskCId);
+    expect(taskIds).toContain(taskDId);
+    // All 3 edges should be present
+    expect(body.edges.length).toBe(3);
+  });
+
+  it("blocked_task_ids reflects full graph even when status filter is active", async () => {
+    const res = await req(`/projects/${projectId}/dependency-graph?status=todo`);
+    const body = await res.json();
+    // Task B is blocked by incomplete Task A (todo) — B should be in blocked_task_ids
+    // even though B is not in the filtered task list (B is in_progress)
+    expect(body.blocked_task_ids).toContain(taskBId);
+    // Task D's only blocker (C) is done, so D should NOT be in blocked_task_ids
+    expect(body.blocked_task_ids).not.toContain(taskDId);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Health Endpoint
 // ---------------------------------------------------------------------------
 
