@@ -281,6 +281,17 @@ export class TaskService implements ITaskService {
     }
   }
 
+  statusCounts(projectIds: string[]): Record<string, { total: number; counts: Record<string, number> }> {
+    const rawCounts = this.taskRepo.getStatusCountsByProject(projectIds);
+    const result: Record<string, { total: number; counts: Record<string, number> }> = {};
+    for (const projectId of projectIds) {
+      const counts = rawCounts[projectId] ?? {};
+      const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+      result[projectId] = { total, counts };
+    }
+    return result;
+  }
+
   remove(ids: string[]): void {
     this.taskRepo.deleteMany(ids);
     for (const id of ids) {

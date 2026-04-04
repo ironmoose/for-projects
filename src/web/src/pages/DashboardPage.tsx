@@ -17,7 +17,7 @@ import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
 import { useShortcut } from "../hooks/useKeyboardShortcuts";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTasks } from "../api";
+import { ApiError, fetchTaskStatusCounts } from "../api";
 import type { ProjectSummary } from "../types";
 import { formatDate } from "../utils";
 
@@ -142,23 +142,15 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
 
   useEffect(() => {
     if (projects.length === 0) return;
-    Promise.all(
-      projects.map((p) =>
-        fetchTasks({ project_id: p.id, limit: 200 }).then(
-          (body) => [p.id, body.total, body.data] as const,
-        ),
-      ),
-    )
-      .then((entries) => {
+    const projectIds = projects.map((p) => p.id);
+    fetchTaskStatusCounts(projectIds)
+      .then((result) => {
         const counts: Record<string, number> = {};
         const statuses: Record<string, StatusCounts> = {};
-        for (const [id, total, tasks] of entries) {
-          counts[id] = total;
-          const sc: StatusCounts = {};
-          for (const t of tasks) {
-            sc[t.status] = (sc[t.status] ?? 0) + 1;
-          }
-          statuses[id] = sc;
+        for (const id of projectIds) {
+          const entry = result[id] ?? { total: 0, counts: {} };
+          counts[id] = entry.total;
+          statuses[id] = entry.counts;
         }
         setTaskCounts(counts);
         setStatusCounts(statuses);

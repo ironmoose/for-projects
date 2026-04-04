@@ -299,6 +299,68 @@ describe("Task Routes", () => {
     const res = await req(`/tasks/00000000000000000000000000`);
     expect(res.status).toBe(404);
   });
+
+  it("GET /tasks/status-counts returns counts for multiple projects", async () => {
+    // Create a second project with tasks in different statuses
+    const [p2] = ctx.projectService.create([{ title: "Status Counts Project 2" }]);
+    ctx.taskService.create([
+      { project_id: p2.id, title: "SC Todo", status: "todo" },
+      { project_id: p2.id, title: "SC Done", status: "done" },
+      { project_id: p2.id, title: "SC Done 2", status: "done" },
+      { project_id: p2.id, title: "SC InProgress", status: "in_progress" },
+    ]);
+
+    const res = await req(`/tasks/status-counts?project_ids=${projectId},${p2.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // projectId should have counts from earlier tests
+    expect(body[projectId]).toBeDefined();
+    expect(body[projectId].total).toBeGreaterThan(0);
+    expect(body[projectId].counts).toBeDefined();
+
+    // p2 should have exact counts we just created
+    expect(body[p2.id]).toBeDefined();
+    expect(body[p2.id].total).toBe(4);
+    expect(body[p2.id].counts.todo).toBe(1);
+    expect(body[p2.id].counts.done).toBe(2);
+    expect(body[p2.id].counts.in_progress).toBe(1);
+  });
+
+  it("GET /tasks/status-counts returns empty for project with no tasks", async () => {
+    const [emptyProject] = ctx.projectService.create([{ title: "Empty Status Counts Project" }]);
+    const res = await req(`/tasks/status-counts?project_ids=${emptyProject.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body[emptyProject.id]).toBeDefined();
+    expect(body[emptyProject.id].total).toBe(0);
+    expect(body[emptyProject.id].counts).toEqual({});
+  });
+
+  it("GET /tasks/status-counts returns empty object for no project_ids", async () => {
+    const res = await req("/tasks/status-counts");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({});
+  });
+
+  it("GET /tasks/status-counts handles mixed statuses correctly", async () => {
+    const [p3] = ctx.projectService.create([{ title: "Mixed Status Project" }]);
+    ctx.taskService.create([
+      { project_id: p3.id, title: "Mixed 1", status: "todo" },
+      { project_id: p3.id, title: "Mixed 2", status: "todo" },
+      { project_id: p3.id, title: "Mixed 3", status: "archived" },
+    ]);
+
+    const res = await req(`/tasks/status-counts?project_ids=${p3.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body[p3.id].total).toBe(3);
+    expect(body[p3.id].counts.todo).toBe(2);
+    expect(body[p3.id].counts.archived).toBe(1);
+    expect(body[p3.id].counts.done).toBeUndefined();
+    expect(body[p3.id].counts.in_progress).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------

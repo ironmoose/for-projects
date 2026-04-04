@@ -160,6 +160,21 @@ export class TaskRepository {
     return results;
   }
 
+  getStatusCountsByProject(projectIds: string[]): Record<string, Record<string, number>> {
+    if (projectIds.length === 0) return {};
+    const placeholders = projectIds.map(() => "?").join(", ");
+    const rows = this.db
+      .query(`SELECT project_id, status, COUNT(*) as count FROM tasks WHERE project_id IN (${placeholders}) GROUP BY project_id, status`)
+      .all(...projectIds) as { project_id: string; status: string; count: number }[];
+
+    const result: Record<string, Record<string, number>> = {};
+    for (const row of rows) {
+      if (!result[row.project_id]) result[row.project_id] = {};
+      result[row.project_id][row.status] = row.count;
+    }
+    return result;
+  }
+
   deleteMany(ids: string[]): void {
     if (ids.length === 0) return;
     const placeholders = ids.map(() => "?").join(", ");
