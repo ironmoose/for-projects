@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Task } from "../entities";
+import type { Task, TaskSummary } from "../entities";
 
 export interface TaskRow {
   id: string;
@@ -19,16 +19,12 @@ export interface TaskRow {
   updated_at: string;
 }
 
+type TaskFilter = { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string };
+
 export class TaskRepository {
   constructor(private db: Database) {}
 
-  findById(id: string): Task | null {
-    return this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Task | null;
-  }
-
-  findMany(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): Task[] {
-    const limit = filter?.limit ?? 50;
-    const offset = filter?.offset ?? 0;
+  private buildWhereClause(filter?: TaskFilter): { where: string; params: (string | number)[] } {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
 
@@ -71,6 +67,17 @@ export class TaskRepository {
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+    return { where, params };
+  }
+
+  findById(id: string): Task | null {
+    return this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Task | null;
+  }
+
+  findMany(filter?: TaskFilter): Task[] {
+    const limit = filter?.limit ?? 50;
+    const offset = filter?.offset ?? 0;
+    const { where, params } = this.buildWhereClause(filter);
     params.push(limit, offset);
 
     return this.db
@@ -78,49 +85,28 @@ export class TaskRepository {
       .all(...params) as Task[];
   }
 
-  count(filter?: { id?: string; project_id?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; title?: string }): number {
-    const conditions: string[] = [];
-    const params: string[] = [];
+  findManySummary(filter?: TaskFilter): TaskSummary[] {
+    const limit = filter?.limit ?? 50;
+    const offset = filter?.offset ?? 0;
+    const { where, params } = this.buildWhereClause(filter);
+    params.push(limit, offset);
 
-    if (filter?.id) {
-      conditions.push("id = ?");
-      params.push(filter.id);
-    }
-    if (filter?.project_id) {
-      conditions.push("project_id = ?");
-      params.push(filter.project_id);
-    }
-    if (filter?.group_key) {
-      conditions.push("group_key = ?");
-      params.push(filter.group_key);
-    }
-    if (filter?.status) {
-      const statuses = filter.status.split(",");
-      if (statuses.length === 1) {
-        conditions.push("status = ?"); params.push(statuses[0]);
-      } else {
-        conditions.push(`status IN (${statuses.map(() => "?").join(", ")})`);
-        params.push(...statuses);
-      }
-    }
-    if (filter?.effort) {
-      conditions.push("effort = ?");
-      params.push(filter.effort);
-    }
-    if (filter?.impact) {
-      conditions.push("impact = ?");
-      params.push(filter.impact);
-    }
-    if (filter?.category) {
-      conditions.push("category = ?");
-      params.push(filter.category);
-    }
-    if (filter?.title) {
-      conditions.push("title LIKE ?");
-      params.push(`%${filter.title}%`);
-    }
+    const rows = this.db
+      .query(`SELECT id, project_id, title, status, effort, impact, category, group_key, (plan IS NOT NULL) AS has_plan, (description IS NOT NULL) AS has_description, (implementation IS NOT NULL) AS has_implementation, (acceptance_criteria IS NOT NULL) AS has_acceptance_criteria, 0 AS is_blocked, created_at, updated_at FROM tasks ${where}ORDER BY created_at ASC LIMIT ? OFFSET ?`)
+      .all(...params) as (Omit<TaskSummary, "has_plan" | "has_description" | "has_implementation" | "has_acceptance_criteria" | "is_blocked"> & { has_plan: number; has_description: number; has_implementation: number; has_acceptance_criteria: number; is_blocked: number })[];
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+    return rows.map((r) => ({
+      ...r,
+      has_plan: !!r.has_plan,
+      has_description: !!r.has_description,
+      has_implementation: !!r.has_implementation,
+      has_acceptance_criteria: !!r.has_acceptance_criteria,
+      is_blocked: !!r.is_blocked,
+    })) as TaskSummary[];
+  }
+
+  count(filter?: TaskFilter): number {
+    const { where, params } = this.buildWhereClause(filter);
 
     return (
       this.db

@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Project } from "../entities";
+import type { Project, ProjectSummary } from "../entities";
 
 export interface ProjectRow {
   id: string;
@@ -12,16 +12,12 @@ export interface ProjectRow {
   updated_at: string;
 }
 
+type ProjectFilter = { id?: string; title?: string; limit?: number; offset?: number };
+
 export class ProjectRepository {
   constructor(private db: Database) {}
 
-  findById(id: string): Project | null {
-    return this.db.query("SELECT * FROM projects WHERE id = ?").get(id) as Project | null;
-  }
-
-  findMany(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Project[] {
-    const limit = filter?.limit ?? 50;
-    const offset = filter?.offset ?? 0;
+  private buildWhereClause(filter?: ProjectFilter): { where: string; params: (string | number)[] } {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
 
@@ -35,6 +31,17 @@ export class ProjectRepository {
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+    return { where, params };
+  }
+
+  findById(id: string): Project | null {
+    return this.db.query("SELECT * FROM projects WHERE id = ?").get(id) as Project | null;
+  }
+
+  findMany(filter?: ProjectFilter): Project[] {
+    const limit = filter?.limit ?? 50;
+    const offset = filter?.offset ?? 0;
+    const { where, params } = this.buildWhereClause(filter);
     params.push(limit, offset);
 
     return this.db
@@ -42,20 +49,26 @@ export class ProjectRepository {
       .all(...params) as Project[];
   }
 
-  count(filter?: { id?: string; title?: string }): number {
-    const conditions: string[] = [];
-    const params: string[] = [];
+  findManySummary(filter?: ProjectFilter): ProjectSummary[] {
+    const limit = filter?.limit ?? 50;
+    const offset = filter?.offset ?? 0;
+    const { where, params } = this.buildWhereClause(filter);
+    params.push(limit, offset);
 
-    if (filter?.id) {
-      conditions.push("id = ?");
-      params.push(filter.id);
-    }
-    if (filter?.title) {
-      conditions.push("title LIKE ?");
-      params.push(`%${filter.title}%`);
-    }
+    const rows = this.db
+      .query(`SELECT id, title, (goal IS NOT NULL) AS has_goal, (requirements IS NOT NULL) AS has_requirements, (design IS NOT NULL) AS has_design, created_at, updated_at FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+      .all(...params) as (Omit<ProjectSummary, "has_goal" | "has_requirements" | "has_design"> & { has_goal: number; has_requirements: number; has_design: number })[];
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";
+    return rows.map((r) => ({
+      ...r,
+      has_goal: !!r.has_goal,
+      has_requirements: !!r.has_requirements,
+      has_design: !!r.has_design,
+    })) as ProjectSummary[];
+  }
+
+  count(filter?: ProjectFilter): number {
+    const { where, params } = this.buildWhereClause(filter);
 
     return (
       this.db
