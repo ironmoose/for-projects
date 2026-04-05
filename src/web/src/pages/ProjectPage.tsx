@@ -790,13 +790,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [titleValue, setTitleValue] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // Summary editing
-  const [editingSummary, setEditingSummary] = useState(false);
-  const [summaryValue, setSummaryValue] = useState("");
-
-  // Reference picker
-  const [referencePickerType, setReferencePickerType] = useState<ReferenceType | null>(null);
-  const [showReferencePicker, setShowReferencePicker] = useState(false);
+  const [showDocPicker, setShowDocPicker] = useState(false);
 
   const [graphStatusFilter, setGraphStatusFilter] = useState("in_progress,todo");
   const { graph, loading: graphLoading } = useDependencyGraph(projectId, graphStatusFilter || undefined);
@@ -891,61 +885,6 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     }
   }
 
-  // Summary editing handlers
-  function handleStartEditSummary() {
-    if (!project) return;
-    setEditingSummary(true);
-    setSummaryValue(project.summary ?? "");
-  }
-
-  async function handleSaveSummary() {
-    const trimmed = summaryValue.trim();
-    await updateProject({ summary: trimmed || null });
-    setEditingSummary(false);
-    setSummaryValue("");
-  }
-
-  // Reference management
-  const referencesByType = useMemo(() => {
-    if (!project) return new Map<ReferenceType, DocumentReferenceDetail[]>();
-    const map = new Map<ReferenceType, DocumentReferenceDetail[]>();
-    for (const ref of project.documents) {
-      const existing = map.get(ref.type) ?? [];
-      existing.push(ref);
-      map.set(ref.type, existing);
-    }
-    return map;
-  }, [project]);
-
-  const visibleTypes = useMemo(() => {
-    if (!project) return [];
-    const types = new Set<ReferenceType>(ALWAYS_SHOWN_TYPES);
-    for (const ref of project.documents) {
-      types.add(ref.type);
-    }
-    return REFERENCE_TYPES.filter((t) => types.has(t));
-  }, [project]);
-
-  async function handleAttachProjectDocument(documentId: string, type: ReferenceType) {
-    if (!project) return;
-    const existingRefs = project.documents.filter((r) => r.document_id === documentId).map((r) => ({ type: r.type }));
-    const mergePatch: DocumentsMergePatch = {
-      [documentId]: [...existingRefs, { type }],
-    };
-    await updateProject({ documents: mergePatch });
-  }
-
-  async function handleDetachProjectDocument(documentId: string, type: ReferenceType) {
-    if (!project) return;
-    const remaining = project.documents
-      .filter((r) => r.document_id === documentId)
-      .filter((r) => !(r.document_id === documentId && r.type === type))
-      .map((r) => ({ type: r.type }));
-    const mergePatch: DocumentsMergePatch = {
-      [documentId]: remaining.length > 0 ? remaining : null,
-    };
-    await updateProject({ documents: mergePatch });
-  }
 
   if (notFound) {
     return (
@@ -1146,43 +1085,56 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           flexDirection: isWide ? "row" : "column",
           gap: theme.spacing.xl,
         }}>
-        {/* Left column -- document references */}
+        {/* Left column — documents */}
         <div style={{
           ...(isWide ? { flex: 1, minWidth: 0 } : {}),
         }}>
-          <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
-            <h3
-              style={{
-                margin: 0,
-                fontFamily: theme.font.headline,
-                fontSize: theme.font.size.lg,
-                fontWeight: 700,
-                color: theme.color.text,
-              }}
-            >
-              Documents
-            </h3>
-            <Button
-              variant="ghost"
-              onClick={() => { setReferencePickerType(null); setShowReferencePicker(true); }}
-            >
-              <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
-                <Icon name="add" size={16} />
-                Add Reference
-              </span>
-            </Button>
-          </Stack>
-
-          {visibleTypes.map((type) => (
-            <DocumentReferenceSection
-              key={type}
-              type={type}
-              references={referencesByType.get(type) ?? []}
-              onOpenDocument={(docId) => setSelectedDocumentId(docId)}
-              onDetachDocument={(docId) => handleDetachProjectDocument(docId, type)}
-              onAddDocument={() => { setReferencePickerType(type); setShowReferencePicker(true); }}
-            />
-          ))}
+          {/* Documents section */}
+          <div style={{ marginBottom: theme.spacing.xl }}>
+            <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
+              <h3
+                style={{
+                  margin: 0,
+                  fontFamily: theme.font.headline,
+                  fontSize: theme.font.size.lg,
+                  fontWeight: 700,
+                  color: theme.color.text,
+                }}
+              >
+                Documents
+              </h3>
+              <Button variant="ghost" onClick={() => setShowDocPicker(true)}>
+                <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+                  <Icon name="edit_note" size={16} />
+                  Manage Documents
+                </span>
+              </Button>
+            </Stack>
+            {(project.documents ?? []).length > 0 ? (
+              <div
+                style={{
+                  borderRadius: theme.radius.md,
+                  border: `1px solid ${theme.color.border}`,
+                  background: theme.color.surfaceContainer,
+                  overflow: "hidden",
+                }}
+              >
+                {(project.documents ?? []).map((doc, idx) => (
+                  <DocumentRow
+                    key={doc.id}
+                    title={doc.title}
+                    isLast={idx === (project.documents ?? []).length - 1}
+                    onClick={() => setSelectedDocumentId(doc.id)}
+                    onDetach={() => {
+                      updateProject({ detach_documents: [doc.id] }).catch(() => {});
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon="description" message="No documents linked." />
+            )}
+          </div>
         </div>
 
         {/* Right column -- tasks */}
