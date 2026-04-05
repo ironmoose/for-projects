@@ -25,6 +25,7 @@ import {
   TagChip,
   DependencyChip,
   DependencyGraphView,
+  ProjectDocumentTable,
 } from "../components";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { ModalShell } from "../components/organisms/ModalShell";
@@ -38,7 +39,7 @@ import { useDependencyGraph } from "../hooks/useDependencyGraph";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask, updateTasks, fetchDocuments, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
+import { ApiError, fetchTask, updateTasks, updateDocuments, fetchDocuments, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
 import type { TaskDependencies, DependencyDetail } from "../api";
 import type { Task, TaskSummary, TaskStatus, DocumentSummary } from "../types";
 import {
@@ -810,55 +811,7 @@ function TaskDetailPanel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// DocumentRow — clickable row for linked documents
-// ---------------------------------------------------------------------------
 
-function DocumentRow({ title, isLast, onClick, onDetach }: { title: string; isLast: boolean; onClick: () => void; onDetach: () => void }) {
-  const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-        cursor: "pointer",
-        background: hovered ? theme.color.surfaceContainerHigh : "transparent",
-        borderBottom: isLast ? "none" : `1px solid ${theme.color.borderSubtle}`,
-        display: "flex",
-        alignItems: "center",
-        gap: theme.spacing.sm,
-        transition: "background 120ms ease",
-      }}
-    >
-      <Icon name="description" size={16} style={{ color: theme.color.text, flexShrink: 0 }} />
-      <span
-        style={{
-          fontSize: theme.font.size.sm,
-          color: theme.color.text,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          flex: 1,
-        }}
-      >
-        {title}
-      </span>
-      <IconButton
-        icon="close"
-        size={14}
-        onClick={(e) => { e.stopPropagation(); onDetach(); }}
-        aria-label={`Detach ${title}`}
-      />
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // DocumentPickerOverlay
@@ -1434,26 +1387,19 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
               </Button>
             </Stack>
             {(project.documents ?? []).length > 0 ? (
-              <div
-                style={{
-                  borderRadius: theme.radius.md,
-                  border: `1px solid ${theme.color.border}`,
-                  background: theme.color.surfaceContainer,
-                  overflow: "hidden",
+              <ProjectDocumentTable
+                documents={project.documents ?? []}
+                selectedDocumentId={selectedDocumentId}
+                onSelectDocument={(id) => setSelectedDocumentId(id)}
+                onDetachDocument={(doc) => {
+                  updateProject({ detach_documents: [doc.id] }).catch(() => {});
                 }}
-              >
-                {(project.documents ?? []).map((doc, idx) => (
-                  <DocumentRow
-                    key={doc.id}
-                    title={doc.title}
-                    isLast={idx === (project.documents ?? []).length - 1}
-                    onClick={() => setSelectedDocumentId(doc.id)}
-                    onDetach={() => {
-                      updateProject({ detach_documents: [doc.id] }).catch(() => {});
-                    }}
-                  />
-                ))}
-              </div>
+                onToggleFavorite={(doc) => {
+                  // favorite field supported by backend but not in api.ts type
+                  const input = { id: doc.id, favorite: !doc.favorite };
+                  updateDocuments([input as typeof input & { title?: string }]).catch(() => {});
+                }}
+              />
             ) : (
               <EmptyState icon="description" message="No documents linked." />
             )}
