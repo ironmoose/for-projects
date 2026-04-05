@@ -52,7 +52,7 @@ export function useDocument(documentId: string) {
     });
   }, [documentId, subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function updateDocument(input: { title?: string; summary?: string | null; content?: string | null; tags?: string[]; favorite?: boolean }): Promise<boolean> {
+  async function updateDocument(input: { title?: string; summary?: string | null; content?: string | null; tags?: string[]; favorite?: boolean; folder?: string | null }): Promise<boolean> {
     if (!document) return false;
     try {
       await updateDocuments([{ id: document.id, ...input }]);

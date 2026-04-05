@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { useDocument } from "../../hooks/useDocument";
+import { useDocuments } from "../../hooks/useDocuments";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
@@ -8,6 +9,7 @@ import { Textarea } from "../atoms/Textarea";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
 import { TagPicker } from "../molecules/TagPicker";
+import { FolderInput } from "../molecules/FolderInput";
 import { EmptyState } from "../molecules/EmptyState";
 import { Markdown } from "../molecules/Markdown";
 import { ModalShell } from "./ModalShell";
@@ -21,18 +23,29 @@ interface DocumentReaderModalProps {
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
   const { theme } = useTheme();
   const { document, notFound, loading, updateDocument } = useDocument(documentId);
+  const { documents: allDocs } = useDocuments();
   const reduced = useReducedMotion();
 
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [editFolder, setEditFolder] = useState("");
   const [editTags, setEditTags] = useState<TagName[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const knownFolders = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of allDocs) {
+      if (d.folder) set.add(d.folder);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [allDocs]);
 
   const enterEditMode = useCallback(() => {
     if (!document) return;
     setEditTitle(document.title);
     setEditContent(document.content ?? "");
+    setEditFolder(document.folder ?? "");
     setEditTags([...document.tags] as TagName[]);
     setEditing(true);
   }, [document]);
@@ -47,11 +60,12 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
     const ok = await updateDocument({
       title: editTitle.trim(),
       content: contentValue,
+      folder: editFolder.trim() || null,
       tags: editTags,
     });
     setSaving(false);
     if (ok) setEditing(false);
-  }, [editTitle, editContent, editTags, updateDocument]);
+  }, [editTitle, editContent, editFolder, editTags, updateDocument]);
 
   const saveDisabled = !editTitle.trim() || saving;
 
@@ -182,6 +196,22 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                   {document.tags.map((tag) => (
                     <TagChip key={tag} name={tag} />
                   ))}
+                </div>
+              )
+            )}
+
+            {/* Folder section */}
+            {editing ? (
+              <FolderInput
+                value={editFolder}
+                folders={knownFolders}
+                onChange={setEditFolder}
+              />
+            ) : (
+              document.folder && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: theme.font.size.xs, color: theme.color.textMuted }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>folder</span>
+                  {document.folder}
                 </div>
               )
             )}

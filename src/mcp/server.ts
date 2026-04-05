@@ -268,13 +268,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         search: z.string().max(500).optional(),
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
+        folder: z.string().max(255).optional(),
         project_id: z.string().max(26).optional(),
         favorite: z.boolean().optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ search, tag, title, project_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, project_id, favorite, limit, offset }))
+    ({ search, tag, title, folder, project_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, folder, project_id, favorite, limit, offset }))
   );
 
   server.registerTool(
@@ -297,6 +298,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           content: z.string().max(50000).optional(),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
           favorite: z.boolean().optional(),
+          folder: z.string().max(255).nullable().optional(),
         })),
       },
     },
@@ -306,7 +308,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_document",
     {
-      description: "Update documents by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
+      description: "Update documents by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags. Set folder to null to remove from folder. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
@@ -315,6 +317,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           content: z.string().max(50000).optional(),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
           favorite: z.boolean().optional(),
+          folder: z.string().max(255).nullable().optional(),
         })),
       },
     },

@@ -4,19 +4,22 @@ import { Input } from "../atoms/Input";
 import { Textarea } from "../atoms/Textarea";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TagPicker } from "../molecules/TagPicker";
+import { FolderInput } from "../molecules/FolderInput";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import type { TagName } from "../../types";
 
 interface CreateDocumentOverlayProps {
-  onCreated: (fields: { title: string; summary?: string; content?: string; tags?: string[] }) => Promise<void>;
+  folders?: string[];
+  onCreated: (fields: { title: string; summary?: string; content?: string; tags?: string[]; folder?: string | null }) => Promise<void>;
   onClose: () => void;
 }
 
-export function CreateDocumentOverlay({ onCreated, onClose }: CreateDocumentOverlayProps) {
+export function CreateDocumentOverlay({ folders = [], onCreated, onClose }: CreateDocumentOverlayProps) {
   const { theme } = useTheme();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
+  const [folder, setFolder] = useState("");
   const [selectedTags, setSelectedTags] = useState<TagName[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +35,7 @@ export function CreateDocumentOverlay({ onCreated, onClose }: CreateDocumentOver
         summary: summary.trim() || undefined,
         content: content.trim() || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
+        folder: folder.trim() || null,
       });
       onClose();
     } catch (err) {
@@ -82,6 +86,12 @@ export function CreateDocumentOverlay({ onCreated, onClose }: CreateDocumentOver
           onChange={(e) => setContent(e.target.value)}
           placeholder="Markdown content (optional)"
           rows={8}
+        />
+
+        <FolderInput
+          value={folder}
+          folders={folders}
+          onChange={setFolder}
         />
 
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>

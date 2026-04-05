@@ -17,7 +17,7 @@ export class DocumentService implements IDocumentService {
     private projectDocumentRepo?: ProjectDocumentRepository,
   ) {}
 
-  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
+  list(filter?: { search?: string; title?: string; tag?: string; folder?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
     // If filtering by project_id, get linked doc IDs first and intersect
     let docIds: string[] | undefined;
     if (filter?.project_id && this.projectDocumentRepo) {
@@ -71,6 +71,7 @@ export class DocumentService implements IDocumentService {
       title: input.title,
       summary: input.summary ?? null,
       content: input.content ?? null,
+      folder: input.folder ?? null,
       favorite: input.favorite ? 1 : 0,
     }));
 
