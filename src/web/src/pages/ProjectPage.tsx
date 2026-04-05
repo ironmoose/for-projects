@@ -21,8 +21,7 @@ import {
   TaskTable,
   TaskTableFilters,
   DocumentReaderModal,
-  CreateEntityOverlay,
-  TagChip,
+  DocumentReferencePicker,
   DependencyChip,
   DependencyGraphView,
 } from "../components";
@@ -38,9 +37,9 @@ import { useDependencyGraph } from "../hooks/useDependencyGraph";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask, updateTasks, fetchDocuments, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
+import { ApiError, fetchTask, updateTasks, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
 import type { TaskDependencies, DependencyDetail } from "../api";
-import type { Task, TaskSummary, TaskStatus, DocumentSummary } from "../types";
+import type { Task, TaskSummary, TaskStatus } from "../types";
 import {
   TASK_STATUSES,
   EFFORT_LEVELS,
@@ -861,189 +860,6 @@ function DocumentRow({ title, isLast, onClick, onDetach }: { title: string; isLa
 }
 
 // ---------------------------------------------------------------------------
-// DocumentPickerOverlay
-// ---------------------------------------------------------------------------
-
-interface DocumentPickerOverlayProps {
-  linkedDocIds: Set<string>;
-  onSubmit: (attach: string[], detach: string[]) => Promise<void>;
-  onClose: () => void;
-}
-
-const DOC_PICKER_PAGE_SIZE = 50;
-
-function DocumentPickerOverlay({ linkedDocIds, onSubmit, onClose }: DocumentPickerOverlayProps) {
-  const { theme } = useTheme();
-  const [allDocs, setAllDocs] = useState<DocumentSummary[]>([]);
-  const [totalDocs, setTotalDocs] = useState(0);
-  const [loadingDocs, setLoadingDocs] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set(linkedDocIds));
-  const [titleSearch, setTitleSearch] = useState("");
-  const [debouncedTitle, setDebouncedTitle] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Debounce title search input (300ms)
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setDebouncedTitle(titleSearch);
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [titleSearch]);
-
-  // Fetch documents server-side with title filter
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingDocs(true);
-    const params: { limit: number; title?: string } = { limit: DOC_PICKER_PAGE_SIZE };
-    if (debouncedTitle.trim()) params.title = debouncedTitle.trim();
-    fetchDocuments(params)
-      .then((res) => {
-        if (cancelled) return;
-        setAllDocs(res.data);
-        setTotalDocs(res.total);
-      })
-      .catch(() => { /* toast handled by caller context */ })
-      .finally(() => { if (!cancelled) setLoadingDocs(false); });
-    return () => { cancelled = true; };
-  }, [debouncedTitle]);
-
-  function handleLoadMore() {
-    setLoadingMore(true);
-    const params: { limit: number; offset: number; title?: string } = {
-      limit: DOC_PICKER_PAGE_SIZE,
-      offset: allDocs.length,
-    };
-    if (debouncedTitle.trim()) params.title = debouncedTitle.trim();
-    fetchDocuments(params)
-      .then((res) => {
-        setAllDocs((prev) => [...prev, ...res.data]);
-        setTotalDocs(res.total);
-      })
-      .catch(() => { /* toast handled by caller context */ })
-      .finally(() => setLoadingMore(false));
-  }
-
-  const filtered = allDocs;
-
-  function toggleDoc(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleSubmit() {
-    const attach: string[] = [];
-    const detach: string[] = [];
-    for (const id of selected) {
-      if (!linkedDocIds.has(id)) attach.push(id);
-    }
-    for (const id of linkedDocIds) {
-      if (!selected.has(id)) detach.push(id);
-    }
-    if (attach.length === 0 && detach.length === 0) {
-      onClose();
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onSubmit(attach, detach);
-      onClose();
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <CreateEntityOverlay
-      title="Manage Documents"
-      onSubmit={handleSubmit}
-      onClose={onClose}
-      loading={submitting}
-      submitLabel="Save"
-      submitDisabled={loadingDocs}
-    >
-      <Input
-        value={titleSearch}
-        onChange={(e) => setTitleSearch(e.target.value)}
-        placeholder="Search by title..."
-        style={{ marginBottom: theme.spacing.sm }}
-      />
-      <div
-        style={{
-          maxHeight: 320,
-          overflowY: "auto",
-          border: `1px solid ${theme.color.borderSubtle}`,
-          borderRadius: theme.radius.md,
-          background: theme.color.surface,
-        }}
-      >
-        {loadingDocs ? (
-          <div style={{ padding: theme.spacing.lg, textAlign: "center", color: theme.color.textMuted, fontSize: theme.font.size.sm }}>
-            Loading documents...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: theme.spacing.lg, textAlign: "center", color: theme.color.textMuted, fontSize: theme.font.size.sm }}>
-            {allDocs.length === 0 ? "No documents exist yet." : "No documents match the search."}
-          </div>
-        ) : (
-          <>
-            {filtered.map((doc) => (
-              <label
-                key={doc.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: theme.spacing.sm,
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  cursor: "pointer",
-                  borderBottom: `1px solid ${theme.color.borderSubtle}`,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.text,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(doc.id)}
-                  onChange={() => toggleDoc(doc.id)}
-                  style={{ flexShrink: 0 }}
-                />
-                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {doc.title}
-                </span>
-                {doc.tags.length > 0 && (
-                  <span style={{ display: "flex", gap: theme.spacing.xs, flexShrink: 0 }}>
-                    {doc.tags.map((tag) => (
-                      <TagChip key={tag} name={tag} />
-                    ))}
-                  </span>
-                )}
-              </label>
-            ))}
-            {allDocs.length < totalDocs && (
-              <div style={{ padding: theme.spacing.sm, textAlign: "center" }}>
-                <Button
-                  variant="ghost"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                >
-                  {loadingMore ? "Loading..." : `Load more (${allDocs.length} of ${totalDocs})`}
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </CreateEntityOverlay>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // ProjectPage
 // ---------------------------------------------------------------------------
 
@@ -1551,9 +1367,11 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       />
     )}
     {showDocPicker && (
-      <DocumentPickerOverlay
+      <DocumentReferencePicker
         linkedDocIds={new Set((project.documents ?? []).map((d) => d.id))}
-        onSubmit={async (attach, detach) => {
+        hideTypeSelection={true}
+        preselectedType="reference"
+        onSave={async (attach, detach) => {
           const input: { attach_documents?: string[]; detach_documents?: string[] } = {};
           if (attach.length > 0) input.attach_documents = attach;
           if (detach.length > 0) input.detach_documents = detach;

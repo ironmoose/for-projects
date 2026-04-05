@@ -52,6 +52,8 @@ export { CreateTaskOverlay } from "./organisms/CreateTaskOverlay";
 export { DocumentReaderModal } from "./organisms/DocumentReaderModal";
 export { DocumentTable } from "./organisms/DocumentTable";
 export { CreateDocumentOverlay } from "./organisms/CreateDocumentOverlay";
+export { DocumentReferencePicker } from "./organisms/DocumentReferencePicker";
+export type { ReferenceType } from "./organisms/DocumentReferencePicker";
 export { ShortcutHelpOverlay } from "./organisms/ShortcutHelpOverlay";
 export { DependencyGraphView } from "./organisms/DependencyGraphView";
 export { ModalShell } from "./organisms/ModalShell";
