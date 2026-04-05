@@ -8,6 +8,18 @@ import type { DocumentReferenceRepository } from "../repositories/document-refer
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
 
+const FOLDER_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+function normalizeFolder(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed === "" ? null : trimmed;
+}
+
+function isValidFolder(value: string): boolean {
+  return value.length <= 64 && FOLDER_PATTERN.test(value);
+}
+
 export class DocumentService implements IDocumentService {
   constructor(
     private documentRepo: DocumentRepository,
@@ -17,7 +29,7 @@ export class DocumentService implements IDocumentService {
     private docRefRepo?: DocumentReferenceRepository,
   ) {}
 
-  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
+  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; project_id?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
     // Resolve entity_type/entity_id filtering (project_id is backward-compat alias)
     let docIds: string[] | undefined;
     const entityType = filter?.entity_type ?? (filter?.project_id ? "project" : undefined);
@@ -62,6 +74,12 @@ export class DocumentService implements IDocumentService {
       if (input.content !== undefined && input.content.length > 50000) {
         throw new ServiceError("content must be 50000 characters or fewer", 400);
       }
+      if (input.folder !== undefined) {
+        input.folder = normalizeFolder(input.folder);
+        if (input.folder !== null && !isValidFolder(input.folder)) {
+          throw new ServiceError("folder must be lowercase alphanumeric and hyphens, max 64 chars", 400);
+        }
+      }
       if (input.tags) {
         for (const tag of input.tags) {
           const normalized = tag.toLowerCase();
@@ -76,6 +94,7 @@ export class DocumentService implements IDocumentService {
       title: input.title,
       summary: input.summary ?? null,
       content: input.content ?? null,
+      folder: input.folder ?? null,
       favorite: input.favorite ? 1 : 0,
     }));
 
@@ -117,6 +136,12 @@ export class DocumentService implements IDocumentService {
       }
       if (input.content !== undefined && input.content !== null && input.content.length > 50000) {
         throw new ServiceError("content must be 50000 characters or fewer", 400);
+      }
+      if (input.folder !== undefined) {
+        input.folder = normalizeFolder(input.folder);
+        if (input.folder !== null && !isValidFolder(input.folder)) {
+          throw new ServiceError("folder must be lowercase alphanumeric and hyphens, max 64 chars", 400);
+        }
       }
       if (input.tags) {
         for (const tag of input.tags) {

@@ -351,13 +351,11 @@ function TaskDetailPanel({
   task,
   onClose,
   onUpdate,
-  onOpenDocument,
   taskTitles,
 }: {
   task: TaskDetail;
   onClose: () => void;
   onUpdate: (taskId: string, input: Record<string, unknown>) => Promise<void>;
-  onOpenDocument: (documentId: string) => void;
   taskTitles: Map<string, string>;
 }) {
   const { theme } = useTheme();
@@ -373,10 +371,6 @@ function TaskDetailPanel({
   // Group key editing state
   const [editingGroupKey, setEditingGroupKey] = useState(false);
   const [groupKeyValue, setGroupKeyValue] = useState(task.group_key ?? "");
-
-  // Reference picker state
-  const [referencePickerType, setReferencePickerType] = useState<ReferenceType | null>(null);
-  const [showReferencePicker, setShowReferencePicker] = useState(false);
 
   // Suppress keyboard shortcuts while detail panel is open
   useShortcutSuppression();
@@ -502,44 +496,6 @@ function TaskDetailPanel({
     }
     await onUpdate(task.id, { group_key: sendValue });
     setEditingGroupKey(false);
-  }
-
-  // Group references by type
-  const referencesByType = useMemo(() => {
-    const map = new Map<ReferenceType, DocumentReferenceDetail[]>();
-    for (const ref of task.documents) {
-      const existing = map.get(ref.type) ?? [];
-      existing.push(ref);
-      map.set(ref.type, existing);
-    }
-    return map;
-  }, [task.documents]);
-
-  // Determine which types to show
-  const visibleTypes = useMemo(() => {
-    const types = new Set<ReferenceType>(ALWAYS_SHOWN_TYPES);
-    for (const ref of task.documents) {
-      types.add(ref.type);
-    }
-    return REFERENCE_TYPES.filter((t) => types.has(t));
-  }, [task.documents]);
-
-  async function handleAttachDocument(documentId: string, type: ReferenceType) {
-    const mergePatch: DocumentsMergePatch = {
-      [documentId]: [...(task.documents.filter((r) => r.document_id === documentId).map((r) => ({ type: r.type }))), { type }],
-    };
-    await onUpdate(task.id, { documents: mergePatch });
-  }
-
-  async function handleDetachDocument(documentId: string, type: ReferenceType) {
-    const remaining = task.documents
-      .filter((r) => r.document_id === documentId)
-      .filter((r) => !(r.document_id === documentId && r.type === type))
-      .map((r) => ({ type: r.type }));
-    const mergePatch: DocumentsMergePatch = {
-      [documentId]: remaining.length > 0 ? remaining : null,
-    };
-    await onUpdate(task.id, { documents: mergePatch });
   }
 
   return (
@@ -742,33 +698,6 @@ function TaskDetailPanel({
           )}
         </Card>
 
-        {/* Document Reference Sections */}
-        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.sm }}>
-            <SectionLabel>Documents</SectionLabel>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setReferencePickerType(null); setShowReferencePicker(true); }}
-            >
-              <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
-                <Icon name="add" size={14} />
-                Manage
-              </span>
-            </Button>
-          </div>
-          {visibleTypes.map((type) => (
-            <DocumentReferenceSection
-              key={type}
-              type={type}
-              references={referencesByType.get(type) ?? []}
-              onOpenDocument={(docId) => { onClose(); onOpenDocument(docId); }}
-              onDetachDocument={(docId) => handleDetachDocument(docId, type)}
-              onAddDocument={() => { setReferencePickerType(type); setShowReferencePicker(true); }}
-            />
-          ))}
-        </Card>
-
         {/* Dependencies -- always visible */}
         <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.sm }}>
           <SectionLabel style={{ marginBottom: theme.spacing.sm }}>Dependencies</SectionLabel>
@@ -838,16 +767,6 @@ function TaskDetailPanel({
         </div>
       </div>
 
-      {showReferencePicker && (
-        <DocumentReferencePicker
-          entityType="task"
-          entityId={task.id}
-          existingReferences={task.documents}
-          preselectedType={referencePickerType ?? undefined}
-          onSave={async (mergePatch) => { await onUpdate(task.id, { documents: mergePatch }); }}
-          onClose={() => setShowReferencePicker(false)}
-        />
-      )}
     </ModalShell>
   );
 }
@@ -1339,7 +1258,6 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         task={selectedTask}
         onClose={handleClosePanel}
         onUpdate={updateTask}
-        onOpenDocument={(docId) => { handleClosePanel(); setSelectedDocumentId(docId); }}
         taskTitles={taskTitles}
       />
     )}

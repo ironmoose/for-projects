@@ -7,13 +7,14 @@ export interface DocumentRow {
   title: string;
   summary: string | null;
   content: string | null;
+  folder: string | null;
   favorite: number;
   created_at: string;
   updated_at: string;
 }
 
 function toDocument(row: DocumentRow): Document {
-  return { ...row, favorite: !!row.favorite };
+  return { ...row, favorite: !!row.favorite, folder: row.folder ?? null };
 }
 
 export class DocumentRepository {
@@ -24,7 +25,7 @@ export class DocumentRepository {
     return row ? toDocument(row) : null;
   }
 
-  findMany(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; doc_ids?: string[]; limit?: number; offset?: number }): DocumentSummary[] {
+  findMany(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[]; limit?: number; offset?: number }): DocumentSummary[] {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
@@ -48,6 +49,10 @@ export class DocumentRepository {
       conditions.push("d.favorite = ?");
       params.push(filter.favorite ? 1 : 0);
     }
+    if (filter?.folder) {
+      conditions.push("d.folder = ?");
+      params.push(filter.folder);
+    }
     if (filter?.doc_ids) {
       const placeholders = filter.doc_ids.map(() => "?").join(", ");
       conditions.push(`d.id IN (${placeholders})`);
@@ -58,12 +63,12 @@ export class DocumentRepository {
     params.push(limit, offset);
 
     const rows = this.db
-      .query(`SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content, d.favorite, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
+      .query(`SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content, d.folder, d.favorite, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
       .all(...params) as (Omit<DocumentSummary, "has_content" | "favorite" | "tags"> & { has_content: number; favorite: number })[];
-    return rows.map((r) => ({ ...r, has_content: !!r.has_content, favorite: !!r.favorite, tags: [] as string[] })) as DocumentSummary[];
+    return rows.map((r) => ({ ...r, has_content: !!r.has_content, folder: r.folder ?? null, favorite: !!r.favorite, tags: [] as string[] })) as DocumentSummary[];
   }
 
-  count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; doc_ids?: string[] }): number {
+  count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[] }): number {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
     let join = "";
@@ -85,6 +90,10 @@ export class DocumentRepository {
       conditions.push("d.favorite = ?");
       params.push(filter.favorite ? 1 : 0);
     }
+    if (filter?.folder) {
+      conditions.push("d.folder = ?");
+      params.push(filter.folder);
+    }
     if (filter?.doc_ids) {
       const placeholders = filter.doc_ids.map(() => "?").join(", ");
       conditions.push(`d.id IN (${placeholders})`);
@@ -102,7 +111,7 @@ export class DocumentRepository {
 
   insertMany(rows: Omit<DocumentRow, "id" | "created_at" | "updated_at">[]): Document[] {
     const stmt = this.db.query(
-      "INSERT INTO documents (id, title, summary, content, favorite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO documents (id, title, summary, content, folder, favorite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const now = new Date().toISOString();
     const ids: string[] = [];
@@ -110,7 +119,7 @@ export class DocumentRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.title, row.summary ?? null, row.content ?? null, row.favorite ?? 0, now, now);
+      stmt.run(id, row.title, row.summary ?? null, row.content ?? null, row.folder ?? null, row.favorite ?? 0, now, now);
     }
 
     const results: Document[] = [];
@@ -120,6 +129,7 @@ export class DocumentRepository {
         title: rows[i].title,
         summary: rows[i].summary ?? null,
         content: rows[i].content ?? null,
+        folder: rows[i].folder ?? null,
         favorite: !!rows[i].favorite,
         created_at: now,
         updated_at: now,
@@ -128,7 +138,7 @@ export class DocumentRepository {
     return results;
   }
 
-  updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; favorite?: boolean }[]): Document[] {
+  updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean }[]): Document[] {
     const now = new Date().toISOString();
     const results: Document[] = [];
 
@@ -139,17 +149,19 @@ export class DocumentRepository {
       const title = row.title !== undefined ? row.title : existing.title;
       const summary = row.summary !== undefined ? row.summary : existing.summary;
       const content = row.content !== undefined ? row.content : existing.content;
+      const folder = row.folder !== undefined ? row.folder : existing.folder;
       const favorite = row.favorite !== undefined ? (row.favorite ? 1 : 0) : (existing.favorite ? 1 : 0);
 
       this.db
-        .query("UPDATE documents SET title = ?, summary = ?, content = ?, favorite = ?, updated_at = ? WHERE id = ?")
-        .run(title, summary, content, favorite, now, row.id);
+        .query("UPDATE documents SET title = ?, summary = ?, content = ?, folder = ?, favorite = ?, updated_at = ? WHERE id = ?")
+        .run(title, summary, content, folder, favorite, now, row.id);
 
       results.push({
         id: row.id,
         title,
         summary,
         content,
+        folder,
         favorite: !!favorite,
         created_at: existing.created_at,
         updated_at: now,

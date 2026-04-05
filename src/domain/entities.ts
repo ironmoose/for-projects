@@ -120,6 +120,7 @@ export interface Document {
   title: string;
   summary: string | null;
   content: string | null;
+  folder: string | null;
   favorite: boolean;
   created_at: string;
   updated_at: string;
@@ -130,6 +131,7 @@ export interface DocumentSummary {
   title: string;
   summary: string | null;
   has_content: boolean;
+  folder: string | null;
   favorite: boolean;
   tags: TagName[];
   created_at: string;
@@ -156,6 +158,7 @@ export function toDocumentSummary(doc: Document, tags: TagName[] = []): Document
     id: doc.id, title: doc.title,
     summary: doc.summary,
     has_content: doc.content != null,
+    folder: doc.folder,
     favorite: doc.favorite,
     tags,
     created_at: doc.created_at, updated_at: doc.updated_at,

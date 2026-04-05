@@ -46,7 +46,7 @@ function handle<T>(fn: () => T) {
 }
 
 /**
- * Zod schema for the documents merge-patch field used in project and task tools.
+ * Zod schema for the documents merge-patch field used in project tools.
  * Keys are document IDs. Array value replaces reference types for that document.
  * null removes all references to that document. Absent keys are untouched.
  */
@@ -115,7 +115,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_task",
     {
-      description: "Retrieve a single task by ID with all fields. Response includes title, summary, status, effort, impact, category, group_key, is_blocked, timestamps, and a `documents` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
+      description: "Retrieve a single task by ID with all fields. Response includes title, summary, status, effort, impact, category, group_key, is_blocked, and timestamps. Tasks do not have document references — use task summary for context. Documents are linked to projects only.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => taskService.get(id))
@@ -162,7 +162,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_task",
     {
-      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Tasks have title and summary only — rich content lives in linked documents managed via the documents field on update_task. Optional summary (max 1000 chars), group_key (max 32 chars) for organizing tasks into flat groups. Status defaults to 'todo' if not provided. Optional effort (trivial/low/medium/high/extreme), impact (trivial/low/medium/high/extreme), and category (feature/bugfix/refactor/test/perf/infra/docs/security/design/chore). Optionally attach document references using the `documents` field: an object where keys are document IDs and values are arrays of {type} objects. Valid reference types: goal, plan, requirements, design, reference, note.",
+      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Tasks have title and summary only — documents are linked to projects, not tasks. Optional summary (max 1000 chars), group_key (max 32 chars) for organizing tasks into flat groups. Status defaults to 'todo' if not provided. Optional effort (trivial/low/medium/high/extreme), impact (trivial/low/medium/high/extreme), and category (feature/bugfix/refactor/test/perf/infra/docs/security/design/chore).",
       inputSchema: {
         items: z.array(z.object({
           project_id: z.string().max(26),
@@ -173,10 +173,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
-          documents: z.record(
-            z.string().max(26),
-            z.array(z.object({ type: z.enum([...DOCUMENT_REFERENCE_TYPES]) })).nullable(),
-          ).optional(),
         })),
       },
     },
@@ -186,7 +182,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use the documents field to manage document references with merge-patch semantics: key = document_id, value = array of {type} objects replaces all reference types for that document; value = null removes all references to that document; absent key = no change. Valid types: goal, plan, requirements, design, reference, note. Use add_dependencies to create dependency edges (each with task_id of the blocker/related task and type 'blocks' or 'relates_to'). Use remove_dependencies to remove edges by task_id. The current task becomes the target (blocked by / related to the specified task_id).",
+      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use add_dependencies to create dependency edges (each with task_id of the blocker/related task and type 'blocks' or 'relates_to'). Use remove_dependencies to remove edges by task_id. The current task becomes the target (blocked by / related to the specified task_id).",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
@@ -197,7 +193,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
-          documents: documentsMergePatchSchema,
           add_dependencies: z.array(z.object({
             task_id: z.string().max(26),
             type: z.enum([...DEPENDENCY_TYPES]),
@@ -285,6 +280,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         search: z.string().max(500).optional(),
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
+        folder: z.string().max(64).optional().describe("Filter by folder name (exact match)."),
         project_id: z.string().max(26).optional().describe("Deprecated: use entity_type='project' + entity_id instead."),
         entity_type: z.enum([...ENTITY_TYPES]).optional().describe("Filter documents linked to this entity type. Requires entity_id."),
         entity_id: z.string().max(26).optional().describe("Filter documents linked to this entity ID. Requires entity_type."),
@@ -293,7 +289,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ search, tag, title, project_id, entity_type, entity_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, project_id, entity_type, entity_id, favorite, limit, offset }))
+    ({ search, tag, title, folder, project_id, entity_type, entity_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, folder, project_id, entity_type, entity_id, favorite, limit, offset }))
   );
 
   server.registerTool(
@@ -308,12 +304,13 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_document",
     {
-      description: "Create documents. Pass an `items` array of objects, each with a required title, optional summary (max 500 chars), optional content (markdown), optional tags array, and optional favorite boolean. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
+      description: "Create documents. Pass an `items` array of objects, each with a required title, optional summary (max 500 chars), optional content (markdown), optional folder (lowercase alphanumeric + hyphens, max 64 chars), optional tags array, and optional favorite boolean. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
       inputSchema: {
         items: z.array(z.object({
           title: z.string().max(255),
           summary: z.string().max(500).optional(),
           content: z.string().max(50000).optional(),
+          folder: z.string().max(64).optional().describe("Flat folder grouping. Lowercase alphanumeric + hyphens only."),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
           favorite: z.boolean().optional(),
         })),
@@ -325,13 +322,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_document",
     {
-      description: "Update documents by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
+      description: "Update documents by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags. Set folder to null to remove from folder. Valid tags — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
           summary: z.string().max(500).optional(),
           content: z.string().max(50000).optional(),
+          folder: z.string().max(64).nullable().optional().describe("Flat folder grouping. Lowercase alphanumeric + hyphens. Set to null to remove."),
           tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
           favorite: z.boolean().optional(),
         })),

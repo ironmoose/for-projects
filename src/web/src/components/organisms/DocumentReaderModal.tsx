@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useTheme } from "../theme/ThemeContext";
+import { useToastContext } from "../ToastContext";
 import { useDocument } from "../../hooks/useDocument";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Button } from "../atoms/Button";
@@ -20,15 +21,38 @@ interface DocumentReaderModalProps {
 
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
   const { theme } = useTheme();
+  const toast = useToastContext();
   const { document, notFound, loading, updateDocument } = useDocument(documentId);
   const reduced = useReducedMotion();
 
+  const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editSummary, setEditSummary] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editTags, setEditTags] = useState<TagName[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    if (!document) return;
+    const text = document.content
+      ? document.content
+      : document.title + "\n\n" + (document.summary ?? "");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.showToast("Copied to clipboard", "success");
+      setCopied(true);
+      clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.showToast("Failed to copy", "error");
+    }
+  }, [document, toast]);
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current);
+  }, []);
 
   const enterEditMode = useCallback(() => {
     if (!document) return;
@@ -166,6 +190,13 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                       onClick={() => updateDocument({ favorite: !document.favorite })}
                       aria-label={document.favorite ? "Remove from favorites" : "Add to favorites"}
                       style={{ color: document.favorite ? theme.color.warning : theme.color.textMuted }}
+                    />
+                    <IconButton
+                      icon={copied ? "check" : "content_copy"}
+                      size={18}
+                      onClick={handleCopy}
+                      aria-label="Copy markdown to clipboard"
+                      style={{ color: copied ? theme.color.success : undefined }}
                     />
                     <IconButton icon="edit" size={18} onClick={enterEditMode} aria-label="Edit document" />
                   </>

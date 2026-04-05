@@ -5,7 +5,6 @@ import type {
   CreateTaskInput,
   UpdateTaskInput,
 } from "../../domain";
-import { validateDocumentsMergePatch, DocumentsMergePatchError } from "./validation";
 
 export function taskRoutes(service: ITaskService, depService?: ITaskDependencyService): Hono {
   const app = new Hono();
@@ -68,19 +67,6 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateTaskInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    try {
-      for (let i = 0; i < body.items.length; i++) {
-        const item = body.items[i];
-        if (item.documents !== undefined) {
-          item.documents = validateDocumentsMergePatch(item.documents, i);
-        }
-      }
-    } catch (err) {
-      if (err instanceof DocumentsMergePatchError) {
-        return c.json({ error: err.message }, 400);
-      }
-      throw err;
-    }
     const tasks = service.update(body.items);
     return c.json(tasks);
   });
