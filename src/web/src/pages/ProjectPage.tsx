@@ -23,7 +23,6 @@ import {
   DependencyChip,
   DependencyGraphView,
 } from "../components";
-import { DocumentReferenceSection } from "../components/organisms/DocumentReferenceSection";
 import { DocumentReferencePicker } from "../components/organisms/DocumentReferencePicker";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { ModalShell } from "../components/organisms/ModalShell";
@@ -39,8 +38,8 @@ import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { useToastContext } from "../components/ToastContext";
 import { ApiError, fetchTask, updateTasks, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
 import type { TaskDetail, TaskDependencies, DependencyDetail, DocumentsMergePatch } from "../api";
-import type { TaskSummary, TaskStatus, DocumentReferenceDetail, ReferenceType } from "../types";
-import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES, REFERENCE_TYPES } from "../types";
+import type { TaskSummary, TaskStatus } from "../types";
+import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../types";
 import { formatDate } from "../utils";
 
 // ---------------------------------------------------------------------------
@@ -69,7 +68,6 @@ const graphStatusFilterOptions = [
 ];
 
 /** Types always shown even when empty */
-const ALWAYS_SHOWN_TYPES: ReferenceType[] = ["goal", "plan", "requirements", "design"];
 
 // ---------------------------------------------------------------------------
 // AddDependencySearch — inline search to add a dependency
@@ -790,6 +788,10 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [titleValue, setTitleValue] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
 
+  // Summary editing
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [summaryValue, setSummaryValue] = useState("");
+
   const [showDocPicker, setShowDocPicker] = useState(false);
 
   const [graphStatusFilter, setGraphStatusFilter] = useState("in_progress,todo");
@@ -885,6 +887,20 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     }
   }
 
+
+  // Summary editing handlers
+  function handleStartEditSummary() {
+    if (!project) return;
+    setEditingSummary(true);
+    setSummaryValue(project.summary ?? "");
+  }
+
+  async function handleSaveSummary() {
+    const trimmed = summaryValue.trim();
+    await updateProject({ summary: trimmed || null });
+    setEditingSummary(false);
+    setSummaryValue("");
+  }
 
   if (notFound) {
     return (
@@ -1120,15 +1136,30 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 }}
               >
                 {(project.documents ?? []).map((doc, idx) => (
-                  <DocumentRow
-                    key={doc.id}
-                    title={doc.title}
-                    isLast={idx === (project.documents ?? []).length - 1}
-                    onClick={() => setSelectedDocumentId(doc.id)}
-                    onDetach={() => {
-                      updateProject({ detach_documents: [doc.id] }).catch(() => {});
+                  <div
+                    key={doc.document_id}
+                    onClick={() => setSelectedDocumentId(doc.document_id)}
+                    style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      borderBottom: idx < (project.documents ?? []).length - 1 ? `1px solid ${theme.color.border}` : "none",
                     }}
-                  />
+                  >
+                    <span style={{ fontSize: theme.font.size.sm, color: theme.color.text }}>{doc.title}</span>
+                    <IconButton
+                      icon="link_off"
+                      size={14}
+                      aria-label="Detach document"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const mergePatch: DocumentsMergePatch = { [doc.document_id]: null };
+                        updateProject({ documents: mergePatch }).catch(() => {});
+                      }}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -1227,14 +1258,13 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         onCancel={() => setDeleteTaskTarget(null)}
       />
     )}
-    {showReferencePicker && project && (
+    {showDocPicker && project && (
       <DocumentReferencePicker
         entityType="project"
         entityId={project.id}
         existingReferences={project.documents}
-        preselectedType={referencePickerType ?? undefined}
         onSave={async (mergePatch) => { await updateProject({ documents: mergePatch }); }}
-        onClose={() => setShowReferencePicker(false)}
+        onClose={() => setShowDocPicker(false)}
       />
     )}
   </>
