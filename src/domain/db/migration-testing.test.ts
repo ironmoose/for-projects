@@ -243,16 +243,16 @@ describe("text-to-document data migrations (021 + 022)", () => {
     // -----------------------------------------------------------------------
     // Verify title format
     // -----------------------------------------------------------------------
-    // The migrations use "{title}: {TypeName}" format
-    expect(getDocTitle("project", PROJECT_A_ID, "goal")).toBe("Project A: Goal");
-    expect(getDocTitle("project", PROJECT_A_ID, "requirements")).toBe("Project A: Requirements");
-    expect(getDocTitle("project", PROJECT_A_ID, "design")).toBe("Project A: Design");
-    expect(getDocTitle("project", PROJECT_B_ID, "goal")).toBe("Project B: Goal");
-    expect(getDocTitle("task", TASK_X_ID, "plan")).toBe("Task X: Plan");
-    expect(getDocTitle("task", TASK_X_ID, "note")).toBe("Task X: Note");
-    expect(getDocTitle("task", TASK_X_ID, "reference")).toBe("Task X: Reference");
-    expect(getDocTitle("task", TASK_X_ID, "requirements")).toBe("Task X: Requirements");
-    expect(getDocTitle("task", TASK_Y_ID, "plan")).toBe("Task Y: Plan");
+    // The migrations use generateDocumentTitle which produces "{title} — {TypeName}" format
+    expect(getDocTitle("project", PROJECT_A_ID, "goal")).toBe("Project A \u2014 Goal");
+    expect(getDocTitle("project", PROJECT_A_ID, "requirements")).toBe("Project A \u2014 Requirements");
+    expect(getDocTitle("project", PROJECT_A_ID, "design")).toBe("Project A \u2014 Design");
+    expect(getDocTitle("project", PROJECT_B_ID, "goal")).toBe("Project B \u2014 Goal");
+    expect(getDocTitle("task", TASK_X_ID, "plan")).toBe("Task X \u2014 Plan");
+    expect(getDocTitle("task", TASK_X_ID, "note")).toBe("Task X \u2014 Note");
+    expect(getDocTitle("task", TASK_X_ID, "reference")).toBe("Task X \u2014 Reference");
+    expect(getDocTitle("task", TASK_X_ID, "requirements")).toBe("Task X \u2014 Requirements");
+    expect(getDocTitle("task", TASK_Y_ID, "plan")).toBe("Task Y \u2014 Plan");
 
     // -----------------------------------------------------------------------
     // Verify summary population

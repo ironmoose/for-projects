@@ -688,9 +688,9 @@ describe("update_project with document references merge-patch", () => {
     });
 
     const project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.references).toBeTruthy();
-    expect(project.references.length).toBeGreaterThanOrEqual(1);
-    expect(project.references.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
+    expect(project.documents).toBeTruthy();
+    expect(project.documents.length).toBeGreaterThanOrEqual(1);
+    expect(project.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
   });
 
   it("documents merge-patch with null removes documents, verify via get_project", async () => {
@@ -703,7 +703,7 @@ describe("update_project with document references merge-patch", () => {
 
     // Verify attached
     let project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.references.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
+    expect(project.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
 
     // Detach via null
     await callTool("update_project", {
@@ -711,7 +711,7 @@ describe("update_project with document references merge-patch", () => {
     });
 
     project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.references.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
+    expect(project.documents.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
   });
 });
 
@@ -1182,6 +1182,6 @@ describe("delete_document", () => {
     await callTool("delete_document", { ids: [doc.id] });
 
     const project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.references.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
+    expect(project.documents.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
   });
 });

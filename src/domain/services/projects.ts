@@ -21,11 +21,11 @@ export class ProjectService implements IProjectService {
     };
   }
 
-  get(id: string): Project & { references: DocumentReferenceDetail[] } {
+  get(id: string): Project & { documents: DocumentReferenceDetail[] } {
     const project = this.repo.findById(id);
     if (!project) throw new ServiceError("project not found", 404);
-    const references = this.docRefService.findByEntity("project", id);
-    return { ...project, references };
+    const documents = this.docRefService.findByEntity("project", id);
+    return { ...project, documents };
   }
 
   create(inputs: CreateProjectInput[]): (Project & { documents: DocumentReferenceSummary[] })[] {

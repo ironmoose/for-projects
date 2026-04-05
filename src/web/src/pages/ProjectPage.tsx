@@ -6,7 +6,6 @@ import {
   IconButton,
   Input,
   Select,
-  Markdown,
   SectionLabel,
   Textarea,
   Stack,
@@ -21,11 +20,11 @@ import {
   TaskTable,
   TaskTableFilters,
   DocumentReaderModal,
-  CreateEntityOverlay,
-  TagChip,
   DependencyChip,
   DependencyGraphView,
 } from "../components";
+import { DocumentReferenceSection } from "../components/organisms/DocumentReferenceSection";
+import { DocumentReferencePicker } from "../components/organisms/DocumentReferencePicker";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { ModalShell } from "../components/organisms/ModalShell";
 import { Badge } from "../components/atoms/Badge";
@@ -38,16 +37,15 @@ import { useDependencyGraph } from "../hooks/useDependencyGraph";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask, updateTasks, fetchDocuments, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
-import type { TaskDependencies, DependencyDetail } from "../api";
-import type { Task, TaskSummary, TaskStatus, DocumentSummary } from "../types";
-import {
-  TASK_STATUSES,
-  EFFORT_LEVELS,
-  IMPACT_LEVELS,
-  TASK_CATEGORIES,
-} from "../types";
+import { ApiError, fetchTask, updateTasks, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
+import type { TaskDetail, TaskDependencies, DependencyDetail, DocumentsMergePatch } from "../api";
+import type { TaskSummary, TaskStatus, DocumentReferenceDetail, ReferenceType } from "../types";
+import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES, REFERENCE_TYPES } from "../types";
 import { formatDate } from "../utils";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const STATUS_LABELS: Record<string, string> = {
   todo: "todo",
@@ -69,6 +67,9 @@ const graphStatusFilterOptions = [
   { value: "done", label: "Done" },
   { value: "archived", label: "Archived" },
 ];
+
+/** Types always shown even when empty */
+const ALWAYS_SHOWN_TYPES: ReferenceType[] = ["goal", "plan", "requirements", "design"];
 
 // ---------------------------------------------------------------------------
 // AddDependencySearch — inline search to add a dependency
@@ -226,7 +227,7 @@ function DependencySection({
             fontWeight: 700,
             color: theme.color.textMuted,
             textTransform: "uppercase",
-            letterSpacing: theme.font.letterSpacing.wide,
+            letterSpacing: "0.06em",
           }}
         >
           {title}
@@ -262,14 +263,7 @@ function DependencySection({
           ))}
         </div>
       ) : (
-        <p
-          style={{
-            margin: 0,
-            fontSize: theme.font.size.xs,
-            color: theme.color.textFaint,
-            fontStyle: "italic",
-          }}
-        >
+        <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
           None
         </p>
       )}
@@ -308,10 +302,6 @@ function DependencySection({
 // TaskDetailPanel
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Select option helpers (mirrors CreateTaskOverlay pattern)
-// ---------------------------------------------------------------------------
-
 function toSelectOptions(
   values: readonly string[],
   noneLabel = "-- none --",
@@ -329,10 +319,6 @@ const DETAIL_STATUS_OPTIONS = TASK_STATUSES.map((v) => ({ value: v, label: v.rep
 const DETAIL_EFFORT_OPTIONS = toSelectOptions(EFFORT_LEVELS);
 const DETAIL_IMPACT_OPTIONS = toSelectOptions(IMPACT_LEVELS);
 const DETAIL_CATEGORY_OPTIONS = toSelectOptions(TASK_CATEGORIES);
-
-// ---------------------------------------------------------------------------
-// MetadataField — label + select/input for inline metadata editing
-// ---------------------------------------------------------------------------
 
 function MetadataField({
   label,
@@ -361,28 +347,17 @@ function MetadataField({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Text field names we support editing
-// ---------------------------------------------------------------------------
-
-type EditableTextField = "description" | "plan" | "implementation" | "acceptance_criteria";
-
-const TEXT_FIELDS: { key: EditableTextField; label: string; defaultOpen: boolean }[] = [
-  { key: "description", label: "Description", defaultOpen: true },
-  { key: "plan", label: "Plan", defaultOpen: false },
-  { key: "implementation", label: "Implementation", defaultOpen: false },
-  { key: "acceptance_criteria", label: "Acceptance Criteria", defaultOpen: false },
-];
-
 function TaskDetailPanel({
   task,
   onClose,
   onUpdate,
+  onOpenDocument,
   taskTitles,
 }: {
-  task: Task;
+  task: TaskDetail;
   onClose: () => void;
-  onUpdate: (taskId: string, input: Record<string, string | null | undefined>) => Promise<void>;
+  onUpdate: (taskId: string, input: Record<string, unknown>) => Promise<void>;
+  onOpenDocument: (documentId: string) => void;
   taskTitles: Map<string, string>;
 }) {
   const { theme } = useTheme();
@@ -391,13 +366,17 @@ function TaskDetailPanel({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(task.title);
 
-  // Text field editing state — only one at a time
-  const [editingTextField, setEditingTextField] = useState<EditableTextField | null>(null);
-  const [editTextValue, setEditTextValue] = useState("");
+  // Summary editing state
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [summaryValue, setSummaryValue] = useState(task.summary ?? "");
 
   // Group key editing state
   const [editingGroupKey, setEditingGroupKey] = useState(false);
   const [groupKeyValue, setGroupKeyValue] = useState(task.group_key ?? "");
+
+  // Reference picker state
+  const [referencePickerType, setReferencePickerType] = useState<ReferenceType | null>(null);
+  const [showReferencePicker, setShowReferencePicker] = useState(false);
 
   // Suppress keyboard shortcuts while detail panel is open
   useShortcutSuppression();
@@ -421,7 +400,6 @@ function TaskDetailPanel({
     loadDependencies();
   }, [loadDependencies]);
 
-  // All existing dependency task IDs (for excluding from search)
   const allExistingIds = useMemo(() => {
     if (!dependencies) return new Set<string>();
     const ids = new Set<string>();
@@ -434,13 +412,10 @@ function TaskDetailPanel({
   const handleRemoveDependency = useCallback(async (dep: DependencyDetail, section: DependencySectionType) => {
     try {
       if (section === "blocked_by") {
-        // Edge is: dep.task_id blocks current task => source=dep.task_id, target=task.id
         await removeDependency(task.project_id, dep.task_id, task.id);
       } else if (section === "blocks") {
-        // Edge is: current task blocks dep.task_id => source=task.id, target=dep.task_id
         await removeDependency(task.project_id, task.id, dep.task_id);
       } else {
-        // relates_to: stored direction is arbitrary, try both
         await removeDependencyBothDirections(task.project_id, task.id, dep.task_id);
       }
       loadDependencies();
@@ -452,13 +427,10 @@ function TaskDetailPanel({
   const handleAddDependency = useCallback(async (targetTaskId: string, section: DependencySectionType) => {
     try {
       if (section === "blocked_by") {
-        // Selected task blocks current task => source=selected, target=current
         await addDependency(task.project_id, targetTaskId, task.id, "blocks");
       } else if (section === "blocks") {
-        // Current task blocks selected task => source=current, target=selected
         await addDependency(task.project_id, task.id, targetTaskId, "blocks");
       } else {
-        // relates_to: source=current, target=selected
         await addDependency(task.project_id, task.id, targetTaskId, "relates_to");
       }
       loadDependencies();
@@ -467,10 +439,14 @@ function TaskDetailPanel({
     }
   }, [task.id, task.project_id, loadDependencies, showToast]);
 
-  // Sync title/groupKey when task prop changes
+  // Sync state when task prop changes
   useEffect(() => {
     if (!editingTitle) setTitleValue(task.title);
   }, [task.title, editingTitle]);
+
+  useEffect(() => {
+    if (!editingSummary) setSummaryValue(task.summary ?? "");
+  }, [task.summary, editingSummary]);
 
   useEffect(() => {
     if (!editingGroupKey) setGroupKeyValue(task.group_key ?? "");
@@ -480,27 +456,14 @@ function TaskDetailPanel({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (editingTitle) { setEditingTitle(false); setTitleValue(task.title); return; }
-        if (editingTextField) { setEditingTextField(null); return; }
+        if (editingSummary) { setEditingSummary(false); setSummaryValue(task.summary ?? ""); return; }
         if (editingGroupKey) { setEditingGroupKey(false); setGroupKeyValue(task.group_key ?? ""); return; }
         onClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, editingTitle, editingTextField, editingGroupKey, task.title, task.group_key]);
-
-  const emptyText = (label: string) => (
-    <p
-      style={{
-        margin: 0,
-        fontSize: theme.font.size.sm,
-        color: theme.color.textFaint,
-        fontStyle: "italic",
-      }}
-    >
-      No {label} yet
-    </p>
-  );
+  }, [onClose, editingTitle, editingSummary, editingGroupKey, task.title, task.summary, task.group_key]);
 
   // --- Metadata save handlers ---
   async function handleMetadataChange(field: string, value: string) {
@@ -508,7 +471,6 @@ function TaskDetailPanel({
     await onUpdate(task.id, { [field]: sendValue });
   }
 
-  // --- Title save ---
   async function handleTitleSave() {
     const trimmed = titleValue.trim();
     if (!trimmed || trimmed === task.title) {
@@ -520,7 +482,17 @@ function TaskDetailPanel({
     setEditingTitle(false);
   }
 
-  // --- Group key save ---
+  async function handleSummarySave() {
+    const trimmed = summaryValue.trim();
+    const sendValue = trimmed === "" ? null : trimmed;
+    if (sendValue === (task.summary ?? null)) {
+      setEditingSummary(false);
+      return;
+    }
+    await onUpdate(task.id, { summary: sendValue });
+    setEditingSummary(false);
+  }
+
   async function handleGroupKeySave() {
     const trimmed = groupKeyValue.trim();
     const sendValue = trimmed === "" ? null : trimmed;
@@ -532,28 +504,43 @@ function TaskDetailPanel({
     setEditingGroupKey(false);
   }
 
-  // --- Text field save ---
-  async function handleTextFieldSave() {
-    if (!editingTextField) return;
-    const trimmed = editTextValue.trim();
-    const sendValue = trimmed === "" ? null : trimmed;
-    await onUpdate(task.id, { [editingTextField]: sendValue });
-    setEditingTextField(null);
+  // Group references by type
+  const referencesByType = useMemo(() => {
+    const map = new Map<ReferenceType, DocumentReferenceDetail[]>();
+    for (const ref of task.documents) {
+      const existing = map.get(ref.type) ?? [];
+      existing.push(ref);
+      map.set(ref.type, existing);
+    }
+    return map;
+  }, [task.documents]);
+
+  // Determine which types to show
+  const visibleTypes = useMemo(() => {
+    const types = new Set<ReferenceType>(ALWAYS_SHOWN_TYPES);
+    for (const ref of task.documents) {
+      types.add(ref.type);
+    }
+    return REFERENCE_TYPES.filter((t) => types.has(t));
+  }, [task.documents]);
+
+  async function handleAttachDocument(documentId: string, type: ReferenceType) {
+    const mergePatch: DocumentsMergePatch = {
+      [documentId]: [...(task.documents.filter((r) => r.document_id === documentId).map((r) => ({ type: r.type }))), { type }],
+    };
+    await onUpdate(task.id, { documents: mergePatch });
   }
 
-  function startEditingTextField(key: EditableTextField) {
-    setEditingTextField(key);
-    setEditTextValue(task[key] ?? "");
+  async function handleDetachDocument(documentId: string, type: ReferenceType) {
+    const remaining = task.documents
+      .filter((r) => r.document_id === documentId)
+      .filter((r) => !(r.document_id === documentId && r.type === type))
+      .map((r) => ({ type: r.type }));
+    const mergePatch: DocumentsMergePatch = {
+      [documentId]: remaining.length > 0 ? remaining : null,
+    };
+    await onUpdate(task.id, { documents: mergePatch });
   }
-
-  const editButton = (key: EditableTextField) => (
-    <IconButton
-      icon="edit"
-      size={14}
-      onClick={() => startEditingTextField(key)}
-      aria-label={`Edit ${key.replace(/_/g, " ")}`}
-    />
-  );
 
   return (
     <ModalShell
@@ -563,483 +550,305 @@ function TaskDetailPanel({
       handleEscape={false}
       style={{ gap: 0, padding: 0, minHeight: "50vh" }}
     >
-          {/* Header — editable title */}
-          <div
-            style={{
-              padding: `${theme.spacing.xl} ${theme.spacing.xl} ${theme.spacing.lg}`,
-              borderBottom: `1px solid ${theme.color.borderSubtle}`,
-              flexShrink: 0,
-            }}
-          >
-            <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {editingTitle ? (
-                  <Input
-                    value={titleValue}
-                    onChange={(e) => setTitleValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); handleTitleSave(); }
-                      if (e.key === "Escape") { e.stopPropagation(); setEditingTitle(false); setTitleValue(task.title); }
-                    }}
-                    onBlur={handleTitleSave}
-                    autoFocus
-                    style={{
-                      fontFamily: theme.font.headline,
-                      fontSize: theme.font.size.xl,
-                      fontWeight: 800,
-                      letterSpacing: theme.font.letterSpacing.tight,
-                    }}
-                  />
-                ) : (
-                  <h2
-                    onClick={() => setEditingTitle(true)}
-                    style={{
-                      margin: 0,
-                      fontFamily: theme.font.headline,
-                      fontSize: theme.font.size.xl,
-                      fontWeight: 800,
-                      letterSpacing: theme.font.letterSpacing.tight,
-                      color: theme.color.text,
-                      lineHeight: 1.3,
-                      cursor: "pointer",
-                    }}
-                    title="Click to edit title"
-                  >
-                    {task.title}
-                  </h2>
-                )}
-              </div>
-              <IconButton icon="close" size={18} onClick={onClose} aria-label="Close detail panel" />
-            </Stack>
-          </div>
-
-          {/* Body */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: theme.spacing.xl,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {/* Metadata — inline editable selects and group key input */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                gap: theme.spacing.md,
-                marginBottom: theme.spacing.lg,
-              }}
-            >
-              <MetadataField label="Status">
-                <Select
-                  options={DETAIL_STATUS_OPTIONS}
-                  value={task.status}
-                  onChange={(e) => handleMetadataChange("status", e.target.value)}
-                />
-              </MetadataField>
-              <MetadataField label="Effort">
-                <Select
-                  options={DETAIL_EFFORT_OPTIONS}
-                  value={task.effort ?? ""}
-                  onChange={(e) => handleMetadataChange("effort", e.target.value)}
-                />
-              </MetadataField>
-              <MetadataField label="Impact">
-                <Select
-                  options={DETAIL_IMPACT_OPTIONS}
-                  value={task.impact ?? ""}
-                  onChange={(e) => handleMetadataChange("impact", e.target.value)}
-                />
-              </MetadataField>
-              <MetadataField label="Category">
-                <Select
-                  options={DETAIL_CATEGORY_OPTIONS}
-                  value={task.category ?? ""}
-                  onChange={(e) => handleMetadataChange("category", e.target.value)}
-                />
-              </MetadataField>
-            </div>
-
-            {/* Group key — editable inline input */}
-            <div style={{ marginBottom: theme.spacing.lg }}>
-              <MetadataField label="Group Key">
-                {editingGroupKey ? (
-                  <Input
-                    value={groupKeyValue}
-                    onChange={(e) => setGroupKeyValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); handleGroupKeySave(); }
-                      if (e.key === "Escape") { e.stopPropagation(); setEditingGroupKey(false); setGroupKeyValue(task.group_key ?? ""); }
-                    }}
-                    onBlur={handleGroupKeySave}
-                    autoFocus
-                    placeholder="e.g. ui-crud-completeness"
-                  />
-                ) : (
-                  <span
-                    onClick={() => setEditingGroupKey(true)}
-                    style={{
-                      fontSize: theme.font.size.sm,
-                      color: task.group_key ? theme.color.text : theme.color.textFaint,
-                      fontStyle: task.group_key ? "normal" : "italic",
-                      cursor: "pointer",
-                      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                      borderRadius: theme.radius.lg,
-                      border: `1px solid transparent`,
-                      display: "inline-block",
-                    }}
-                    title="Click to edit group key"
-                  >
-                    {task.group_key ?? "No group key"}
-                  </span>
-                )}
-              </MetadataField>
-            </div>
-
-            {/* Text fields — each with edit button, only one editable at a time */}
-            {TEXT_FIELDS.map(({ key, label, defaultOpen }, idx) => (
-              <ExpandableCard
-                key={key}
-                title={label}
-                defaultOpen={defaultOpen}
-                variant="flat"
-                style={{ marginBottom: idx < TEXT_FIELDS.length - 1 ? theme.spacing.sm : 0 }}
-                headerAction={editingTextField !== key ? editButton(key) : undefined}
-              >
-                {editingTextField === key ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-                    <Textarea
-                      value={editTextValue}
-                      onChange={(e) => setEditTextValue(e.target.value)}
-                      autoFocus
-                      rows={8}
-                      placeholder={`Enter ${label.toLowerCase()}...`}
-                      style={{ width: "100%", boxSizing: "border-box" }}
-                    />
-                    <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setEditingTextField(null)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleTextFieldSave}
-                      >
-                        Save
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  task[key] ? <Markdown>{task[key]}</Markdown> : emptyText(label.toLowerCase())
-                )}
-              </ExpandableCard>
-            ))}
-
-            {/* Dependencies — always visible, not collapsible */}
-            <Card variant="flat" padding="md" style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.sm }}>
-              <SectionLabel style={{ marginBottom: theme.spacing.sm }}>Dependencies</SectionLabel>
-              {depsLoading ? (
-                <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint }}>Loading dependencies...</p>
-              ) : dependencies ? (
-                <>
-                  <div ref={blockedByRef}>
-                    <DependencySection
-                      title="Blocked By"
-                      items={dependencies.blocked_by}
-                      section="blocked_by"
-                      projectId={task.project_id}
-                      currentTaskId={task.id}
-                      allExistingIds={allExistingIds}
-                      onSelectTask={() => {}}
-                      onRemove={handleRemoveDependency}
-                      onAdd={handleAddDependency}
-                    />
-                  </div>
-                  <DependencySection
-                    title="Blocks"
-                    items={dependencies.blocks}
-                    section="blocks"
-                    projectId={task.project_id}
-                    currentTaskId={task.id}
-                    allExistingIds={allExistingIds}
-                    onSelectTask={() => {}}
-                    onRemove={handleRemoveDependency}
-                    onAdd={handleAddDependency}
-                  />
-                  <DependencySection
-                    title="Related"
-                    items={dependencies.relates_to}
-                    section="relates_to"
-                    projectId={task.project_id}
-                    currentTaskId={task.id}
-                    allExistingIds={allExistingIds}
-                    onSelectTask={() => {}}
-                    onRemove={handleRemoveDependency}
-                    onAdd={handleAddDependency}
-                  />
-                </>
-              ) : (
-                <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
-                  Dependencies not available
-                </p>
-              )}
-            </Card>
-
-            {/* Read-only metadata footer */}
-            <div
-              style={{
-                marginTop: "auto",
-                paddingTop: theme.spacing.xl,
-                borderTop: `1px solid ${theme.color.borderSubtle}`,
-              }}
-            >
-              <MetadataTable
-                title="Info"
-                rows={[
-                  { label: "ID", value: task.id },
-                  { label: "Created", value: formatDate(task.created_at) },
-                  { label: "Updated", value: formatDate(task.updated_at) },
-                ]}
-              />
-            </div>
-          </div>
-    </ModalShell>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// DocumentRow — clickable row for linked documents
-// ---------------------------------------------------------------------------
-
-function DocumentRow({ title, isLast, onClick, onDetach }: { title: string; isLast: boolean; onClick: () => void; onDetach: () => void }) {
-  const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-        cursor: "pointer",
-        background: hovered ? theme.color.surfaceContainerHigh : "transparent",
-        borderBottom: isLast ? "none" : `1px solid ${theme.color.borderSubtle}`,
-        display: "flex",
-        alignItems: "center",
-        gap: theme.spacing.sm,
-        transition: "background 120ms ease",
-      }}
-    >
-      <Icon name="description" size={16} style={{ color: theme.color.text, flexShrink: 0 }} />
-      <span
-        style={{
-          fontSize: theme.font.size.sm,
-          color: theme.color.text,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          flex: 1,
-        }}
-      >
-        {title}
-      </span>
-      <IconButton
-        icon="close"
-        size={14}
-        onClick={(e) => { e.stopPropagation(); onDetach(); }}
-        aria-label={`Detach ${title}`}
-      />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// DocumentPickerOverlay
-// ---------------------------------------------------------------------------
-
-interface DocumentPickerOverlayProps {
-  linkedDocIds: Set<string>;
-  onSubmit: (attach: string[], detach: string[]) => Promise<void>;
-  onClose: () => void;
-}
-
-const DOC_PICKER_PAGE_SIZE = 50;
-
-function DocumentPickerOverlay({ linkedDocIds, onSubmit, onClose }: DocumentPickerOverlayProps) {
-  const { theme } = useTheme();
-  const [allDocs, setAllDocs] = useState<DocumentSummary[]>([]);
-  const [totalDocs, setTotalDocs] = useState(0);
-  const [loadingDocs, setLoadingDocs] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set(linkedDocIds));
-  const [titleSearch, setTitleSearch] = useState("");
-  const [debouncedTitle, setDebouncedTitle] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Debounce title search input (300ms)
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setDebouncedTitle(titleSearch);
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [titleSearch]);
-
-  // Fetch documents server-side with title filter
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingDocs(true);
-    const params: { limit: number; title?: string } = { limit: DOC_PICKER_PAGE_SIZE };
-    if (debouncedTitle.trim()) params.title = debouncedTitle.trim();
-    fetchDocuments(params)
-      .then((res) => {
-        if (cancelled) return;
-        setAllDocs(res.data);
-        setTotalDocs(res.total);
-      })
-      .catch(() => { /* toast handled by caller context */ })
-      .finally(() => { if (!cancelled) setLoadingDocs(false); });
-    return () => { cancelled = true; };
-  }, [debouncedTitle]);
-
-  function handleLoadMore() {
-    setLoadingMore(true);
-    const params: { limit: number; offset: number; title?: string } = {
-      limit: DOC_PICKER_PAGE_SIZE,
-      offset: allDocs.length,
-    };
-    if (debouncedTitle.trim()) params.title = debouncedTitle.trim();
-    fetchDocuments(params)
-      .then((res) => {
-        setAllDocs((prev) => [...prev, ...res.data]);
-        setTotalDocs(res.total);
-      })
-      .catch(() => { /* toast handled by caller context */ })
-      .finally(() => setLoadingMore(false));
-  }
-
-  const filtered = allDocs;
-
-  function toggleDoc(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleSubmit() {
-    const attach: string[] = [];
-    const detach: string[] = [];
-    for (const id of selected) {
-      if (!linkedDocIds.has(id)) attach.push(id);
-    }
-    for (const id of linkedDocIds) {
-      if (!selected.has(id)) detach.push(id);
-    }
-    if (attach.length === 0 && detach.length === 0) {
-      onClose();
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onSubmit(attach, detach);
-      onClose();
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <CreateEntityOverlay
-      title="Manage Documents"
-      onSubmit={handleSubmit}
-      onClose={onClose}
-      loading={submitting}
-      submitLabel="Save"
-      submitDisabled={loadingDocs}
-    >
-      <Input
-        value={titleSearch}
-        onChange={(e) => setTitleSearch(e.target.value)}
-        placeholder="Search by title..."
-        style={{ marginBottom: theme.spacing.sm }}
-      />
+      {/* Header -- editable title */}
       <div
         style={{
-          maxHeight: 320,
-          overflowY: "auto",
-          border: `1px solid ${theme.color.borderSubtle}`,
-          borderRadius: theme.radius.md,
-          background: theme.color.surface,
+          padding: `${theme.spacing.xl} ${theme.spacing.xl} ${theme.spacing.lg}`,
+          borderBottom: `1px solid ${theme.color.borderSubtle}`,
+          flexShrink: 0,
         }}
       >
-        {loadingDocs ? (
-          <div style={{ padding: theme.spacing.lg, textAlign: "center", color: theme.color.textMuted, fontSize: theme.font.size.sm }}>
-            Loading documents...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: theme.spacing.lg, textAlign: "center", color: theme.color.textMuted, fontSize: theme.font.size.sm }}>
-            {allDocs.length === 0 ? "No documents exist yet." : "No documents match the search."}
-          </div>
-        ) : (
-          <>
-            {filtered.map((doc) => (
-              <label
-                key={doc.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: theme.spacing.sm,
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  cursor: "pointer",
-                  borderBottom: `1px solid ${theme.color.borderSubtle}`,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.text,
+        <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {editingTitle ? (
+              <Input
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleTitleSave(); }
+                  if (e.key === "Escape") { e.stopPropagation(); setEditingTitle(false); setTitleValue(task.title); }
                 }}
+                onBlur={handleTitleSave}
+                autoFocus
+                style={{
+                  fontFamily: theme.font.headline,
+                  fontSize: theme.font.size.xl,
+                  fontWeight: 800,
+                  letterSpacing: theme.font.letterSpacing.tight,
+                }}
+              />
+            ) : (
+              <h2
+                onClick={() => setEditingTitle(true)}
+                style={{
+                  margin: 0,
+                  fontFamily: theme.font.headline,
+                  fontSize: theme.font.size.xl,
+                  fontWeight: 800,
+                  letterSpacing: theme.font.letterSpacing.tight,
+                  color: theme.color.text,
+                  lineHeight: 1.3,
+                  cursor: "pointer",
+                }}
+                title="Click to edit title"
               >
-                <input
-                  type="checkbox"
-                  checked={selected.has(doc.id)}
-                  onChange={() => toggleDoc(doc.id)}
-                  style={{ flexShrink: 0 }}
-                />
-                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {doc.title}
-                </span>
-                {doc.tags.length > 0 && (
-                  <span style={{ display: "flex", gap: theme.spacing.xs, flexShrink: 0 }}>
-                    {doc.tags.map((tag) => (
-                      <TagChip key={tag} name={tag} />
-                    ))}
-                  </span>
-                )}
-              </label>
-            ))}
-            {allDocs.length < totalDocs && (
-              <div style={{ padding: theme.spacing.sm, textAlign: "center" }}>
-                <Button
-                  variant="ghost"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                >
-                  {loadingMore ? "Loading..." : `Load more (${allDocs.length} of ${totalDocs})`}
-                </Button>
-              </div>
+                {task.title}
+              </h2>
             )}
-          </>
-        )}
+          </div>
+          <IconButton icon="close" size={18} onClick={onClose} aria-label="Close detail panel" />
+        </Stack>
       </div>
-    </CreateEntityOverlay>
+
+      {/* Body */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: theme.spacing.xl,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Metadata -- inline editable selects */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr 1fr",
+            gap: theme.spacing.md,
+            marginBottom: theme.spacing.lg,
+          }}
+        >
+          <MetadataField label="Status">
+            <Select
+              options={DETAIL_STATUS_OPTIONS}
+              value={task.status}
+              onChange={(e) => handleMetadataChange("status", e.target.value)}
+            />
+          </MetadataField>
+          <MetadataField label="Effort">
+            <Select
+              options={DETAIL_EFFORT_OPTIONS}
+              value={task.effort ?? ""}
+              onChange={(e) => handleMetadataChange("effort", e.target.value)}
+            />
+          </MetadataField>
+          <MetadataField label="Impact">
+            <Select
+              options={DETAIL_IMPACT_OPTIONS}
+              value={task.impact ?? ""}
+              onChange={(e) => handleMetadataChange("impact", e.target.value)}
+            />
+          </MetadataField>
+          <MetadataField label="Category">
+            <Select
+              options={DETAIL_CATEGORY_OPTIONS}
+              value={task.category ?? ""}
+              onChange={(e) => handleMetadataChange("category", e.target.value)}
+            />
+          </MetadataField>
+        </div>
+
+        {/* Group key -- editable */}
+        <div style={{ marginBottom: theme.spacing.lg }}>
+          <MetadataField label="Group Key">
+            {editingGroupKey ? (
+              <Input
+                value={groupKeyValue}
+                onChange={(e) => setGroupKeyValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleGroupKeySave(); }
+                  if (e.key === "Escape") { e.stopPropagation(); setEditingGroupKey(false); setGroupKeyValue(task.group_key ?? ""); }
+                }}
+                onBlur={handleGroupKeySave}
+                autoFocus
+                placeholder="e.g. ui-crud-completeness"
+              />
+            ) : (
+              <span
+                onClick={() => setEditingGroupKey(true)}
+                style={{
+                  fontSize: theme.font.size.sm,
+                  color: task.group_key ? theme.color.text : theme.color.textFaint,
+                  fontStyle: task.group_key ? "normal" : "italic",
+                  cursor: "pointer",
+                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                  borderRadius: theme.radius.lg,
+                  border: `1px solid transparent`,
+                  display: "inline-block",
+                }}
+                title="Click to edit group key"
+              >
+                {task.group_key ?? "No group key"}
+              </span>
+            )}
+          </MetadataField>
+        </div>
+
+        {/* Summary -- editable */}
+        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
+            <SectionLabel>Summary</SectionLabel>
+            {!editingSummary && (
+              <IconButton icon="edit" size={14} onClick={() => setEditingSummary(true)} aria-label="Edit summary" />
+            )}
+          </div>
+          {editingSummary ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={summaryValue}
+                onChange={(e) => setSummaryValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Task summary..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(task.summary ?? ""); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSummarySave}>Save</Button>
+              </div>
+            </div>
+          ) : task.summary ? (
+            <p
+              onClick={() => setEditingSummary(true)}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.text,
+                cursor: "pointer",
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.5,
+              }}
+              title="Click to edit summary"
+            >
+              {task.summary}
+            </p>
+          ) : (
+            <p
+              onClick={() => setEditingSummary(true)}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.textFaint,
+                fontStyle: "italic",
+                cursor: "pointer",
+              }}
+              title="Click to add summary"
+            >
+              No summary
+            </p>
+          )}
+        </Card>
+
+        {/* Document Reference Sections */}
+        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.sm }}>
+            <SectionLabel>Documents</SectionLabel>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setReferencePickerType(null); setShowReferencePicker(true); }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+                <Icon name="add" size={14} />
+                Manage
+              </span>
+            </Button>
+          </div>
+          {visibleTypes.map((type) => (
+            <DocumentReferenceSection
+              key={type}
+              type={type}
+              references={referencesByType.get(type) ?? []}
+              onOpenDocument={(docId) => { onClose(); onOpenDocument(docId); }}
+              onDetachDocument={(docId) => handleDetachDocument(docId, type)}
+              onAddDocument={() => { setReferencePickerType(type); setShowReferencePicker(true); }}
+            />
+          ))}
+        </Card>
+
+        {/* Dependencies -- always visible */}
+        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.sm }}>
+          <SectionLabel style={{ marginBottom: theme.spacing.sm }}>Dependencies</SectionLabel>
+          {depsLoading ? (
+            <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint }}>Loading dependencies...</p>
+          ) : dependencies ? (
+            <>
+              <div ref={blockedByRef}>
+                <DependencySection
+                  title="Blocked By"
+                  items={dependencies.blocked_by}
+                  section="blocked_by"
+                  projectId={task.project_id}
+                  currentTaskId={task.id}
+                  allExistingIds={allExistingIds}
+                  onSelectTask={() => {}}
+                  onRemove={handleRemoveDependency}
+                  onAdd={handleAddDependency}
+                />
+              </div>
+              <DependencySection
+                title="Blocks"
+                items={dependencies.blocks}
+                section="blocks"
+                projectId={task.project_id}
+                currentTaskId={task.id}
+                allExistingIds={allExistingIds}
+                onSelectTask={() => {}}
+                onRemove={handleRemoveDependency}
+                onAdd={handleAddDependency}
+              />
+              <DependencySection
+                title="Related"
+                items={dependencies.relates_to}
+                section="relates_to"
+                projectId={task.project_id}
+                currentTaskId={task.id}
+                allExistingIds={allExistingIds}
+                onSelectTask={() => {}}
+                onRemove={handleRemoveDependency}
+                onAdd={handleAddDependency}
+              />
+            </>
+          ) : (
+            <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
+              Dependencies not available
+            </p>
+          )}
+        </Card>
+
+        {/* Read-only metadata footer */}
+        <div
+          style={{
+            marginTop: "auto",
+            paddingTop: theme.spacing.xl,
+            borderTop: `1px solid ${theme.color.borderSubtle}`,
+          }}
+        >
+          <MetadataTable
+            title="Info"
+            rows={[
+              { label: "ID", value: task.id },
+              { label: "Created", value: formatDate(task.created_at) },
+              { label: "Updated", value: formatDate(task.updated_at) },
+            ]}
+          />
+        </div>
+      </div>
+
+      {showReferencePicker && (
+        <DocumentReferencePicker
+          entityType="task"
+          entityId={task.id}
+          existingReferences={task.documents}
+          preselectedType={referencePickerType ?? undefined}
+          onSave={async (mergePatch) => { await onUpdate(task.id, { documents: mergePatch }); }}
+          onClose={() => setShowReferencePicker(false)}
+        />
+      )}
+    </ModalShell>
   );
 }
 
@@ -1062,27 +871,28 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [titleValue, setTitleValue] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  type EditableField = "goal" | "requirements" | "design";
-  const [editingField, setEditingField] = useState<EditableField | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [showDocPicker, setShowDocPicker] = useState(false);
+  // Summary editing
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [summaryValue, setSummaryValue] = useState("");
+
+  // Reference picker
+  const [referencePickerType, setReferencePickerType] = useState<ReferenceType | null>(null);
+  const [showReferencePicker, setShowReferencePicker] = useState(false);
 
   const [graphStatusFilter, setGraphStatusFilter] = useState("in_progress,todo");
   const { graph, loading: graphLoading } = useDependencyGraph(projectId, graphStatusFilter || undefined);
 
   const { tasks, total, totalPages, page, setPage, loading: tasksLoading } = useProjectTasks(projectId, taskFilter);
 
-  // Accumulate group keys from paginated tasks — grows monotonically, resets on project change
+  // Accumulate group keys from paginated tasks
   const groupKeySetRef = useRef<Set<string>>(new Set());
   const prevProjectIdRef = useRef(projectId);
 
-  // Reset accumulated keys when navigating to a different project
   if (prevProjectIdRef.current !== projectId) {
     groupKeySetRef.current = new Set();
     prevProjectIdRef.current = projectId;
   }
 
-  // Add any new group keys from the current page of tasks
   for (const t of tasks) {
     if (t.group_key != null && t.group_key !== "") {
       groupKeySetRef.current.add(t.group_key);
@@ -1104,10 +914,9 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     }
   }, [editingTitle]);
 
-  // Keyboard shortcut: "n" to create new task
   useShortcut("n", "New task", () => setShowCreateTask(true), "Project");
 
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const { subscribeEvents } = useEventSubscription();
   const selectedTaskIdRef = useRef(selectedTaskId);
   selectedTaskIdRef.current = selectedTaskId;
@@ -1138,7 +947,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
 
-  async function handleAddTask(fields: { title: string; description?: string; plan?: string; acceptance_criteria?: string; implementation?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }) {
+  async function handleAddTask(fields: { title: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }) {
     await addTask(fields);
   }
 
@@ -1163,23 +972,60 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     }
   }
 
-  function handleStartEdit(field: EditableField) {
+  // Summary editing handlers
+  function handleStartEditSummary() {
     if (!project) return;
-    setEditingField(field);
-    setEditValue(project[field] ?? "");
+    setEditingSummary(true);
+    setSummaryValue(project.summary ?? "");
   }
 
-  function handleCancelEdit() {
-    setEditingField(null);
-    setEditValue("");
+  async function handleSaveSummary() {
+    const trimmed = summaryValue.trim();
+    await updateProject({ summary: trimmed || null });
+    setEditingSummary(false);
+    setSummaryValue("");
   }
 
-  async function handleSaveEdit() {
-    if (!editingField) return;
-    const trimmed = editValue.trim();
-    await updateProject({ [editingField]: trimmed || null });
-    setEditingField(null);
-    setEditValue("");
+  // Reference management
+  const referencesByType = useMemo(() => {
+    if (!project) return new Map<ReferenceType, DocumentReferenceDetail[]>();
+    const map = new Map<ReferenceType, DocumentReferenceDetail[]>();
+    for (const ref of project.documents) {
+      const existing = map.get(ref.type) ?? [];
+      existing.push(ref);
+      map.set(ref.type, existing);
+    }
+    return map;
+  }, [project]);
+
+  const visibleTypes = useMemo(() => {
+    if (!project) return [];
+    const types = new Set<ReferenceType>(ALWAYS_SHOWN_TYPES);
+    for (const ref of project.documents) {
+      types.add(ref.type);
+    }
+    return REFERENCE_TYPES.filter((t) => types.has(t));
+  }, [project]);
+
+  async function handleAttachProjectDocument(documentId: string, type: ReferenceType) {
+    if (!project) return;
+    const existingRefs = project.documents.filter((r) => r.document_id === documentId).map((r) => ({ type: r.type }));
+    const mergePatch: DocumentsMergePatch = {
+      [documentId]: [...existingRefs, { type }],
+    };
+    await updateProject({ documents: mergePatch });
+  }
+
+  async function handleDetachProjectDocument(documentId: string, type: ReferenceType) {
+    if (!project) return;
+    const remaining = project.documents
+      .filter((r) => r.document_id === documentId)
+      .filter((r) => !(r.document_id === documentId && r.type === type))
+      .map((r) => ({ type: r.type }));
+    const mergePatch: DocumentsMergePatch = {
+      [documentId]: remaining.length > 0 ? remaining : null,
+    };
+    await updateProject({ documents: mergePatch });
   }
 
   if (notFound) {
@@ -1220,7 +1066,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         {/* Full-width header */}
         <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: theme.spacing.lg }} />
 
-        <Stack direction="row" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.xl }}>
+        <Stack direction="row" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.md }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             {editingTitle ? (
               <Input
@@ -1262,10 +1108,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 <h2
                   role="button"
                   tabIndex={0}
-                  onClick={() => {
-                    setTitleValue(project.title);
-                    setEditingTitle(true);
-                  }}
+                  onClick={() => { setTitleValue(project.title); setEditingTitle(true); }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -1289,16 +1132,70 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 <IconButton
                   icon="edit"
                   size={16}
-                  onClick={() => {
-                    setTitleValue(project.title);
-                    setEditingTitle(true);
-                  }}
+                  onClick={() => { setTitleValue(project.title); setEditingTitle(true); }}
                   aria-label="Edit project title"
                 />
               </Stack>
             )}
           </div>
         </Stack>
+
+        {/* Summary -- full width, editable */}
+        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.xl }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
+            <SectionLabel>Summary</SectionLabel>
+            {!editingSummary && (
+              <IconButton icon="edit" size={14} onClick={handleStartEditSummary} aria-label="Edit summary" />
+            )}
+          </div>
+          {editingSummary ? (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setEditingSummary(false); } }}
+            >
+              <Textarea
+                value={summaryValue}
+                onChange={(e) => setSummaryValue(e.target.value)}
+                rows={4}
+                style={{ width: "100%", boxSizing: "border-box" }}
+                autoFocus
+              />
+              <Stack direction="row" gap="sm" justify="flex-end" style={{ marginTop: theme.spacing.sm }}>
+                <Button variant="ghost" onClick={() => setEditingSummary(false)}>Cancel</Button>
+                <Button variant="primary" onClick={handleSaveSummary}>Save</Button>
+              </Stack>
+            </div>
+          ) : project.summary ? (
+            <p
+              onClick={handleStartEditSummary}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.text,
+                cursor: "pointer",
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.5,
+              }}
+              title="Click to edit summary"
+            >
+              {project.summary}
+            </p>
+          ) : (
+            <p
+              onClick={handleStartEditSummary}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.textFaint,
+                fontStyle: "italic",
+                cursor: "pointer",
+              }}
+              title="Click to add summary"
+            >
+              No summary
+            </p>
+          )}
+        </Card>
 
         {/* Dependency Graph (collapsible) */}
         {!graphLoading && graph && graph.edges.length > 0 && (
@@ -1330,137 +1227,46 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           flexDirection: isWide ? "row" : "column",
           gap: theme.spacing.xl,
         }}>
-        {/* Left column — metadata */}
+        {/* Left column -- document references */}
         <div style={{
-          ...(isWide
-            ? { flex: 1, minWidth: 0 }
-            : {}),
+          ...(isWide ? { flex: 1, minWidth: 0 } : {}),
         }}>
-          {/* Markdown sections: goal, requirements, design */}
-          {([
-            { key: "goal" as const, label: "Goal", defaultOpen: true },
-            { key: "requirements" as const, label: "Requirements", defaultOpen: false },
-            { key: "design" as const, label: "Design", defaultOpen: false },
-          ]).map(({ key, label, defaultOpen }) => {
-            const isEditing = editingField === key;
-            return (
-              <ExpandableCard
-                key={key}
-                title={label}
-                defaultOpen={isEditing || isWide || defaultOpen}
-                style={{ marginBottom: theme.spacing.xl }}
-                headerAction={
-                  !isEditing ? (
-                    <IconButton
-                      icon="edit"
-                      size={16}
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        handleStartEdit(key);
-                      }}
-                      aria-label={`Edit ${label}`}
-                    />
-                  ) : undefined
-                }
-              >
-                {isEditing ? (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        e.stopPropagation();
-                        handleCancelEdit();
-                      }
-                    }}
-                  >
-                    <Textarea
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      rows={8}
-                      style={{ width: "100%", boxSizing: "border-box", minHeight: 120 }}
-                      autoFocus
-                    />
-                    <Stack direction="row" gap="sm" justify="flex-end" style={{ marginTop: theme.spacing.sm }}>
-                      <Button
-                        variant="ghost"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          handleCancelEdit();
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="primary"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          handleSaveEdit();
-                        }}
-                      >
-                        Save
-                      </Button>
-                    </Stack>
-                  </div>
-                ) : project[key] ? (
-                  <Markdown>{project[key]}</Markdown>
-                ) : (
-                  <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic" }}>
-                    Not set
-                  </p>
-                )}
-              </ExpandableCard>
-            );
-          })}
+          <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
+            <h3
+              style={{
+                margin: 0,
+                fontFamily: theme.font.headline,
+                fontSize: theme.font.size.lg,
+                fontWeight: 700,
+                color: theme.color.text,
+              }}
+            >
+              Documents
+            </h3>
+            <Button
+              variant="ghost"
+              onClick={() => { setReferencePickerType(null); setShowReferencePicker(true); }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+                <Icon name="add" size={16} />
+                Add Reference
+              </span>
+            </Button>
+          </Stack>
 
-          {/* Documents section */}
-          <div style={{ marginBottom: theme.spacing.xl }}>
-            <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
-              <h3
-                style={{
-                  margin: 0,
-                  fontFamily: theme.font.headline,
-                  fontSize: theme.font.size.lg,
-                  fontWeight: 700,
-                  color: theme.color.text,
-                }}
-              >
-                Documents
-              </h3>
-              <Button variant="ghost" onClick={() => setShowDocPicker(true)}>
-                <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
-                  <Icon name="edit_note" size={16} />
-                  Manage Documents
-                </span>
-              </Button>
-            </Stack>
-            {(project.documents ?? []).length > 0 ? (
-              <div
-                style={{
-                  borderRadius: theme.radius.md,
-                  border: `1px solid ${theme.color.border}`,
-                  background: theme.color.surfaceContainer,
-                  overflow: "hidden",
-                }}
-              >
-                {(project.documents ?? []).map((doc, idx) => (
-                  <DocumentRow
-                    key={doc.id}
-                    title={doc.title}
-                    isLast={idx === (project.documents ?? []).length - 1}
-                    onClick={() => setSelectedDocumentId(doc.id)}
-                    onDetach={() => {
-                      updateProject({ detach_documents: [doc.id] }).catch(() => {});
-                    }}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState icon="description" message="No documents linked." />
-            )}
-          </div>
+          {visibleTypes.map((type) => (
+            <DocumentReferenceSection
+              key={type}
+              type={type}
+              references={referencesByType.get(type) ?? []}
+              onOpenDocument={(docId) => setSelectedDocumentId(docId)}
+              onDetachDocument={(docId) => handleDetachProjectDocument(docId, type)}
+              onAddDocument={() => { setReferencePickerType(type); setShowReferencePicker(true); }}
+            />
+          ))}
         </div>
 
-        {/* Right column — tasks */}
+        {/* Right column -- tasks */}
         <div style={{
           flex: 1,
           minWidth: 0,
@@ -1533,6 +1339,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         task={selectedTask}
         onClose={handleClosePanel}
         onUpdate={updateTask}
+        onOpenDocument={(docId) => { handleClosePanel(); setSelectedDocumentId(docId); }}
         taskTitles={taskTitles}
       />
     )}
@@ -1550,16 +1357,14 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         onCancel={() => setDeleteTaskTarget(null)}
       />
     )}
-    {showDocPicker && (
-      <DocumentPickerOverlay
-        linkedDocIds={new Set((project.documents ?? []).map((d) => d.id))}
-        onSubmit={async (attach, detach) => {
-          const input: { attach_documents?: string[]; detach_documents?: string[] } = {};
-          if (attach.length > 0) input.attach_documents = attach;
-          if (detach.length > 0) input.detach_documents = detach;
-          await updateProject(input);
-        }}
-        onClose={() => setShowDocPicker(false)}
+    {showReferencePicker && project && (
+      <DocumentReferencePicker
+        entityType="project"
+        entityId={project.id}
+        existingReferences={project.documents}
+        preselectedType={referencePickerType ?? undefined}
+        onSave={async (mergePatch) => { await updateProject({ documents: mergePatch }); }}
+        onClose={() => setShowReferencePicker(false)}
       />
     )}
   </>

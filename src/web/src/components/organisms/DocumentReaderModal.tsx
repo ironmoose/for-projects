@@ -190,6 +190,39 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
               )
             )}
 
+            {/* Referenced by section */}
+            {!editing && document.referenced_by && document.referenced_by.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs, alignItems: "center" }}>
+                <span
+                  style={{
+                    fontSize: theme.font.size.xxs,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: theme.color.textFaint,
+                    marginRight: theme.spacing.xs,
+                  }}
+                >
+                  Referenced by
+                </span>
+                {document.referenced_by.map((ref) => (
+                  <span
+                    key={`${ref.entity_type}-${ref.entity_id}-${ref.type}`}
+                    style={{
+                      display: "inline-block",
+                      padding: "1px 6px",
+                      borderRadius: theme.radius.sm,
+                      fontSize: theme.font.size.xxs,
+                      background: theme.color.surfaceContainerHigh,
+                      color: theme.color.textMuted,
+                    }}
+                  >
+                    {ref.entity_type}: {ref.entity_title || ref.entity_id} ({ref.type})
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Summary section */}
             {editing ? (
               <Input

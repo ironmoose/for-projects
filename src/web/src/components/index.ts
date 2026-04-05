@@ -55,7 +55,13 @@ export { CreateDocumentOverlay } from "./organisms/CreateDocumentOverlay";
 export { ShortcutHelpOverlay } from "./organisms/ShortcutHelpOverlay";
 export { DependencyGraphView } from "./organisms/DependencyGraphView";
 export { ModalShell } from "./organisms/ModalShell";
+export { DocumentReferenceSection } from "./organisms/DocumentReferenceSection";
+export { DocumentReferencePicker } from "./organisms/DocumentReferencePicker";
 export type { DependencyGraphViewProps } from "./organisms/DependencyGraphView";
+// Atoms
+export { ReferenceTypeBadge } from "./atoms/ReferenceTypeBadge";
+// Molecules
+export { DocumentReferenceCard } from "./molecules/DocumentReferenceCard";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

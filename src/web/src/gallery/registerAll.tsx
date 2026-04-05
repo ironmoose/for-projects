@@ -22,6 +22,7 @@ import {
   RowSkeleton,
   ExpandableCard,
   DependencyChip,
+  ReferenceTypeBadge,
 } from "../components";
 import type { TagName } from "../types";
 import type { ProgressBarSegment } from "../components";
@@ -204,6 +205,25 @@ export function registerAllComponents(): void {
       { name: "Mixed", props: {} },
     ],
     codeTemplate: `<ProgressBar segments={[{ value: 3, color: "green", label: "done" }]} height={6} />`,
+  });
+
+  registerComponent({
+    name: "ReferenceTypeBadge",
+    description: "Badge displaying a document reference type with consistent labeling.",
+    category: "atom",
+    propDefs: [
+      { name: "type", type: "enum", defaultValue: "goal", options: ["goal", "plan", "requirements", "design", "reference", "note"] },
+    ],
+    render: (props) => <ReferenceTypeBadge type={String(props.type)} />,
+    variants: [
+      { name: "Goal", props: { type: "goal" } },
+      { name: "Plan", props: { type: "plan" } },
+      { name: "Requirements", props: { type: "requirements" } },
+      { name: "Design", props: { type: "design" } },
+      { name: "Reference", props: { type: "reference" } },
+      { name: "Note", props: { type: "note" } },
+    ],
+    codeTemplate: `<ReferenceTypeBadge type="goal" />`,
   });
 
   // Molecules

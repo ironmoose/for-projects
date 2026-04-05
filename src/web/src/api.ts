@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, DocumentReferenceSummary, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -73,7 +73,11 @@ export async function fetchProjects(params?: { limit?: number; offset?: number }
   return res.json();
 }
 
-export async function fetchProject(id: string): Promise<Project & { references: DocumentReferenceSummary[] }> {
+export interface ProjectDetail extends Project {
+  documents: DocumentReferenceDetail[];
+}
+
+export async function fetchProject(id: string): Promise<ProjectDetail> {
   const res = await apiFetch(`/api/projects/${encodeURIComponent(id)}`);
   return res.json();
 }
@@ -103,7 +107,11 @@ export async function fetchTasks(params?: { project_id?: string; status?: string
   return res.json();
 }
 
-export async function fetchTask(id: string): Promise<Task & { references: DocumentReferenceSummary[] }> {
+export interface TaskDetail extends Task {
+  documents: DocumentReferenceDetail[];
+}
+
+export async function fetchTask(id: string): Promise<TaskDetail> {
   const res = await apiFetch(`/api/tasks/${encodeURIComponent(id)}`);
   return res.json();
 }
@@ -191,7 +199,14 @@ export async function fetchDocuments(params?: { tag?: string; title?: string; li
   return res.json();
 }
 
-export async function fetchDocument(id: string): Promise<Document & { tags: string[] }> {
+export interface ReferencedByEntry {
+  entity_type: string;
+  entity_id: string;
+  entity_title: string;
+  type: string;
+}
+
+export async function fetchDocument(id: string): Promise<Document & { tags: string[]; referenced_by: ReferencedByEntry[] }> {
   const res = await apiFetch(`/api/documents/${encodeURIComponent(id)}`);
   return res.json();
 }

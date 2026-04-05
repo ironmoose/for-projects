@@ -716,10 +716,10 @@ describe("Extended Project Routes", () => {
     // Verify GET includes the document
     const getRes = await req(`/projects/${project.id}`);
     const body = await getRes.json();
-    expect(body.references).toBeArray();
-    expect(body.references.length).toBe(1);
-    expect(body.references[0].document_id).toBe(doc.id);
-    expect(body.references[0].type).toBe("reference");
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(1);
+    expect(body.documents[0].document_id).toBe(doc.id);
+    expect(body.documents[0].type).toBe("reference");
   });
 
   it("PATCH /projects with documents merge-patch null removes document", async () => {
@@ -751,8 +751,8 @@ describe("Extended Project Routes", () => {
 
     const getRes = await req(`/projects/${project.id}`);
     const body = await getRes.json();
-    expect(body.references).toBeArray();
-    expect(body.references.length).toBe(0);
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(0);
   });
 });
 

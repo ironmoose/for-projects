@@ -87,7 +87,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_project",
     {
-      description: "Retrieve a single project by ID. Response includes title, summary, timestamps, and a `references` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
+      description: "Retrieve a single project by ID. Response includes title, summary, timestamps, and a `documents` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => projectService.get(id))
@@ -115,7 +115,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_task",
     {
-      description: "Retrieve a single task by ID with all fields. Response includes title, summary, status, effort, impact, category, group_key, is_blocked, timestamps, and a `references` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
+      description: "Retrieve a single task by ID with all fields. Response includes title, summary, status, effort, impact, category, group_key, is_blocked, timestamps, and a `documents` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => taskService.get(id))

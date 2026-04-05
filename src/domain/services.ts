@@ -15,7 +15,7 @@ export interface Paginated<T> {
 
 export interface IProjectService {
   list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary>;
-  get(id: string): Project & { references: DocumentReferenceDetail[] };
+  get(id: string): Project & { documents: DocumentReferenceDetail[] };
   create(inputs: CreateProjectInput[]): (Project & { documents: DocumentReferenceSummary[] })[];
   update(inputs: UpdateProjectInput[]): Project[];
   remove(ids: string[]): void;
@@ -24,7 +24,7 @@ export interface IProjectService {
 export interface ITaskService {
   list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary>;
   listGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[];
-  get(id: string): Task & { references: DocumentReferenceDetail[] };
+  get(id: string): Task & { documents: DocumentReferenceDetail[] };
   create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[];
   update(inputs: UpdateTaskInput[]): Task[];
   statusCounts(projectIds: string[]): Record<string, { total: number; counts: Record<string, number> }>;
@@ -51,7 +51,7 @@ export interface IDocumentReferenceService {
 
 export interface IDocumentService {
   list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
-  get(id: string): Document & { tags: string[] };
+  get(id: string): Document & { tags: string[]; referenced_by: { entity_type: string; entity_id: string; entity_title: string; type: string }[] };
   create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[];
   update(inputs: UpdateDocumentInput[]): (Document & { tags: string[] })[];
   remove(ids: string[]): void;

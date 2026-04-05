@@ -65,14 +65,14 @@ export class TaskService implements ITaskService {
     return this.taskRepo.findGraphSummaries(projectId, status);
   }
 
-  get(id: string): Task & { is_blocked?: boolean; references: DocumentReferenceDetail[] } {
+  get(id: string): Task & { is_blocked?: boolean; documents: DocumentReferenceDetail[] } {
     const task = this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
-    const references = this.docRefService?.findByEntity('task', id) ?? [];
+    const documents = this.docRefService?.findByEntity('task', id) ?? [];
     if (this.depRepo) {
-      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id), references };
+      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id), documents };
     }
-    return { ...task, is_blocked: false, references };
+    return { ...task, is_blocked: false, documents };
   }
 
   create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[] {

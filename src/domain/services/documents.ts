@@ -38,11 +38,14 @@ export class DocumentService implements IDocumentService {
     };
   }
 
-  get(id: string): Document & { tags: string[] } {
+  get(id: string): Document & { tags: string[]; referenced_by: { entity_type: string; entity_id: string; entity_title: string; type: string }[] } {
     const doc = this.documentRepo.findById(id);
     if (!doc) throw new ServiceError("document not found", 404);
     const tags = this.tagRepo.getTagsForEntity("document", id).map((t) => t.kind);
-    return { ...doc, tags };
+    const referenced_by = this.docRefRepo
+      ? this.docRefRepo.getEntitiesForDocumentWithTitles(id)
+      : [];
+    return { ...doc, tags, referenced_by };
   }
 
   create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[] {

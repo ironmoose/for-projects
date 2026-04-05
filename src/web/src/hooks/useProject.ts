@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, fetchProject as apiFetchProject, createTasks, updateTasks, updateProjects, deleteTasks } from "../api";
-import type { DocumentsMergePatch } from "../api";
-import type { Project, DocumentReferenceSummary } from "../types";
+import type { DocumentsMergePatch, ProjectDetail } from "../api";
+import type { Project } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export function useProject(projectId: string) {
-  const [project, setProject] = useState<(Project & { references: DocumentReferenceSummary[] }) | null>(null);
+  const [project, setProject] = useState<ProjectDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();

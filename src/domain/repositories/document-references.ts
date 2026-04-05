@@ -139,4 +139,19 @@ export class DocumentReferenceRepository {
       )
       .all(documentId) as DocumentReference[];
   }
+
+  getEntitiesForDocumentWithTitles(documentId: string): { entity_type: string; entity_id: string; entity_title: string; type: string }[] {
+    const rows = this.db
+      .query(
+        `SELECT dr.entity_type, dr.entity_id, dr.type,
+                COALESCE(p.title, t.title, '') AS entity_title
+         FROM document_references dr
+         LEFT JOIN projects p ON dr.entity_type = 'project' AND dr.entity_id = p.id
+         LEFT JOIN tasks t ON dr.entity_type = 'task' AND dr.entity_id = t.id
+         WHERE dr.document_id = ?
+         ORDER BY dr.entity_type, dr.entity_id`,
+      )
+      .all(documentId) as { entity_type: string; entity_id: string; type: string; entity_title: string }[];
+    return rows;
+  }
 }

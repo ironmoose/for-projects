@@ -11,6 +11,7 @@ export type {
   DocumentSummary,
   DocumentReference,
   DocumentReferenceSummary,
+  DocumentReferenceDetail,
   DocumentReferenceType,
   ActivityLog,
   TaskStatus,
@@ -33,3 +34,10 @@ export {
   TAG_CATEGORIES,
   DOCUMENT_REFERENCE_TYPES,
 } from '@domain/entities';
+
+// ---------------------------------------------------------------------------
+// Convenience aliases (used by shared document-reference UI components)
+// ---------------------------------------------------------------------------
+
+export { DOCUMENT_REFERENCE_TYPES as REFERENCE_TYPES } from '@domain/entities';
+export type { DocumentReferenceType as ReferenceType } from '@domain/entities';

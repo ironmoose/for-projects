@@ -460,7 +460,7 @@ describe("Document CRUD", () => {
 
     // Project-document link is also gone
     const projectAfter = ctx.projectService.get(project.id);
-    expect(projectAfter.references.some((d) => d.document_id === doc.id)).toBe(false);
+    expect(projectAfter.documents.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
   it("lists documents filtered by project_id", () => {
@@ -695,8 +695,8 @@ describe("Project-Document Linking", () => {
     }]);
 
     const fetched = ctx.projectService.get(project.id);
-    expect(fetched.references.length).toBeGreaterThanOrEqual(1);
-    expect(fetched.references.some((d) => d.document_id === doc.id)).toBe(true);
+    expect(fetched.documents.length).toBeGreaterThanOrEqual(1);
+    expect(fetched.documents.some((d) => d.document_id === doc.id)).toBe(true);
   });
 
   it("detaches documents via project update merge-patch null", () => {
@@ -705,11 +705,11 @@ describe("Project-Document Linking", () => {
 
     ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "design" }] } }]);
     const before = ctx.projectService.get(project.id);
-    expect(before.references.some((d) => d.document_id === doc.id)).toBe(true);
+    expect(before.documents.some((d) => d.document_id === doc.id)).toBe(true);
 
     ctx.projectService.update([{ id: project.id, documents: { [doc.id]: null } }]);
     const after = ctx.projectService.get(project.id);
-    expect(after.references.some((d) => d.document_id === doc.id)).toBe(false);
+    expect(after.documents.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
   it("throws on nonexistent document ID in merge-patch", () => {
@@ -735,7 +735,7 @@ describe("Project-Document Linking", () => {
 
     const fetched = ctx.projectService.get(project.id);
     // Should still appear exactly once for this type
-    const matches = fetched.references.filter((d) => d.document_id === doc.id);
+    const matches = fetched.documents.filter((d) => d.document_id === doc.id);
     expect(matches.length).toBe(1);
   });
 
@@ -749,7 +749,7 @@ describe("Project-Document Linking", () => {
     ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
 
     const fetched = ctx.projectService.get(project.id);
-    const linked = fetched.references.find((d) => d.document_id === doc.id);
+    const linked = fetched.documents.find((d) => d.document_id === doc.id);
     expect(linked).toBeTruthy();
     expect(linked!.title).toBe("Summary Doc");
     expect(linked!.document_id).toBe(doc.id);
@@ -764,12 +764,12 @@ describe("Project-Document Linking", () => {
 
     ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
     const before = ctx.projectService.get(project.id);
-    expect(before.references.some((d) => d.document_id === doc.id)).toBe(true);
+    expect(before.documents.some((d) => d.document_id === doc.id)).toBe(true);
 
     ctx.documentService.remove([doc.id]);
 
     const after = ctx.projectService.get(project.id);
-    expect(after.references.some((d) => d.document_id === doc.id)).toBe(false);
+    expect(after.documents.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
   it("attaches multiple documents in single update", () => {
@@ -786,9 +786,9 @@ describe("Project-Document Linking", () => {
     }]);
 
     const fetched = ctx.projectService.get(project.id);
-    expect(fetched.references.some((d) => d.document_id === docA.id)).toBe(true);
-    expect(fetched.references.some((d) => d.document_id === docB.id)).toBe(true);
-    expect(fetched.references.length).toBeGreaterThanOrEqual(2);
+    expect(fetched.documents.some((d) => d.document_id === docA.id)).toBe(true);
+    expect(fetched.documents.some((d) => d.document_id === docB.id)).toBe(true);
+    expect(fetched.documents.length).toBeGreaterThanOrEqual(2);
   });
 
   it("detach nonexistent document link silently succeeds", () => {
