@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useTheme,
   PageHeader,
@@ -25,6 +25,7 @@ export function DocumentsPage() {
   const { showToast } = useToastContext();
   const [titleFilter, setTitleFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [folderFilter, setFolderFilter] = useState("");
   const [favoriteFilter, setFavoriteFilter] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
@@ -33,12 +34,22 @@ export function DocumentsPage() {
   const filter = {
     ...(titleFilter ? { title: titleFilter } : {}),
     ...(tagFilter ? { tag: tagFilter } : {}),
+    ...(folderFilter ? { folder: folderFilter } : {}),
     ...(favoriteFilter ? { favorite: true as const } : {}),
   };
 
   const { documents, loading, total, totalPages, page, setPage, create, update, remove } = useDocuments(
     Object.keys(filter).length > 0 ? filter : undefined,
   );
+
+  // Derive distinct folder names from loaded documents for autocomplete/filter
+  const knownFolders = useMemo(() => {
+    const set = new Set<string>();
+    for (const doc of documents) {
+      if (doc.folder) set.add(doc.folder);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [documents]);
 
   const sorted = [...documents].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 
@@ -99,9 +110,12 @@ export function DocumentsPage() {
         <DocumentSearchBar
           title={titleFilter}
           tag={tagFilter}
+          folder={folderFilter}
+          folders={knownFolders}
           favorite={favoriteFilter}
           onTitleChange={setTitleFilter}
           onTagChange={setTagFilter}
+          onFolderChange={setFolderFilter}
           onFavoriteChange={setFavoriteFilter}
         />
 
@@ -113,7 +127,7 @@ export function DocumentsPage() {
           ) : sorted.length === 0 ? (
             <EmptyState
               icon="description"
-              message={titleFilter || tagFilter || favoriteFilter
+              message={titleFilter || tagFilter || folderFilter || favoriteFilter
                 ? "No documents match your search."
                 : "No documents yet."}
               variant="card"
@@ -157,6 +171,7 @@ export function DocumentsPage() {
 
       {showCreateOverlay && (
         <CreateDocumentOverlay
+          folders={knownFolders}
           onCreated={async (fields) => {
             try {
               await create(fields);

@@ -8,9 +8,12 @@ import { TAG_NAMES } from "../../types";
 interface DocumentSearchBarProps {
   title: string;
   tag: string;
+  folder: string;
+  folders: string[];
   favorite: boolean;
   onTitleChange: (value: string) => void;
   onTagChange: (value: string) => void;
+  onFolderChange: (value: string) => void;
   onFavoriteChange: (value: boolean) => void;
 }
 
@@ -19,7 +22,7 @@ const tagOptions = [
   ...TAG_NAMES.map((t) => ({ value: t, label: t })),
 ];
 
-export function DocumentSearchBar({ title, tag, favorite, onTitleChange, onTagChange, onFavoriteChange }: DocumentSearchBarProps) {
+export function DocumentSearchBar({ title, tag, folder, folders, favorite, onTitleChange, onTagChange, onFolderChange, onFavoriteChange }: DocumentSearchBarProps) {
   const [localTitle, setLocalTitle] = useState(title);
   const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { theme } = useTheme();
@@ -36,6 +39,11 @@ export function DocumentSearchBar({ title, tag, favorite, onTitleChange, onTagCh
     }, 350);
   }
 
+  const folderOptions = [
+    { value: "", label: "All folders" },
+    ...folders.map((f) => ({ value: f, label: f })),
+  ];
+
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
       <div style={{ minWidth: 180, flex: "1 1 180px" }}>
@@ -50,6 +58,13 @@ export function DocumentSearchBar({ title, tag, favorite, onTitleChange, onTagCh
           options={tagOptions}
           value={tag}
           onChange={(e) => onTagChange(e.target.value)}
+        />
+      </div>
+      <div style={{ minWidth: 120, flex: "0 1 160px" }}>
+        <Select
+          options={folderOptions}
+          value={folder}
+          onChange={(e) => onFolderChange(e.target.value)}
         />
       </div>
       <IconButton

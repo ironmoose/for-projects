@@ -7,6 +7,7 @@ export interface CreateDocumentInput {
   folder?: string;
   tags?: TagName[];
   favorite?: boolean;
+  folder?: string | null;
 }
 
 export interface UpdateDocumentInput {
@@ -17,6 +18,7 @@ export interface UpdateDocumentInput {
   folder?: string | null;
   tags?: TagName[];
   favorite?: boolean;
+  folder?: string | null;
 }
 
 export interface CreateProjectInput {
