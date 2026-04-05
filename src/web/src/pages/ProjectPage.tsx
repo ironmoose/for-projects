@@ -1263,6 +1263,8 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         entityType="project"
         entityId={project.id}
         existingReferences={project.documents}
+        hideTypeSelection={true}
+        preselectedType="reference"
         onSave={async (mergePatch) => { await updateProject({ documents: mergePatch }); }}
         onClose={() => setShowDocPicker(false)}
       />

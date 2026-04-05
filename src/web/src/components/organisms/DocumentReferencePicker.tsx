@@ -17,6 +17,8 @@ interface DocumentReferencePickerProps {
   entityId: string;
   existingReferences: DocumentReferenceDetail[];
   preselectedType?: ReferenceType;
+  /** When true, hides the type dropdown and auto-assigns preselectedType (default 'reference') */
+  hideTypeSelection?: boolean;
   onSave: (mergePatch: Record<string, Array<{ type: ReferenceType }> | null>) => Promise<void>;
   onClose: () => void;
 }
@@ -42,6 +44,7 @@ export function DocumentReferencePicker({
   entityId,
   existingReferences,
   preselectedType = "reference",
+  hideTypeSelection = false,
   onSave,
   onClose,
 }: DocumentReferencePickerProps) {
@@ -272,6 +275,7 @@ export function DocumentReferencePicker({
                     key={doc.id}
                     doc={doc}
                     types={types}
+                    hideTypeSelection={hideTypeSelection}
                     onAddType={(t) => addTypeToLinked(doc.id, t)}
                     onRemoveType={(t) => removeTypeFromLinked(doc.id, t)}
                     onUnlink={() => unlinkDocument(doc.id)}
@@ -325,6 +329,7 @@ export function DocumentReferencePicker({
                     key={doc.id}
                     doc={doc}
                     stagedTypes={staged}
+                    hideTypeSelection={hideTypeSelection}
                     onUpdateType={(i, t) => updateStagedType(doc.id, i, t)}
                     onAddSlot={() => addStagedTypeSlot(doc.id)}
                     onLink={() => linkDocument(doc.id)}
@@ -377,12 +382,14 @@ export function DocumentReferencePicker({
 function LinkedDocRow({
   doc,
   types,
+  hideTypeSelection = false,
   onAddType,
   onRemoveType,
   onUnlink,
 }: {
   doc: DocumentSummary;
   types: Array<{ type: ReferenceType }>;
+  hideTypeSelection?: boolean;
   onAddType: (t: ReferenceType) => void;
   onRemoveType: (t: ReferenceType) => void;
   onUnlink: () => void;
@@ -438,10 +445,10 @@ function LinkedDocRow({
           <TagChip
             key={t.type}
             name={TYPE_LABELS[t.type]}
-            onRemove={() => onRemoveType(t.type)}
+            onRemove={hideTypeSelection ? undefined : () => onRemoveType(t.type)}
           />
         ))}
-        {availableTypes.length > 0 && !showAddType && (
+        {!hideTypeSelection && availableTypes.length > 0 && !showAddType && (
           <IconButton
             icon="add"
             size={12}
@@ -453,7 +460,7 @@ function LinkedDocRow({
             style={{ width: 22, height: 22, minWidth: 22 }}
           />
         )}
-        {showAddType && (
+        {!hideTypeSelection && showAddType && (
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Select
               value={newType}
@@ -488,12 +495,14 @@ function LinkedDocRow({
 function AvailableDocRow({
   doc,
   stagedTypes,
+  hideTypeSelection = false,
   onUpdateType,
   onAddSlot,
   onLink,
 }: {
   doc: DocumentSummary;
   stagedTypes: ReferenceType[];
+  hideTypeSelection?: boolean;
   onUpdateType: (index: number, type: ReferenceType) => void;
   onAddSlot: () => void;
   onLink: () => void;
@@ -539,24 +548,26 @@ function AvailableDocRow({
           Link
         </Button>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-        {stagedTypes.map((t, i) => (
-          <Select
-            key={i}
-            value={t}
-            options={TYPE_OPTIONS}
-            onChange={(e) => onUpdateType(i, e.currentTarget.value as ReferenceType)}
-            style={{ fontSize: theme.font.size.xs, padding: "2px 4px", minWidth: 90 }}
+      {!hideTypeSelection && (
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+          {stagedTypes.map((t, i) => (
+            <Select
+              key={i}
+              value={t}
+              options={TYPE_OPTIONS}
+              onChange={(e) => onUpdateType(i, e.currentTarget.value as ReferenceType)}
+              style={{ fontSize: theme.font.size.xs, padding: "2px 4px", minWidth: 90 }}
+            />
+          ))}
+          <IconButton
+            icon="add"
+            size={12}
+            onClick={onAddSlot}
+            aria-label="Add another type"
+            style={{ width: 22, height: 22, minWidth: 22 }}
           />
-        ))}
-        <IconButton
-          icon="add"
-          size={12}
-          onClick={onAddSlot}
-          aria-label="Add another type"
-          style={{ width: 22, height: 22, minWidth: 22 }}
-        />
-      </div>
+        </div>
+      )}
     </div>
   );
 }
