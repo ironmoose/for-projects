@@ -1,20 +1,17 @@
 import { useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Input } from "../atoms/Input";
-import { Textarea } from "../atoms/Textarea";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 
 interface CreateProjectOverlayProps {
-  onCreated: (fields: { title: string; goal?: string; requirements?: string; design?: string }) => Promise<void>;
+  onCreated: (fields: { title: string; summary?: string }) => Promise<void>;
   onClose: () => void;
 }
 
 export function CreateProjectOverlay({ onCreated, onClose }: CreateProjectOverlayProps) {
   const { theme } = useTheme();
   const [title, setTitle] = useState("");
-  const [goal, setGoal] = useState("");
-  const [requirements, setRequirements] = useState("");
-  const [design, setDesign] = useState("");
+  const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,9 +23,7 @@ export function CreateProjectOverlay({ onCreated, onClose }: CreateProjectOverla
     try {
       await onCreated({
         title: title.trim(),
-        goal: goal.trim() || undefined,
-        requirements: requirements.trim() || undefined,
-        design: design.trim() || undefined,
+        summary: summary.trim() || undefined,
       });
       onClose();
     } catch (err) {
@@ -54,28 +49,12 @@ export function CreateProjectOverlay({ onCreated, onClose }: CreateProjectOverla
         placeholder="Project title..."
       />
 
-      <Textarea
-        label="Goal"
-        id="project-goal"
-        value={goal}
-        onChange={(e) => setGoal(e.target.value)}
-        placeholder="What is the goal of this project? (optional)"
-      />
-
-      <Textarea
-        label="Requirements"
-        id="project-requirements"
-        value={requirements}
-        onChange={(e) => setRequirements(e.target.value)}
-        placeholder="Requirements for the project (optional)"
-      />
-
-      <Textarea
-        label="Design"
-        id="project-design"
-        value={design}
-        onChange={(e) => setDesign(e.target.value)}
-        placeholder="Design notes (optional)"
+      <Input
+        label="Summary"
+        id="project-summary"
+        value={summary}
+        onChange={(e) => setSummary(e.target.value)}
+        placeholder="Brief project summary (optional)"
       />
 
       {error && (

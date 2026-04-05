@@ -6,6 +6,7 @@ import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from "../../domain";
+import { validateDocumentsMergePatch, DocumentsMergePatchError } from "./validation";
 
 export function projectRoutes(service: IProjectService, taskService?: ITaskService, depService?: ITaskDependencyService): Hono {
   const app = new Hono();
@@ -73,6 +74,19 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateProjectInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
+    try {
+      for (let i = 0; i < body.items.length; i++) {
+        const item = body.items[i];
+        if (item.documents !== undefined) {
+          item.documents = validateDocumentsMergePatch(item.documents, i);
+        }
+      }
+    } catch (err) {
+      if (err instanceof DocumentsMergePatchError) {
+        return c.json({ error: err.message }, 400);
+      }
+      throw err;
+    }
     const projects = service.update(body.items);
     return c.json(projects);
   });

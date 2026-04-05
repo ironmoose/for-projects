@@ -19,7 +19,7 @@
  *   migration does not create duplicates.
  */
 
-import type { DocumentReferenceType } from '../../entities';
+import type { DocumentReferenceType } from '../entities';
 
 // ---------------------------------------------------------------------------
 // Field-to-reference-type mapping

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Input } from "../atoms/Input";
 import { Select } from "../atoms/Select";
-import { Textarea } from "../atoms/Textarea";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import {
   TASK_STATUSES,
@@ -13,10 +12,7 @@ import {
 
 interface CreateTaskFields {
   title: string;
-  description?: string;
-  plan?: string;
-  acceptance_criteria?: string;
-  implementation?: string;
+  summary?: string;
   group_key?: string;
   status?: string;
   effort?: string;
@@ -53,10 +49,7 @@ const CATEGORY_OPTIONS = toSelectOptions(TASK_CATEGORIES);
 export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps) {
   const { theme } = useTheme();
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [plan, setPlan] = useState("");
-  const [acceptanceCriteria, setAcceptanceCriteria] = useState("");
-  const [implementation, setImplementation] = useState("");
+  const [summary, setSummary] = useState("");
   const [groupKey, setGroupKey] = useState("");
   const [status, setStatus] = useState("todo");
   const [effort, setEffort] = useState("");
@@ -73,10 +66,7 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
     try {
       await onCreated({
         title: title.trim(),
-        description: description.trim() || undefined,
-        plan: plan.trim() || undefined,
-        acceptance_criteria: acceptanceCriteria.trim() || undefined,
-        implementation: implementation.trim() || undefined,
+        summary: summary.trim() || undefined,
         group_key: groupKey.trim() || undefined,
         status,
         effort: effort || undefined,
@@ -109,40 +99,13 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
           placeholder="Task title..."
         />
 
-        {/* Description */}
-        <Textarea
-          label="Description"
-          id="task-description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Task description (optional)"
-        />
-
-        {/* Plan */}
-        <Textarea
-          label="Plan"
-          id="task-plan"
-          value={plan}
-          onChange={(e) => setPlan(e.target.value)}
-          placeholder="Execution plan (optional)"
-        />
-
-        {/* Acceptance Criteria */}
-        <Textarea
-          label="Acceptance Criteria"
-          id="task-acceptance-criteria"
-          value={acceptanceCriteria}
-          onChange={(e) => setAcceptanceCriteria(e.target.value)}
-          placeholder="Acceptance criteria (optional)"
-        />
-
-        {/* Implementation */}
-        <Textarea
-          label="Implementation"
-          id="task-implementation"
-          value={implementation}
-          onChange={(e) => setImplementation(e.target.value)}
-          placeholder="Implementation notes (optional)"
+        {/* Summary */}
+        <Input
+          label="Summary"
+          id="task-summary"
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="Brief task summary (optional)"
         />
 
         {/* Group Key */}

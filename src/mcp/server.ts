@@ -8,11 +8,14 @@ import {
   IMPACT_LEVELS,
   TASK_CATEGORIES,
   DEPENDENCY_TYPES,
+  DOCUMENT_REFERENCE_TYPES,
+  ENTITY_TYPES,
   TAG_NAMES,
   type IProjectService,
   type ITaskService,
   type ITaskDependencyService,
   type IDocumentService,
+  type IDocumentReferenceService,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -20,6 +23,7 @@ export interface McpServiceContext {
   taskService: ITaskService;
   taskDependencyService: ITaskDependencyService;
   documentService: IDocumentService;
+  documentReferenceService: IDocumentReferenceService;
 }
 
 function handle<T>(fn: () => T) {
@@ -41,6 +45,21 @@ function handle<T>(fn: () => T) {
   }
 }
 
+/**
+ * Zod schema for the documents merge-patch field used in project and task tools.
+ * Keys are document IDs. Array value replaces reference types for that document.
+ * null removes all references to that document. Absent keys are untouched.
+ */
+const documentsMergePatchSchema = z.record(
+  z.string().max(26),
+  z.union([
+    z.array(z.object({ type: z.enum([...DOCUMENT_REFERENCE_TYPES]) })),
+    z.null(),
+  ]),
+).optional().describe(
+  'Merge-patch for document references. Keys are document IDs. Array value sets reference types for that document (valid types: goal, plan, requirements, design, reference, note). null removes all references to that document. Absent keys are untouched.'
+);
+
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
   const { projectService, taskService, taskDependencyService, documentService } = ctx;
@@ -55,7 +74,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_projects",
     {
-      description: "List projects with optional pagination and title search. Returns { data, total } where data contains project summaries (id, title, timestamps).",
+      description: "List projects with optional pagination and title search. Returns { data, total } where data contains project summaries (id, title, summary, timestamps).",
       inputSchema: {
         title: z.string().max(255).optional(),
         limit: z.number().int().min(1).max(200).optional(),
@@ -68,7 +87,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_project",
     {
-      description: "Retrieve a single project by ID with all fields.",
+      description: "Retrieve a single project by ID. Response includes title, summary, timestamps, and a `references` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => projectService.get(id))
@@ -96,7 +115,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_task",
     {
-      description: "Retrieve a single task by ID with all fields.",
+      description: "Retrieve a single task by ID with all fields. Response includes title, summary, status, effort, impact, category, group_key, is_blocked, timestamps, and a `references` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => taskService.get(id))
@@ -107,13 +126,15 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_project",
     {
-      description: "Create projects. Pass an `items` array of objects, each with a required title and optional goal, requirements, design.",
+      description: "Create projects. Pass an `items` array of objects, each with a required title and optional summary (max 1000 chars). Projects now have title and summary only — rich content lives in linked documents managed via the documents field on update_project. Optionally attach document references using the `documents` field: an object where keys are document IDs and values are arrays of {type} objects. Valid reference types: goal, plan, requirements, design, reference, note.",
       inputSchema: {
         items: z.array(z.object({
           title: z.string().max(255),
-          goal: z.string().max(10000).optional(),
-          requirements: z.string().max(10000).optional(),
-          design: z.string().max(10000).optional(),
+          summary: z.string().max(1000).optional(),
+          documents: z.record(
+            z.string().max(26),
+            z.array(z.object({ type: z.enum([...DOCUMENT_REFERENCE_TYPES]) })).nullable(),
+          ).optional(),
         })),
       },
     },
@@ -123,16 +144,13 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_project",
     {
-      description: "Update projects by ID. Pass an `items` array. Only provided fields are changed. Use attach_documents / detach_documents to link or unlink documents.",
+      description: "Update projects by ID. Pass an `items` array. Only provided fields are changed. Use the documents field to manage document references with merge-patch semantics: key = document_id, value = array of {type} objects replaces all reference types for that document; value = null removes all references to that document; absent key = no change. Valid types: goal, plan, requirements, design, reference, note.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
-          goal: z.string().max(10000).optional(),
-          requirements: z.string().max(10000).optional(),
-          design: z.string().max(10000).optional(),
-          attach_documents: z.array(z.string().max(26)).optional(),
-          detach_documents: z.array(z.string().max(26)).optional(),
+          summary: z.string().max(1000).optional(),
+          documents: documentsMergePatchSchema,
         })),
       },
     },
@@ -144,20 +162,21 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_task",
     {
-      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Optional group_key (max 32 chars) for organizing tasks into flat groups. Status defaults to 'todo' if not provided. Optional effort (trivial/low/medium/high/extreme), impact (trivial/low/medium/high/extreme), and category (feature/bugfix/refactor/test/perf/infra/docs/security/design/chore).",
+      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Tasks have title and summary only — rich content lives in linked documents managed via the documents field on update_task. Optional summary (max 1000 chars), group_key (max 32 chars) for organizing tasks into flat groups. Status defaults to 'todo' if not provided. Optional effort (trivial/low/medium/high/extreme), impact (trivial/low/medium/high/extreme), and category (feature/bugfix/refactor/test/perf/infra/docs/security/design/chore). Optionally attach document references using the `documents` field: an object where keys are document IDs and values are arrays of {type} objects. Valid reference types: goal, plan, requirements, design, reference, note.",
       inputSchema: {
         items: z.array(z.object({
           project_id: z.string().max(26),
           title: z.string().max(255),
-          plan: z.string().max(10000).optional(),
-          description: z.string().max(10000).optional(),
-          implementation: z.string().max(10000).optional(),
-          acceptance_criteria: z.string().max(10000).optional(),
+          summary: z.string().max(1000).optional(),
           group_key: z.string().max(32).optional(),
           status: z.enum([...TASK_STATUSES]).optional(),
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
+          documents: z.record(
+            z.string().max(26),
+            z.array(z.object({ type: z.enum([...DOCUMENT_REFERENCE_TYPES]) })).nullable(),
+          ).optional(),
         })),
       },
     },
@@ -167,20 +186,18 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use add_dependencies to create dependency edges (each with task_id of the blocker/related task and type 'blocks' or 'relates_to'). Use remove_dependencies to remove edges by task_id. The current task becomes the target (blocked by / related to the specified task_id).",
+      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use the documents field to manage document references with merge-patch semantics: key = document_id, value = array of {type} objects replaces all reference types for that document; value = null removes all references to that document; absent key = no change. Valid types: goal, plan, requirements, design, reference, note. Use add_dependencies to create dependency edges (each with task_id of the blocker/related task and type 'blocks' or 'relates_to'). Use remove_dependencies to remove edges by task_id. The current task becomes the target (blocked by / related to the specified task_id).",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
-          plan: z.string().max(10000).optional(),
-          description: z.string().max(10000).optional(),
-          implementation: z.string().max(10000).optional(),
-          acceptance_criteria: z.string().max(10000).optional(),
+          summary: z.string().max(1000).optional(),
           group_key: z.string().max(32).optional(),
           status: z.enum([...TASK_STATUSES]).optional(),
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
+          documents: documentsMergePatchSchema,
           add_dependencies: z.array(z.object({
             task_id: z.string().max(26),
             type: z.enum([...DEPENDENCY_TYPES]),
@@ -263,18 +280,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_documents",
     {
-      description: "List document summaries and tags, optionally filtered by tag, title, search, project_id, or favorite status. Use `search` to search across both title and summary fields (OR logic, case-insensitive, partial match). Returns { data, total } where data contains document summaries (id, title, summary, has_content, favorite, tags, timestamps). Valid tag values — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility. Documents marked as favorite are high-value references — when setting up a new project, use `list_documents` with `favorite: true` to find documents the user wants auto-attached to relevant projects.",
+      description: "List document summaries and tags, optionally filtered by tag, title, search, entity_type+entity_id, or favorite status. Use `search` to search across both title and summary fields (OR logic, case-insensitive, partial match). Use entity_type + entity_id to find documents linked to a specific project or task. Returns { data, total } where data contains document summaries (id, title, summary, has_content, favorite, tags, timestamps). Valid tag values — Domain: ui, data, integration, infra, domain; Content Type: architecture, conventions, guide, reference, decision, troubleshooting; Concern: security, performance, testing, accessibility. Documents marked as favorite are high-value references — when setting up a new project, use `list_documents` with `favorite: true` to find documents the user wants auto-attached to relevant projects.",
       inputSchema: {
         search: z.string().max(500).optional(),
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
-        project_id: z.string().max(26).optional(),
+        project_id: z.string().max(26).optional().describe("Deprecated: use entity_type='project' + entity_id instead."),
+        entity_type: z.enum([...ENTITY_TYPES]).optional().describe("Filter documents linked to this entity type. Requires entity_id."),
+        entity_id: z.string().max(26).optional().describe("Filter documents linked to this entity ID. Requires entity_type."),
         favorite: z.boolean().optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ search, tag, title, project_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, project_id, favorite, limit, offset }))
+    ({ search, tag, title, project_id, entity_type, entity_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, project_id, entity_type, entity_id, favorite, limit, offset }))
   );
 
   server.registerTool(

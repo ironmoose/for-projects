@@ -20,6 +20,8 @@ export interface UpdateDocumentInput {
 export interface CreateProjectInput {
   title: string;
   summary?: string;
+  /** Merge-patch for document references on create. Key = document_id. Array = types for that doc. null values are silently ignored (no existing refs to remove). */
+  documents?: Record<string, { type: DocumentReferenceType }[] | null>;
 }
 
 export interface UpdateProjectInput {
@@ -39,6 +41,8 @@ export interface CreateTaskInput {
   effort?: EffortLevel;
   impact?: ImpactLevel;
   category?: TaskCategory;
+  /** Merge-patch for document references on create. Key = document_id. Array = types for that doc. null values are silently ignored (no existing refs to remove). */
+  documents?: Record<string, { type: DocumentReferenceType }[] | null>;
 }
 
 export interface UpdateTaskInput {

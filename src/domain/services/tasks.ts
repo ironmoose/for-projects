@@ -1,4 +1,4 @@
-import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentReferenceSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
+import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentReferenceDetail, type DocumentReferenceSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
 import type { ITaskService, ITaskDependencyService, IDocumentReferenceService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -65,17 +65,18 @@ export class TaskService implements ITaskService {
     return this.taskRepo.findGraphSummaries(projectId, status);
   }
 
-  get(id: string): Task & { is_blocked?: boolean; documents: DocumentReferenceSummary[] } {
+  get(id: string): Task & { is_blocked?: boolean; references: DocumentReferenceDetail[] } {
     const task = this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
-    const documents = this.docRefService?.getReferencesForEntity('task', id) ?? [];
+    const references = this.docRefService?.findByEntity('task', id) ?? [];
     if (this.depRepo) {
-      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id), documents };
+      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id), references };
     }
-    return { ...task, is_blocked: false, documents };
+    return { ...task, is_blocked: false, references };
   }
 
-  create(inputs: CreateTaskInput[]): Task[] {
+  create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[] {
+    // Validate all inputs before any writes
     for (const input of inputs) {
       const project = this.projectRepo.findById(input.project_id);
       if (!project) {
@@ -105,6 +106,10 @@ export class TaskService implements ITaskService {
       if (input.category !== undefined && !(TASK_CATEGORIES as readonly string[]).includes(input.category)) {
         throw new ServiceError(`category must be one of: ${(TASK_CATEGORIES as readonly string[]).join(", ")}`, 400);
       }
+      // Pre-validate document references so we fail before creating the entity
+      if (input.documents) {
+        this.docRefService?.validateMergePatch(input.documents);
+      }
     }
 
     const rows = inputs.map((input) => ({
@@ -119,6 +124,15 @@ export class TaskService implements ITaskService {
     }));
 
     const tasks = this.taskRepo.insertMany(rows);
+
+    // Create document references for each task
+    for (let i = 0; i < tasks.length; i++) {
+      const input = inputs[i];
+      if (input.documents) {
+        this.docRefService?.applyMergePatch("task", tasks[i].id, input.documents);
+      }
+    }
+
     for (const t of tasks) {
       this.activityLog.insert({
         entity_type: "task",
@@ -128,11 +142,13 @@ export class TaskService implements ITaskService {
       });
     }
     this.eventBus.emit({ type: "created", entity_type: "task", ids: tasks.map((t) => t.id) });
-    // Newly created tasks are never blocked
-    if (this.depRepo) {
-      return tasks.map((t) => ({ ...t, is_blocked: false }));
-    }
-    return tasks;
+
+    // Return tasks with is_blocked and document references
+    return tasks.map((t) => ({
+      ...t,
+      is_blocked: false, // Newly created tasks are never blocked
+      documents: this.docRefService?.getReferencesForEntity("task", t.id) ?? [],
+    }));
   }
 
   update(inputs: UpdateTaskInput[]): Task[] {

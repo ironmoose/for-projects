@@ -142,6 +142,15 @@ export interface DocumentReferenceSummary {
   type: DocumentReferenceType;
 }
 
+/** Enriched reference detail for GET responses — includes document summary and favorite. */
+export interface DocumentReferenceDetail {
+  document_id: string;
+  type: DocumentReferenceType;
+  title: string;
+  summary: string | null;
+  favorite: boolean;
+}
+
 export function toDocumentSummary(doc: Document, tags: TagName[] = []): DocumentSummary {
   return {
     id: doc.id, title: doc.title,

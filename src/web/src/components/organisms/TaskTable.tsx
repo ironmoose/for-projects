@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
-import { PresenceCharm } from "../molecules/PresenceCharm";
+
 import { tableWrapperStyle, tableHeaderStyle, cellStyle } from "../molecules/tableUtils";
 import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
@@ -70,25 +70,16 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
         }}
       >
         <td style={{ ...cellStyle(theme), fontWeight: 500, maxWidth: 320 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span
-              style={{
-                flex: 1,
-                minWidth: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {task.title}
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-              <PresenceCharm active={task.has_plan} label="Plan" color={theme.color.success} />
-              <PresenceCharm active={task.has_description} label="Description" color={theme.color.primary} />
-              <PresenceCharm active={task.has_implementation} label="Implementation" color={theme.color.tertiary} />
-              <PresenceCharm active={task.has_acceptance_criteria} label="Acceptance criteria" color={theme.color.warning} />
-            </div>
-          </div>
+          <span
+            style={{
+              display: "block",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {task.title}
+          </span>
         </td>
         <td style={{ ...cellStyle(theme), position: "relative" }}>
           <div

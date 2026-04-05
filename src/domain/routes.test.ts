@@ -83,16 +83,14 @@ describe("Project Routes", () => {
     const create = await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Get Project", goal: "A goal", requirements: "Reqs", design: "Design" }] }),
+      body: JSON.stringify({ items: [{ title: "Get Project", summary: "A summary" }] }),
     });
     const [project] = await create.json();
     const res = await req(`/projects/${project.id}`);
     const body = await res.json();
     expect(body.id).toBe(project.id);
     expect(body.title).toBe("Get Project");
-    expect(body.goal).toBe("A goal");
-    expect(body.requirements).toBe("Reqs");
-    expect(body.design).toBe("Design");
+    expect(body.summary).toBe("A summary");
     expect(body.created_at).toBeTruthy();
     expect(body.updated_at).toBeTruthy();
   });
@@ -112,12 +110,12 @@ describe("Project Routes", () => {
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: project.id, title: "Patched", goal: "New goal" }] }),
+      body: JSON.stringify({ items: [{ id: project.id, title: "Patched", summary: "New summary" }] }),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
     expect(body.title).toBe("Patched");
-    expect(body.goal).toBe("New goal");
+    expect(body.summary).toBe("New summary");
   });
 
   it("GET /projects lists projects with summary fields", async () => {
@@ -132,10 +130,7 @@ describe("Project Routes", () => {
     expect(summary.title).toBeTruthy();
     expect(summary.created_at).toBeTruthy();
     expect(summary.updated_at).toBeTruthy();
-    // Summary must not include full-entity fields
-    expect(summary.goal).toBeUndefined();
-    expect(summary.requirements).toBeUndefined();
-    expect(summary.design).toBeUndefined();
+    // Summary includes summary field (no removed fields to check)
   });
 
   it("GET /projects filters by title", async () => {
@@ -201,7 +196,7 @@ describe("Task Routes", () => {
     await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ project_id: projectId, title: "Summary Check", plan: "P", description: "D", implementation: "I", acceptance_criteria: "AC" }] }),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Summary Check", summary: "S" }] }),
     });
     const res = await req(`/tasks?project_id=${projectId}`);
     expect(res.status).toBe(200);
@@ -215,11 +210,6 @@ describe("Task Routes", () => {
     expect(summary.status).toBeTruthy();
     expect(summary.created_at).toBeTruthy();
     expect(summary.updated_at).toBeTruthy();
-    // Summary must not include full-entity fields
-    expect(summary.plan).toBeUndefined();
-    expect(summary.description).toBeUndefined();
-    expect(summary.implementation).toBeUndefined();
-    expect(summary.acceptance_criteria).toBeUndefined();
   });
 
   it("PATCH /tasks updates task", async () => {
@@ -232,55 +222,51 @@ describe("Task Routes", () => {
     const res = await req("/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: task.id, title: "Patched", plan: "New plan" }] }),
+      body: JSON.stringify({ items: [{ id: task.id, title: "Patched", summary: "New summary" }] }),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
     expect(body.title).toBe("Patched");
-    expect(body.plan).toBe("New plan");
+    expect(body.summary).toBe("New summary");
   });
 
-  it("POST /tasks creates task with new fields", async () => {
+  it("POST /tasks creates task with summary", async () => {
     const res = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: [{
         project_id: projectId,
-        title: "New Fields Task",
-        description: "A description",
-        implementation: "Some impl",
-        acceptance_criteria: "It passes",
+        title: "Summary Task",
+        summary: "A summary",
       }] }),
     });
     expect(res.status).toBe(201);
     const [body] = await res.json();
-    expect(body.description).toBe("A description");
-    expect(body.implementation).toBe("Some impl");
-    expect(body.acceptance_criteria).toBe("It passes");
+    expect(body.summary).toBe("A summary");
   });
 
-  it("PATCH /tasks updates new fields", async () => {
+  it("PATCH /tasks updates summary", async () => {
     const create = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ project_id: projectId, title: "Patch new fields" }] }),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Patch summary task" }] }),
     });
     const [task] = await create.json();
     const res = await req("/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: task.id, description: "Patched desc" }] }),
+      body: JSON.stringify({ items: [{ id: task.id, summary: "Patched summary" }] }),
     });
     expect(res.status).toBe(200);
     const [body] = await res.json();
-    expect(body.description).toBe("Patched desc");
+    expect(body.summary).toBe("Patched summary");
   });
 
   it("GET /tasks/:id returns full task entity", async () => {
     const create = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ project_id: projectId, title: "Get Task", description: "Full desc", plan: "Full plan" }] }),
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Get Task", summary: "Full summary" }] }),
     });
     const [task] = await create.json();
     const res = await req(`/tasks/${task.id}`);
@@ -288,8 +274,7 @@ describe("Task Routes", () => {
     const body = await res.json();
     expect(body.id).toBe(task.id);
     expect(body.title).toBe("Get Task");
-    expect(body.description).toBe("Full desc");
-    expect(body.plan).toBe("Full plan");
+    expect(body.summary).toBe("Full summary");
     expect(body.project_id).toBe(projectId);
     expect(body.created_at).toBeTruthy();
     expect(body.updated_at).toBeTruthy();
@@ -707,7 +692,7 @@ describe("Document Routes", () => {
 // ---------------------------------------------------------------------------
 
 describe("Extended Project Routes", () => {
-  it("PATCH /projects with attach_documents includes documents in GET", async () => {
+  it("PATCH /projects with documents merge-patch attaches documents, verify via GET", async () => {
     // Create a project and a document
     const [project] = await (await req("/projects", {
       method: "POST",
@@ -720,23 +705,24 @@ describe("Extended Project Routes", () => {
       body: JSON.stringify({ items: [{ title: "Attach Test Doc" }] }),
     })).json();
 
-    // Attach document to project
+    // Attach document to project via merge-patch
     const patchRes = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: project.id, attach_documents: [doc.id] }] }),
+      body: JSON.stringify({ items: [{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }] }),
     });
     expect(patchRes.status).toBe(200);
 
     // Verify GET includes the document
     const getRes = await req(`/projects/${project.id}`);
     const body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBe(1);
-    expect(body.documents[0].id).toBe(doc.id);
+    expect(body.references).toBeArray();
+    expect(body.references.length).toBe(1);
+    expect(body.references[0].document_id).toBe(doc.id);
+    expect(body.references[0].type).toBe("reference");
   });
 
-  it("PATCH /projects with detach_documents removes document", async () => {
+  it("PATCH /projects with documents merge-patch null removes document", async () => {
     // Create project + document, attach first
     const [project] = await (await req("/projects", {
       method: "POST",
@@ -752,45 +738,215 @@ describe("Extended Project Routes", () => {
     await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: project.id, attach_documents: [doc.id] }] }),
+      body: JSON.stringify({ items: [{ id: project.id, documents: { [doc.id]: [{ type: "design" }] } }] }),
     });
 
-    // Detach
+    // Detach via null
     const detachRes = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: project.id, detach_documents: [doc.id] }] }),
+      body: JSON.stringify({ items: [{ id: project.id, documents: { [doc.id]: null } }] }),
     });
     expect(detachRes.status).toBe(200);
 
     const getRes = await req(`/projects/${project.id}`);
     const body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBe(0);
+    expect(body.references).toBeArray();
+    expect(body.references.length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Documents Merge-Patch Validation
+// ---------------------------------------------------------------------------
+
+describe("Documents Merge-Patch Validation", () => {
+  let projectId: string;
+  let taskId: string;
+  let docId: string;
+
+  beforeAll(async () => {
+    const [project] = ctx.projectService.create([{ title: "MergePatch Test Project" }]);
+    projectId = project.id;
+    const [task] = ctx.taskService.create([{ project_id: projectId, title: "MergePatch Test Task" }]);
+    taskId = task.id;
+    const [doc] = ctx.documentService.create([{ title: "MergePatch Test Doc" }]);
+    docId = doc.id;
   });
 
-  it("PATCH /projects with conflicting attach/detach returns 400", async () => {
-    const [project] = await (await req("/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Conflict Test Project" }] }),
-    })).json();
-    const [doc] = await (await req("/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Conflict Test Doc" }] }),
-    })).json();
-
+  it("PATCH /projects accepts documents field with valid merge-patch shape", async () => {
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{
-        id: project.id,
-        attach_documents: [doc.id],
-        detach_documents: [doc.id],
-      }] }),
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: {
+            [docId]: [{ type: "design" }, { type: "reference" }],
+          },
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /tasks accepts documents field with valid merge-patch shape", async () => {
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskId,
+          documents: {
+            [docId]: [{ type: "plan" }],
+          },
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /projects accepts null value (remove references)", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: {
+            [docId]: null,
+          },
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /projects accepts empty documents object (no-op)", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: {},
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("absent documents field means no reference changes", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ id: projectId, title: "Renamed" }],
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /projects with invalid type value returns 400", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: {
+            [docId]: [{ type: "invalid_type" }],
+          },
+        }],
+      }),
     });
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/documents/i);
+  });
+
+  it("PATCH /tasks with invalid type value returns 400", async () => {
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: taskId,
+          documents: {
+            [docId]: [{ type: "bogus" }],
+          },
+        }],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/documents/i);
+  });
+
+  it("PATCH /projects with non-object documents value returns 400", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: "not_an_object",
+        }],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/documents/i);
+  });
+
+  it("PATCH /projects with valid multiple reference types accepted", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: {
+            [docId]: [{ type: "goal" }, { type: "plan" }, { type: "requirements" }, { type: "design" }, { type: "reference" }, { type: "note" }],
+          },
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /projects with mixed set and null operations accepted", async () => {
+    const [doc2] = ctx.documentService.create([{ title: "MergePatch Doc 2" }]);
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: {
+            [docId]: [{ type: "design" }],
+            [doc2.id]: null,
+          },
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /projects with empty array value accepted (set zero types)", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: {
+            [docId]: [],
+          },
+        }],
+      }),
+    });
+    expect(res.status).toBe(200);
   });
 });
 
@@ -1305,7 +1461,7 @@ describe("Dependency Graph Status Filtering", () => {
     const res = await req(`/projects/${projectId}/dependency-graph?status=todo,in_progress`);
     expect(res.status).toBe(200);
     const body = await res.json();
-    const statuses = new Set(body.tasks.map((t: { status: string }) => t.status));
+    const statuses = new Set<string>(body.tasks.map((t: { status: string }) => t.status));
     for (const s of statuses) {
       expect(["todo", "in_progress"]).toContain(s);
     }

@@ -13,7 +13,6 @@ import {
 } from "../components";
 import type { ProgressBarSegment } from "../components";
 import { CreateProjectOverlay } from "../components/organisms/CreateProjectOverlay";
-import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
 import { useShortcut } from "../hooks/useKeyboardShortcuts";
 import { useToastContext } from "../components/ToastContext";
@@ -76,11 +75,20 @@ function ProjectCard({
         {project.title}
       </span>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <PresenceCharm active={project.has_goal} label="Goal" color={theme.color.success} />
-        <PresenceCharm active={project.has_requirements} label="Requirements" color={theme.color.primary} />
-        <PresenceCharm active={project.has_design} label="Design" color={theme.color.tertiary} />
-      </div>
+      {project.summary && (
+        <span
+          style={{
+            fontSize: theme.font.size.xs,
+            color: theme.color.textMuted,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            display: "block",
+          }}
+        >
+          {project.summary}
+        </span>
+      )}
 
       {taskCount > 0 && (() => {
         const segments: ProgressBarSegment[] = [
@@ -133,7 +141,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
   // Keyboard shortcut: "n" to create new project
   useShortcut("n", "New project", () => setShowCreateOverlay(true), "Dashboard");
 
-  async function handleCreate(fields: { title: string; goal?: string; requirements?: string; design?: string }) {
+  async function handleCreate(fields: { title: string; summary?: string }) {
     await create(fields);
   }
 

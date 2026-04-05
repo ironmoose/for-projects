@@ -1,4 +1,4 @@
-import { type Project, type ProjectSummary, type DocumentReferenceSummary } from "../entities";
+import { type Project, type ProjectSummary, type DocumentReferenceDetail, type DocumentReferenceSummary } from "../entities";
 import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
 import type { IProjectService, IDocumentReferenceService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -21,14 +21,15 @@ export class ProjectService implements IProjectService {
     };
   }
 
-  get(id: string): Project & { documents: DocumentReferenceSummary[] } {
+  get(id: string): Project & { references: DocumentReferenceDetail[] } {
     const project = this.repo.findById(id);
     if (!project) throw new ServiceError("project not found", 404);
-    const documents = this.docRefService.getReferencesForEntity("project", id);
-    return { ...project, documents };
+    const references = this.docRefService.findByEntity("project", id);
+    return { ...project, references };
   }
 
-  create(inputs: CreateProjectInput[]): Project[] {
+  create(inputs: CreateProjectInput[]): (Project & { documents: DocumentReferenceSummary[] })[] {
+    // Validate all inputs before any writes
     for (const input of inputs) {
       if (!input.title?.trim()) {
         throw new ServiceError("title is required", 400);
@@ -39,6 +40,10 @@ export class ProjectService implements IProjectService {
       if (input.summary !== undefined && input.summary.length > 1000) {
         throw new ServiceError("summary must be 1000 characters or fewer", 400);
       }
+      // Pre-validate document references so we fail before creating the entity
+      if (input.documents) {
+        this.docRefService.validateMergePatch(input.documents);
+      }
     }
 
     const rows = inputs.map((input) => ({
@@ -47,6 +52,15 @@ export class ProjectService implements IProjectService {
     }));
 
     const projects = this.repo.insertMany(rows);
+
+    // Create document references for each project
+    for (let i = 0; i < projects.length; i++) {
+      const input = inputs[i];
+      if (input.documents) {
+        this.docRefService.applyMergePatch("project", projects[i].id, input.documents);
+      }
+    }
+
     for (const p of projects) {
       this.activityLog.insert({
         entity_type: "project",
@@ -56,7 +70,12 @@ export class ProjectService implements IProjectService {
       });
     }
     this.eventBus.emit({ type: "created", entity_type: "project", ids: projects.map((p) => p.id) });
-    return projects;
+
+    // Return projects with their document references
+    return projects.map((p) => ({
+      ...p,
+      documents: this.docRefService.getReferencesForEntity("project", p.id),
+    }));
   }
 
   update(inputs: UpdateProjectInput[]): Project[] {

@@ -52,7 +52,7 @@ afterAll(async () => {
 
 describe("list_projects", () => {
   it("returns created projects with correct total", async () => {
-    await callTool("create_project", { items: [{ title: "List Test Project", goal: "G", requirements: "R", design: "D" }] });
+    await callTool("create_project", { items: [{ title: "List Test Project", summary: "S" }] });
 
     const listResult = await callTool("list_projects");
     const parsed = parseResult(listResult);
@@ -62,10 +62,6 @@ describe("list_projects", () => {
     expect(parsed.data[0].title).toBeTruthy();
     expect(parsed.data[0].created_at).toBeTruthy();
     expect(parsed.data[0].updated_at).toBeTruthy();
-    // Summary must not include full-entity fields
-    expect(parsed.data[0].goal).toBeUndefined();
-    expect(parsed.data[0].requirements).toBeUndefined();
-    expect(parsed.data[0].design).toBeUndefined();
   });
 
   it("supports pagination via limit and offset", async () => {
@@ -78,16 +74,14 @@ describe("list_projects", () => {
 describe("get_project", () => {
   it("returns full project entity by id", async () => {
     const [created] = parseResult(
-      await callTool("create_project", { items: [{ title: "Get Me", goal: "A goal", requirements: "Reqs", design: "Design" }] })
+      await callTool("create_project", { items: [{ title: "Get Me", summary: "A summary" }] })
     );
 
     const result = await callTool("get_project", { id: created.id });
     const project = parseResult(result);
     expect(project.id).toBe(created.id);
     expect(project.title).toBe("Get Me");
-    expect(project.goal).toBe("A goal");
-    expect(project.requirements).toBe("Reqs");
-    expect(project.design).toBe("Design");
+    expect(project.summary).toBe("A summary");
     expect(project.created_at).toBeTruthy();
     expect(project.updated_at).toBeTruthy();
   });
@@ -106,9 +100,7 @@ describe("create_project", () => {
 
     expect(project.id).toBeTruthy();
     expect(project.title).toBe("Title Only");
-    expect(project.goal).toBeNull();
-    expect(project.requirements).toBeNull();
-    expect(project.design).toBeNull();
+    expect(project.summary).toBeNull();
     expect(project.created_at).toBeTruthy();
     expect(project.updated_at).toBeTruthy();
   });
@@ -117,17 +109,13 @@ describe("create_project", () => {
     const result = await callTool("create_project", {
       items: [{
         title: "Full",
-        goal: "Ship it",
-        requirements: "Be fast",
-        design: "Monolith",
+        summary: "Ship it fast",
       }],
     });
     const [project] = parseResult(result);
 
     expect(project.title).toBe("Full");
-    expect(project.goal).toBe("Ship it");
-    expect(project.requirements).toBe("Be fast");
-    expect(project.design).toBe("Monolith");
+    expect(project.summary).toBe("Ship it fast");
   });
 
   it("returns empty array for empty items", async () => {
@@ -140,7 +128,7 @@ describe("create_project", () => {
 describe("update_project", () => {
   it("updates single field, others unchanged", async () => {
     const [created] = parseResult(
-      await callTool("create_project", { items: [{ title: "Before", goal: "Original Goal" }] })
+      await callTool("create_project", { items: [{ title: "Before", summary: "Original Summary" }] })
     );
 
     const [updated] = parseResult(
@@ -148,7 +136,7 @@ describe("update_project", () => {
     );
 
     expect(updated.title).toBe("After");
-    expect(updated.goal).toBe("Original Goal");
+    expect(updated.summary).toBe("Original Summary");
   });
 
   it("rejects unknown id", async () => {
@@ -195,7 +183,7 @@ describe("list_tasks", () => {
   it("returns summary fields in list results", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Summary Fields Proj" }] }));
     await callTool("create_task", {
-      items: [{ project_id: proj.id, title: "Summary Task", plan: "P", description: "D", implementation: "I", acceptance_criteria: "AC" }],
+      items: [{ project_id: proj.id, title: "Summary Task", summary: "S" }],
     });
 
     const list = parseResult(await callTool("list_tasks", { project_id: proj.id }));
@@ -206,11 +194,6 @@ describe("list_tasks", () => {
     expect(task.status).toBeTruthy();
     expect(task.created_at).toBeTruthy();
     expect(task.updated_at).toBeTruthy();
-    // Summary must not include full-entity fields
-    expect(task.plan).toBeUndefined();
-    expect(task.description).toBeUndefined();
-    expect(task.implementation).toBeUndefined();
-    expect(task.acceptance_criteria).toBeUndefined();
   });
 });
 
@@ -219,7 +202,7 @@ describe("get_task", () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Get Task Proj" }] }));
     const [created] = parseResult(
       await callTool("create_task", {
-        items: [{ project_id: proj.id, title: "Full Task", plan: "The plan", description: "Desc" }],
+        items: [{ project_id: proj.id, title: "Full Task", summary: "A summary" }],
       })
     );
 
@@ -227,8 +210,7 @@ describe("get_task", () => {
     const task = parseResult(result);
     expect(task.id).toBe(created.id);
     expect(task.title).toBe("Full Task");
-    expect(task.plan).toBe("The plan");
-    expect(task.description).toBe("Desc");
+    expect(task.summary).toBe("A summary");
     expect(task.project_id).toBe(proj.id);
     expect(task.created_at).toBeTruthy();
     expect(task.updated_at).toBeTruthy();
@@ -251,7 +233,7 @@ describe("create_task", () => {
     expect(task.id).toBeTruthy();
     expect(task.project_id).toBe(proj.id);
     expect(task.title).toBe("New Task");
-    expect(task.plan).toBeNull();
+    expect(task.summary).toBeNull();
   });
 
   it("rejects missing project_id", async () => {
@@ -261,7 +243,7 @@ describe("create_task", () => {
 });
 
 describe("update_task", () => {
-  it("updates title and plan", async () => {
+  it("updates title and summary", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Update Task Proj" }] }));
     const [task] = parseResult(
       await callTool("create_task", { items: [{ project_id: proj.id, title: "Old Title" }] })
@@ -269,38 +251,34 @@ describe("update_task", () => {
 
     const [updated] = parseResult(
       await callTool("update_task", {
-        items: [{ id: task.id, project_id: proj.id, title: "New Title", plan: "The plan" }],
+        items: [{ id: task.id, title: "New Title", summary: "The summary" }],
       })
     );
 
     expect(updated.title).toBe("New Title");
-    expect(updated.plan).toBe("The plan");
+    expect(updated.summary).toBe("The summary");
   });
 });
 
 describe("create_task with all fields", () => {
-  it("creates task with all fields", async () => {
+  it("creates task with summary", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "New Fields Proj" }] }));
     const [task] = parseResult(
       await callTool("create_task", {
         items: [{
           project_id: proj.id,
           title: "Full Task",
-          description: "A description",
-          implementation: "Some impl",
-          acceptance_criteria: "It passes",
+          summary: "A summary",
         }],
       })
     );
 
-    expect(task.description).toBe("A description");
-    expect(task.implementation).toBe("Some impl");
-    expect(task.acceptance_criteria).toBe("It passes");
+    expect(task.summary).toBe("A summary");
   });
 });
 
 describe("update_task with optional fields", () => {
-  it("updates optional fields via update_task", async () => {
+  it("updates summary via update_task", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Update New Fields Proj" }] }));
     const [task] = parseResult(
       await callTool("create_task", { items: [{ project_id: proj.id, title: "Bare Task" }] })
@@ -308,12 +286,11 @@ describe("update_task with optional fields", () => {
 
     const [updated] = parseResult(
       await callTool("update_task", {
-        items: [{ id: task.id, project_id: proj.id, description: "Now has description" }],
+        items: [{ id: task.id, summary: "Now has summary" }],
       })
     );
 
-    expect(updated.description).toBe("Now has description");
-    expect(updated.implementation).toBeNull();
+    expect(updated.summary).toBe("Now has summary");
   });
 });
 
@@ -326,14 +303,14 @@ describe("batch create_project", () => {
     const result = await callTool("create_project", {
       items: [
         { title: "Project A" },
-        { title: "Project B", goal: "Ship B" },
+        { title: "Project B", summary: "Ship B" },
       ],
     });
     const projects = parseResult(result);
     expect(projects).toHaveLength(2);
     expect(projects[0].title).toBe("Project A");
     expect(projects[1].title).toBe("Project B");
-    expect(projects[1].goal).toBe("Ship B");
+    expect(projects[1].summary).toBe("Ship B");
   });
 });
 
@@ -346,13 +323,13 @@ describe("batch update_project", () => {
     const result = await callTool("update_project", {
       items: [
         { id: a.id, title: "A Updated" },
-        { id: b.id, goal: "New goal" },
+        { id: b.id, summary: "New summary" },
       ],
     });
     const updated = parseResult(result);
     expect(updated).toHaveLength(2);
     expect(updated[0].title).toBe("A Updated");
-    expect(updated[1].goal).toBe("New goal");
+    expect(updated[1].summary).toBe("New summary");
   });
 });
 
@@ -362,14 +339,14 @@ describe("batch create_task", () => {
     const result = await callTool("create_task", {
       items: [
         { project_id: proj.id, title: "Task A" },
-        { project_id: proj.id, title: "Task B", plan: "Do B" },
+        { project_id: proj.id, title: "Task B", summary: "Do B" },
       ],
     });
     const tasks = parseResult(result);
     expect(tasks).toHaveLength(2);
     expect(tasks[0].title).toBe("Task A");
     expect(tasks[1].title).toBe("Task B");
-    expect(tasks[1].plan).toBe("Do B");
+    expect(tasks[1].summary).toBe("Do B");
   });
 });
 
@@ -385,14 +362,14 @@ describe("batch update_task", () => {
 
     const result = await callTool("update_task", {
       items: [
-        { id: a.id, project_id: proj.id, title: "TA Updated" },
-        { id: b.id, project_id: proj.id, description: "New desc" },
+        { id: a.id, title: "TA Updated" },
+        { id: b.id, summary: "New summary" },
       ],
     });
     const updated = parseResult(result);
     expect(updated).toHaveLength(2);
     expect(updated[0].title).toBe("TA Updated");
-    expect(updated[1].description).toBe("New desc");
+    expect(updated[1].summary).toBe("New summary");
   });
 });
 
@@ -701,40 +678,40 @@ describe("batch create_document with distinct tag sets", () => {
 // Extended update_project (document attach/detach)
 // ---------------------------------------------------------------------------
 
-describe("update_project with document attach/detach", () => {
-  it("attach_documents links documents, verify via get_project", async () => {
+describe("update_project with document references merge-patch", () => {
+  it("documents merge-patch attaches documents, verify via get_project", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Attach Proj" }] }));
     const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Attachable Doc" }] }));
 
     await callTool("update_project", {
-      items: [{ id: proj.id, attach_documents: [doc.id] }],
+      items: [{ id: proj.id, documents: { [doc.id]: [{ type: "reference" }] } }],
     });
 
     const project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.documents).toBeTruthy();
-    expect(project.documents.length).toBeGreaterThanOrEqual(1);
-    expect(project.documents.some((d: { id: string }) => d.id === doc.id)).toBe(true);
+    expect(project.references).toBeTruthy();
+    expect(project.references.length).toBeGreaterThanOrEqual(1);
+    expect(project.references.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
   });
 
-  it("detach_documents removes documents, verify via get_project", async () => {
+  it("documents merge-patch with null removes documents, verify via get_project", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Detach Proj" }] }));
     const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Detachable Doc" }] }));
 
     await callTool("update_project", {
-      items: [{ id: proj.id, attach_documents: [doc.id] }],
+      items: [{ id: proj.id, documents: { [doc.id]: [{ type: "design" }] } }],
     });
 
     // Verify attached
     let project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.documents.some((d: { id: string }) => d.id === doc.id)).toBe(true);
+    expect(project.references.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
 
-    // Detach
+    // Detach via null
     await callTool("update_project", {
-      items: [{ id: proj.id, detach_documents: [doc.id] }],
+      items: [{ id: proj.id, documents: { [doc.id]: null } }],
     });
 
     project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.documents.every((d: { id: string }) => d.id !== doc.id)).toBe(true);
+    expect(project.references.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
   });
 });
 
@@ -1200,11 +1177,11 @@ describe("delete_document", () => {
   it("cleans up project associations when document is deleted", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Assoc Proj" }] }));
     const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Assoc Doc" }] }));
-    await callTool("update_project", { items: [{ id: proj.id, attach_documents: [doc.id] }] });
+    await callTool("update_project", { items: [{ id: proj.id, documents: { [doc.id]: [{ type: "reference" }] } }] });
 
     await callTool("delete_document", { ids: [doc.id] });
 
     const project = parseResult(await callTool("get_project", { id: proj.id }));
-    expect(project.documents.every((d: { id: string }) => d.id !== doc.id)).toBe(true);
+    expect(project.references.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
   });
 });

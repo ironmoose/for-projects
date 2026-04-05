@@ -37,11 +37,11 @@ export function useProjects() {
     });
   }, [subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function create(input: { title: string; goal?: string; requirements?: string; design?: string }) {
+  async function create(input: { title: string; summary?: string }) {
     await createProjects([input]);
   }
 
-  async function update(id: string, input: { title?: string; goal?: string | null; requirements?: string | null; design?: string | null }) {
+  async function update(id: string, input: { title?: string; summary?: string | null }) {
     await updateProjects([{ id, ...input }]);
   }
 

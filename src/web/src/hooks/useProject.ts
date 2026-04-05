@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, fetchProject as apiFetchProject, createTasks, updateTasks, updateProjects, deleteTasks } from "../api";
-import type { Project, DocumentSummary } from "../types";
+import type { DocumentsMergePatch } from "../api";
+import type { Project, DocumentReferenceSummary } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export function useProject(projectId: string) {
-  const [project, setProject] = useState<(Project & { documents: DocumentSummary[] }) | null>(null);
+  const [project, setProject] = useState<(Project & { references: DocumentReferenceSummary[] }) | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
@@ -44,13 +45,13 @@ export function useProject(projectId: string) {
     loadProject();
 
     return subscribeEvents((event) => {
-      if (event.entity_type === "project" || event.entity_type === "document") {
+      if (event.entity_type === "project" || event.entity_type === "document" || event.entity_type === "document_reference") {
         throttledLoad();
       }
     });
   }, [projectId, subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function updateProject(input: { title?: string; goal?: string | null; requirements?: string | null; design?: string | null; attach_documents?: string[]; detach_documents?: string[] }) {
+  async function updateProject(input: { title?: string; summary?: string | null; documents?: DocumentsMergePatch }) {
     if (!project) return;
     try {
       await updateProjects([{ id: project.id, ...input }]);
@@ -59,7 +60,7 @@ export function useProject(projectId: string) {
     }
   }
 
-  async function addTask(input: { title: string; description?: string; plan?: string; acceptance_criteria?: string; implementation?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }) {
+  async function addTask(input: { title: string; summary?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; documents?: DocumentsMergePatch }) {
     if (!project) return;
     await createTasks([{ project_id: project.id, ...input }]);
   }

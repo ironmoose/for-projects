@@ -6,6 +6,7 @@ import type {
   TaskCategory,
   EntityType,
   ActivityAction,
+  DocumentReferenceType,
   Task,
   ActivityLog,
 } from "./entities";
@@ -16,6 +17,7 @@ import {
   TASK_CATEGORIES,
   ENTITY_TYPES,
   ACTIVITY_ACTIONS,
+  DOCUMENT_REFERENCE_TYPES,
 } from "./entities";
 
 // -- Helper: fails if array does not cover every member of the union ----------
@@ -28,6 +30,7 @@ IMPACT_LEVELS satisfies readonly ImpactLevel[];
 TASK_CATEGORIES satisfies readonly TaskCategory[];
 ENTITY_TYPES satisfies readonly EntityType[];
 ACTIVITY_ACTIONS satisfies readonly ActivityAction[];
+DOCUMENT_REFERENCE_TYPES satisfies readonly DocumentReferenceType[];
 
 // -- Reverse: union types are fully covered by const arrays -------------------
 type _CheckTaskStatuses = AssertExhaustive<typeof TASK_STATUSES, TaskStatus>;
@@ -36,6 +39,7 @@ type _CheckImpactLevels = AssertExhaustive<typeof IMPACT_LEVELS, ImpactLevel>;
 type _CheckTaskCategories = AssertExhaustive<typeof TASK_CATEGORIES, TaskCategory>;
 type _CheckEntityTypes = AssertExhaustive<typeof ENTITY_TYPES, EntityType>;
 type _CheckActivityActions = AssertExhaustive<typeof ACTIVITY_ACTIONS, ActivityAction>;
+type _CheckDocumentReferenceTypes = AssertExhaustive<typeof DOCUMENT_REFERENCE_TYPES, DocumentReferenceType>;
 
 // -- Entity interfaces use the correct union types ----------------------------
 const _taskStatusField: Task["status"] extends TaskStatus ? true : never = true;

@@ -18,14 +18,18 @@ export function documentRoutes(service: IDocumentService): Hono {
     const title = c.req.query("title");
     const search = c.req.query("search");
     const project_id = c.req.query("project_id");
+    const entity_type = c.req.query("entity_type");
+    const entity_id = c.req.query("entity_id");
     const rawFav = c.req.query("favorite");
     const favorite = rawFav === "true" ? true : rawFav === "false" ? false : undefined;
-    const filter: { search?: string; tag?: string; title?: string; favorite?: boolean; project_id?: string; limit: number; offset: number } = { limit, offset };
+    const filter: { search?: string; tag?: string; title?: string; favorite?: boolean; project_id?: string; entity_type?: string; entity_id?: string; limit: number; offset: number } = { limit, offset };
     if (search) filter.search = search;
     if (tag) filter.tag = tag;
     if (title) filter.title = title;
     if (favorite !== undefined) filter.favorite = favorite;
     if (project_id) filter.project_id = project_id;
+    if (entity_type) filter.entity_type = entity_type;
+    if (entity_id) filter.entity_id = entity_id;
     return c.json(service.list(filter));
   });
 

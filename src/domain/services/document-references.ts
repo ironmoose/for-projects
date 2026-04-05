@@ -1,4 +1,4 @@
-import type { DocumentReference, DocumentReferenceSummary, DocumentReferenceType, EntityType } from "../entities";
+import type { DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, EntityType } from "../entities";
 import { DOCUMENT_REFERENCE_TYPES } from "../entities";
 import type { IDocumentReferenceService } from "../services";
 import { ServiceError } from "../errors";
@@ -14,6 +14,28 @@ export class DocumentReferenceService implements IDocumentReferenceService {
     private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
   ) {}
+
+  validateMergePatch(
+    documents: Record<string, { type: DocumentReferenceType }[] | null>,
+  ): void {
+    for (const [documentId, value] of Object.entries(documents)) {
+      if (value === null) continue; // null means remove — no validation needed
+
+      for (const entry of value) {
+        if (!(DOCUMENT_REFERENCE_TYPES as readonly string[]).includes(entry.type)) {
+          throw new ServiceError(
+            `invalid reference type "${entry.type}". Valid types: ${DOCUMENT_REFERENCE_TYPES.join(", ")}`,
+            400,
+          );
+        }
+      }
+
+      const doc = this.documentRepo.findById(documentId);
+      if (!doc) {
+        throw new ServiceError(`document not found: ${documentId}`, 404);
+      }
+    }
+  }
 
   applyMergePatch(
     entityType: EntityType,
@@ -67,6 +89,10 @@ export class DocumentReferenceService implements IDocumentReferenceService {
 
   getReferencesForEntity(entityType: EntityType, entityId: string): DocumentReferenceSummary[] {
     return this.docRefRepo.getReferencesForEntityWithDocumentTitles(entityType, entityId);
+  }
+
+  findByEntity(entityType: EntityType, entityId: string): DocumentReferenceDetail[] {
+    return this.docRefRepo.findByEntity(entityType, entityId);
   }
 
   getEntitiesForDocument(documentId: string): DocumentReference[] {

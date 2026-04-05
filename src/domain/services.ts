@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceType, EntityType } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, EntityType } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -15,8 +15,8 @@ export interface Paginated<T> {
 
 export interface IProjectService {
   list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Paginated<ProjectSummary>;
-  get(id: string): Project & { documents: DocumentReferenceSummary[] };
-  create(inputs: CreateProjectInput[]): Project[];
+  get(id: string): Project & { references: DocumentReferenceDetail[] };
+  create(inputs: CreateProjectInput[]): (Project & { documents: DocumentReferenceSummary[] })[];
   update(inputs: UpdateProjectInput[]): Project[];
   remove(ids: string[]): void;
 }
@@ -24,8 +24,8 @@ export interface IProjectService {
 export interface ITaskService {
   list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary>;
   listGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[];
-  get(id: string): Task;
-  create(inputs: CreateTaskInput[]): Task[];
+  get(id: string): Task & { references: DocumentReferenceDetail[] };
+  create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[];
   update(inputs: UpdateTaskInput[]): Task[];
   statusCounts(projectIds: string[]): Record<string, { total: number; counts: Record<string, number> }>;
   remove(ids: string[]): void;
@@ -39,15 +39,18 @@ export interface ITaskDependencyService {
 }
 
 export interface IDocumentReferenceService {
+  /** Validate a merge-patch without applying it. Throws ServiceError on invalid types or missing documents. */
+  validateMergePatch(documents: Record<string, { type: DocumentReferenceType }[] | null>): void;
   applyMergePatch(entityType: EntityType, entityId: string, documents: Record<string, { type: DocumentReferenceType }[] | null>): void;
   getReferencesForEntity(entityType: EntityType, entityId: string): DocumentReferenceSummary[];
+  findByEntity(entityType: EntityType, entityId: string): DocumentReferenceDetail[];
   getEntitiesForDocument(documentId: string): DocumentReference[];
   removeAllForEntity(entityType: EntityType, entityId: string): void;
   removeAllForDocument(documentId: string): void;
 }
 
 export interface IDocumentService {
-  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
+  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary>;
   get(id: string): Document & { tags: string[] };
   create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[];
   update(inputs: UpdateDocumentInput[]): (Document & { tags: string[] })[];

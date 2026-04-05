@@ -25,6 +25,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
 
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
+  const [editSummary, setEditSummary] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editTags, setEditTags] = useState<TagName[]>([]);
   const [saving, setSaving] = useState(false);
@@ -32,6 +33,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
   const enterEditMode = useCallback(() => {
     if (!document) return;
     setEditTitle(document.title);
+    setEditSummary(document.summary ?? "");
     setEditContent(document.content ?? "");
     setEditTags([...document.tags] as TagName[]);
     setEditing(true);
@@ -44,14 +46,16 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
   const handleSave = useCallback(async () => {
     setSaving(true);
     const contentValue = editTitle.trim() ? editContent.trim() || null : null;
+    const summaryValue = editSummary.trim() || null;
     const ok = await updateDocument({
       title: editTitle.trim(),
+      summary: summaryValue,
       content: contentValue,
       tags: editTags,
     });
     setSaving(false);
     if (ok) setEditing(false);
-  }, [editTitle, editContent, editTags, updateDocument]);
+  }, [editTitle, editSummary, editContent, editTags, updateDocument]);
 
   const saveDisabled = !editTitle.trim() || saving;
 
@@ -183,6 +187,30 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                     <TagChip key={tag} name={tag} />
                   ))}
                 </div>
+              )
+            )}
+
+            {/* Summary section */}
+            {editing ? (
+              <Input
+                value={editSummary}
+                onChange={(e) => setEditSummary(e.target.value)}
+                placeholder="Brief summary"
+                style={{ fontSize: theme.font.size.sm }}
+                aria-label="Document summary"
+              />
+            ) : (
+              document.summary && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.font.size.sm,
+                    color: theme.color.textMuted,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {document.summary}
+                </p>
               )
             )}
           </div>

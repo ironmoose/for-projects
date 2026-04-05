@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, ActivityLog, TaskStatus } from "./types";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, DocumentReferenceSummary, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -73,17 +73,19 @@ export async function fetchProjects(params?: { limit?: number; offset?: number }
   return res.json();
 }
 
-export async function fetchProject(id: string): Promise<Project & { documents: DocumentSummary[] }> {
+export async function fetchProject(id: string): Promise<Project & { references: DocumentReferenceSummary[] }> {
   const res = await apiFetch(`/api/projects/${encodeURIComponent(id)}`);
   return res.json();
 }
 
-export async function createProjects(inputs: Array<{ title: string; goal?: string; requirements?: string; design?: string }>): Promise<Project[]> {
+export type DocumentsMergePatch = Record<string, { type: DocumentReferenceType }[] | null>;
+
+export async function createProjects(inputs: Array<{ title: string; summary?: string }>): Promise<Project[]> {
   const res = await apiFetch("/api/projects", jsonPost({ items: inputs }));
   return res.json();
 }
 
-export async function updateProjects(inputs: Array<{ id: string; title?: string; goal?: string | null; requirements?: string | null; design?: string | null }>): Promise<Project[]> {
+export async function updateProjects(inputs: Array<{ id: string; title?: string; summary?: string | null; documents?: DocumentsMergePatch }>): Promise<Project[]> {
   const res = await apiFetch("/api/projects", jsonPatch({ items: inputs }));
   return res.json();
 }
@@ -101,17 +103,17 @@ export async function fetchTasks(params?: { project_id?: string; status?: string
   return res.json();
 }
 
-export async function fetchTask(id: string): Promise<Task> {
+export async function fetchTask(id: string): Promise<Task & { references: DocumentReferenceSummary[] }> {
   const res = await apiFetch(`/api/tasks/${encodeURIComponent(id)}`);
   return res.json();
 }
 
-export async function createTasks(inputs: Array<{ project_id: string; title: string; plan?: string; description?: string; implementation?: string; acceptance_criteria?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }>): Promise<Task[]> {
+export async function createTasks(inputs: Array<{ project_id: string; title: string; summary?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; documents?: DocumentsMergePatch }>): Promise<Task[]> {
   const res = await apiFetch("/api/tasks", jsonPost({ items: inputs }));
   return res.json();
 }
 
-export async function updateTasks(inputs: Array<{ id: string; title?: string; plan?: string | null; description?: string | null; implementation?: string | null; acceptance_criteria?: string | null; add_dependencies?: { task_id: string; type: string }[]; remove_dependencies?: { task_id: string }[] }>): Promise<Task[]> {
+export async function updateTasks(inputs: Array<{ id: string; title?: string; summary?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null; add_dependencies?: { task_id: string; type: string }[]; remove_dependencies?: { task_id: string }[]; documents?: DocumentsMergePatch }>): Promise<Task[]> {
   const res = await apiFetch("/api/tasks", jsonPatch({ items: inputs }));
   return res.json();
 }

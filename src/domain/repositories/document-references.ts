@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import type { DocumentReference, DocumentReferenceSummary, DocumentReferenceType } from "../entities";
+import type { DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType } from "../entities";
 
 export class DocumentReferenceRepository {
   constructor(private db: Database) {}
@@ -110,6 +110,26 @@ export class DocumentReferenceRepository {
     }
 
     return result;
+  }
+
+  /** Single-query join returning enriched reference details (title, summary, favorite). */
+  findByEntity(entityType: string, entityId: string): DocumentReferenceDetail[] {
+    const rows = this.db
+      .query(
+        `SELECT dr.document_id, dr.type, d.title, d.summary, d.favorite
+         FROM document_references dr
+         JOIN documents d ON d.id = dr.document_id
+         WHERE dr.entity_type = ? AND dr.entity_id = ?
+         ORDER BY dr.type, d.title`,
+      )
+      .all(entityType, entityId) as { document_id: string; type: DocumentReferenceType; title: string; summary: string | null; favorite: number | boolean }[];
+    return rows.map((row) => ({
+      document_id: row.document_id,
+      type: row.type,
+      title: row.title,
+      summary: row.summary,
+      favorite: row.favorite === 1 || row.favorite === true,
+    }));
   }
 
   getEntitiesForDocument(documentId: string): DocumentReference[] {

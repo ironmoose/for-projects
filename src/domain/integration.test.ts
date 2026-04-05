@@ -31,9 +31,7 @@ describe("Project CRUD", () => {
     expect(project.id).toBeTruthy();
     expect(project.id.length).toBeGreaterThan(10); // ULID
     expect(project.title).toBe("My Project");
-    expect(project.goal).toBeNull();
-    expect(project.requirements).toBeNull();
-    expect(project.design).toBeNull();
+    expect(project.summary).toBeNull();
     expect(project.created_at).toBeTruthy();
     expect(project.updated_at).toBeTruthy();
     expect(() => new Date(project.created_at)).not.toThrow();
@@ -42,15 +40,11 @@ describe("Project CRUD", () => {
   it("creates a project with optional fields", () => {
     const [project] = ctx.projectService.create([{
       title: "Full Project",
-      goal: "Ship it",
-      requirements: "Must be fast",
-      design: "Monolith",
+      summary: "Ship it fast",
     }]);
 
     expect(project.title).toBe("Full Project");
-    expect(project.goal).toBe("Ship it");
-    expect(project.requirements).toBe("Must be fast");
-    expect(project.design).toBe("Monolith");
+    expect(project.summary).toBe("Ship it fast");
   });
 
   it("updates project title and optional fields", () => {
@@ -58,11 +52,11 @@ describe("Project CRUD", () => {
     const [updated] = ctx.projectService.update([{
       id: project.id,
       title: "Renamed",
-      goal: "New goal",
+      summary: "New summary",
     }]);
 
     expect(updated.title).toBe("Renamed");
-    expect(updated.goal).toBe("New goal");
+    expect(updated.summary).toBe("New summary");
   });
 
   it("lists projects", () => {
@@ -101,23 +95,23 @@ describe("Task CRUD", () => {
     expect(task.id).toBeTruthy();
     expect(task.project_id).toBe(project.id);
     expect(task.title).toBe("Do the thing");
-    expect(task.plan).toBeNull();
+    expect(task.summary).toBeNull();
     expect(task.created_at).toBeTruthy();
     expect(task.updated_at).toBeTruthy();
   });
 
-  it("creates a task with plan", () => {
-    const [project] = ctx.projectService.create([{ title: "Plan Project" }]);
+  it("creates a task with summary", () => {
+    const [project] = ctx.projectService.create([{ title: "Summary Project" }]);
     const [task] = ctx.taskService.create([{
       project_id: project.id,
-      title: "Planned task",
-      plan: "Step 1, step 2",
+      title: "Summarized task",
+      summary: "Step 1, step 2",
     }]);
 
-    expect(task.plan).toBe("Step 1, step 2");
+    expect(task.summary).toBe("Step 1, step 2");
   });
 
-  it("updates task title and plan", () => {
+  it("updates task title and summary", () => {
     const [project] = ctx.projectService.create([{ title: "Update Project" }]);
     const [task] = ctx.taskService.create([{
       project_id: project.id,
@@ -127,8 +121,8 @@ describe("Task CRUD", () => {
     const [u1] = ctx.taskService.update([{ id: task.id, title: "New title" }]);
     expect(u1.title).toBe("New title");
 
-    const [u2] = ctx.taskService.update([{ id: task.id, plan: "New plan" }]);
-    expect(u2.plan).toBe("New plan");
+    const [u2] = ctx.taskService.update([{ id: task.id, summary: "New summary" }]);
+    expect(u2.summary).toBe("New summary");
   });
 
   it("lists tasks filtered by project_id", () => {
@@ -158,34 +152,28 @@ describe("Task CRUD", () => {
     ).toThrow(ServiceError);
   });
 
-  it("creates a task with description, implementation, and acceptance_criteria", () => {
+  it("creates a task with summary field", () => {
     const [project] = ctx.projectService.create([{ title: "New Fields Project" }]);
     const [task] = ctx.taskService.create([{
       project_id: project.id,
       title: "Full task",
-      description: "A description",
-      implementation: "Some implementation details",
-      acceptance_criteria: "It works",
+      summary: "A summary",
     }]);
 
-    expect(task.description).toBe("A description");
-    expect(task.implementation).toBe("Some implementation details");
-    expect(task.acceptance_criteria).toBe("It works");
+    expect(task.summary).toBe("A summary");
   });
 
-  it("new task fields default to null", () => {
+  it("new task summary defaults to null", () => {
     const [project] = ctx.projectService.create([{ title: "Null Fields Project" }]);
     const [task] = ctx.taskService.create([{
       project_id: project.id,
       title: "Bare task",
     }]);
 
-    expect(task.description).toBeNull();
-    expect(task.implementation).toBeNull();
-    expect(task.acceptance_criteria).toBeNull();
+    expect(task.summary).toBeNull();
   });
 
-  it("updates description, implementation, acceptance_criteria", () => {
+  it("updates summary", () => {
     const [project] = ctx.projectService.create([{ title: "Update Fields Project" }]);
     const [task] = ctx.taskService.create([{
       project_id: project.id,
@@ -194,32 +182,28 @@ describe("Task CRUD", () => {
 
     const [updated] = ctx.taskService.update([{
       id: task.id,
-      description: "Updated desc",
-      implementation: "Updated impl",
-      acceptance_criteria: "Updated AC",
+      summary: "Updated summary",
     }]);
 
-    expect(updated.description).toBe("Updated desc");
-    expect(updated.implementation).toBe("Updated impl");
-    expect(updated.acceptance_criteria).toBe("Updated AC");
+    expect(updated.summary).toBe("Updated summary");
   });
 
-  it("nulls out a field on update", () => {
+  it("nulls out summary on update", () => {
     const [project] = ctx.projectService.create([{ title: "Null Update Project" }]);
     const [task] = ctx.taskService.create([{
       project_id: project.id,
       title: "Null me",
-      description: "Has a description",
+      summary: "Has a summary",
     }]);
 
-    expect(task.description).toBe("Has a description");
+    expect(task.summary).toBe("Has a summary");
 
     const [updated] = ctx.taskService.update([{
       id: task.id,
-      description: null,
+      summary: null,
     }]);
 
-    expect(updated.description).toBeNull();
+    expect(updated.summary).toBeNull();
   });
 });
 
@@ -467,7 +451,7 @@ describe("Document CRUD", () => {
 
     // Link to a project to verify cascade on that side too
     const [project] = ctx.projectService.create([{ title: "Tag Cleanup Project" }]);
-    ctx.projectService.update([{ id: project.id, attach_documents: [doc.id] }]);
+    ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
 
     ctx.documentService.remove([doc.id]);
 
@@ -476,7 +460,7 @@ describe("Document CRUD", () => {
 
     // Project-document link is also gone
     const projectAfter = ctx.projectService.get(project.id);
-    expect(projectAfter.documents.some((d) => d.id === doc.id)).toBe(false);
+    expect(projectAfter.references.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
   it("lists documents filtered by project_id", () => {
@@ -484,7 +468,7 @@ describe("Document CRUD", () => {
     const [linkedDoc] = ctx.documentService.create([{ title: "Linked Doc for Filter" }]);
     const [unlinkedDoc] = ctx.documentService.create([{ title: "Unlinked Doc for Filter" }]);
 
-    ctx.projectService.update([{ id: project.id, attach_documents: [linkedDoc.id] }]);
+    ctx.projectService.update([{ id: project.id, documents: { [linkedDoc.id]: [{ type: "reference" }] } }]);
 
     const result = ctx.documentService.list({ project_id: project.id });
     expect(result.data.length).toBeGreaterThanOrEqual(1);
@@ -701,53 +685,40 @@ describe("Document Search", () => {
 // ---------------------------------------------------------------------------
 
 describe("Project-Document Linking", () => {
-  it("attaches documents via project update", () => {
+  it("attaches documents via project update merge-patch", () => {
     const [project] = ctx.projectService.create([{ title: "Link Project" }]);
     const [doc] = ctx.documentService.create([{ title: "Link Doc" }]);
 
     ctx.projectService.update([{
       id: project.id,
-      attach_documents: [doc.id],
+      documents: { [doc.id]: [{ type: "reference" }] },
     }]);
 
     const fetched = ctx.projectService.get(project.id);
-    expect(fetched.documents.length).toBeGreaterThanOrEqual(1);
-    expect(fetched.documents.some((d) => d.id === doc.id)).toBe(true);
+    expect(fetched.references.length).toBeGreaterThanOrEqual(1);
+    expect(fetched.references.some((d) => d.document_id === doc.id)).toBe(true);
   });
 
-  it("detaches documents via project update", () => {
+  it("detaches documents via project update merge-patch null", () => {
     const [project] = ctx.projectService.create([{ title: "Detach Project" }]);
     const [doc] = ctx.documentService.create([{ title: "Detach Doc" }]);
 
-    ctx.projectService.update([{ id: project.id, attach_documents: [doc.id] }]);
+    ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "design" }] } }]);
     const before = ctx.projectService.get(project.id);
-    expect(before.documents.some((d) => d.id === doc.id)).toBe(true);
+    expect(before.references.some((d) => d.document_id === doc.id)).toBe(true);
 
-    ctx.projectService.update([{ id: project.id, detach_documents: [doc.id] }]);
+    ctx.projectService.update([{ id: project.id, documents: { [doc.id]: null } }]);
     const after = ctx.projectService.get(project.id);
-    expect(after.documents.some((d) => d.id === doc.id)).toBe(false);
+    expect(after.references.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
-  it("rejects same ID in both attach and detach", () => {
-    const [project] = ctx.projectService.create([{ title: "Conflict Project" }]);
-    const [doc] = ctx.documentService.create([{ title: "Conflict Doc" }]);
-
-    expect(() =>
-      ctx.projectService.update([{
-        id: project.id,
-        attach_documents: [doc.id],
-        detach_documents: [doc.id],
-      }])
-    ).toThrow(ServiceError);
-  });
-
-  it("throws 404 on nonexistent document ID in attach", () => {
+  it("throws on nonexistent document ID in merge-patch", () => {
     const [project] = ctx.projectService.create([{ title: "404 Attach Project" }]);
 
     expect(() =>
       ctx.projectService.update([{
         id: project.id,
-        attach_documents: ["nonexistent-doc-id"],
+        documents: { "nonexistent-doc-id": [{ type: "reference" }] },
       }])
     ).toThrow(ServiceError);
   });
@@ -756,48 +727,49 @@ describe("Project-Document Linking", () => {
     const [project] = ctx.projectService.create([{ title: "Idempotent Project" }]);
     const [doc] = ctx.documentService.create([{ title: "Idempotent Doc" }]);
 
-    ctx.projectService.update([{ id: project.id, attach_documents: [doc.id] }]);
+    ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
     // Second attach should not throw
     expect(() =>
-      ctx.projectService.update([{ id: project.id, attach_documents: [doc.id] }])
+      ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }])
     ).not.toThrow();
 
     const fetched = ctx.projectService.get(project.id);
-    // Should still appear exactly once
-    const matches = fetched.documents.filter((d) => d.id === doc.id);
+    // Should still appear exactly once for this type
+    const matches = fetched.references.filter((d) => d.document_id === doc.id);
     expect(matches.length).toBe(1);
   });
 
-  it("project GET includes document summaries without content", () => {
+  it("project GET includes document reference summaries", () => {
     const [project] = ctx.projectService.create([{ title: "Summary Project" }]);
     const [doc] = ctx.documentService.create([{
       title: "Summary Doc",
       content: "This should not appear",
     }]);
 
-    ctx.projectService.update([{ id: project.id, attach_documents: [doc.id] }]);
+    ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
 
     const fetched = ctx.projectService.get(project.id);
-    const linked = fetched.documents.find((d) => d.id === doc.id);
+    const linked = fetched.references.find((d) => d.document_id === doc.id);
     expect(linked).toBeTruthy();
     expect(linked!.title).toBe("Summary Doc");
-    expect(linked!.id).toBe(doc.id);
-    // DocumentSummary should not include content field
+    expect(linked!.document_id).toBe(doc.id);
+    expect(linked!.type).toBe("reference");
+    // DocumentReferenceSummary should not include content field
     expect((linked as any).content).toBeUndefined();
   });
 
-  it("cascade on document delete removes join rows", () => {
+  it("cascade on document delete removes reference rows", () => {
     const [project] = ctx.projectService.create([{ title: "Cascade Project" }]);
     const [doc] = ctx.documentService.create([{ title: "Cascade Doc" }]);
 
-    ctx.projectService.update([{ id: project.id, attach_documents: [doc.id] }]);
+    ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
     const before = ctx.projectService.get(project.id);
-    expect(before.documents.some((d) => d.id === doc.id)).toBe(true);
+    expect(before.references.some((d) => d.document_id === doc.id)).toBe(true);
 
     ctx.documentService.remove([doc.id]);
 
     const after = ctx.projectService.get(project.id);
-    expect(after.documents.some((d) => d.id === doc.id)).toBe(false);
+    expect(after.references.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
   it("attaches multiple documents in single update", () => {
@@ -807,13 +779,16 @@ describe("Project-Document Linking", () => {
 
     ctx.projectService.update([{
       id: project.id,
-      attach_documents: [docA.id, docB.id],
+      documents: {
+        [docA.id]: [{ type: "design" }],
+        [docB.id]: [{ type: "reference" }],
+      },
     }]);
 
     const fetched = ctx.projectService.get(project.id);
-    expect(fetched.documents.some((d) => d.id === docA.id)).toBe(true);
-    expect(fetched.documents.some((d) => d.id === docB.id)).toBe(true);
-    expect(fetched.documents.length).toBeGreaterThanOrEqual(2);
+    expect(fetched.references.some((d) => d.document_id === docA.id)).toBe(true);
+    expect(fetched.references.some((d) => d.document_id === docB.id)).toBe(true);
+    expect(fetched.references.length).toBeGreaterThanOrEqual(2);
   });
 
   it("detach nonexistent document link silently succeeds", () => {
@@ -824,7 +799,7 @@ describe("Project-Document Linking", () => {
     expect(() =>
       ctx.projectService.update([{
         id: project.id,
-        detach_documents: [doc.id],
+        documents: { [doc.id]: null },
       }])
     ).not.toThrow();
   });
@@ -896,12 +871,12 @@ describe("Input Validation Edge Cases", () => {
     ).toThrow(ServiceError);
   });
 
-  it("rejects task with plan over 50000 chars", () => {
+  it("rejects task with summary over 1000 chars", () => {
     expect(() =>
       ctx.taskService.create([{
         project_id: projectId,
-        title: "Long plan",
-        plan: "x".repeat(50001),
+        title: "Long summary",
+        summary: "x".repeat(1001),
       }])
     ).toThrow(ServiceError);
   });
@@ -915,11 +890,11 @@ describe("Input Validation Edge Cases", () => {
     ).toThrow(ServiceError);
   });
 
-  it("rejects project with goal over 50000 chars", () => {
+  it("rejects project with summary over 1000 chars", () => {
     expect(() =>
       ctx.projectService.create([{
-        title: "Long goal project",
-        goal: "x".repeat(50001),
+        title: "Long summary project",
+        summary: "x".repeat(1001),
       }])
     ).toThrow(ServiceError);
   });

@@ -17,11 +17,13 @@ export class DocumentService implements IDocumentService {
     private docRefRepo?: DocumentReferenceRepository,
   ) {}
 
-  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
-    // If filtering by project_id, get linked doc IDs first and intersect
+  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; project_id?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
+    // Resolve entity_type/entity_id filtering (project_id is backward-compat alias)
     let docIds: string[] | undefined;
-    if (filter?.project_id && this.docRefRepo) {
-      const refs = this.docRefRepo.getReferencesForEntity('project', filter.project_id);
+    const entityType = filter?.entity_type ?? (filter?.project_id ? "project" : undefined);
+    const entityId = filter?.entity_id ?? filter?.project_id;
+    if (entityType && entityId && this.docRefRepo) {
+      const refs = this.docRefRepo.getReferencesForEntity(entityType, entityId);
       docIds = [...new Set(refs.map((r) => r.document_id))];
       if (docIds.length === 0) return { data: [], total: 0 };
     }
