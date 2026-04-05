@@ -22,6 +22,7 @@ import {
   DocumentReaderModal,
   DependencyChip,
   DependencyGraphView,
+  ProjectDocumentTable,
 } from "../components";
 import { DocumentReferencePicker } from "../components/organisms/DocumentReferencePicker";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
@@ -36,7 +37,7 @@ import { useDependencyGraph } from "../hooks/useDependencyGraph";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { useToastContext } from "../components/ToastContext";
-import { ApiError, fetchTask, updateTasks, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
+import { ApiError, fetchTask, updateTasks, updateDocuments, fetchTaskDependencies, fetchTasks, addDependency, removeDependency, removeDependencyBothDirections } from "../api";
 import type { TaskDetail, TaskDependencies, DependencyDetail, DocumentsMergePatch } from "../api";
 import type { TaskSummary, TaskStatus } from "../types";
 import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../types";
@@ -1126,45 +1127,28 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 </span>
               </Button>
             </Stack>
-            {(project.documents ?? []).length > 0 ? (
-              <div
-                style={{
-                  borderRadius: theme.radius.md,
-                  border: `1px solid ${theme.color.border}`,
-                  background: theme.color.surfaceContainer,
-                  overflow: "hidden",
-                }}
-              >
-                {(project.documents ?? []).map((doc, idx) => (
-                  <div
-                    key={doc.document_id}
-                    onClick={() => setSelectedDocumentId(doc.document_id)}
-                    style={{
-                      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      borderBottom: idx < (project.documents ?? []).length - 1 ? `1px solid ${theme.color.border}` : "none",
-                    }}
-                  >
-                    <span style={{ fontSize: theme.font.size.sm, color: theme.color.text }}>{doc.title}</span>
-                    <IconButton
-                      icon="link_off"
-                      size={14}
-                      aria-label="Detach document"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const mergePatch: DocumentsMergePatch = { [doc.document_id]: null };
-                        updateProject({ documents: mergePatch }).catch(() => {});
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState icon="description" message="No documents linked." />
-            )}
+            <ProjectDocumentTable
+              documents={(project.documents ?? []).map((d) => ({
+                id: d.document_id,
+                title: d.title,
+                summary: d.summary,
+                folder: null,
+                has_content: true,
+                favorite: d.favorite,
+                tags: [],
+                created_at: "",
+                updated_at: "",
+              }))}
+              selectedDocumentId={selectedDocumentId}
+              onSelectDocument={(docId) => setSelectedDocumentId(docId)}
+              onDetachDocument={(doc) => {
+                const mergePatch: DocumentsMergePatch = { [doc.id]: null };
+                updateProject({ documents: mergePatch }).catch(() => {});
+              }}
+              onToggleFavorite={(doc) => {
+                updateDocuments([{ id: doc.id, favorite: !doc.favorite } as Parameters<typeof updateDocuments>[0][0]]).catch(() => {});
+              }}
+            />
           </div>
         </div>
 
