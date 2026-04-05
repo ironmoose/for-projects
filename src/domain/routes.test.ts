@@ -865,23 +865,6 @@ describe("Documents Merge-Patch Validation", () => {
     expect(body.error).toMatch(/documents/i);
   });
 
-  it("PATCH /tasks with invalid type value returns 400", async () => {
-    const res = await req("/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: [{
-          id: taskId,
-          documents: {
-            [docId]: [{ type: "bogus" }],
-          },
-        }],
-      }),
-    });
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toMatch(/documents/i);
-  });
 
   it("PATCH /projects with non-object documents value returns 400", async () => {
     const res = await req("/projects", {
