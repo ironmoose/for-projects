@@ -64,9 +64,6 @@ export interface Task {
 export interface ProjectSummary {
   id: string;
   title: string;
-  has_goal: boolean;
-  has_requirements: boolean;
-  has_design: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -102,7 +99,6 @@ export interface GraphTaskSummary {
 export function toProjectSummary(p: Project): ProjectSummary {
   return {
     id: p.id, title: p.title,
-    has_goal: p.goal != null, has_requirements: p.requirements != null, has_design: p.design != null,
     created_at: p.created_at, updated_at: p.updated_at,
   };
 }

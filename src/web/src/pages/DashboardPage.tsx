@@ -13,7 +13,6 @@ import {
 } from "../components";
 import type { ProgressBarSegment } from "../components";
 import { CreateProjectOverlay } from "../components/organisms/CreateProjectOverlay";
-import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { useProjects } from "../hooks";
 import { useShortcut } from "../hooks/useKeyboardShortcuts";
 import { useToastContext } from "../components/ToastContext";
@@ -75,12 +74,6 @@ function ProjectCard({
       >
         {project.title}
       </span>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <PresenceCharm active={project.has_goal} label="Goal" color={theme.color.success} />
-        <PresenceCharm active={project.has_requirements} label="Requirements" color={theme.color.info ?? theme.color.primary} />
-        <PresenceCharm active={project.has_design} label="Design" color={theme.color.tertiary} />
-      </div>
 
       {taskCount > 0 && (() => {
         const segments: ProgressBarSegment[] = [

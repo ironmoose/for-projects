@@ -55,16 +55,9 @@ export class ProjectRepository {
     const { where, params } = this.buildWhereClause(filter);
     params.push(limit, offset);
 
-    const rows = this.db
-      .query(`SELECT id, title, (goal IS NOT NULL) AS has_goal, (requirements IS NOT NULL) AS has_requirements, (design IS NOT NULL) AS has_design, created_at, updated_at FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-      .all(...params) as (Omit<ProjectSummary, "has_goal" | "has_requirements" | "has_design"> & { has_goal: number; has_requirements: number; has_design: number })[];
-
-    return rows.map((r) => ({
-      ...r,
-      has_goal: !!r.has_goal,
-      has_requirements: !!r.has_requirements,
-      has_design: !!r.has_design,
-    })) as ProjectSummary[];
+    return this.db
+      .query(`SELECT id, title, created_at, updated_at FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+      .all(...params) as ProjectSummary[];
   }
 
   count(filter?: ProjectFilter): number {
