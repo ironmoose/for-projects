@@ -116,7 +116,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_task",
     {
-      description: "Retrieve a single task by ID with all fields. Response includes title, summary, context, acceptance_criteria, status, effort, impact, category, group_key, is_blocked, and timestamps.",
+      description: "Retrieve a single task by ID with all fields. Response includes title, summary, context, acceptance_criteria, status, effort, impact, category, group_key, is_blocked, timestamps, and a `references` array of linked document references, each with document_id, type, title, summary, and favorite. Use get_document for full document content.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => taskService.get(id))
@@ -163,7 +163,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_task",
     {
-      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Optional summary (max 1000 chars), context (freeform), acceptance_criteria (freeform), group_key (max 32 chars). Status defaults to 'todo'. Optional effort, impact, category.",
+      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Optional summary (max 1000 chars), context (freeform), acceptance_criteria (freeform), group_key (max 32 chars). Status defaults to 'todo'. Optional effort, impact, category. Optionally attach document references using the `documents` field: an object where keys are document IDs and values are arrays of {type} objects. Valid reference types: goal, plan, requirements, design, reference, note.",
       inputSchema: {
         items: z.array(z.object({
           project_id: z.string().max(26),
@@ -176,6 +176,10 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
+          documents: z.record(
+            z.string().max(26),
+            z.array(z.object({ type: z.enum([...DOCUMENT_REFERENCE_TYPES]) })).nullable(),
+          ).optional(),
         })),
       },
     },
@@ -185,7 +189,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use add_dependencies to create dependency edges (each with task_id of the blocker/related task and type 'blocks' or 'relates_to'). Use remove_dependencies to remove edges by task_id. The current task becomes the target (blocked by / related to the specified task_id).",
+      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use add_dependencies to create dependency edges (each with task_id of the blocker/related task and type 'blocks' or 'relates_to'). Use remove_dependencies to remove edges by task_id. The current task becomes the target (blocked by / related to the specified task_id). Use the documents field to manage document references with merge-patch semantics: key = document_id, value = array of {type} objects replaces all reference types for that document; value = null removes all references to that document; absent key = no change. Valid types: goal, plan, requirements, design, reference, note.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
@@ -198,6 +202,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
+          documents: documentsMergePatchSchema,
           add_dependencies: z.array(z.object({
             task_id: z.string().max(26),
             type: z.enum([...DEPENDENCY_TYPES]),
