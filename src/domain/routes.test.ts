@@ -285,6 +285,134 @@ describe("Task Routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("POST /tasks creates task with context and acceptance_criteria", async () => {
+    const res = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: projectId,
+        title: "Context AC Task",
+        context: "Background for this task",
+        acceptance_criteria: "Tests pass, no regressions",
+      }] }),
+    });
+    expect(res.status).toBe(201);
+    const [body] = await res.json();
+    expect(body.context).toBe("Background for this task");
+    expect(body.acceptance_criteria).toBe("Tests pass, no regressions");
+  });
+
+  it("GET /tasks/:id returns context and acceptance_criteria", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: projectId,
+        title: "Get Context Task",
+        context: "Full context here",
+        acceptance_criteria: "Full AC here",
+      }] }),
+    });
+    const [task] = await create.json();
+    const res = await req(`/tasks/${task.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.context).toBe("Full context here");
+    expect(body.acceptance_criteria).toBe("Full AC here");
+  });
+
+  it("GET /tasks list excludes context and acceptance_criteria, includes has_ booleans", async () => {
+    await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: projectId,
+        title: "List Exclusion Check",
+        context: "Should not appear in list",
+        acceptance_criteria: "Should not appear in list",
+      }] }),
+    });
+    const res = await req(`/tasks?project_id=${projectId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const task = body.data.find((t: { title: string }) => t.title === "List Exclusion Check");
+    expect(task).toBeTruthy();
+    // Full text fields must not be in list response
+    expect(task.context).toBeUndefined();
+    expect(task.acceptance_criteria).toBeUndefined();
+    // Boolean flags must be present
+    expect(task.has_context).toBe(true);
+    expect(task.has_acceptance_criteria).toBe(true);
+  });
+
+  it("PATCH /tasks updates context and acceptance_criteria", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Patch context task" }] }),
+    });
+    const [task] = await create.json();
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        id: task.id,
+        context: "Patched context",
+        acceptance_criteria: "Patched AC",
+      }] }),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.context).toBe("Patched context");
+    expect(body.acceptance_criteria).toBe("Patched AC");
+  });
+
+  it("PATCH /tasks clears context via null", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: projectId,
+        title: "Clear context task",
+        context: "Will be cleared",
+      }] }),
+    });
+    const [task] = await create.json();
+    expect(task.context).toBe("Will be cleared");
+
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ id: task.id, context: null }] }),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.context).toBeNull();
+  });
+
+  it("PATCH /tasks clears acceptance_criteria via null", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: projectId,
+        title: "Clear AC task",
+        acceptance_criteria: "Will be cleared",
+      }] }),
+    });
+    const [task] = await create.json();
+    expect(task.acceptance_criteria).toBe("Will be cleared");
+
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ id: task.id, acceptance_criteria: null }] }),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.acceptance_criteria).toBeNull();
+  });
+
   it("GET /tasks/status-counts returns counts for multiple projects", async () => {
     // Create a second project with tasks in different statuses
     const [p2] = ctx.projectService.create([{ title: "Status Counts Project 2" }]);
