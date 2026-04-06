@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { type Theme } from "../theme/theme";
 import { useTheme } from "../theme/ThemeContext";
 import { Card } from "./Card";
 import { Icon } from "../atoms/Icon";
@@ -10,6 +9,10 @@ interface ExpandableCardProps {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
+  /** Controlled open state. When provided, internal state is ignored. */
+  open?: boolean;
+  /** Called when the user clicks to expand/collapse. Receives the new open state. */
+  onToggle?: (open: boolean) => void;
   variant?: CardVariant;
   style?: React.CSSProperties;
   headerAction?: ReactNode;
@@ -19,12 +22,14 @@ export function ExpandableCard({
   title,
   children,
   defaultOpen = false,
+  open: controlledOpen,
+  onToggle,
   variant = "default",
   style,
   headerAction,
 }: ExpandableCardProps) {
   const { theme } = useTheme();
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -32,8 +37,19 @@ export function ExpandableCard({
       isFirstRender.current = false;
       return;
     }
-    setOpen(defaultOpen);
+    setInternalOpen(defaultOpen);
   }, [defaultOpen]);
+
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+
+  const handleClick = () => {
+    const next = !isOpen;
+    if (!isControlled) {
+      setInternalOpen(next);
+    }
+    onToggle?.(next);
+  };
 
   return (
     <Card
@@ -41,7 +57,7 @@ export function ExpandableCard({
       padding="xs"
       hover
       style={{ cursor: "pointer", ...style }}
-      onClick={() => setOpen((prev) => !prev)}
+      onClick={handleClick}
     >
       <div
         style={{
@@ -55,19 +71,21 @@ export function ExpandableCard({
           boxSizing: "border-box",
         }}
       >
-        <span
-          style={{
-            fontSize: theme.font.size.sm,
-            fontWeight: 700,
-            fontFamily: theme.font.headline,
-            letterSpacing: theme.font.letterSpacing.tight,
-            color: theme.color.text,
-          }}
-        >
-          {title}
-        </span>
+        {title && (
+          <span
+            style={{
+              fontSize: theme.font.size.sm,
+              fontWeight: 700,
+              fontFamily: theme.font.headline,
+              letterSpacing: theme.font.letterSpacing.tight,
+              color: theme.color.text,
+            }}
+          >
+            {title}
+          </span>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginLeft: "auto", flexShrink: 0 }}>
-          {open && headerAction && (
+          {isOpen && headerAction && (
             <span onClick={(e) => e.stopPropagation()}>
               {headerAction}
             </span>
@@ -77,7 +95,7 @@ export function ExpandableCard({
             size={18}
             style={{
               color: theme.color.textMuted,
-              transform: open ? "rotate(90deg)" : "rotate(0deg)",
+              transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
               transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
               flexShrink: 0,
             }}
@@ -87,7 +105,7 @@ export function ExpandableCard({
       <div
         style={{
           display: "grid",
-          gridTemplateRows: open ? "1fr" : "0fr",
+          gridTemplateRows: isOpen ? "1fr" : "0fr",
           transition: `grid-template-rows ${theme.motion.normal} ${theme.motion.easing}`,
         }}
       >
