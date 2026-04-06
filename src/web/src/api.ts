@@ -193,7 +193,7 @@ export async function deleteTasks(ids: string[]): Promise<void> {
 // Documents API
 // ---------------------------------------------------------------------------
 
-export async function fetchDocuments(params?: { tag?: string; title?: string; folder?: string; limit?: number; offset?: number }): Promise<{ data: DocumentSummary[]; total: number }> {
+export async function fetchDocuments(params?: { tag?: string; title?: string; search?: string; favorite?: boolean; entity_type?: string; entity_id?: string; folder?: string; limit?: number; offset?: number }): Promise<{ data: DocumentSummary[]; total: number }> {
   const res = await apiFetch(`/api/documents${qs(params)}`);
   return res.json();
 }
