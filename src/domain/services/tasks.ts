@@ -1,4 +1,4 @@
-import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentReferenceSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
+import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentReferenceSummary, type DocumentReferenceDetail, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
 import type { ITaskService, ITaskDependencyService, IDocumentReferenceService, Paginated } from "../services";
 import { ServiceError } from "../errors";
@@ -65,13 +65,12 @@ export class TaskService implements ITaskService {
     return this.taskRepo.findGraphSummaries(projectId, status);
   }
 
-  get(id: string): Task & { is_blocked?: boolean } {
+  get(id: string): Task & { is_blocked: boolean; documents: DocumentReferenceDetail[] } {
     const task = this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
-    if (this.depRepo) {
-      return { ...task, is_blocked: this.depRepo.isTaskBlocked(task.id) };
-    }
-    return { ...task, is_blocked: false };
+    const is_blocked = this.depRepo ? this.depRepo.isTaskBlocked(task.id) : false;
+    const documents = this.docRefService?.findByEntity("task", id) ?? [];
+    return { ...task, is_blocked, documents };
   }
 
   create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[] {
