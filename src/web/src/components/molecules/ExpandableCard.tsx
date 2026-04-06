@@ -62,12 +62,14 @@ export function ExpandableCard({
       <div
         style={{
           borderRadius: theme.radius.lg,
-          padding: `${theme.spacing.md} ${theme.spacing.md}`,
+          padding: title
+            ? `${theme.spacing.md} ${theme.spacing.md}`
+            : `${theme.spacing.xs} ${theme.spacing.md}`,
           width: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          minHeight: 44,
+          minHeight: title ? 44 : 28,
           boxSizing: "border-box",
         }}
       >
