@@ -838,6 +838,80 @@ describe("update_project with document references merge-patch", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Task document references merge-patch via MCP
+// ---------------------------------------------------------------------------
+
+describe("create_task with documents merge-patch", () => {
+  it("creates task with document references attached", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task Doc Create Proj" }] }));
+    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Task Doc Create Doc" }] }));
+
+    const result = await callTool("create_task", {
+      items: [{
+        project_id: proj.id,
+        title: "Task with docs via MCP",
+        documents: { [doc.id]: [{ type: "goal" }, { type: "plan" }] },
+      }],
+    });
+    expect(result.isError).toBeUndefined();
+    const [task] = parseResult(result);
+    expect(task.id).toBeTruthy();
+
+    // Verify via get_task
+    const fetched = parseResult(await callTool("get_task", { id: task.id }));
+    expect(fetched.documents).toBeArray();
+    expect(fetched.documents.length).toBe(2);
+    const types = fetched.documents.map((d: { type: string }) => d.type).sort();
+    expect(types).toEqual(["goal", "plan"]);
+    expect(fetched.documents.every((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
+  });
+});
+
+describe("update_task with documents merge-patch", () => {
+  it("attaches documents to task via update_task, verify via get_task", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task Doc Update Proj" }] }));
+    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Task Doc Update Doc" }] }));
+    const [task] = parseResult(await callTool("create_task", {
+      items: [{ project_id: proj.id, title: "Task to attach docs" }],
+    }));
+
+    await callTool("update_task", {
+      items: [{ id: task.id, documents: { [doc.id]: [{ type: "design" }, { type: "reference" }] } }],
+    });
+
+    const fetched = parseResult(await callTool("get_task", { id: task.id }));
+    expect(fetched.documents).toBeArray();
+    expect(fetched.documents.length).toBe(2);
+    const types = fetched.documents.map((d: { type: string }) => d.type).sort();
+    expect(types).toEqual(["design", "reference"]);
+  });
+
+  it("documents merge-patch with null removes documents from task", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task Doc Detach Proj" }] }));
+    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Task Doc Detach Doc" }] }));
+    const [task] = parseResult(await callTool("create_task", {
+      items: [{
+        project_id: proj.id,
+        title: "Task to detach docs",
+        documents: { [doc.id]: [{ type: "requirements" }] },
+      }],
+    }));
+
+    // Verify attached
+    let fetched = parseResult(await callTool("get_task", { id: task.id }));
+    expect(fetched.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
+
+    // Detach via null
+    await callTool("update_task", {
+      items: [{ id: task.id, documents: { [doc.id]: null } }],
+    });
+
+    fetched = parseResult(await callTool("get_task", { id: task.id }));
+    expect(fetched.documents.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Deleted tools -- negative tests
 // ---------------------------------------------------------------------------
 

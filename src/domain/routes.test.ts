@@ -475,7 +475,7 @@ describe("Task Routes", () => {
     expect(body[p3.id].counts.in_progress).toBeUndefined();
   });
 
-  it("POST /tasks accepts optional documents field and passes through", async () => {
+  it("POST /tasks with documents returns 201 and references are verifiable via GET", async () => {
     // Create a real document first so the service can validate the reference
     const docRes = await req("/documents", {
       method: "POST",
@@ -493,9 +493,19 @@ describe("Task Routes", () => {
       }] }),
     });
     expect(res.status).toBe(201);
+    const [task] = await res.json();
+
+    // Verify via GET
+    const getRes = await req(`/tasks/${task.id}`);
+    expect(getRes.status).toBe(200);
+    const body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(1);
+    expect(body.documents[0].document_id).toBe(doc.id);
+    expect(body.documents[0].type).toBe("goal");
   });
 
-  it("PATCH /tasks accepts valid documents merge-patch", async () => {
+  it("PATCH /tasks with documents returns 200 and references are verifiable via GET", async () => {
     const docRes = await req("/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -519,6 +529,16 @@ describe("Task Routes", () => {
       }] }),
     });
     expect(res.status).toBe(200);
+
+    // Verify via GET
+    const getRes = await req(`/tasks/${task.id}`);
+    expect(getRes.status).toBe(200);
+    const body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(2);
+    const types = body.documents.map((d: { type: string }) => d.type).sort();
+    expect(types).toEqual(["design", "reference"]);
+    expect(body.documents.every((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
   });
 
   it("PATCH /tasks returns 400 for invalid documents merge-patch (bad type)", async () => {
@@ -988,6 +1008,112 @@ describe("Extended Project Routes", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Extended Task Routes (documents merge-patch)
+// ---------------------------------------------------------------------------
+
+describe("Extended Task Routes", () => {
+  it("PATCH /tasks with documents merge-patch attaches documents, verify via GET", async () => {
+    const [project] = ctx.projectService.create([{ title: "Task MP Attach Project" }]);
+    const [doc] = await (await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Task MP Attach Doc" }] }),
+    })).json();
+
+    const createRes = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ project_id: project.id, title: "Task MP Attach" }] }),
+    });
+    const [task] = await createRes.json();
+
+    // Attach document via merge-patch
+    const patchRes = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ id: task.id, documents: { [doc.id]: [{ type: "requirements" }] } }] }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    // Verify GET includes the document
+    const getRes = await req(`/tasks/${task.id}`);
+    const body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(1);
+    expect(body.documents[0].document_id).toBe(doc.id);
+    expect(body.documents[0].type).toBe("requirements");
+  });
+
+  it("PATCH /tasks with documents merge-patch null removes document", async () => {
+    const [project] = ctx.projectService.create([{ title: "Task MP Detach Project" }]);
+    const [doc] = await (await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Task MP Detach Doc" }] }),
+    })).json();
+
+    // Create task with document attached
+    const createRes = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: project.id,
+        title: "Task MP Detach",
+        documents: { [doc.id]: [{ type: "design" }] },
+      }] }),
+    });
+    const [task] = await createRes.json();
+
+    // Verify attached
+    let getRes = await req(`/tasks/${task.id}`);
+    let body = await getRes.json();
+    expect(body.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
+
+    // Detach via null
+    const detachRes = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ id: task.id, documents: { [doc.id]: null } }] }),
+    });
+    expect(detachRes.status).toBe(200);
+
+    getRes = await req(`/tasks/${task.id}`);
+    body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(0);
+  });
+
+  it("POST /tasks with documents creates task with references attached", async () => {
+    const [project] = ctx.projectService.create([{ title: "Task MP Create Project" }]);
+    const [doc] = await (await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Task MP Create Doc" }] }),
+    })).json();
+
+    const res = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: project.id,
+        title: "Task MP Create",
+        documents: { [doc.id]: [{ type: "goal" }, { type: "note" }] },
+      }] }),
+    });
+    expect(res.status).toBe(201);
+    const [task] = await res.json();
+
+    // Verify via GET
+    const getRes = await req(`/tasks/${task.id}`);
+    const body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBe(2);
+    const types = body.documents.map((d: { type: string }) => d.type).sort();
+    expect(types).toEqual(["goal", "note"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Documents Merge-Patch Validation
 // ---------------------------------------------------------------------------
 
@@ -1021,7 +1147,7 @@ describe("Documents Merge-Patch Validation", () => {
     expect(res.status).toBe(200);
   });
 
-  it("PATCH /tasks accepts documents field with valid merge-patch shape", async () => {
+  it("PATCH /tasks accepts documents field and actually applies merge-patch", async () => {
     const res = await req("/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1035,6 +1161,13 @@ describe("Documents Merge-Patch Validation", () => {
       }),
     });
     expect(res.status).toBe(200);
+
+    // Verify the documents were actually applied via GET
+    const getRes = await req(`/tasks/${taskId}`);
+    const body = await getRes.json();
+    expect(body.documents).toBeArray();
+    expect(body.documents.length).toBeGreaterThanOrEqual(1);
+    expect(body.documents.some((d: { document_id: string; type: string }) => d.document_id === docId && d.type === "plan")).toBe(true);
   });
 
   it("PATCH /projects accepts null value (remove references)", async () => {

@@ -912,6 +912,130 @@ describe("Project-Document Linking", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Task-Document Merge-Patch (via service)
+// ---------------------------------------------------------------------------
+
+describe("Task-Document Merge-Patch via service", () => {
+  let projectId: string;
+
+  beforeAll(() => {
+    const [project] = ctx.projectService.create([{ title: "Task Doc MP Project" }]);
+    projectId = project.id;
+  });
+
+  it("task create with documents produces correct references", () => {
+    const [doc] = ctx.documentService.create([{ title: "Task Create Doc" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: projectId,
+      title: "Task with docs on create",
+      documents: { [doc.id]: [{ type: "goal" }, { type: "plan" }] },
+    }]);
+
+    const fetched = ctx.taskService.get(task.id);
+    expect(fetched.documents).toHaveLength(2);
+    const types = fetched.documents.map((d) => d.type).sort();
+    expect(types).toEqual(["goal", "plan"]);
+    expect(fetched.documents.every((d) => d.document_id === doc.id)).toBe(true);
+  });
+
+  it("task update with documents replaces reference types", () => {
+    const [doc] = ctx.documentService.create([{ title: "Task Replace Doc" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: projectId,
+      title: "Task to replace refs",
+      documents: { [doc.id]: [{ type: "goal" }] },
+    }]);
+
+    // Verify initial
+    let fetched = ctx.taskService.get(task.id);
+    expect(fetched.documents).toHaveLength(1);
+    expect(fetched.documents[0].type).toBe("goal");
+
+    // Replace with different types
+    ctx.taskService.update([{
+      id: task.id,
+      documents: { [doc.id]: [{ type: "design" }, { type: "reference" }] },
+    }]);
+
+    fetched = ctx.taskService.get(task.id);
+    expect(fetched.documents).toHaveLength(2);
+    const types = fetched.documents.map((d) => d.type).sort();
+    expect(types).toEqual(["design", "reference"]);
+  });
+
+  it("task update with null removes references", () => {
+    const [doc] = ctx.documentService.create([{ title: "Task Null Doc" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: projectId,
+      title: "Task to null refs",
+      documents: { [doc.id]: [{ type: "plan" }] },
+    }]);
+
+    // Verify initial
+    let fetched = ctx.taskService.get(task.id);
+    expect(fetched.documents).toHaveLength(1);
+
+    // Remove via null
+    ctx.taskService.update([{
+      id: task.id,
+      documents: { [doc.id]: null },
+    }]);
+
+    fetched = ctx.taskService.get(task.id);
+    expect(fetched.documents).toHaveLength(0);
+  });
+
+  it("task update with absent key preserves existing references", () => {
+    const [doc1] = ctx.documentService.create([{ title: "Task Absent Doc 1" }]);
+    const [doc2] = ctx.documentService.create([{ title: "Task Absent Doc 2" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: projectId,
+      title: "Task with two docs",
+      documents: {
+        [doc1.id]: [{ type: "goal" }],
+        [doc2.id]: [{ type: "plan" }],
+      },
+    }]);
+
+    // Update only doc2; doc1 should be untouched
+    ctx.taskService.update([{
+      id: task.id,
+      documents: { [doc2.id]: [{ type: "note" }] },
+    }]);
+
+    const fetched = ctx.taskService.get(task.id);
+    expect(fetched.documents).toHaveLength(2);
+    const doc1Ref = fetched.documents.find((d) => d.document_id === doc1.id);
+    const doc2Ref = fetched.documents.find((d) => d.document_id === doc2.id);
+    expect(doc1Ref?.type).toBe("goal"); // untouched
+    expect(doc2Ref?.type).toBe("note"); // updated
+  });
+
+  it("task delete removes all document references", () => {
+    const [doc] = ctx.documentService.create([{ title: "Task Delete Doc" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: projectId,
+      title: "Task to delete with refs",
+      documents: { [doc.id]: [{ type: "requirements" }, { type: "design" }] },
+    }]);
+
+    // Verify references exist
+    const fetched = ctx.taskService.get(task.id);
+    expect(fetched.documents).toHaveLength(2);
+
+    // Delete the task
+    ctx.taskService.remove([task.id]);
+
+    // Task is gone
+    expect(() => ctx.taskService.get(task.id)).toThrow(ServiceError);
+
+    // Document still exists (not cascaded)
+    const doc2 = ctx.documentService.get(doc.id);
+    expect(doc2.title).toBe("Task Delete Doc");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Input Validation Edge Cases
 // ---------------------------------------------------------------------------
 
