@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   TopBar,
   useTheme,
   ConnectionStatus,
@@ -153,7 +152,6 @@ function TrailingIndicators({ connected }: { connected: boolean }) {
   const { theme } = useTheme();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-      <ActivityIndicator count={0} />
       <ConnectionStatus connected={connected} />
     </div>
   );
