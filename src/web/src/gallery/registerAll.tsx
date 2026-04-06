@@ -245,7 +245,8 @@ export function registerAllComponents(): void {
 
   registerComponent({
     name: "ExpandableCard",
-    description: "Card with clickable header, chevron, and expand/collapse behavior.",
+    description:
+      "Card with clickable header, chevron, and expand/collapse animation. Supports uncontrolled (defaultOpen) and controlled (open/onToggle) modes for accordion patterns.",
     category: "molecule",
     propDefs: [
       { name: "title", type: "string", defaultValue: "Section Title" },
@@ -263,11 +264,22 @@ export function registerAllComponents(): void {
       </ExpandableCard>
     ),
     variants: [
-      { name: "Closed", props: { defaultOpen: false } },
+      { name: "Collapsed", props: { defaultOpen: false } },
       { name: "Open", props: { defaultOpen: true } },
       { name: "Flat", props: { variant: "flat", defaultOpen: true } },
+      { name: "Elevated", props: { variant: "elevated", defaultOpen: true } },
     ],
-    codeTemplate: `<ExpandableCard title="Section" defaultOpen={false}>Content</ExpandableCard>`,
+    codeTemplate: [
+      "// Uncontrolled (manages own state)",
+      '<ExpandableCard title="Section" defaultOpen={false}>',
+      "  Content",
+      "</ExpandableCard>",
+      "",
+      "// Controlled (parent manages state, for accordion patterns)",
+      '<ExpandableCard title="Section" open={isOpen} onToggle={setIsOpen}>',
+      "  Content",
+      "</ExpandableCard>",
+    ].join("\n"),
   });
 
   registerComponent({
