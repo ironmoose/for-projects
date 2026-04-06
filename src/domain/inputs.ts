@@ -37,6 +37,7 @@ export interface UpdateProjectInput {
 export interface CreateTaskInput {
   project_id: string;
   title: string;
+  context?: string;
   plan?: string;
   description?: string;
   implementation?: string;
@@ -51,6 +52,7 @@ export interface CreateTaskInput {
 export interface UpdateTaskInput {
   id: string;
   title?: string;
+  context?: string | null;
   plan?: string | null;
   description?: string | null;
   implementation?: string | null;

@@ -45,6 +45,7 @@ export interface Task {
   id: string;
   project_id: string;
   title: string;
+  context: string | null;
   plan: string | null;
   description: string | null;
   implementation: string | null;
@@ -81,6 +82,7 @@ export interface TaskSummary {
   category: TaskCategory | null;
   group_key: string | null;
   is_blocked: boolean;
+  has_context: boolean;
   has_plan: boolean;
   has_description: boolean;
   has_implementation: boolean;
@@ -112,7 +114,7 @@ export function toTaskSummary(t: Task): TaskSummary {
     id: t.id, project_id: t.project_id, title: t.title, status: t.status,
     effort: t.effort, impact: t.impact, category: t.category, group_key: t.group_key,
     is_blocked: t.is_blocked ?? false,
-    has_plan: t.plan != null, has_description: t.description != null,
+    has_context: t.context != null, has_plan: t.plan != null, has_description: t.description != null,
     has_implementation: t.implementation != null, has_acceptance_criteria: t.acceptance_criteria != null,
     created_at: t.created_at, updated_at: t.updated_at,
   };

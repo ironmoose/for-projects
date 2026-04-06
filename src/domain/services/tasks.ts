@@ -85,6 +85,9 @@ export class TaskService implements ITaskService {
       if (input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
       }
+      if (input.context !== undefined && input.context.length > 50000) {
+        throw new ServiceError("context must be 50000 characters or fewer", 400);
+      }
       if (input.plan !== undefined && input.plan.length > 50000) {
         throw new ServiceError("plan must be 50000 characters or fewer", 400);
       }
@@ -117,6 +120,7 @@ export class TaskService implements ITaskService {
     const rows = inputs.map((input) => ({
       project_id: input.project_id,
       title: input.title,
+      context: input.context ?? null,
       plan: input.plan ?? null,
       description: input.description ?? null,
       implementation: input.implementation ?? null,
@@ -153,6 +157,9 @@ export class TaskService implements ITaskService {
       }
       if (input.title !== undefined && input.title.length > 255) {
         throw new ServiceError("title must be 255 characters or fewer", 400);
+      }
+      if (input.context !== undefined && input.context !== null && input.context.length > 50000) {
+        throw new ServiceError("context must be 50000 characters or fewer", 400);
       }
       if (input.plan !== undefined && input.plan !== null && input.plan.length > 50000) {
         throw new ServiceError("plan must be 50000 characters or fewer", 400);

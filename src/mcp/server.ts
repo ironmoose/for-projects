@@ -149,6 +149,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         items: z.array(z.object({
           project_id: z.string().max(26),
           title: z.string().max(255),
+          context: z.string().max(10000).optional(),
           plan: z.string().max(10000).optional(),
           description: z.string().max(10000).optional(),
           implementation: z.string().max(10000).optional(),
@@ -172,6 +173,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
+          context: z.string().max(10000).optional(),
           plan: z.string().max(10000).optional(),
           description: z.string().max(10000).optional(),
           implementation: z.string().max(10000).optional(),
