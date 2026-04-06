@@ -205,6 +205,112 @@ describe("Task CRUD", () => {
 
     expect(updated.summary).toBeNull();
   });
+
+  it("creates a task with context and acceptance_criteria", () => {
+    const [project] = ctx.projectService.create([{ title: "Context AC Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Full fields task",
+      context: "Background information for this task",
+      acceptance_criteria: "All tests pass and coverage is above 80%",
+    }]);
+
+    expect(task.context).toBe("Background information for this task");
+    expect(task.acceptance_criteria).toBe("All tests pass and coverage is above 80%");
+  });
+
+  it("context and acceptance_criteria default to null", () => {
+    const [project] = ctx.projectService.create([{ title: "Default Null CA Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Bare task for defaults",
+    }]);
+
+    expect(task.context).toBeNull();
+    expect(task.acceptance_criteria).toBeNull();
+  });
+
+  it("updates context and acceptance_criteria", () => {
+    const [project] = ctx.projectService.create([{ title: "Update CA Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Update context task",
+    }]);
+
+    const [updated] = ctx.taskService.update([{
+      id: task.id,
+      context: "New context",
+      acceptance_criteria: "New AC",
+    }]);
+
+    expect(updated.context).toBe("New context");
+    expect(updated.acceptance_criteria).toBe("New AC");
+  });
+
+  it("clears context via null on update", () => {
+    const [project] = ctx.projectService.create([{ title: "Null Context Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Clear context",
+      context: "Will be cleared",
+    }]);
+
+    expect(task.context).toBe("Will be cleared");
+
+    const [updated] = ctx.taskService.update([{
+      id: task.id,
+      context: null,
+    }]);
+
+    expect(updated.context).toBeNull();
+  });
+
+  it("clears acceptance_criteria via null on update", () => {
+    const [project] = ctx.projectService.create([{ title: "Null AC Project" }]);
+    const [task] = ctx.taskService.create([{
+      project_id: project.id,
+      title: "Clear AC",
+      acceptance_criteria: "Will be cleared",
+    }]);
+
+    expect(task.acceptance_criteria).toBe("Will be cleared");
+
+    const [updated] = ctx.taskService.update([{
+      id: task.id,
+      acceptance_criteria: null,
+    }]);
+
+    expect(updated.acceptance_criteria).toBeNull();
+  });
+
+  it("list returns has_context and has_acceptance_criteria booleans", () => {
+    const [project] = ctx.projectService.create([{ title: "List CA Project" }]);
+    ctx.taskService.create([{
+      project_id: project.id,
+      title: "With context and AC",
+      context: "Some context",
+      acceptance_criteria: "Some AC",
+    }]);
+    ctx.taskService.create([{
+      project_id: project.id,
+      title: "Without context and AC",
+    }]);
+
+    const result = ctx.taskService.list({ project_id: project.id, limit: 100, offset: 0 });
+    const withFields = result.data.find(t => t.title === "With context and AC");
+    const withoutFields = result.data.find(t => t.title === "Without context and AC");
+
+    expect(withFields).toBeTruthy();
+    expect(withFields!.has_context).toBe(true);
+    expect(withFields!.has_acceptance_criteria).toBe(true);
+    // Summary should not include the full text fields
+    expect((withFields as Record<string, unknown>)["context"]).toBeUndefined();
+    expect((withFields as Record<string, unknown>)["acceptance_criteria"]).toBeUndefined();
+
+    expect(withoutFields).toBeTruthy();
+    expect(withoutFields!.has_context).toBe(false);
+    expect(withoutFields!.has_acceptance_criteria).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

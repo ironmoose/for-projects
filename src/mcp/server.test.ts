@@ -295,6 +295,128 @@ describe("update_task with optional fields", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Task context and acceptance_criteria round-trip
+// ---------------------------------------------------------------------------
+
+describe("create_task with context and acceptance_criteria", () => {
+  it("creates task with both fields", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Context AC MCP Proj" }] }));
+    const [task] = parseResult(
+      await callTool("create_task", {
+        items: [{
+          project_id: proj.id,
+          title: "Context AC Task",
+          context: "Background info",
+          acceptance_criteria: "All tests green",
+        }],
+      })
+    );
+
+    expect(task.context).toBe("Background info");
+    expect(task.acceptance_criteria).toBe("All tests green");
+  });
+
+  it("defaults context and acceptance_criteria to null", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Default CA Proj" }] }));
+    const [task] = parseResult(
+      await callTool("create_task", {
+        items: [{ project_id: proj.id, title: "Bare CA Task" }],
+      })
+    );
+
+    expect(task.context).toBeNull();
+    expect(task.acceptance_criteria).toBeNull();
+  });
+});
+
+describe("get_task returns context and acceptance_criteria", () => {
+  it("round-trips context and acceptance_criteria via get_task", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Get CA Proj" }] }));
+    const [created] = parseResult(
+      await callTool("create_task", {
+        items: [{
+          project_id: proj.id,
+          title: "Roundtrip Task",
+          context: "Task context",
+          acceptance_criteria: "Task AC",
+        }],
+      })
+    );
+
+    const task = parseResult(await callTool("get_task", { id: created.id }));
+    expect(task.context).toBe("Task context");
+    expect(task.acceptance_criteria).toBe("Task AC");
+  });
+});
+
+describe("list_tasks excludes context and acceptance_criteria", () => {
+  it("returns has_ booleans instead of full text", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "List CA Proj" }] }));
+    await callTool("create_task", {
+      items: [{
+        project_id: proj.id,
+        title: "Listed CA Task",
+        context: "Should not appear",
+        acceptance_criteria: "Should not appear",
+      }],
+    });
+
+    const list = parseResult(await callTool("list_tasks", { project_id: proj.id }));
+    const task = list.data.find((t: { title: string }) => t.title === "Listed CA Task");
+    expect(task).toBeTruthy();
+    expect(task.context).toBeUndefined();
+    expect(task.acceptance_criteria).toBeUndefined();
+    expect(task.has_context).toBe(true);
+    expect(task.has_acceptance_criteria).toBe(true);
+  });
+});
+
+describe("update_task with context and acceptance_criteria", () => {
+  it("sets context and acceptance_criteria", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Update CA Proj" }] }));
+    const [task] = parseResult(
+      await callTool("create_task", { items: [{ project_id: proj.id, title: "Update CA Task" }] })
+    );
+
+    const [updated] = parseResult(
+      await callTool("update_task", {
+        items: [{
+          id: task.id,
+          context: "Added context",
+          acceptance_criteria: "Added AC",
+        }],
+      })
+    );
+
+    expect(updated.context).toBe("Added context");
+    expect(updated.acceptance_criteria).toBe("Added AC");
+  });
+
+  it("updates only context, preserving acceptance_criteria", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Partial Update CA Proj" }] }));
+    const [task] = parseResult(
+      await callTool("create_task", {
+        items: [{
+          project_id: proj.id,
+          title: "Partial Update Task",
+          context: "Original context",
+          acceptance_criteria: "Original AC",
+        }],
+      })
+    );
+
+    const [updated] = parseResult(
+      await callTool("update_task", {
+        items: [{ id: task.id, context: "Changed context" }],
+      })
+    );
+
+    expect(updated.context).toBe("Changed context");
+    expect(updated.acceptance_criteria).toBe("Original AC");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Batch operations
 // ---------------------------------------------------------------------------
 
