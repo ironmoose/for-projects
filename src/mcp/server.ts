@@ -115,7 +115,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_task",
     {
-      description: "Retrieve a single task by ID with all fields. Response includes title, summary, status, effort, impact, category, group_key, is_blocked, and timestamps. Tasks do not have document references — use task summary for context. Documents are linked to projects only.",
+      description: "Retrieve a single task by ID with all fields. Response includes title, summary, context, acceptance_criteria, status, effort, impact, category, group_key, is_blocked, and timestamps.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => taskService.get(id))

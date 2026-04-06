@@ -115,12 +115,12 @@ export async function fetchTask(id: string): Promise<TaskDetail> {
   return res.json();
 }
 
-export async function createTasks(inputs: Array<{ project_id: string; title: string; summary?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }>): Promise<Task[]> {
+export async function createTasks(inputs: Array<{ project_id: string; title: string; summary?: string; context?: string; acceptance_criteria?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }>): Promise<Task[]> {
   const res = await apiFetch("/api/tasks", jsonPost({ items: inputs }));
   return res.json();
 }
 
-export async function updateTasks(inputs: Array<{ id: string; title?: string; summary?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null; add_dependencies?: { task_id: string; type: string }[]; remove_dependencies?: { task_id: string }[] }>): Promise<Task[]> {
+export async function updateTasks(inputs: Array<{ id: string; title?: string; summary?: string | null; context?: string | null; acceptance_criteria?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null; add_dependencies?: { task_id: string; type: string }[]; remove_dependencies?: { task_id: string }[] }>): Promise<Task[]> {
   const res = await apiFetch("/api/tasks", jsonPatch({ items: inputs }));
   return res.json();
 }
