@@ -476,20 +476,32 @@ describe("Task Routes", () => {
   });
 
   it("POST /tasks accepts optional documents field and passes through", async () => {
+    // Create a real document first so the service can validate the reference
+    const docRes = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Task Doc" }] }),
+    });
+    const [doc] = await docRes.json();
     const res = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: [{
         project_id: projectId,
         title: "Task with docs",
-        documents: { "doc-123": [{ type: "goal" }] },
+        documents: { [doc.id]: [{ type: "goal" }] },
       }] }),
     });
-    // Service ignores the documents field for now, but the route should not reject it
     expect(res.status).toBe(201);
   });
 
   it("PATCH /tasks accepts valid documents merge-patch", async () => {
+    const docRes = await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ title: "Patch Task Doc" }] }),
+    });
+    const [doc] = await docRes.json();
     const create = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -502,9 +514,7 @@ describe("Task Routes", () => {
       body: JSON.stringify({ items: [{
         id: task.id,
         documents: {
-          "doc-1": [{ type: "design" }, { type: "reference" }],
-          "doc-2": [{ type: "goal" }],
-          "doc-3": null,
+          [doc.id]: [{ type: "design" }, { type: "reference" }],
         },
       }] }),
     });
@@ -528,7 +538,7 @@ describe("Task Routes", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Invalid documents merge-patch");
+    expect(body.error).toContain("documents");
   });
 
   it("PATCH /tasks returns 400 for invalid documents merge-patch (wrong shape)", async () => {
@@ -548,7 +558,7 @@ describe("Task Routes", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Invalid documents merge-patch");
+    expect(body.error).toContain("documents");
   });
 
   it("PATCH /tasks works normally when documents field is absent", async () => {

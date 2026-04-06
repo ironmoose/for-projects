@@ -15,9 +15,6 @@ export type DocumentReferenceType = typeof DOCUMENT_REFERENCE_TYPES[number];
 export const DEPENDENCY_TYPES = ['blocks', 'relates_to'] as const;
 export type DependencyType = typeof DEPENDENCY_TYPES[number];
 
-export const DOCUMENT_REFERENCE_TYPES = ['goal', 'plan', 'requirements', 'design', 'reference', 'note'] as const;
-export type DocumentReferenceType = typeof DOCUMENT_REFERENCE_TYPES[number];
-
 export const ENTITY_TYPES = ['project', 'task', 'document'] as const;
 export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
 
