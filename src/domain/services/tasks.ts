@@ -110,6 +110,8 @@ export class TaskService implements ITaskService {
       project_id: input.project_id,
       title: input.title,
       summary: input.summary ?? null,
+      context: input.context ?? null,
+      acceptance_criteria: input.acceptance_criteria ?? null,
       group_key: input.group_key ?? null,
       status: input.status ?? "todo",
       effort: input.effort ?? null,

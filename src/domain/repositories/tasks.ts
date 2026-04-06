@@ -7,6 +7,8 @@ export interface TaskRow {
   project_id: string;
   title: string;
   summary: string | null;
+  context: string | null;
+  acceptance_criteria: string | null;
   group_key: string | null;
   status: string;
   effort: string | null;
@@ -88,11 +90,13 @@ export class TaskRepository {
     params.push(limit, offset);
 
     const rows = this.db
-      .query(`SELECT id, project_id, title, summary, status, effort, impact, category, group_key, 0 AS is_blocked, created_at, updated_at FROM tasks ${where}ORDER BY created_at ASC LIMIT ? OFFSET ?`)
-      .all(...params) as (Omit<TaskSummary, "is_blocked"> & { is_blocked: number })[];
+      .query(`SELECT id, project_id, title, summary, status, effort, impact, category, group_key, (context IS NOT NULL) AS has_context, (acceptance_criteria IS NOT NULL) AS has_acceptance_criteria, 0 AS is_blocked, created_at, updated_at FROM tasks ${where}ORDER BY created_at ASC LIMIT ? OFFSET ?`)
+      .all(...params) as (Omit<TaskSummary, "has_context" | "has_acceptance_criteria" | "is_blocked"> & { has_context: number; has_acceptance_criteria: number; is_blocked: number })[];
 
     return rows.map((r) => ({
       ...r,
+      has_context: !!r.has_context,
+      has_acceptance_criteria: !!r.has_acceptance_criteria,
       is_blocked: !!r.is_blocked,
     })) as TaskSummary[];
   }
@@ -122,7 +126,7 @@ export class TaskRepository {
 
   insertMany(rows: Omit<TaskRow, "id" | "created_at" | "updated_at">[]): Task[] {
     const stmt = this.db.query(
-      "INSERT INTO tasks (id, project_id, title, summary, group_key, status, effort, impact, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO tasks (id, project_id, title, summary, context, acceptance_criteria, group_key, status, effort, impact, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const now = new Date().toISOString();
     const ids: string[] = [];
@@ -130,7 +134,7 @@ export class TaskRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.project_id, row.title, row.summary ?? null, row.group_key ?? null, row.status, row.effort ?? null, row.impact ?? null, row.category ?? null, now, now);
+      stmt.run(id, row.project_id, row.title, row.summary ?? null, row.context ?? null, row.acceptance_criteria ?? null, row.group_key ?? null, row.status, row.effort ?? null, row.impact ?? null, row.category ?? null, now, now);
     }
 
     const results: Task[] = [];
@@ -140,6 +144,8 @@ export class TaskRepository {
         project_id: rows[i].project_id,
         title: rows[i].title,
         summary: rows[i].summary ?? null,
+        context: rows[i].context ?? null,
+        acceptance_criteria: rows[i].acceptance_criteria ?? null,
         group_key: rows[i].group_key ?? null,
         status: rows[i].status as TaskStatus,
         effort: (rows[i].effort ?? null) as EffortLevel | null,
@@ -153,7 +159,7 @@ export class TaskRepository {
     return results;
   }
 
-  updateMany(rows: { id: string; title?: string; summary?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null }[]): Task[] {
+  updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; acceptance_criteria?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null }[]): Task[] {
     const now = new Date().toISOString();
     const results: Task[] = [];
 
@@ -163,6 +169,8 @@ export class TaskRepository {
 
       const title = row.title !== undefined ? row.title : existing.title;
       const summary = row.summary !== undefined ? row.summary : existing.summary;
+      const context = row.context !== undefined ? row.context : existing.context;
+      const acceptance_criteria = row.acceptance_criteria !== undefined ? row.acceptance_criteria : existing.acceptance_criteria;
       const group_key = row.group_key !== undefined ? row.group_key : existing.group_key;
       const status = row.status !== undefined ? row.status : existing.status;
       const effort = row.effort !== undefined ? row.effort : existing.effort;
@@ -170,14 +178,16 @@ export class TaskRepository {
       const category = row.category !== undefined ? row.category : existing.category;
 
       this.db
-        .query("UPDATE tasks SET title = ?, summary = ?, group_key = ?, status = ?, effort = ?, impact = ?, category = ?, updated_at = ? WHERE id = ?")
-        .run(title, summary, group_key, status, effort, impact, category, now, row.id);
+        .query("UPDATE tasks SET title = ?, summary = ?, context = ?, acceptance_criteria = ?, group_key = ?, status = ?, effort = ?, impact = ?, category = ?, updated_at = ? WHERE id = ?")
+        .run(title, summary, context, acceptance_criteria, group_key, status, effort, impact, category, now, row.id);
 
       results.push({
         id: row.id,
         project_id: existing.project_id,
         title,
         summary,
+        context,
+        acceptance_criteria,
         group_key,
         status: status as TaskStatus,
         effort: (effort ?? null) as EffortLevel | null,

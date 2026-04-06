@@ -40,6 +40,8 @@ export interface CreateTaskInput {
   project_id: string;
   title: string;
   summary?: string;
+  context?: string;
+  acceptance_criteria?: string;
   group_key?: string;
   status?: TaskStatus;
   effort?: EffortLevel;
@@ -51,6 +53,8 @@ export interface UpdateTaskInput {
   id: string;
   title?: string;
   summary?: string | null;
+  context?: string | null;
+  acceptance_criteria?: string | null;
   group_key?: string | null;
   status?: TaskStatus;
   effort?: EffortLevel | null;

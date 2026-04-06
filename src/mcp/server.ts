@@ -162,12 +162,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_task",
     {
-      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Tasks have title and summary only — documents are linked to projects, not tasks. Optional summary (max 1000 chars), group_key (max 32 chars) for organizing tasks into flat groups. Status defaults to 'todo' if not provided. Optional effort (trivial/low/medium/high/extreme), impact (trivial/low/medium/high/extreme), and category (feature/bugfix/refactor/test/perf/infra/docs/security/design/chore).",
+      description: "Create tasks within a project. Pass an `items` array with required project_id and title per item. Optional summary (max 1000 chars), context (freeform), acceptance_criteria (freeform), group_key (max 32 chars). Status defaults to 'todo'. Optional effort, impact, category.",
       inputSchema: {
         items: z.array(z.object({
           project_id: z.string().max(26),
           title: z.string().max(255),
           summary: z.string().max(1000).optional(),
+          context: z.string().optional(),
+          acceptance_criteria: z.string().optional(),
           group_key: z.string().max(32).optional(),
           status: z.enum([...TASK_STATUSES]).optional(),
           effort: z.enum([...EFFORT_LEVELS]).optional(),
@@ -188,6 +190,8 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           id: z.string().max(26),
           title: z.string().max(255).optional(),
           summary: z.string().max(1000).optional(),
+          context: z.string().optional(),
+          acceptance_criteria: z.string().optional(),
           group_key: z.string().max(32).optional(),
           status: z.enum([...TASK_STATUSES]).optional(),
           effort: z.enum([...EFFORT_LEVELS]).optional(),
