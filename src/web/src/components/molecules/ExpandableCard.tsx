@@ -46,26 +46,30 @@ export function ExpandableCard({
       <div
         style={{
           borderRadius: theme.radius.lg,
-          padding: `${theme.spacing.md} ${theme.spacing.md}`,
+          padding: title
+            ? `${theme.spacing.md} ${theme.spacing.md}`
+            : `${theme.spacing.xs} ${theme.spacing.md}`,
           width: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          minHeight: 44,
+          minHeight: title ? 44 : 28,
           boxSizing: "border-box",
         }}
       >
-        <span
-          style={{
-            fontSize: theme.font.size.sm,
-            fontWeight: 700,
-            fontFamily: theme.font.headline,
-            letterSpacing: theme.font.letterSpacing.tight,
-            color: theme.color.text,
-          }}
-        >
-          {title}
-        </span>
+        {title && (
+          <span
+            style={{
+              fontSize: theme.font.size.sm,
+              fontWeight: 700,
+              fontFamily: theme.font.headline,
+              letterSpacing: theme.font.letterSpacing.tight,
+              color: theme.color.text,
+            }}
+          >
+            {title}
+          </span>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginLeft: "auto", flexShrink: 0 }}>
           {open && headerAction && (
             <span onClick={(e) => e.stopPropagation()}>
