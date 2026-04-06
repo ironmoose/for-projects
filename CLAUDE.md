@@ -17,7 +17,7 @@ Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 - Validation happens in services; routes parse HTTP and return errors
 - Dependencies wired explicitly in `bootstrap.ts` — no globals or service locators
 - No DEFAULT values in the schema
-- Document-first: all rich content is stored as documents, linked to entities via typed references. Projects and tasks hold only `title` and `summary` (max 1000 chars) inline.
+- Document-first: all rich content is stored as documents, linked to entities via typed references. Projects and tasks hold only `title` and `summary` (max 1000 chars) inline. Tasks also have `context` (freeform background/rationale) and `acceptance_criteria` (freeform completion criteria) as inline text fields.
 
 ### Document reference types
 
@@ -49,7 +49,7 @@ Core tables: `projects`, `tasks`, `document_references`, `activity_log`.
 
 **Projects:** `id`, `title`, `summary`, `created_at`, `updated_at`
 
-**Tasks:** `id`, `project_id`, `title`, `summary`, `status`, `effort`, `impact`, `category`, `group_key`, `is_blocked`, `created_at`, `updated_at`
+**Tasks:** `id`, `project_id`, `title`, `summary`, `context`, `acceptance_criteria`, `status`, `effort`, `impact`, `category`, `group_key`, `is_blocked`, `created_at`, `updated_at`
 
 **document_references:** `entity_type`, `entity_id`, `document_id`, `type` — composite PK on all four columns. Polymorphic (no FK on `entity_id`); FK CASCADE on `document_id`. Type is one of: goal, plan, requirements, design, reference, note. Same document can be attached to the same entity with different types. Multiple documents can share the same type on one entity.
 
@@ -60,7 +60,7 @@ Knowledge base tables (migration 009+):
 - `tags` — id, name (unique index), created_at
 - `entity_tags` — entity_type, entity_id, tag_id (polymorphic join; composite PK; no FK on entity_id)
 
-Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023.
+Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks.
 
 ### REST API
 
@@ -68,8 +68,8 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 
 - `POST /api/projects` — `{items: [{title, summary?, documents?}]}`
 - `PATCH /api/projects` — `{items: [{id, title?, summary?, documents?}]}`
-- `POST /api/tasks` — `{items: [{project_id, title, summary?, status?, effort?, impact?, category?, group_key?, documents?}]}`
-- `PATCH /api/tasks` — `{items: [{id, title?, summary?, status?, effort?, impact?, category?, group_key?, documents?, add_dependencies?, remove_dependencies?}]}`
+- `POST /api/tasks` — `{items: [{project_id, title, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, documents?}]}`
+- `PATCH /api/tasks` — `{items: [{id, title?, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, documents?, add_dependencies?, remove_dependencies?}]}`
 - `GET /api/tasks` — supports filters: `project_id`, `status`, `effort`, `impact`, `category`, `group_key`, `blocked`
 - `POST /api/documents` — `{items: [{title, summary?, content?, tags?, favorite?}]}` batch create
 - `PATCH /api/documents` — `{items: [{id, title?, summary?, content?, tags?, favorite?}]}` batch update; tags array replaces all existing tags
@@ -99,7 +99,7 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 - **Dependencies:** `get_dependency_graph`, `get_ready_tasks`
 - **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`, `delete_document`
 
-`create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document.
+`create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields. `get_task` returns these fields in the response.
 
 ### Tagging system
 
