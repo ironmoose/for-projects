@@ -375,6 +375,9 @@ function TaskDetailPanel({
   const [editingAC, setEditingAC] = useState(false);
   const [acValue, setACValue] = useState(task.acceptance_criteria ?? "");
 
+  // Accordion state -- only one card expanded at a time
+  const [expandedCard, setExpandedCard] = useState<"summary" | "context" | "acceptance_criteria" | null>("summary");
+
   // Group key editing state
   const [editingGroupKey, setEditingGroupKey] = useState(false);
   const [groupKeyValue, setGroupKeyValue] = useState(task.group_key ?? "");
@@ -680,176 +683,197 @@ function TaskDetailPanel({
           </MetadataField>
         </div>
 
-        {/* Context -- editable */}
-        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
-            <SectionLabel>Context</SectionLabel>
-            {!editingContext && (
-              <IconButton icon="edit" size={14} onClick={() => setEditingContext(true)} aria-label="Edit context" />
-            )}
-          </div>
-          {editingContext ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-              <Textarea
-                value={contextValue}
-                onChange={(e) => setContextValue(e.target.value)}
-                autoFocus
-                rows={4}
-                placeholder="Task context..."
-                style={{ width: "100%", boxSizing: "border-box" }}
-              />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
-                <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(task.context ?? ""); }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleContextSave}>Save</Button>
+        {/* Summary -- editable (accordion) */}
+        <div style={{ marginBottom: theme.spacing.md }}>
+          <SectionLabel style={{ marginBottom: theme.spacing.xs }}>Summary</SectionLabel>
+          <ExpandableCard
+            title=""
+            open={expandedCard === "summary"}
+            onToggle={(isOpen) => setExpandedCard(isOpen ? "summary" : null)}
+            variant="flat"
+            headerAction={
+              !editingSummary ? (
+                <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }} aria-label="Edit summary" />
+              ) : undefined
+            }
+          >
+            {editingSummary ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+                <Textarea
+                  value={summaryValue}
+                  onChange={(e) => setSummaryValue(e.target.value)}
+                  autoFocus
+                  rows={4}
+                  placeholder="Task summary..."
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                />
+                <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                  <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(task.summary ?? ""); }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSummarySave}>Save</Button>
+                </div>
               </div>
-            </div>
-          ) : task.context ? (
-            <p
-              onClick={() => setEditingContext(true)}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.text,
-                cursor: "pointer",
-                whiteSpace: "pre-wrap",
-                lineHeight: 1.5,
-              }}
-              title="Click to edit context"
-            >
-              {task.context}
-            </p>
-          ) : (
-            <p
-              onClick={() => setEditingContext(true)}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
-                fontStyle: "italic",
-                cursor: "pointer",
-              }}
-              title="Click to add context"
-            >
-              No context
-            </p>
-          )}
-        </Card>
+            ) : task.summary ? (
+              <p
+                onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }}
+                style={{
+                  margin: 0,
+                  fontSize: theme.font.size.sm,
+                  color: theme.color.text,
+                  cursor: "pointer",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.5,
+                }}
+                title="Click to edit summary"
+              >
+                {task.summary}
+              </p>
+            ) : (
+              <p
+                onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }}
+                style={{
+                  margin: 0,
+                  fontSize: theme.font.size.sm,
+                  color: theme.color.textFaint,
+                  fontStyle: "italic",
+                  cursor: "pointer",
+                }}
+                title="Click to add summary"
+              >
+                No summary
+              </p>
+            )}
+          </ExpandableCard>
+        </div>
 
-        {/* Summary -- editable */}
-        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
-            <SectionLabel>Summary</SectionLabel>
-            {!editingSummary && (
-              <IconButton icon="edit" size={14} onClick={() => setEditingSummary(true)} aria-label="Edit summary" />
-            )}
-          </div>
-          {editingSummary ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-              <Textarea
-                value={summaryValue}
-                onChange={(e) => setSummaryValue(e.target.value)}
-                autoFocus
-                rows={4}
-                placeholder="Task summary..."
-                style={{ width: "100%", boxSizing: "border-box" }}
-              />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
-                <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(task.summary ?? ""); }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSummarySave}>Save</Button>
+        {/* Context -- editable (accordion) */}
+        <div style={{ marginBottom: theme.spacing.md }}>
+          <SectionLabel style={{ marginBottom: theme.spacing.xs }}>Context</SectionLabel>
+          <ExpandableCard
+            title=""
+            open={expandedCard === "context"}
+            onToggle={(isOpen) => setExpandedCard(isOpen ? "context" : null)}
+            variant="flat"
+            headerAction={
+              !editingContext ? (
+                <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("context"); setEditingContext(true); }} aria-label="Edit context" />
+              ) : undefined
+            }
+          >
+            {editingContext ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+                <Textarea
+                  value={contextValue}
+                  onChange={(e) => setContextValue(e.target.value)}
+                  autoFocus
+                  rows={4}
+                  placeholder="Task context..."
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                />
+                <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                  <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(task.context ?? ""); }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleContextSave}>Save</Button>
+                </div>
               </div>
-            </div>
-          ) : task.summary ? (
-            <p
-              onClick={() => setEditingSummary(true)}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.text,
-                cursor: "pointer",
-                whiteSpace: "pre-wrap",
-                lineHeight: 1.5,
-              }}
-              title="Click to edit summary"
-            >
-              {task.summary}
-            </p>
-          ) : (
-            <p
-              onClick={() => setEditingSummary(true)}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
-                fontStyle: "italic",
-                cursor: "pointer",
-              }}
-              title="Click to add summary"
-            >
-              No summary
-            </p>
-          )}
-        </Card>
+            ) : task.context ? (
+              <p
+                onClick={() => { setExpandedCard("context"); setEditingContext(true); }}
+                style={{
+                  margin: 0,
+                  fontSize: theme.font.size.sm,
+                  color: theme.color.text,
+                  cursor: "pointer",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.5,
+                }}
+                title="Click to edit context"
+              >
+                {task.context}
+              </p>
+            ) : (
+              <p
+                onClick={() => { setExpandedCard("context"); setEditingContext(true); }}
+                style={{
+                  margin: 0,
+                  fontSize: theme.font.size.sm,
+                  color: theme.color.textFaint,
+                  fontStyle: "italic",
+                  cursor: "pointer",
+                }}
+                title="Click to add context"
+              >
+                No context
+              </p>
+            )}
+          </ExpandableCard>
+        </div>
 
-        {/* Acceptance Criteria -- editable */}
-        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
-            <SectionLabel>Acceptance Criteria</SectionLabel>
-            {!editingAC && (
-              <IconButton icon="edit" size={14} onClick={() => setEditingAC(true)} aria-label="Edit acceptance criteria" />
-            )}
-          </div>
-          {editingAC ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-              <Textarea
-                value={acValue}
-                onChange={(e) => setACValue(e.target.value)}
-                autoFocus
-                rows={4}
-                placeholder="Acceptance criteria..."
-                style={{ width: "100%", boxSizing: "border-box" }}
-              />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
-                <Button variant="ghost" onClick={() => { setEditingAC(false); setACValue(task.acceptance_criteria ?? ""); }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleACSave}>Save</Button>
+        {/* Acceptance Criteria -- editable (accordion) */}
+        <div style={{ marginBottom: theme.spacing.md }}>
+          <SectionLabel style={{ marginBottom: theme.spacing.xs }}>Acceptance Criteria</SectionLabel>
+          <ExpandableCard
+            title=""
+            open={expandedCard === "acceptance_criteria"}
+            onToggle={(isOpen) => setExpandedCard(isOpen ? "acceptance_criteria" : null)}
+            variant="flat"
+            headerAction={
+              !editingAC ? (
+                <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }} aria-label="Edit acceptance criteria" />
+              ) : undefined
+            }
+          >
+            {editingAC ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+                <Textarea
+                  value={acValue}
+                  onChange={(e) => setACValue(e.target.value)}
+                  autoFocus
+                  rows={4}
+                  placeholder="Acceptance criteria..."
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                />
+                <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                  <Button variant="ghost" onClick={() => { setEditingAC(false); setACValue(task.acceptance_criteria ?? ""); }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleACSave}>Save</Button>
+                </div>
               </div>
-            </div>
-          ) : task.acceptance_criteria ? (
-            <p
-              onClick={() => setEditingAC(true)}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.text,
-                cursor: "pointer",
-                whiteSpace: "pre-wrap",
-                lineHeight: 1.5,
-              }}
-              title="Click to edit acceptance criteria"
-            >
-              {task.acceptance_criteria}
-            </p>
-          ) : (
-            <p
-              onClick={() => setEditingAC(true)}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
-                fontStyle: "italic",
-                cursor: "pointer",
-              }}
-              title="Click to add acceptance criteria"
-            >
-              No acceptance criteria
-            </p>
-          )}
-        </Card>
+            ) : task.acceptance_criteria ? (
+              <p
+                onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }}
+                style={{
+                  margin: 0,
+                  fontSize: theme.font.size.sm,
+                  color: theme.color.text,
+                  cursor: "pointer",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.5,
+                }}
+                title="Click to edit acceptance criteria"
+              >
+                {task.acceptance_criteria}
+              </p>
+            ) : (
+              <p
+                onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }}
+                style={{
+                  margin: 0,
+                  fontSize: theme.font.size.sm,
+                  color: theme.color.textFaint,
+                  fontStyle: "italic",
+                  cursor: "pointer",
+                }}
+                title="Click to add acceptance criteria"
+              >
+                No acceptance criteria
+              </p>
+            )}
+          </ExpandableCard>
+        </div>
 
         {/* Dependencies -- always visible */}
         <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.sm }}>
