@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { Input } from "../atoms/Input";
+import { Textarea } from "../atoms/Textarea";
 import { Select } from "../atoms/Select";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import {
@@ -13,6 +14,8 @@ import {
 interface CreateTaskFields {
   title: string;
   summary?: string;
+  context?: string;
+  acceptance_criteria?: string;
   group_key?: string;
   status?: string;
   effort?: string;
@@ -50,6 +53,8 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
   const { theme } = useTheme();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const [context, setContext] = useState("");
+  const [acceptanceCriteria, setAcceptanceCriteria] = useState("");
   const [groupKey, setGroupKey] = useState("");
   const [status, setStatus] = useState("todo");
   const [effort, setEffort] = useState("");
@@ -67,6 +72,8 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
       await onCreated({
         title: title.trim(),
         summary: summary.trim() || undefined,
+        context: context.trim() || undefined,
+        acceptance_criteria: acceptanceCriteria.trim() || undefined,
         group_key: groupKey.trim() || undefined,
         status,
         effort: effort || undefined,
@@ -106,6 +113,26 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           placeholder="Brief task summary (optional)"
+        />
+
+        {/* Context */}
+        <Textarea
+          label="Context"
+          id="task-context"
+          value={context}
+          onChange={(e) => setContext(e.target.value)}
+          placeholder="Task context (optional)"
+          rows={3}
+        />
+
+        {/* Acceptance Criteria */}
+        <Textarea
+          label="Acceptance Criteria"
+          id="task-acceptance-criteria"
+          value={acceptanceCriteria}
+          onChange={(e) => setAcceptanceCriteria(e.target.value)}
+          placeholder="Acceptance criteria (optional)"
+          rows={3}
         />
 
         {/* Group Key */}

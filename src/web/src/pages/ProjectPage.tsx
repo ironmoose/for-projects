@@ -367,6 +367,14 @@ function TaskDetailPanel({
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryValue, setSummaryValue] = useState(task.summary ?? "");
 
+  // Context editing state
+  const [editingContext, setEditingContext] = useState(false);
+  const [contextValue, setContextValue] = useState(task.context ?? "");
+
+  // Acceptance criteria editing state
+  const [editingAC, setEditingAC] = useState(false);
+  const [acValue, setACValue] = useState(task.acceptance_criteria ?? "");
+
   // Group key editing state
   const [editingGroupKey, setEditingGroupKey] = useState(false);
   const [groupKeyValue, setGroupKeyValue] = useState(task.group_key ?? "");
@@ -442,6 +450,14 @@ function TaskDetailPanel({
   }, [task.summary, editingSummary]);
 
   useEffect(() => {
+    if (!editingContext) setContextValue(task.context ?? "");
+  }, [task.context, editingContext]);
+
+  useEffect(() => {
+    if (!editingAC) setACValue(task.acceptance_criteria ?? "");
+  }, [task.acceptance_criteria, editingAC]);
+
+  useEffect(() => {
     if (!editingGroupKey) setGroupKeyValue(task.group_key ?? "");
   }, [task.group_key, editingGroupKey]);
 
@@ -449,14 +465,16 @@ function TaskDetailPanel({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (editingTitle) { setEditingTitle(false); setTitleValue(task.title); return; }
+        if (editingContext) { setEditingContext(false); setContextValue(task.context ?? ""); return; }
         if (editingSummary) { setEditingSummary(false); setSummaryValue(task.summary ?? ""); return; }
+        if (editingAC) { setEditingAC(false); setACValue(task.acceptance_criteria ?? ""); return; }
         if (editingGroupKey) { setEditingGroupKey(false); setGroupKeyValue(task.group_key ?? ""); return; }
         onClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, editingTitle, editingSummary, editingGroupKey, task.title, task.summary, task.group_key]);
+  }, [onClose, editingTitle, editingContext, editingSummary, editingAC, editingGroupKey, task.title, task.context, task.summary, task.acceptance_criteria, task.group_key]);
 
   // --- Metadata save handlers ---
   async function handleMetadataChange(field: string, value: string) {
@@ -484,6 +502,28 @@ function TaskDetailPanel({
     }
     await onUpdate(task.id, { summary: sendValue });
     setEditingSummary(false);
+  }
+
+  async function handleContextSave() {
+    const trimmed = contextValue.trim();
+    const sendValue = trimmed === "" ? null : trimmed;
+    if (sendValue === (task.context ?? null)) {
+      setEditingContext(false);
+      return;
+    }
+    await onUpdate(task.id, { context: sendValue });
+    setEditingContext(false);
+  }
+
+  async function handleACSave() {
+    const trimmed = acValue.trim();
+    const sendValue = trimmed === "" ? null : trimmed;
+    if (sendValue === (task.acceptance_criteria ?? null)) {
+      setEditingAC(false);
+      return;
+    }
+    await onUpdate(task.id, { acceptance_criteria: sendValue });
+    setEditingAC(false);
   }
 
   async function handleGroupKeySave() {
@@ -640,6 +680,63 @@ function TaskDetailPanel({
           </MetadataField>
         </div>
 
+        {/* Context -- editable */}
+        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
+            <SectionLabel>Context</SectionLabel>
+            {!editingContext && (
+              <IconButton icon="edit" size={14} onClick={() => setEditingContext(true)} aria-label="Edit context" />
+            )}
+          </div>
+          {editingContext ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={contextValue}
+                onChange={(e) => setContextValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Task context..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(task.context ?? ""); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleContextSave}>Save</Button>
+              </div>
+            </div>
+          ) : task.context ? (
+            <p
+              onClick={() => setEditingContext(true)}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.text,
+                cursor: "pointer",
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.5,
+              }}
+              title="Click to edit context"
+            >
+              {task.context}
+            </p>
+          ) : (
+            <p
+              onClick={() => setEditingContext(true)}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.textFaint,
+                fontStyle: "italic",
+                cursor: "pointer",
+              }}
+              title="Click to add context"
+            >
+              No context
+            </p>
+          )}
+        </Card>
+
         {/* Summary -- editable */}
         <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
@@ -693,6 +790,63 @@ function TaskDetailPanel({
               title="Click to add summary"
             >
               No summary
+            </p>
+          )}
+        </Card>
+
+        {/* Acceptance Criteria -- editable */}
+        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.md }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
+            <SectionLabel>Acceptance Criteria</SectionLabel>
+            {!editingAC && (
+              <IconButton icon="edit" size={14} onClick={() => setEditingAC(true)} aria-label="Edit acceptance criteria" />
+            )}
+          </div>
+          {editingAC ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={acValue}
+                onChange={(e) => setACValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Acceptance criteria..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingAC(false); setACValue(task.acceptance_criteria ?? ""); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleACSave}>Save</Button>
+              </div>
+            </div>
+          ) : task.acceptance_criteria ? (
+            <p
+              onClick={() => setEditingAC(true)}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.text,
+                cursor: "pointer",
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.5,
+              }}
+              title="Click to edit acceptance criteria"
+            >
+              {task.acceptance_criteria}
+            </p>
+          ) : (
+            <p
+              onClick={() => setEditingAC(true)}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.textFaint,
+                fontStyle: "italic",
+                cursor: "pointer",
+              }}
+              title="Click to add acceptance criteria"
+            >
+              No acceptance criteria
             </p>
           )}
         </Card>
@@ -863,7 +1017,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   const handleClosePanel = useCallback(() => setSelectedTaskId(null), []);
 
-  async function handleAddTask(fields: { title: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }) {
+  async function handleAddTask(fields: { title: string; summary?: string; context?: string; acceptance_criteria?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string }) {
     await addTask(fields);
   }
 

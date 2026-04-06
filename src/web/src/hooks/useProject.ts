@@ -60,7 +60,7 @@ export function useProject(projectId: string) {
     }
   }
 
-  async function addTask(input: { title: string; summary?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; documents?: DocumentsMergePatch }) {
+  async function addTask(input: { title: string; summary?: string; context?: string; acceptance_criteria?: string; group_key?: string; status?: string; effort?: string; impact?: string; category?: string; documents?: DocumentsMergePatch }) {
     if (!project) return;
     await createTasks([{ project_id: project.id, ...input }]);
   }
