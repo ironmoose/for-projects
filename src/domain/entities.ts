@@ -9,6 +9,9 @@ export const TAG_NAMES = [
   'architecture', 'conventions', 'guide', 'reference', 'decision', 'troubleshooting',
   'security', 'performance', 'testing', 'accessibility',
 ] as const;
+export const DOCUMENT_REFERENCE_TYPES = ['goal', 'plan', 'requirements', 'design', 'reference', 'note'] as const;
+export type DocumentReferenceType = typeof DOCUMENT_REFERENCE_TYPES[number];
+
 export const DEPENDENCY_TYPES = ['blocks', 'relates_to'] as const;
 export type DependencyType = typeof DEPENDENCY_TYPES[number];
 

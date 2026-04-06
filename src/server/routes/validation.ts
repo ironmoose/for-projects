@@ -30,7 +30,7 @@ export const documentsMergePatchSchema = z.record(
  */
 export function validateDocumentsMergePatch(
   documents: unknown,
-  itemIndex: number,
+  itemIndex?: number,
 ): Record<string, { type: DocumentReferenceType }[] | null> | undefined {
   if (documents === undefined) return undefined;
 
@@ -40,8 +40,9 @@ export function validateDocumentsMergePatch(
       const path = issue.path.length > 0 ? ` at documents.${issue.path.join(".")}` : "";
       return `${issue.message}${path}`;
     });
+    const prefix = itemIndex !== undefined ? `items[${itemIndex}].documents: ` : "Invalid documents merge-patch: ";
     throw new DocumentsMergePatchError(
-      `items[${itemIndex}].documents: ${issues.join("; ")}`,
+      `${prefix}${issues.join("; ")}`,
     );
   }
   return result.data;

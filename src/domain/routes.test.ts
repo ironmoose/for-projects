@@ -474,6 +474,99 @@ describe("Task Routes", () => {
     expect(body[p3.id].counts.done).toBeUndefined();
     expect(body[p3.id].counts.in_progress).toBeUndefined();
   });
+
+  it("POST /tasks accepts optional documents field and passes through", async () => {
+    const res = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        project_id: projectId,
+        title: "Task with docs",
+        documents: { "doc-123": [{ type: "goal" }] },
+      }] }),
+    });
+    // Service ignores the documents field for now, but the route should not reject it
+    expect(res.status).toBe(201);
+  });
+
+  it("PATCH /tasks accepts valid documents merge-patch", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Patch docs task" }] }),
+    });
+    const [task] = await create.json();
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        id: task.id,
+        documents: {
+          "doc-1": [{ type: "design" }, { type: "reference" }],
+          "doc-2": [{ type: "goal" }],
+          "doc-3": null,
+        },
+      }] }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /tasks returns 400 for invalid documents merge-patch (bad type)", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Bad docs task" }] }),
+    });
+    const [task] = await create.json();
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        id: task.id,
+        documents: { "doc-1": [{ type: "invalid_type" }] },
+      }] }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Invalid documents merge-patch");
+  });
+
+  it("PATCH /tasks returns 400 for invalid documents merge-patch (wrong shape)", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "Wrong shape task" }] }),
+    });
+    const [task] = await create.json();
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{
+        id: task.id,
+        documents: { "doc-1": "not-an-array" },
+      }] }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Invalid documents merge-patch");
+  });
+
+  it("PATCH /tasks works normally when documents field is absent", async () => {
+    const create = await req("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ project_id: projectId, title: "No docs task" }] }),
+    });
+    const [task] = await create.json();
+    const res = await req("/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ id: task.id, title: "Updated title" }] }),
+    });
+    expect(res.status).toBe(200);
+    const [body] = await res.json();
+    expect(body.title).toBe("Updated title");
+  });
 });
 
 // ---------------------------------------------------------------------------
