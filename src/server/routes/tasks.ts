@@ -5,6 +5,7 @@ import type {
   CreateTaskInput,
   UpdateTaskInput,
 } from "../../domain";
+import { validateDocumentsMergePatch, DocumentsMergePatchError } from "./validation";
 
 export function taskRoutes(service: ITaskService, depService?: ITaskDependencyService): Hono {
   const app = new Hono();
@@ -41,6 +42,7 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
   app.post("/", async (c) => {
     const body = await c.req.json<{ items: CreateTaskInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
+    // documents field is passed through to the service layer (validation happens there)
     const tasks = service.create(body.items);
     return c.json(tasks, 201);
   });
@@ -67,6 +69,19 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateTaskInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
+    // Validate documents merge-patch at the route level (Zod)
+    try {
+      for (const item of body.items) {
+        if (item.documents !== undefined) {
+          validateDocumentsMergePatch(item.documents);
+        }
+      }
+    } catch (err) {
+      if (err instanceof DocumentsMergePatchError) {
+        return c.json({ error: err.message }, 400);
+      }
+      throw err;
+    }
     const tasks = service.update(body.items);
     return c.json(tasks);
   });

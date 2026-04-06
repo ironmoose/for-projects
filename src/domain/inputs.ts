@@ -1,4 +1,12 @@
-import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType } from './entities';
+import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType, DocumentReferenceType } from './entities';
+
+/**
+ * Merge-patch for document references on an entity.
+ * - Key present with array of {type} objects: replaces all reference types for that document
+ * - Key present with null: removes all references to that document
+ * - Key absent: no change
+ */
+export type DocumentsMergePatch = Record<string, { type: DocumentReferenceType }[] | null>;
 
 export interface CreateDocumentInput {
   title: string;
@@ -46,6 +54,7 @@ export interface CreateTaskInput {
   effort?: EffortLevel;
   impact?: ImpactLevel;
   category?: TaskCategory;
+  documents?: DocumentsMergePatch;
 }
 
 export interface UpdateTaskInput {
@@ -62,4 +71,5 @@ export interface UpdateTaskInput {
   category?: TaskCategory | null;
   add_dependencies?: { task_id: string; type: DependencyType }[];
   remove_dependencies?: { task_id: string }[];
+  documents?: DocumentsMergePatch;
 }
