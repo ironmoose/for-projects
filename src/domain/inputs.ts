@@ -47,6 +47,8 @@ export interface CreateTaskInput {
   effort?: EffortLevel;
   impact?: ImpactLevel;
   category?: TaskCategory;
+  /** Merge-patch for document references on create. Key = document_id. Array = types for that doc. null values are silently ignored (no existing refs to remove). */
+  documents?: Record<string, { type: DocumentReferenceType }[] | null>;
 }
 
 export interface UpdateTaskInput {
@@ -62,4 +64,6 @@ export interface UpdateTaskInput {
   category?: TaskCategory | null;
   add_dependencies?: { task_id: string; type: DependencyType }[];
   remove_dependencies?: { task_id: string }[];
+  /** Merge-patch for document references. Key = document_id. Array = replace types for that doc. null = remove all refs. Absent key = untouched. */
+  documents?: Record<string, { type: DocumentReferenceType }[] | null>;
 }

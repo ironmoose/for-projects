@@ -1,6 +1,6 @@
-import { type Task, type TaskSummary, type GraphTaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
+import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentReferenceSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
-import type { ITaskService, ITaskDependencyService, Paginated } from "../services";
+import type { ITaskService, ITaskDependencyService, IDocumentReferenceService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
@@ -16,6 +16,7 @@ export class TaskService implements ITaskService {
     private eventBus: EventBus,
     private depRepo?: TaskDependencyRepository,
     private depService?: ITaskDependencyService,
+    private docRefService?: IDocumentReferenceService,
   ) {}
 
 
@@ -73,7 +74,7 @@ export class TaskService implements ITaskService {
     return { ...task, is_blocked: false };
   }
 
-  create(inputs: CreateTaskInput[]): Task[] {
+  create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[] {
     // Validate all inputs before any writes
     for (const input of inputs) {
       const project = this.projectRepo.findById(input.project_id);
@@ -104,6 +105,10 @@ export class TaskService implements ITaskService {
       if (input.category !== undefined && !(TASK_CATEGORIES as readonly string[]).includes(input.category)) {
         throw new ServiceError(`category must be one of: ${(TASK_CATEGORIES as readonly string[]).join(", ")}`, 400);
       }
+      // Pre-validate document references so we fail before creating the entity
+      if (input.documents && this.docRefService) {
+        this.docRefService.validateMergePatch(input.documents);
+      }
     }
 
     const rows = inputs.map((input) => ({
@@ -121,6 +126,14 @@ export class TaskService implements ITaskService {
 
     const tasks = this.taskRepo.insertMany(rows);
 
+    // Create document references for each task
+    for (let i = 0; i < tasks.length; i++) {
+      const input = inputs[i];
+      if (input.documents && this.docRefService) {
+        this.docRefService.applyMergePatch("task", tasks[i].id, input.documents);
+      }
+    }
+
     for (const t of tasks) {
       this.activityLog.insert({
         entity_type: "task",
@@ -131,7 +144,11 @@ export class TaskService implements ITaskService {
     }
     this.eventBus.emit({ type: "created", entity_type: "task", ids: tasks.map((t) => t.id) });
 
-    return tasks;
+    // Return tasks with their document references
+    return tasks.map((t) => ({
+      ...t,
+      documents: this.docRefService?.getReferencesForEntity("task", t.id) ?? [],
+    }));
   }
 
   update(inputs: UpdateTaskInput[]): Task[] {
@@ -178,8 +195,8 @@ export class TaskService implements ITaskService {
       }
     }
 
-    // Strip dependency arrays from repo input
-    const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, ...rest }) => rest);
+    // Strip dependency arrays and documents from repo input
+    const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, documents, ...rest }) => rest);
     const tasks = this.taskRepo.updateMany(repoInputs);
 
     this.eventBus.beginBatch();
@@ -211,14 +228,24 @@ export class TaskService implements ITaskService {
         }
       }
 
+      // Process document reference merge-patch
+      if (this.docRefService) {
+        for (const input of inputs) {
+          if (input.documents) {
+            this.docRefService.applyMergePatch("task", input.id, input.documents);
+          }
+        }
+      }
+
       for (const t of tasks) {
         const input = inputs.find((i) => i.id === t.id);
-        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies");
+        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies" && k !== "documents");
         const added = input?.add_dependencies?.length ?? 0;
         const removed = input?.remove_dependencies?.length ?? 0;
         const summaryObj: Record<string, unknown> = { fields };
         if (added > 0) summaryObj.added_dependencies = added;
         if (removed > 0) summaryObj.removed_dependencies = removed;
+        if (input?.documents) summaryObj.documents_changed = Object.keys(input.documents).length;
         this.activityLog.insert({
           entity_type: "task",
           entity_id: t.id,
@@ -286,6 +313,9 @@ export class TaskService implements ITaskService {
   }
 
   remove(ids: string[]): void {
+    for (const id of ids) {
+      this.docRefService?.removeAllForEntity("task", id);
+    }
     this.taskRepo.deleteMany(ids);
     for (const id of ids) {
       this.activityLog.insert({
