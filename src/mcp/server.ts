@@ -77,8 +77,9 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tasks",
     {
-      description: "List task summaries, optionally filtered by project_id, group_key, status, effort, impact, category, and/or blocked. status accepts an array of status values (e.g. [\"in_progress\", \"todo\"]). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, is_blocked, timestamps). Use blocked=true to find tasks waiting on dependencies, blocked=false to find tasks ready to work on.",
+      description: "List task summaries, optionally filtered by title, project_id, group_key, status, effort, impact, category, and/or blocked. status accepts an array of status values (e.g. [\"in_progress\", \"todo\"]). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, is_blocked, timestamps). Use blocked=true to find tasks waiting on dependencies, blocked=false to find tasks ready to work on.",
       inputSchema: {
+        title: z.string().max(255).optional(),
         project_id: z.string().max(26).optional(),
         group_key: z.string().max(32).optional(),
         status: z.array(z.enum([...TASK_STATUSES])).optional(),
@@ -90,7 +91,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ project_id, group_key, status, effort, impact, category, blocked, limit, offset }) => handle(() => taskService.list({ project_id, group_key, status, effort, impact, category, blocked, limit, offset }))
+    ({ title, project_id, group_key, status, effort, impact, category, blocked, limit, offset }) => handle(() => taskService.list({ title, project_id, group_key, status, effort, impact, category, blocked, limit, offset }))
   );
 
   server.registerTool(
