@@ -29,6 +29,7 @@ export function ExpandableCard({
   headerAction,
 }: ExpandableCardProps) {
   const { theme } = useTheme();
+  const [headerHovered, setHeaderHovered] = useState(false);
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isFirstRender = useRef(true);
 
@@ -55,11 +56,20 @@ export function ExpandableCard({
     <Card
       variant={variant}
       padding="xs"
-      hover
-      style={{ cursor: "pointer", ...style }}
-      onClick={handleClick}
+      style={style}
     >
       <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+        onMouseEnter={() => setHeaderHovered(true)}
+        onMouseLeave={() => setHeaderHovered(false)}
         style={{
           borderRadius: theme.radius.lg,
           padding: title
@@ -71,6 +81,9 @@ export function ExpandableCard({
           justifyContent: "space-between",
           minHeight: title ? 44 : 28,
           boxSizing: "border-box",
+          cursor: "pointer",
+          background: headerHovered ? theme.color.surfaceContainerHigh : "transparent",
+          transition: `background ${theme.motion.fast} ${theme.motion.easing}`,
         }}
       >
         {title && (
