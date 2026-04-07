@@ -367,11 +367,11 @@ function MetadataField({
 
 type EditableTextField = "description" | "plan" | "implementation" | "acceptance_criteria";
 
-const TEXT_FIELDS: { key: EditableTextField; label: string; defaultOpen: boolean }[] = [
-  { key: "description", label: "Description", defaultOpen: true },
-  { key: "plan", label: "Plan", defaultOpen: false },
-  { key: "implementation", label: "Implementation", defaultOpen: false },
-  { key: "acceptance_criteria", label: "Acceptance Criteria", defaultOpen: false },
+const TEXT_FIELDS: { key: EditableTextField; label: string }[] = [
+  { key: "description", label: "Description" },
+  { key: "plan", label: "Plan" },
+  { key: "implementation", label: "Implementation" },
+  { key: "acceptance_criteria", label: "Acceptance Criteria" },
 ];
 
 function TaskDetailPanel({
@@ -394,6 +394,7 @@ function TaskDetailPanel({
   // Text field editing state — only one at a time
   const [editingTextField, setEditingTextField] = useState<EditableTextField | null>(null);
   const [editTextValue, setEditTextValue] = useState("");
+  const [expandedTextField, setExpandedTextField] = useState<EditableTextField | null>("description");
 
   // Group key editing state
   const [editingGroupKey, setEditingGroupKey] = useState(false);
@@ -699,11 +700,12 @@ function TaskDetailPanel({
             </div>
 
             {/* Text fields — each with edit button, only one editable at a time */}
-            {TEXT_FIELDS.map(({ key, label, defaultOpen }, idx) => (
+            {TEXT_FIELDS.map(({ key, label }, idx) => (
               <ExpandableCard
                 key={key}
                 title={label}
-                defaultOpen={defaultOpen}
+                open={editingTextField === key || expandedTextField === key}
+                onToggle={(nextOpen) => setExpandedTextField(nextOpen ? key : null)}
                 variant="flat"
                 style={{ marginBottom: idx < TEXT_FIELDS.length - 1 ? theme.spacing.sm : 0 }}
                 headerAction={editingTextField !== key ? editButton(key) : undefined}
@@ -1065,6 +1067,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   type EditableField = "goal" | "requirements" | "design";
   const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [expandedProjectCard, setExpandedProjectCard] = useState<EditableField | null>("goal");
   const [showDocPicker, setShowDocPicker] = useState(false);
 
   const [graphStatusFilter, setGraphStatusFilter] = useState("in_progress,todo");
@@ -1338,16 +1341,17 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         }}>
           {/* Markdown sections: goal, requirements, design */}
           {([
-            { key: "goal" as const, label: "Goal", defaultOpen: true },
-            { key: "requirements" as const, label: "Requirements", defaultOpen: false },
-            { key: "design" as const, label: "Design", defaultOpen: false },
-          ]).map(({ key, label, defaultOpen }) => {
+            { key: "goal" as const, label: "Goal" },
+            { key: "requirements" as const, label: "Requirements" },
+            { key: "design" as const, label: "Design" },
+          ]).map(({ key, label }) => {
             const isEditing = editingField === key;
             return (
               <ExpandableCard
                 key={key}
                 title={label}
-                defaultOpen={isEditing || isWide || defaultOpen}
+                open={isEditing || expandedProjectCard === key}
+                onToggle={(nextOpen) => setExpandedProjectCard(nextOpen ? key : null)}
                 style={{ marginBottom: theme.spacing.xl }}
                 headerAction={
                   !isEditing ? (
