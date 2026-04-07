@@ -56,11 +56,11 @@ Core tables: `projects`, `tasks`, `document_references`, `activity_log`.
 **task_dependencies:** `source_task_id`, `target_task_id`, `dependency_type`, `created_at` — supports `blocks` and `relates_to` edge types.
 
 Knowledge base tables (migration 009+):
-- `documents` — id, title, summary, content, favorite, created_at, updated_at (top-level entity)
+- `documents` — id, title, summary, content, folder, favorite, created_at, updated_at (top-level entity)
 - `tags` — id, name (unique index), created_at
 - `entity_tags` — entity_type, entity_id, tag_id (polymorphic join; composite PK; no FK on entity_id)
 
-Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks.
+Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 024 added `folder` column to `documents`. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks.
 
 ### REST API
 
@@ -70,10 +70,10 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 - `PATCH /api/projects` — `{items: [{id, title?, summary?, documents?}]}`
 - `POST /api/tasks` — `{items: [{project_id, title, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, documents?}]}`
 - `PATCH /api/tasks` — `{items: [{id, title?, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, documents?, add_dependencies?, remove_dependencies?}]}`
-- `GET /api/tasks` — supports filters: `project_id`, `status`, `effort`, `impact`, `category`, `group_key`, `blocked`
-- `POST /api/documents` — `{items: [{title, summary?, content?, tags?, favorite?}]}` batch create
-- `PATCH /api/documents` — `{items: [{id, title?, summary?, content?, tags?, favorite?}]}` batch update; tags array replaces all existing tags
-- `GET /api/documents` — list with pagination, `?tag`, `?title`, `?search`, `?favorite`, `?entity_type`+`?entity_id` filters
+- `GET /api/tasks` — supports filters: `project_id`, `status`, `effort`, `impact`, `category`, `group_key`, `title`, `blocked`
+- `POST /api/documents` — `{items: [{title, summary?, content?, folder?, tags?, favorite?}]}` batch create
+- `PATCH /api/documents` — `{items: [{id, title?, summary?, content?, folder?, tags?, favorite?}]}` batch update; tags array replaces all existing tags
+- `GET /api/documents` — list with pagination, `?tag`, `?title`, `?search`, `?favorite`, `?folder`, `?entity_type`+`?entity_id` filters
 - `GET /api/documents/:id` — full content with tags
 - `DELETE /api/documents` — `{ids: [...]}` batch delete
 
