@@ -1316,25 +1316,15 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
               </Button>
             </Stack>
             <ProjectDocumentTable
-              documents={(project.documents ?? []).map((d) => ({
-                id: d.document_id,
-                title: d.title,
-                summary: d.summary,
-                folder: null,
-                has_content: true,
-                favorite: d.favorite,
-                tags: [],
-                created_at: "",
-                updated_at: "",
-              }))}
+              documents={project.documents ?? []}
               selectedDocumentId={selectedDocumentId}
               onSelectDocument={(docId) => setSelectedDocumentId(docId)}
               onDetachDocument={(doc) => {
-                const mergePatch: DocumentsMergePatch = { [doc.id]: null };
+                const mergePatch: DocumentsMergePatch = { [doc.document_id]: null };
                 updateProject({ documents: mergePatch }).catch(() => {});
               }}
               onToggleFavorite={(doc) => {
-                updateDocuments([{ id: doc.id, favorite: !doc.favorite } as Parameters<typeof updateDocuments>[0][0]]).catch(() => {});
+                updateDocuments([{ id: doc.document_id, favorite: !doc.favorite } as Parameters<typeof updateDocuments>[0][0]]).catch(() => {});
               }}
             />
           </div>
