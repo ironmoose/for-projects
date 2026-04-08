@@ -30,11 +30,8 @@ import {
   PageHeader,
   Pagination,
   MetadataTable,
-  PresenceCharm,
-  ThemeSwitcher,
   DocumentSearchBar,
   TaskTableFilters,
-  DocumentReferenceCard,
   ModalShell,
   ConfirmDialog,
   TopBar,
@@ -44,7 +41,9 @@ import {
   CreateProjectOverlay,
   CreateTaskOverlay,
   CreateDocumentOverlay,
-  DocumentReferenceSection,
+  DocumentReaderModal,
+  DocumentReferencePicker,
+  ShortcutHelpOverlay,
   TaskTable,
   DocumentTable,
   ProjectDocumentTable,
@@ -53,7 +52,7 @@ import {
   DetailPageLayout,
 } from "../components";
 import type { NavItem } from "../components";
-import type { TagName, TaskStatus, DocumentReferenceDetail, ReferenceType } from "../types";
+import type { TagName, TaskStatus } from "../types";
 import type { ProgressBarSegment } from "../components";
 import type { TaskSummary, DocumentSummary } from "../types";
 import type { GraphNode } from "../api";
@@ -167,11 +166,6 @@ const MOCK_DOCUMENTS: DocumentSummary[] = [
   { id: "01DOC002", title: "API Conventions Guide", summary: "Standards for REST endpoints, error handling, and validation", folder: "conventions", favorite: false, has_content: true, tags: ["conventions", "api"], linked_projects: [{ id: "01PROJ001", title: "tab-for-projects" }, { id: "01PROJ002", title: "another-project" }], created_at: "2026-02-10T09:00:00Z", updated_at: "2026-03-20T11:00:00Z" },
   { id: "01DOC003", title: "Frontend Component Patterns", summary: "Atomic design patterns used across the UI", folder: "conventions", favorite: false, has_content: false, tags: ["ui", "conventions"], linked_projects: [], created_at: "2026-02-15T08:00:00Z", updated_at: "2026-02-15T08:00:00Z" },
   { id: "01DOC004", title: "Sprint Retrospective Notes", summary: null, folder: null, favorite: false, has_content: true, tags: [], linked_projects: [], created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-01T10:00:00Z" },
-];
-
-const MOCK_REFERENCES: DocumentReferenceDetail[] = [
-  { document_id: "01DOC001", type: "design" as ReferenceType, title: "Architecture Decision Record: SQLite", summary: "Why we chose SQLite", favorite: true },
-  { document_id: "01DOC002", type: "reference" as ReferenceType, title: "API Conventions Guide", summary: "Standards for REST endpoints", favorite: false },
 ];
 
 const MOCK_GRAPH_TASKS: GraphNode[] = [
@@ -709,36 +703,6 @@ export function registerAllComponents(): void {
   });
 
   registerComponent({
-    name: "PresenceCharm",
-    description: "Small colored dot indicating presence or content availability.",
-    category: "molecule",
-    propDefs: [
-      { name: "active", type: "boolean", defaultValue: true },
-      { name: "label", type: "string", defaultValue: "Content" },
-    ],
-    render: (props) => (
-      <PresenceCharm
-        active={props.active as boolean}
-        label={String(props.label)}
-      />
-    ),
-    variants: [
-      { name: "Active", props: { active: true, label: "Content available" } },
-      { name: "Inactive", props: { active: false, label: "No content" } },
-    ],
-    codeTemplate: `<PresenceCharm active={hasContent} label="Content" />`,
-  });
-
-  registerComponent({
-    name: "ThemeSwitcher",
-    description: "Theme selection buttons showing available color themes as circular swatches.",
-    category: "molecule",
-    propDefs: [],
-    render: () => <ThemeSwitcher />,
-    codeTemplate: `<ThemeSwitcher />`,
-  });
-
-  registerComponent({
     name: "DocumentSearchBar",
     description: "Search and filter bar for the documents list with title search, tag filter, folder filter, and favorites toggle.",
     category: "molecule",
@@ -763,33 +727,6 @@ export function registerAllComponents(): void {
     propDefs: [],
     render: () => <FolderInputDemo />,
     codeTemplate: `<FolderInput value={folder} folders={knownFolders} onChange={setFolder} />`,
-  });
-
-  registerComponent({
-    name: "DocumentReferenceCard",
-    description: "Compact card showing a linked document reference with type badge, title, summary preview, and tags.",
-    category: "molecule",
-    propDefs: [],
-    render: () => (
-      <div style={{ width: 320 }}>
-        <DocumentReferenceCard
-          reference={{
-            document_id: "01DOC001",
-            type: "design" as ReferenceType,
-            title: "Architecture Decision Record: SQLite",
-            summary: "Explains why SQLite was chosen over PostgreSQL for the single-process project management tool.",
-            favorite: true,
-            tags: ["architecture", "backend", "database"],
-          }}
-          onOpen={() => {}}
-          onDetach={() => {}}
-        />
-      </div>
-    ),
-    variants: [
-      { name: "With tags", props: {} },
-    ],
-    codeTemplate: `<DocumentReferenceCard reference={ref} onOpen={() => openDoc(ref.document_id)} onDetach={() => detach(ref.document_id)} />`,
   });
 
   // =========================================================================
@@ -944,30 +881,48 @@ export function registerAllComponents(): void {
   });
 
   registerComponent({
-    name: "DocumentReferenceSection",
-    description: "Expandable card section grouping document references by type (goal, plan, design, etc.) with add and detach actions.",
+    name: "DocumentReaderModal",
+    description: "Full-screen modal for reading and editing a document with markdown preview, metadata editing, tag management, and folder selection.",
     category: "organism",
-    propDefs: [
-      { name: "type", type: "enum", defaultValue: "design", options: ["goal", "plan", "requirements", "design", "reference", "note"] },
-      { name: "defaultOpen", type: "boolean", defaultValue: true },
-    ],
-    render: (props) => (
-      <div style={{ width: 360 }}>
-        <DocumentReferenceSection
-          type={props.type as ReferenceType}
-          references={MOCK_REFERENCES.filter((r) => r.type === props.type)}
-          onOpenDocument={() => {}}
-          onDetachDocument={() => {}}
-          onAddDocument={() => {}}
-          defaultOpen={props.defaultOpen as boolean}
-        />
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", border: "1px dashed #555", borderRadius: 8, padding: 16 }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#888" }}>
+          DocumentReaderModal opens as a large modal displaying document content with markdown rendering, inline editing, tag management, folder selection, and copy-to-clipboard.
+        </p>
       </div>
     ),
-    variants: [
-      { name: "Design (with refs)", props: { type: "design", defaultOpen: true } },
-      { name: "Goal (empty)", props: { type: "goal", defaultOpen: true } },
-    ],
-    codeTemplate: `<DocumentReferenceSection type="design" references={refs} onOpenDocument={openDoc} onDetachDocument={detach} onAddDocument={add} />`,
+    codeTemplate: `<DocumentReaderModal documentId={selectedDocId} onClose={handleClose} />`,
+  });
+
+  registerComponent({
+    name: "DocumentReferencePicker",
+    description: "Modal overlay for linking documents to an entity (project or task) with search, type selection, and merge-patch semantics.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", border: "1px dashed #555", borderRadius: 8, padding: 16 }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#888" }}>
+          DocumentReferencePicker opens as a modal with document search, already-linked section, available documents list, and reference type selection.
+        </p>
+      </div>
+    ),
+    codeTemplate: `<DocumentReferencePicker entityType="project" entityId={projectId} existingReferences={refs} onSave={handleSave} onClose={handleClose} />`,
+  });
+
+  registerComponent({
+    name: "ShortcutHelpOverlay",
+    description: "Modal displaying all registered keyboard shortcuts grouped by scope with styled key badges.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", border: "1px dashed #555", borderRadius: 8, padding: 16 }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#888" }}>
+          ShortcutHelpOverlay opens as a modal listing all keyboard shortcuts grouped by scope (Global, Projects, Documents, etc.) with styled key badges.
+        </p>
+      </div>
+    ),
+    codeTemplate: `<ShortcutHelpOverlay onClose={handleClose} />`,
   });
 
   registerComponent({
