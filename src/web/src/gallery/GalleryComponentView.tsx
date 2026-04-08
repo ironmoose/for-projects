@@ -64,7 +64,7 @@ export function GalleryComponentView({ entry, onBack }: GalleryComponentViewProp
 
       {/* Multi-theme preview */}
       <div style={{ marginBottom: 24 }}>
-        <h3 style={{ color: vt.textMuted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
+        <h3 style={{ ...vt.sectionHeader, marginBottom: 12 }}>
           Preview (all themes)
         </h3>
         <PreviewPanel>
@@ -89,7 +89,7 @@ export function GalleryComponentView({ entry, onBack }: GalleryComponentViewProp
       {/* Variants */}
       {entry.variants && entry.variants.length > 0 && (
         <div style={{ marginBottom: 24 }}>
-          <h3 style={{ color: vt.textMuted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
+          <h3 style={{ ...vt.sectionHeader, marginBottom: 12 }}>
             Variants
           </h3>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -119,7 +119,7 @@ export function GalleryComponentView({ entry, onBack }: GalleryComponentViewProp
       {/* Code template */}
       {entry.codeTemplate && (
         <div style={{ marginBottom: 24 }}>
-          <h3 style={{ color: vt.textMuted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
+          <h3 style={{ ...vt.sectionHeader, marginBottom: 12 }}>
             Usage
           </h3>
           <CodeSnippet code={entry.codeTemplate} />

@@ -23,12 +23,9 @@ export function PreviewPanel({ children }: PreviewPanelProps) {
         >
           <div
             style={{
+              ...vt.sectionHeader,
               padding: "6px 12px",
               fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: vt.textMuted,
               background: vt.surfaceHigh,
               borderBottom: `1px solid ${vt.border}`,
             }}

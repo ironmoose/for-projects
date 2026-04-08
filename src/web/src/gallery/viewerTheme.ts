@@ -10,4 +10,11 @@ export const viewerTheme = {
   border: "#2a2a42",
   font: "'Inter', system-ui, sans-serif",
   mono: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+    color: "#8888a0", // same as textMuted
+  } as const,
 } as const;

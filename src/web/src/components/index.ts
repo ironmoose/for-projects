@@ -16,29 +16,25 @@ export { Skeleton, CardSkeleton, RowSkeleton } from "./atoms/Skeleton";
 export { ActivityIndicator } from "./atoms/ActivityIndicator";
 export { ProgressBar } from "./atoms/ProgressBar";
 export type { ProgressBarSegment, ProgressBarProps } from "./atoms/ProgressBar";
+export { ReferenceTypeBadge } from "./atoms/ReferenceTypeBadge";
 // Molecules
 export { Card } from "./molecules/Card";
 export { ExpandableCard } from "./molecules/ExpandableCard";
 export { Stack } from "./molecules/Stack";
 export { Markdown } from "./molecules/Markdown";
 export { PageHeader } from "./molecules/PageHeader";
-export { CreateEntityOverlay } from "./organisms/CreateEntityOverlay";
-export { ListItem } from "./molecules/ListItem";
 export { TagChip } from "./molecules/TagChip";
-export { AddItemInput } from "./molecules/AddItemInput";
 export { MetadataTable } from "./molecules/MetadataTable";
 export { EmptyState } from "./molecules/EmptyState";
 export { BackButton } from "./molecules/BackButton";
 export { Pagination } from "./molecules/Pagination";
-export { HighlightOnChange } from "./molecules/HighlightOnChange";
-export { AnimatedList } from "./molecules/AnimatedList";
 export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 export { PresenceCharm } from "./molecules/PresenceCharm";
-export { CollapsibleSection } from "./molecules/CollapsibleSection";
 export { TaskTableFilters } from "./molecules/TaskTableFilters";
 export { DocumentSearchBar } from "./molecules/DocumentSearchBar";
 export { DependencyChip } from "./molecules/DependencyChip";
 export { TagPicker } from "./molecules/TagPicker";
+export { DocumentReferenceCard } from "./molecules/DocumentReferenceCard";
 // Organisms
 export { TopBar } from "./organisms/TopBar";
 export type { NavItem } from "./organisms/TopBar";
@@ -46,6 +42,7 @@ export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
 export { ConfirmDialog } from "./organisms/ConfirmDialog";
+export { CreateEntityOverlay } from "./organisms/CreateEntityOverlay";
 export { TaskTable } from "./organisms/TaskTable";
 export { CreateProjectOverlay } from "./organisms/CreateProjectOverlay";
 export { CreateTaskOverlay } from "./organisms/CreateTaskOverlay";
@@ -60,10 +57,6 @@ export { DependencyGraphView } from "./organisms/DependencyGraphView";
 export { ModalShell } from "./organisms/ModalShell";
 export { DocumentReferenceSection } from "./organisms/DocumentReferenceSection";
 export type { DependencyGraphViewProps } from "./organisms/DependencyGraphView";
-// Atoms
-export { ReferenceTypeBadge } from "./atoms/ReferenceTypeBadge";
-// Molecules
-export { DocumentReferenceCard } from "./molecules/DocumentReferenceCard";
 
 // Templates
 export { ListPageLayout } from "./templates/ListPageLayout";

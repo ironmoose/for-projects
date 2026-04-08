@@ -18,10 +18,7 @@ export function GalleryIndex({ onSelect }: GalleryIndexProps) {
           <div key={cat} style={{ marginBottom: 32 }}>
             <h2
               style={{
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
+                ...vt.sectionHeader,
                 color: vt.accent,
                 marginBottom: 12,
               }}

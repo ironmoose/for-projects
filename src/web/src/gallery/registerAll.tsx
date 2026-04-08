@@ -23,30 +23,199 @@ import {
   ExpandableCard,
   DependencyChip,
   ReferenceTypeBadge,
+  Textarea,
+  Overlay,
+  ActivityIndicator,
+  Markdown,
+  PageHeader,
+  Pagination,
+  MetadataTable,
+  PresenceCharm,
+  ThemeSwitcher,
+  DocumentSearchBar,
+  TaskTableFilters,
+  DocumentReferenceCard,
+  ModalShell,
+  ConfirmDialog,
+  TopBar,
+  ConnectionStatus,
+  DisconnectionBanner,
+  CreateEntityOverlay,
+  CreateProjectOverlay,
+  CreateTaskOverlay,
+  CreateDocumentOverlay,
+  DocumentReferenceSection,
+  TaskTable,
+  DocumentTable,
+  ProjectDocumentTable,
+  DependencyGraphView,
+  ListPageLayout,
+  DetailPageLayout,
 } from "../components";
-import type { TagName } from "../types";
+import type { NavItem } from "../components";
+import type { TagName, TaskStatus, DocumentReferenceDetail, ReferenceType } from "../types";
 import type { ProgressBarSegment } from "../components";
+import type { TaskSummary, DocumentSummary } from "../types";
+import type { GraphNode } from "../api";
+import { FolderInput } from "../components/molecules/FolderInput";
+
+// ---------------------------------------------------------------------------
+// Demo wrapper components (stateful)
+// ---------------------------------------------------------------------------
 
 function TagPickerDemo() {
   const [selected, setSelected] = useState<TagName[]>(["ui", "conventions"]);
   return <TagPicker selected={selected} onChange={setSelected} />;
 }
 
+function DocumentSearchBarDemo() {
+  const [title, setTitle] = useState("");
+  const [tag, setTag] = useState("");
+  const [folder, setFolder] = useState("");
+  const [favorite, setFavorite] = useState(false);
+  return (
+    <DocumentSearchBar
+      title={title}
+      tag={tag}
+      folder={folder}
+      folders={["architecture", "conventions", "onboarding"]}
+      favorite={favorite}
+      onTitleChange={setTitle}
+      onTagChange={setTag}
+      onFolderChange={setFolder}
+      onFavoriteChange={setFavorite}
+    />
+  );
+}
+
+function TaskTableFiltersDemo() {
+  const [filter, setFilter] = useState<{
+    status?: string;
+    effort?: string;
+    impact?: string;
+    category?: string;
+    group_key?: string;
+    title?: string;
+  }>({});
+  return (
+    <TaskTableFilters
+      filter={filter}
+      onChange={setFilter}
+      groupKeys={["backend", "frontend", "infrastructure"]}
+    />
+  );
+}
+
+function FolderInputDemo() {
+  const [value, setValue] = useState("");
+  return (
+    <FolderInput
+      value={value}
+      folders={["architecture", "conventions", "onboarding", "api-docs"]}
+      onChange={setValue}
+    />
+  );
+}
+
+function ModalShellDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open Modal</Button>
+      {open && (
+        <ModalShell onClose={() => setOpen(false)}>
+          <h2 style={{ margin: 0 }}>Modal Title</h2>
+          <p style={{ margin: 0 }}>This is the modal content area. Press Escape or click the overlay to close.</p>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Close</Button>
+        </ModalShell>
+      )}
+    </>
+  );
+}
+
+function ConfirmDialogDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="danger" onClick={() => setOpen(true)}>Delete Item</Button>
+      {open && (
+        <ConfirmDialog
+          title="Delete this item?"
+          message="This action cannot be undone. The item and all associated data will be permanently removed."
+          confirmLabel="Delete"
+          onConfirm={async () => setOpen(false)}
+          onCancel={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mock data for organisms
+// ---------------------------------------------------------------------------
+
+const MOCK_TASKS: TaskSummary[] = [
+  { id: "01TASK001", project_id: "01PROJ001", title: "Set up database migrations", summary: null, status: "done" as TaskStatus, effort: "medium", impact: "high", category: "backend", group_key: "infrastructure", is_blocked: false, created_at: "2026-03-15T10:00:00Z", updated_at: "2026-03-20T14:30:00Z" },
+  { id: "01TASK002", project_id: "01PROJ001", title: "Implement REST API endpoints", summary: "Build CRUD routes for projects and tasks", status: "in_progress" as TaskStatus, effort: "high", impact: "high", category: "backend", group_key: "api", is_blocked: false, created_at: "2026-03-16T09:00:00Z", updated_at: "2026-04-01T11:00:00Z" },
+  { id: "01TASK003", project_id: "01PROJ001", title: "Design component gallery page", summary: null, status: "todo" as TaskStatus, effort: "low", impact: "medium", category: "frontend", group_key: "ui", is_blocked: false, created_at: "2026-03-18T08:00:00Z", updated_at: "2026-03-18T08:00:00Z" },
+  { id: "01TASK004", project_id: "01PROJ001", title: "Write integration tests for task service", summary: null, status: "todo" as TaskStatus, effort: "medium", impact: "medium", category: "backend", group_key: "api", is_blocked: true, created_at: "2026-03-19T10:00:00Z", updated_at: "2026-03-19T10:00:00Z" },
+];
+
+const MOCK_DOCUMENTS: DocumentSummary[] = [
+  { id: "01DOC001", title: "Architecture Decision Record: SQLite", summary: "Why we chose SQLite over Postgres for the project management tool", folder: "architecture", favorite: true, has_content: true, tags: ["architecture", "backend"], created_at: "2026-02-01T10:00:00Z", updated_at: "2026-03-15T14:30:00Z" },
+  { id: "01DOC002", title: "API Conventions Guide", summary: "Standards for REST endpoints, error handling, and validation", folder: "conventions", favorite: false, has_content: true, tags: ["conventions", "api"], created_at: "2026-02-10T09:00:00Z", updated_at: "2026-03-20T11:00:00Z" },
+  { id: "01DOC003", title: "Frontend Component Patterns", summary: "Atomic design patterns used across the UI", folder: "conventions", favorite: false, has_content: false, tags: ["ui", "conventions"], created_at: "2026-02-15T08:00:00Z", updated_at: "2026-02-15T08:00:00Z" },
+  { id: "01DOC004", title: "Sprint Retrospective Notes", summary: null, folder: null, favorite: false, has_content: true, tags: [], created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-01T10:00:00Z" },
+];
+
+const MOCK_REFERENCES: DocumentReferenceDetail[] = [
+  { document_id: "01DOC001", type: "design" as ReferenceType, title: "Architecture Decision Record: SQLite", summary: "Why we chose SQLite", favorite: true },
+  { document_id: "01DOC002", type: "reference" as ReferenceType, title: "API Conventions Guide", summary: "Standards for REST endpoints", favorite: false },
+];
+
+const MOCK_GRAPH_TASKS: GraphNode[] = [
+  { id: "01G001", title: "Define schema", status: "done" as TaskStatus },
+  { id: "01G002", title: "Build repository layer", status: "in_progress" as TaskStatus },
+  { id: "01G003", title: "Write service tests", status: "todo" as TaskStatus },
+  { id: "01G004", title: "Implement API routes", status: "todo" as TaskStatus },
+];
+
+const MOCK_GRAPH_EDGES = [
+  { source_task_id: "01G001", target_task_id: "01G002", dependency_type: "blocks" as const },
+  { source_task_id: "01G002", target_task_id: "01G003", dependency_type: "blocks" as const },
+  { source_task_id: "01G002", target_task_id: "01G004", dependency_type: "blocks" as const },
+  { source_task_id: "01G003", target_task_id: "01G004", dependency_type: "relates_to" as const },
+];
+
+const MOCK_NAV_ITEMS: NavItem[] = [
+  { label: "Projects", path: "/projects", icon: "folder" },
+  { label: "Documents", path: "/documents", icon: "description" },
+  { label: "Gallery", path: "/gallery", icon: "palette" },
+];
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
+
 export function registerAllComponents(): void {
+  // =========================================================================
   // Atoms
+  // =========================================================================
+
   registerComponent({
     name: "Button",
     description: "Primary action button with variants and sizes.",
     category: "atom",
     propDefs: [
-      { name: "variant", type: "enum", defaultValue: "primary", options: ["primary", "ghost"] },
+      { name: "variant", type: "enum", defaultValue: "primary", options: ["primary", "ghost", "danger", "icon"] },
       { name: "size", type: "enum", defaultValue: "md", options: ["sm", "md"] },
       { name: "children", type: "string", defaultValue: "Click Me" },
       { name: "disabled", type: "boolean", defaultValue: false },
     ],
     render: (props) => (
       <Button
-        variant={props.variant as "primary" | "ghost"}
+        variant={props.variant as "primary" | "ghost" | "danger" | "icon"}
         size={props.size as "sm" | "md"}
         disabled={props.disabled as boolean}
       >
@@ -56,6 +225,8 @@ export function registerAllComponents(): void {
     variants: [
       { name: "Primary", props: { variant: "primary" } },
       { name: "Ghost", props: { variant: "ghost" } },
+      { name: "Danger", props: { variant: "danger", children: "Delete" } },
+      { name: "Icon", props: { variant: "icon", children: "\u2605" } },
       { name: "Small", props: { size: "sm" } },
       { name: "Disabled", props: { disabled: true } },
     ],
@@ -115,6 +286,58 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Input label={String(props.label)} placeholder={String(props.placeholder)} />,
     codeTemplate: `<Input label="Label" placeholder="Enter text..." />`,
+  });
+
+  registerComponent({
+    name: "Textarea",
+    description: "Multi-line text area with optional label, matching Input styling.",
+    category: "atom",
+    propDefs: [
+      { name: "label", type: "string", defaultValue: "Description" },
+      { name: "placeholder", type: "string", defaultValue: "Enter details..." },
+    ],
+    render: (props) => <Textarea label={String(props.label)} placeholder={String(props.placeholder)} />,
+    codeTemplate: `<Textarea label="Description" placeholder="Enter details..." />`,
+  });
+
+  registerComponent({
+    name: "Overlay",
+    description: "Full-screen semi-transparent backdrop used behind modals and drawers.",
+    category: "atom",
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", width: 200, height: 80, border: "1px dashed #555", borderRadius: 8 }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            borderRadius: 8,
+          }}
+        />
+        <span style={{ position: "relative", zIndex: 1, color: "#fff", padding: 8, display: "block", fontSize: 12 }}>
+          Overlay preview
+        </span>
+      </div>
+    ),
+    codeTemplate: `<Overlay onClick={handleClose} zIndex={100} />`,
+  });
+
+  registerComponent({
+    name: "ActivityIndicator",
+    description: "Animated count badge that displays a number, showing 99+ for counts above 99.",
+    category: "atom",
+    propDefs: [
+      { name: "count", type: "number", defaultValue: 5 },
+    ],
+    render: (props) => <ActivityIndicator count={Number(props.count)} />,
+    variants: [
+      { name: "Zero", props: { count: 0 } },
+      { name: "Single digit", props: { count: 3 } },
+      { name: "Double digit", props: { count: 42 } },
+      { name: "Overflow (99+)", props: { count: 150 } },
+    ],
+    codeTemplate: `<ActivityIndicator count={unreadCount} />`,
   });
 
   registerComponent({
@@ -226,20 +449,29 @@ export function registerAllComponents(): void {
     codeTemplate: `<ReferenceTypeBadge type="goal" />`,
   });
 
+  // =========================================================================
   // Molecules
+  // =========================================================================
+
   registerComponent({
     name: "Card",
-    description: "Container card with surface background.",
+    description: "Container card with surface background and multiple visual variants.",
     category: "molecule",
     propDefs: [
-      { name: "variant", type: "enum", defaultValue: "default", options: ["default", "flat"] },
+      { name: "variant", type: "enum", defaultValue: "default", options: ["default", "flat", "live", "elevated"] },
       { name: "padding", type: "enum", defaultValue: "lg", options: ["xs", "sm", "md", "lg", "xl", "2xl"] },
     ],
     render: (props) => (
-      <Card variant={props.variant as "default" | "flat"} padding={props.padding as "lg"} style={{ width: 200 }}>
+      <Card variant={props.variant as "default" | "flat" | "live" | "elevated"} padding={props.padding as "lg"} style={{ width: 200 }}>
         <span>Card content</span>
       </Card>
     ),
+    variants: [
+      { name: "Default", props: { variant: "default" } },
+      { name: "Flat", props: { variant: "flat" } },
+      { name: "Live", props: { variant: "live" } },
+      { name: "Elevated", props: { variant: "elevated" } },
+    ],
     codeTemplate: `<Card variant="default" padding="lg">Content</Card>`,
   });
 
@@ -395,5 +627,473 @@ export function registerAllComponents(): void {
     propDefs: [],
     render: () => <RowSkeleton style={{ width: 300 }} />,
     codeTemplate: `<RowSkeleton />`,
+  });
+
+  registerComponent({
+    name: "Markdown",
+    description: "Renders markdown content with themed typography, code blocks, tables, and GFM support.",
+    category: "molecule",
+    propDefs: [
+      { name: "children", type: "string", defaultValue: "## Getting Started\n\nThis is a **bold** statement and an *italic* note.\n\n- First item\n- Second item\n- Third item\n\n```ts\nconst result = await fetchData();\n```" },
+    ],
+    render: (props) => <Markdown>{String(props.children)}</Markdown>,
+    codeTemplate: `<Markdown>{"## Title\\n\\nParagraph with **bold** text."}</Markdown>`,
+  });
+
+  registerComponent({
+    name: "PageHeader",
+    description: "Page-level heading with optional subtitle and trailing action slot.",
+    category: "molecule",
+    propDefs: [
+      { name: "title", type: "string", defaultValue: "All Projects" },
+      { name: "subtitle", type: "string", defaultValue: "Manage and track your active projects" },
+    ],
+    render: (props) => (
+      <PageHeader
+        title={String(props.title)}
+        subtitle={String(props.subtitle) || undefined}
+        trailing={<Button size="sm">New Project</Button>}
+      />
+    ),
+    variants: [
+      { name: "With subtitle", props: { title: "Documents", subtitle: "Browse and manage knowledge base documents" } },
+      { name: "Title only", props: { title: "Settings", subtitle: "" } },
+    ],
+    codeTemplate: `<PageHeader title="Projects" subtitle="Overview" trailing={<Button>Create</Button>} />`,
+  });
+
+  registerComponent({
+    name: "Pagination",
+    description: "Page navigation controls with previous/next buttons and page info.",
+    category: "molecule",
+    propDefs: [
+      { name: "page", type: "number", defaultValue: 2 },
+      { name: "totalPages", type: "number", defaultValue: 5 },
+      { name: "total", type: "number", defaultValue: 47 },
+    ],
+    render: (props) => (
+      <Pagination
+        page={Number(props.page)}
+        totalPages={Number(props.totalPages)}
+        total={Number(props.total)}
+        onPageChange={() => {}}
+      />
+    ),
+    variants: [
+      { name: "First page", props: { page: 1, totalPages: 5, total: 47 } },
+      { name: "Middle page", props: { page: 3, totalPages: 5, total: 47 } },
+      { name: "Last page", props: { page: 5, totalPages: 5, total: 47 } },
+    ],
+    codeTemplate: `<Pagination page={currentPage} totalPages={totalPages} total={total} onPageChange={setPage} />`,
+  });
+
+  registerComponent({
+    name: "MetadataTable",
+    description: "Vertical list of label/value pairs with an optional section title.",
+    category: "molecule",
+    propDefs: [
+      { name: "title", type: "string", defaultValue: "Details" },
+    ],
+    render: (props) => (
+      <MetadataTable
+        title={String(props.title) || undefined}
+        rows={[
+          { label: "ID", value: "01HXK9ZN4V8RPQD3" },
+          { label: "Status", value: "in_progress" },
+          { label: "Created", value: "2026-03-15T10:00:00Z" },
+          { label: "Effort", value: "medium" },
+        ]}
+      />
+    ),
+    codeTemplate: `<MetadataTable title="Details" rows={[{ label: "ID", value: task.id }]} />`,
+  });
+
+  registerComponent({
+    name: "PresenceCharm",
+    description: "Small colored dot indicating presence or content availability.",
+    category: "molecule",
+    propDefs: [
+      { name: "active", type: "boolean", defaultValue: true },
+      { name: "label", type: "string", defaultValue: "Content" },
+    ],
+    render: (props) => (
+      <PresenceCharm
+        active={props.active as boolean}
+        label={String(props.label)}
+      />
+    ),
+    variants: [
+      { name: "Active", props: { active: true, label: "Content available" } },
+      { name: "Inactive", props: { active: false, label: "No content" } },
+    ],
+    codeTemplate: `<PresenceCharm active={hasContent} label="Content" />`,
+  });
+
+  registerComponent({
+    name: "ThemeSwitcher",
+    description: "Theme selection buttons showing available color themes as circular swatches.",
+    category: "molecule",
+    propDefs: [],
+    render: () => <ThemeSwitcher />,
+    codeTemplate: `<ThemeSwitcher />`,
+  });
+
+  registerComponent({
+    name: "DocumentSearchBar",
+    description: "Search and filter bar for the documents list with title search, tag filter, folder filter, and favorites toggle.",
+    category: "molecule",
+    propDefs: [],
+    render: () => <DocumentSearchBarDemo />,
+    codeTemplate: `<DocumentSearchBar title={title} tag={tag} folder={folder} folders={folders} favorite={fav} onTitleChange={setTitle} onTagChange={setTag} onFolderChange={setFolder} onFavoriteChange={setFav} />`,
+  });
+
+  registerComponent({
+    name: "TaskTableFilters",
+    description: "Filter bar for the task table with search, status, category, effort, impact, and group key selects.",
+    category: "molecule",
+    propDefs: [],
+    render: () => <TaskTableFiltersDemo />,
+    codeTemplate: `<TaskTableFilters filter={filter} onChange={setFilter} groupKeys={["backend", "frontend"]} />`,
+  });
+
+  registerComponent({
+    name: "FolderInput",
+    description: "Text input with autocomplete dropdown for selecting or typing a folder name.",
+    category: "molecule",
+    propDefs: [],
+    render: () => <FolderInputDemo />,
+    codeTemplate: `<FolderInput value={folder} folders={knownFolders} onChange={setFolder} />`,
+  });
+
+  registerComponent({
+    name: "DocumentReferenceCard",
+    description: "Compact card showing a linked document reference with type badge, title, summary preview, and tags.",
+    category: "molecule",
+    propDefs: [],
+    render: () => (
+      <div style={{ width: 320 }}>
+        <DocumentReferenceCard
+          reference={{
+            document_id: "01DOC001",
+            type: "design" as ReferenceType,
+            title: "Architecture Decision Record: SQLite",
+            summary: "Explains why SQLite was chosen over PostgreSQL for the single-process project management tool.",
+            favorite: true,
+            tags: ["architecture", "backend", "database"],
+          }}
+          onOpen={() => {}}
+          onDetach={() => {}}
+        />
+      </div>
+    ),
+    variants: [
+      { name: "With tags", props: {} },
+    ],
+    codeTemplate: `<DocumentReferenceCard reference={ref} onOpen={() => openDoc(ref.document_id)} onDetach={() => detach(ref.document_id)} />`,
+  });
+
+  // =========================================================================
+  // Organisms
+  // =========================================================================
+
+  registerComponent({
+    name: "ModalShell",
+    description: "Base modal container with overlay backdrop, centered content panel, and escape-to-close behavior.",
+    category: "organism",
+    propDefs: [],
+    render: () => <ModalShellDemo />,
+    codeTemplate: [
+      '<ModalShell onClose={handleClose} maxWidth={480}>',
+      '  <h2>Title</h2>',
+      '  <p>Modal content</p>',
+      '</ModalShell>',
+    ].join("\n"),
+  });
+
+  registerComponent({
+    name: "ConfirmDialog",
+    description: "Destructive action confirmation modal with cancel and confirm buttons.",
+    category: "organism",
+    propDefs: [],
+    render: () => <ConfirmDialogDemo />,
+    codeTemplate: `<ConfirmDialog title="Delete item?" message="This cannot be undone." onConfirm={handleDelete} onCancel={handleCancel} />`,
+  });
+
+  registerComponent({
+    name: "TopBar",
+    description: "Application header with navigation tabs, optional breadcrumb, and trailing action slot.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <TopBar
+        navItems={MOCK_NAV_ITEMS}
+        activePath="/projects"
+        onNavigate={() => {}}
+        trailing={<ConnectionStatus connected={true} />}
+      />
+    ),
+    variants: [
+      { name: "With breadcrumb", props: {} },
+    ],
+    codeTemplate: `<TopBar navItems={navItems} activePath={location.pathname} onNavigate={navigate} trailing={<ConnectionStatus connected />} />`,
+  });
+
+  registerComponent({
+    name: "ConnectionStatus",
+    description: "WebSocket connection indicator dot that pulses when disconnected and ripples on reconnect.",
+    category: "organism",
+    propDefs: [
+      { name: "connected", type: "boolean", defaultValue: true },
+    ],
+    render: (props) => <ConnectionStatus connected={props.connected as boolean} />,
+    variants: [
+      { name: "Connected", props: { connected: true } },
+      { name: "Disconnected", props: { connected: false } },
+    ],
+    codeTemplate: `<ConnectionStatus connected={isConnected} />`,
+  });
+
+  registerComponent({
+    name: "DisconnectionBanner",
+    description: "Full-width danger banner shown after prolonged WebSocket disconnection (10s threshold).",
+    category: "organism",
+    propDefs: [
+      { name: "connected", type: "boolean", defaultValue: false },
+    ],
+    render: (props) => {
+      // The banner only shows after a 10s timeout when disconnected.
+      // For the gallery, render a static preview of what it looks like.
+      if (props.connected) {
+        return <span style={{ color: "#888", fontSize: 12 }}>Banner hidden when connected</span>;
+      }
+      return (
+        <DisconnectionBanner connected={false} />
+      );
+    },
+    variants: [
+      { name: "Connected (hidden)", props: { connected: true } },
+      { name: "Disconnected", props: { connected: false } },
+    ],
+    codeTemplate: `<DisconnectionBanner connected={isConnected} />`,
+  });
+
+  registerComponent({
+    name: "CreateEntityOverlay",
+    description: "Generic modal form shell with title, scrollable content area, and cancel/submit footer. Used as the base for all create overlays.",
+    category: "organism",
+    propDefs: [],
+    render: () => {
+      return (
+        <div style={{ position: "relative", border: "1px dashed #555", borderRadius: 8, padding: 16 }}>
+          <p style={{ margin: 0, fontSize: 12, color: "#888" }}>
+            CreateEntityOverlay renders as a modal. It is the base for CreateProjectOverlay, CreateTaskOverlay, and CreateDocumentOverlay.
+          </p>
+        </div>
+      );
+    },
+    codeTemplate: [
+      '<CreateEntityOverlay title="Create Item" onSubmit={handleSubmit} onClose={handleClose} loading={saving}>',
+      '  <Input label="Title" value={title} onChange={e => setTitle(e.target.value)} />',
+      '</CreateEntityOverlay>',
+    ].join("\n"),
+  });
+
+  registerComponent({
+    name: "CreateProjectOverlay",
+    description: "Modal form for creating a new project with title and summary fields.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", border: "1px dashed #555", borderRadius: 8, padding: 16 }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#888" }}>
+          CreateProjectOverlay opens as a modal with Title and Summary inputs, plus Create/Cancel buttons.
+        </p>
+      </div>
+    ),
+    codeTemplate: `<CreateProjectOverlay onCreated={handleCreated} onClose={handleClose} />`,
+  });
+
+  registerComponent({
+    name: "CreateTaskOverlay",
+    description: "Modal form for creating a new task with title, summary, context, acceptance criteria, group key, and metadata selects.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", border: "1px dashed #555", borderRadius: 8, padding: 16 }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#888" }}>
+          CreateTaskOverlay opens as a modal with fields for title, summary, context, acceptance criteria, group key, status, effort, impact, and category.
+        </p>
+      </div>
+    ),
+    codeTemplate: `<CreateTaskOverlay onCreated={handleCreated} onClose={handleClose} />`,
+  });
+
+  registerComponent({
+    name: "CreateDocumentOverlay",
+    description: "Modal form for creating a new document with title, summary, markdown content, folder, and tag picker.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", border: "1px dashed #555", borderRadius: 8, padding: 16 }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#888" }}>
+          CreateDocumentOverlay opens as a modal with fields for title, summary, content (markdown), folder selection, and tag picker.
+        </p>
+      </div>
+    ),
+    codeTemplate: `<CreateDocumentOverlay folders={folders} onCreated={handleCreated} onClose={handleClose} />`,
+  });
+
+  registerComponent({
+    name: "DocumentReferenceSection",
+    description: "Expandable card section grouping document references by type (goal, plan, design, etc.) with add and detach actions.",
+    category: "organism",
+    propDefs: [
+      { name: "type", type: "enum", defaultValue: "design", options: ["goal", "plan", "requirements", "design", "reference", "note"] },
+      { name: "defaultOpen", type: "boolean", defaultValue: true },
+    ],
+    render: (props) => (
+      <div style={{ width: 360 }}>
+        <DocumentReferenceSection
+          type={props.type as ReferenceType}
+          references={MOCK_REFERENCES.filter((r) => r.type === props.type)}
+          onOpenDocument={() => {}}
+          onDetachDocument={() => {}}
+          onAddDocument={() => {}}
+          defaultOpen={props.defaultOpen as boolean}
+        />
+      </div>
+    ),
+    variants: [
+      { name: "Design (with refs)", props: { type: "design", defaultOpen: true } },
+      { name: "Goal (empty)", props: { type: "goal", defaultOpen: true } },
+    ],
+    codeTemplate: `<DocumentReferenceSection type="design" references={refs} onOpenDocument={openDoc} onDetachDocument={detach} onAddDocument={add} />`,
+  });
+
+  registerComponent({
+    name: "TaskTable",
+    description: "Data table displaying tasks with columns for title, status (with inline status switcher), category, effort, impact, and delete action. Supports grouping by group_key.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <TaskTable
+        tasks={MOCK_TASKS}
+        selectedTaskId={null}
+        onSelectTask={() => {}}
+        onDeleteTask={() => {}}
+        onUpdateTaskStatus={() => {}}
+      />
+    ),
+    codeTemplate: `<TaskTable tasks={tasks} selectedTaskId={selectedId} onSelectTask={setSelected} onDeleteTask={handleDelete} onUpdateTaskStatus={handleStatusChange} />`,
+  });
+
+  registerComponent({
+    name: "DocumentTable",
+    description: "Data table displaying documents grouped by folder, with columns for favorite toggle, title with content indicator, tags, updated date, and delete action.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <DocumentTable
+        documents={MOCK_DOCUMENTS}
+        selectedDocumentId={null}
+        onSelectDocument={() => {}}
+        onDeleteDocument={() => {}}
+        onToggleFavorite={() => {}}
+      />
+    ),
+    codeTemplate: `<DocumentTable documents={docs} selectedDocumentId={selectedId} onSelectDocument={setSelected} onDeleteDocument={handleDelete} onToggleFavorite={handleFav} />`,
+  });
+
+  registerComponent({
+    name: "ProjectDocumentTable",
+    description: "Simplified document table for project detail views with detach (unlink) action instead of delete.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <ProjectDocumentTable
+        documents={MOCK_DOCUMENTS.slice(0, 2)}
+        selectedDocumentId={null}
+        onSelectDocument={() => {}}
+        onDetachDocument={() => {}}
+        onToggleFavorite={() => {}}
+      />
+    ),
+    codeTemplate: `<ProjectDocumentTable documents={docs} selectedDocumentId={selectedId} onSelectDocument={setSelected} onDetachDocument={handleDetach} onToggleFavorite={handleFav} />`,
+  });
+
+  registerComponent({
+    name: "DependencyGraphView",
+    description: "SVG-based directed graph visualization showing task dependencies with blocks/relates_to edges, level-based layout, hover highlighting, and cycle detection.",
+    category: "organism",
+    propDefs: [],
+    render: () => (
+      <div style={{ width: "100%", maxWidth: 700, overflow: "auto" }}>
+        <DependencyGraphView
+          tasks={MOCK_GRAPH_TASKS}
+          edges={MOCK_GRAPH_EDGES}
+          blockedTaskIds={["01G003"]}
+          onTaskClick={() => {}}
+        />
+      </div>
+    ),
+    codeTemplate: `<DependencyGraphView tasks={graphTasks} edges={graphEdges} blockedTaskIds={blockedIds} onTaskClick={handleClick} />`,
+  });
+
+  // =========================================================================
+  // Templates
+  // =========================================================================
+
+  registerComponent({
+    name: "ListPageLayout",
+    description: "Centered, max-width container for list pages with vertical padding and scroll support.",
+    category: "template",
+    propDefs: [],
+    render: () => (
+      <div style={{ border: "1px dashed #555", borderRadius: 8, height: 200, overflow: "hidden" }}>
+        <ListPageLayout>
+          <PageHeader title="Projects" subtitle="All your active projects" />
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+            <Card padding="md"><span>Project Alpha</span></Card>
+            <Card padding="md"><span>Project Beta</span></Card>
+          </div>
+        </ListPageLayout>
+      </div>
+    ),
+    codeTemplate: [
+      '<ListPageLayout>',
+      '  <PageHeader title="Projects" />',
+      '  {/* list content */}',
+      '</ListPageLayout>',
+    ].join("\n"),
+  });
+
+  registerComponent({
+    name: "DetailPageLayout",
+    description: "Horizontally constrained container for detail/edit pages with optional expanded mode for wider content.",
+    category: "template",
+    propDefs: [
+      { name: "expanded", type: "boolean", defaultValue: false },
+    ],
+    render: (props) => (
+      <div style={{ border: "1px dashed #555", borderRadius: 8, height: 200, overflow: "hidden", display: "flex", justifyContent: "center" }}>
+        <DetailPageLayout expanded={props.expanded as boolean}>
+          <div style={{ flex: 1, padding: 16 }}>
+            <h3 style={{ margin: 0 }}>Detail Content</h3>
+            <p style={{ margin: "8px 0 0", fontSize: 13, color: "#aaa" }}>
+              {(props.expanded as boolean) ? "Expanded layout (max-width: 1800px)" : "Default layout (max-width: 900px)"}
+            </p>
+          </div>
+        </DetailPageLayout>
+      </div>
+    ),
+    variants: [
+      { name: "Default", props: { expanded: false } },
+      { name: "Expanded", props: { expanded: true } },
+    ],
+    codeTemplate: [
+      '<DetailPageLayout expanded={showGraph}>',
+      '  {/* detail panels */}',
+      '</DetailPageLayout>',
+    ].join("\n"),
   });
 }

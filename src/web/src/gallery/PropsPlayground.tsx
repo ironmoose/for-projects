@@ -10,7 +10,7 @@ interface PropsPlaygroundProps {
 export function PropsPlayground({ propDefs, values, onChange }: PropsPlaygroundProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: vt.textMuted }}>
+      <div style={{ ...vt.sectionHeader }}>
         Props
       </div>
       {propDefs.map((def) => (
