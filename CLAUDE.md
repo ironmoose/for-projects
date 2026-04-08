@@ -53,14 +53,14 @@ Core tables: `projects`, `tasks`, `document_references`, `activity_log`.
 
 **document_references:** `entity_type`, `entity_id`, `document_id`, `type` — composite PK on all four columns. Polymorphic (no FK on `entity_id`); FK CASCADE on `document_id`. Type is one of: goal, plan, requirements, design, reference, note. Same document can be attached to the same entity with different types. Multiple documents can share the same type on one entity.
 
-**task_dependencies:** `source_task_id`, `target_task_id`, `dependency_type`, `created_at` — supports `blocks` and `relates_to` edge types.
+**task_dependencies:** `source_task_id`, `target_task_id`, `dependency_type`, `created_at` — supports `blocks` and `relates_to` edge types. Edges are informational only — they do not enforce `is_blocked`, which is a user-managed field on tasks.
 
 Knowledge base tables (migration 009+):
 - `documents` — id, title, summary, content, folder, favorite, created_at, updated_at (top-level entity)
 - `tags` — id, name (unique index), created_at
 - `entity_tags` — entity_type, entity_id, tag_id (polymorphic join; composite PK; no FK on entity_id)
 
-Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 024 added `folder` column to `documents`. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks.
+Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 024 added `folder` column to `documents`. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks. Migration 027 materialized `is_blocked` as a column on tasks (previously computed at read time from dependency edges; now a plain user-managed boolean).
 
 ### REST API
 
@@ -69,7 +69,7 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 - `POST /api/projects` — `{items: [{title, summary?, documents?}]}`
 - `PATCH /api/projects` — `{items: [{id, title?, summary?, documents?}]}`
 - `POST /api/tasks` — `{items: [{project_id, title, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, documents?}]}`
-- `PATCH /api/tasks` — `{items: [{id, title?, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, documents?, add_dependencies?, remove_dependencies?}]}`
+- `PATCH /api/tasks` — `{items: [{id, title?, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, is_blocked?, documents?, add_dependencies?, remove_dependencies?}]}`
 - `GET /api/tasks` — supports filters: `project_id`, `status`, `effort`, `impact`, `category`, `group_key`, `title`, `blocked`
 - `POST /api/documents` — `{items: [{title, summary?, content?, folder?, tags?, favorite?}]}` batch create
 - `PATCH /api/documents` — `{items: [{id, title?, summary?, content?, folder?, tags?, favorite?}]}` batch update; tags array replaces all existing tags
@@ -94,12 +94,12 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 ### MCP tools
 
 13 tools total (no delete tools — deletion is REST-only):
-- **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`
-- **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`, `delete_task`
-- **Dependencies:** `get_dependency_graph`
-- **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`, `delete_document`
+- **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`
+- **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`
+- **Dependencies:** `get_dependency_graph` (returns tasks and edges only; no blocker computation)
+- **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`
 
-`create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields. `get_task` returns these fields in the response.
+`create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields. `update_task` accepts `is_blocked` boolean. `get_task` returns all fields in the response.
 
 ### Tagging system
 
