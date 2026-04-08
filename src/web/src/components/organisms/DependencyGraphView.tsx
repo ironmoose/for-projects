@@ -35,6 +35,7 @@ const MIN_HEIGHT = 400;
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 3;
 const ZOOM_SENSITIVITY = 0.002;
+const MAX_NODES = 100;
 
 // ---------------------------------------------------------------------------
 // Cycle detection (retained from previous implementation)
@@ -365,6 +366,42 @@ export function DependencyGraphView({
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const [size, setSize] = useState({ width: 800, height: MIN_HEIGHT });
 
+  // -------------------------------------------------------------------------
+  // Truncate to MAX_NODES — keep the most connected / interesting nodes
+  // -------------------------------------------------------------------------
+  const { visibleTasks, visibleEdges, truncated } = useMemo(() => {
+    if (tasks.length <= MAX_NODES) {
+      return { visibleTasks: tasks, visibleEdges: edges, truncated: false };
+    }
+
+    // Score: connected nodes first, then by status priority
+    const STATUS_SCORE: Record<string, number> = {
+      in_progress: 4,
+      todo: 3,
+      done: 1,
+      archived: 0,
+    };
+
+    const edgeDegree = new Map<string, number>();
+    for (const e of edges) {
+      edgeDegree.set(e.source_task_id, (edgeDegree.get(e.source_task_id) ?? 0) + 1);
+      edgeDegree.set(e.target_task_id, (edgeDegree.get(e.target_task_id) ?? 0) + 1);
+    }
+
+    const scored = tasks
+      .map((t) => ({
+        task: t,
+        score: (edgeDegree.get(t.id) ?? 0) * 10 + (STATUS_SCORE[t.status] ?? 0),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const kept = new Set(scored.slice(0, MAX_NODES).map((s) => s.task.id));
+    const vTasks = tasks.filter((t) => kept.has(t.id));
+    const vEdges = edges.filter((e) => kept.has(e.source_task_id) && kept.has(e.target_task_id));
+
+    return { visibleTasks: vTasks, visibleEdges: vEdges, truncated: true };
+  }, [tasks, edges]);
+
   // Measure container width, use fixed min height
   useEffect(() => {
     const el = containerRef.current;
@@ -378,16 +415,16 @@ export function DependencyGraphView({
   }, []);
 
   // Scale height with node count
-  const graphHeight = Math.max(MIN_HEIGHT, tasks.length * 60);
+  const graphHeight = Math.max(MIN_HEIGHT, visibleTasks.length * 60);
 
   const blockedSet = useMemo(() => new Set(blockedTaskIds), [blockedTaskIds]);
 
   const { backEdges, cycleNodeIds } = useMemo(
-    () => detectCycles(tasks.map((t) => t.id), edges),
-    [tasks, edges],
+    () => detectCycles(visibleTasks.map((t) => t.id), visibleEdges),
+    [visibleTasks, visibleEdges],
   );
 
-  const { positions, drag, settled, resetPositions } = useForceGraph(tasks, edges, size.width, graphHeight);
+  const { positions, drag, settled, resetPositions } = useForceGraph(visibleTasks, visibleEdges, size.width, graphHeight);
 
   // -------------------------------------------------------------------------
   // Zoom / pan state
@@ -575,23 +612,23 @@ export function DependencyGraphView({
 
   const taskMap = useMemo(() => {
     const map = new Map<string, GraphNode>();
-    for (const t of tasks) map.set(t.id, t);
+    for (const t of visibleTasks) map.set(t.id, t);
     return map;
-  }, [tasks]);
+  }, [visibleTasks]);
 
   // Connected task IDs for highlight on hover
   const connectedIds = useMemo(() => {
     if (!hoveredTaskId) return null;
     const ids = new Set<string>();
     ids.add(hoveredTaskId);
-    for (const edge of edges) {
+    for (const edge of visibleEdges) {
       if (edge.source_task_id === hoveredTaskId) ids.add(edge.target_task_id);
       if (edge.target_task_id === hoveredTaskId) ids.add(edge.source_task_id);
     }
     return ids;
-  }, [hoveredTaskId, edges]);
+  }, [hoveredTaskId, visibleEdges]);
 
-  if (edges.length === 0) {
+  if (visibleEdges.length === 0 && !truncated) {
     return (
       <EmptyState
         icon="account_tree"
@@ -650,7 +687,7 @@ export function DependencyGraphView({
               fontFamily: theme.font.body,
             }}
           >
-            Computing layout{tasks.length > 20 ? ` for ${tasks.length} nodes` : ""}…
+            Computing layout{visibleTasks.length > 20 ? ` for ${visibleTasks.length} nodes` : ""}…
           </span>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
@@ -671,7 +708,7 @@ export function DependencyGraphView({
       >
         {/* SVG edge overlay */}
         <EdgeOverlay
-          edges={edges}
+          edges={visibleEdges}
           posMap={posMap}
           backEdges={backEdges}
           highlightedTaskId={hoveredTaskId}
@@ -716,6 +753,30 @@ export function DependencyGraphView({
           );
         })}
       </div>
+
+      {/* Truncation notice */}
+      {truncated && settled && (
+        <div
+          style={{
+            position: "absolute",
+            top: theme.spacing.sm,
+            left: theme.spacing.sm,
+            display: "flex",
+            alignItems: "center",
+            gap: theme.spacing.xs,
+            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+            borderRadius: theme.radius.md,
+            background: theme.color.surfaceContainerHigh,
+            border: `1px solid ${theme.color.borderSubtle}`,
+            fontSize: theme.font.size.xxs,
+            color: theme.color.textMuted,
+            zIndex: 10,
+          }}
+        >
+          <Icon name="info" size={14} />
+          Showing {visibleTasks.length} of {tasks.length} nodes
+        </div>
+      )}
 
       {/* Zoom controls */}
       <div
