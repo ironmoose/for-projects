@@ -40,7 +40,7 @@ Route handler → Service → Repository → SQLite
 
 Single process, single port (default 3000):
 - `/api/*` — REST API (projects, tasks, documents, activity-log, health)
-- `/mcp` — MCP endpoint (17 tools: CRUD for projects, tasks, documents; dependency graph; ready tasks)
+- `/mcp` — MCP endpoint (16 tools: CRUD for projects, tasks, documents; dependency graph)
 - `/*` — static web assets + SPA fallback
 
 ### Data model
@@ -93,10 +93,10 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 
 ### MCP tools
 
-17 tools total:
+16 tools total:
 - **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`
 - **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`, `delete_task`
-- **Dependencies:** `get_dependency_graph`, `get_ready_tasks`
+- **Dependencies:** `get_dependency_graph`
 - **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`, `delete_document`
 
 `create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields. `get_task` returns these fields in the response.
