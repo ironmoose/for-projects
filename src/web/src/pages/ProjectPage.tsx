@@ -612,7 +612,7 @@ function TaskDetailPanel({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1fr",
+            gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
             gap: theme.spacing.md,
             marginBottom: theme.spacing.lg,
           }}
@@ -643,6 +643,16 @@ function TaskDetailPanel({
               options={DETAIL_CATEGORY_OPTIONS}
               value={task.category ?? ""}
               onChange={(e) => handleMetadataChange("category", e.target.value)}
+            />
+          </MetadataField>
+          <MetadataField label="Blocked">
+            <Select
+              options={[
+                { value: "false", label: "No" },
+                { value: "true", label: "Yes" },
+              ]}
+              value={task.is_blocked ? "true" : "false"}
+              onChange={(e) => onUpdate(task.id, { is_blocked: e.target.value === "true" })}
             />
           </MetadataField>
         </div>

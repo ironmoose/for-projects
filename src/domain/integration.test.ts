@@ -569,14 +569,14 @@ describe("Document CRUD", () => {
     expect(projectAfter.documents.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
-  it("lists documents filtered by project_id", () => {
+  it("lists documents filtered by entity_type and entity_id", () => {
     const [project] = ctx.projectService.create([{ title: "Doc Filter Project" }]);
     const [linkedDoc] = ctx.documentService.create([{ title: "Linked Doc for Filter" }]);
     const [unlinkedDoc] = ctx.documentService.create([{ title: "Unlinked Doc for Filter" }]);
 
     ctx.projectService.update([{ id: project.id, documents: { [linkedDoc.id]: [{ type: "reference" }] } }]);
 
-    const result = ctx.documentService.list({ project_id: project.id });
+    const result = ctx.documentService.list({ entity_type: "project", entity_id: project.id });
     expect(result.data.length).toBeGreaterThanOrEqual(1);
     expect(result.data.some((d) => d.id === linkedDoc.id)).toBe(true);
     expect(result.data.some((d) => d.id === unlinkedDoc.id)).toBe(false);

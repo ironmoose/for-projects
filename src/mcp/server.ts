@@ -250,7 +250,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
         folder: z.string().max(64).optional().describe("Filter by folder name (exact match)."),
-        project_id: z.string().max(26).optional().describe("Deprecated: use entity_type='project' + entity_id instead."),
         entity_type: z.enum([...ENTITY_TYPES]).optional().describe("Filter documents linked to this entity type. Requires entity_id."),
         entity_id: z.string().max(26).optional().describe("Filter documents linked to this entity ID. Requires entity_type."),
         favorite: z.boolean().optional(),
@@ -258,7 +257,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ search, tag, title, folder, project_id, entity_type, entity_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, folder, project_id, entity_type, entity_id, favorite, limit, offset }))
+    ({ search, tag, title, folder, entity_type, entity_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, folder, entity_type, entity_id, favorite, limit, offset }))
   );
 
   server.registerTool(
