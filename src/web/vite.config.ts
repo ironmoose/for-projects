@@ -3,8 +3,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import webfontDownload from "vite-plugin-webfont-dl";
 
-export default defineConfig({
-  plugins: [react(), webfontDownload()],
+export default defineConfig(({ command }) => ({
+  plugins: [react(), ...(command === "serve" ? [webfontDownload()] : [])],
   resolve: {
     alias: {
       "@domain": path.resolve(__dirname, "../domain"),
@@ -24,4 +24,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
