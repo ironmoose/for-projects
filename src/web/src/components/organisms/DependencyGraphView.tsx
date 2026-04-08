@@ -414,8 +414,8 @@ export function DependencyGraphView({
     return () => ro.disconnect();
   }, []);
 
-  // Scale height with node count
-  const graphHeight = Math.max(MIN_HEIGHT, visibleTasks.length * 60);
+  // Fixed height — zoom/pan handles large graphs
+  const graphHeight = Math.min(600, Math.max(MIN_HEIGHT, visibleTasks.length * 12));
 
   const blockedSet = useMemo(() => new Set(blockedTaskIds), [blockedTaskIds]);
 
