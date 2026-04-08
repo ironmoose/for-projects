@@ -18,7 +18,7 @@ export interface TaskRow {
   updated_at: string;
 }
 
-type TaskFilter = { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string };
+type TaskFilter = { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean };
 
 /** SQLite stores booleans as 0/1; normalize to JS boolean. */
 function normalizeTask(row: Record<string, unknown>): Task {
@@ -67,6 +67,10 @@ export class TaskRepository {
     if (filter?.title) {
       conditions.push("title LIKE ?");
       params.push(`%${filter.title}%`);
+    }
+    if (filter?.blocked !== undefined) {
+      conditions.push("is_blocked = ?");
+      params.push(filter.blocked ? 1 : 0);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")} ` : "";

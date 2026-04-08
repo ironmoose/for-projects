@@ -19,19 +19,8 @@ export class TaskService implements ITaskService {
 
 
   list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary> {
-    const blockedFilter = filter?.blocked;
-    // Strip blocked from the filter before passing to repo
-    const repoFilter = filter ? { ...filter } : undefined;
-    if (repoFilter) delete (repoFilter as Record<string, unknown>).blocked;
-
-    const data = this.taskRepo.findManySummary(repoFilter);
-    const total = this.taskRepo.count(repoFilter);
-
-    // is_blocked is materialized on the tasks table — just filter if requested
-    if (blockedFilter !== undefined) {
-      const filtered = data.filter((s) => s.is_blocked === blockedFilter);
-      return { data: filtered, total: filtered.length };
-    }
+    const data = this.taskRepo.findManySummary(filter);
+    const total = this.taskRepo.count(filter);
     return { data, total };
   }
 
