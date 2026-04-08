@@ -40,7 +40,7 @@ Route handler → Service → Repository → SQLite
 
 Single process, single port (default 3000):
 - `/api/*` — REST API (projects, tasks, documents, activity-log, health)
-- `/mcp` — MCP endpoint (16 tools: CRUD for projects, tasks, documents; dependency graph)
+- `/mcp` — MCP endpoint (13 tools: create/read/update for projects, tasks, documents; dependency graph)
 - `/*` — static web assets + SPA fallback
 
 ### Data model
@@ -93,7 +93,7 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 
 ### MCP tools
 
-16 tools total:
+13 tools total (no delete tools — deletion is REST-only):
 - **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`
 - **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`, `delete_task`
 - **Dependencies:** `get_dependency_graph`

@@ -15,7 +15,6 @@ import {
   type ITaskService,
   type ITaskDependencyService,
   type IDocumentService,
-  type IDocumentReferenceService,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -23,7 +22,6 @@ export interface McpServiceContext {
   taskService: ITaskService;
   taskDependencyService: ITaskDependencyService;
   documentService: IDocumentService;
-  documentReferenceService: IDocumentReferenceService;
 }
 
 function handle<T>(fn: () => T) {
@@ -216,22 +214,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_dependency_graph",
     {
-      description: "Get the dependency graph for a project. Returns edges, task metadata, and blocked_task_ids (tasks with at least one incomplete blocker in the graph). Note: this is computed from edge data and is independent of the task's is_blocked field, which is user-managed. Optionally filter by status to see only matching tasks and edges. blocked_task_ids is always computed from the full graph regardless of status filter.",
+      description: "Get the dependency graph for a project. Returns tasks and edges. Optionally filter by status to see only matching tasks and edges between them.",
       inputSchema: {
         project_id: z.string().max(26),
         status: z.array(z.enum([...TASK_STATUSES])).optional(),
       },
     },
     ({ project_id, status }) => handle(() => {
-      const { edges, blocked_task_ids } = taskDependencyService.getGraph(project_id, status);
+      const { edges } = taskDependencyService.getGraph(project_id, status);
       const tasks = taskService.listGraphSummaries(project_id, status);
-      const blockedSet = new Set(blocked_task_ids);
       return {
         tasks: tasks.map((t) => ({
           id: t.id,
           title: t.title,
           status: t.status,
-          has_incomplete_blockers: blockedSet.has(t.id),
           group_key: t.group_key,
         })),
         edges: edges.map((e) => ({
@@ -239,7 +235,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           target: e.target_task_id,
           type: e.dependency_type,
         })),
-        blocked_task_ids,
       };
     })
   );
@@ -310,41 +305,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ items }) => handle(() => documentService.update(items))
-  );
-
-  // -- Delete tools ----------------------------------------------------
-
-  server.registerTool(
-    "delete_project",
-    {
-      description: "Permanently delete projects by ID. This is destructive and cannot be undone. Deleting a project cascades to all its tasks. Pass an `ids` array of project ID strings.",
-      inputSchema: {
-        ids: z.array(z.string().max(26)),
-      },
-    },
-    ({ ids }) => handle(() => { projectService.remove(ids); return { deleted: ids.length }; })
-  );
-
-  server.registerTool(
-    "delete_task",
-    {
-      description: "Permanently delete tasks by ID. This is destructive and cannot be undone. Pass an `ids` array of task ID strings.",
-      inputSchema: {
-        ids: z.array(z.string().max(26)),
-      },
-    },
-    ({ ids }) => handle(() => { taskService.remove(ids); return { deleted: ids.length }; })
-  );
-
-  server.registerTool(
-    "delete_document",
-    {
-      description: "Permanently delete documents by ID. This is destructive and cannot be undone. Deleting a document removes its tags and any entity references. Pass an `ids` array of document ID strings.",
-      inputSchema: {
-        ids: z.array(z.string().max(26)),
-      },
-    },
-    ({ ids }) => handle(() => { documentService.remove(ids); return { deleted: ids.length }; })
   );
 
   return server;
