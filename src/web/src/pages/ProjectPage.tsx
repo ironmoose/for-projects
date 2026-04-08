@@ -1261,7 +1261,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         </Card>
 
         {/* Dependency Graph (collapsible) */}
-        {!graphLoading && graph && graph.edges.length > 0 && (
+        {!graphLoading && graph && (
           <ExpandableCard
             title="Dependency Graph"
             defaultOpen={false}

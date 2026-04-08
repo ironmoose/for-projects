@@ -1023,7 +1023,7 @@ export function registerAllComponents(): void {
 
   registerComponent({
     name: "DependencyGraphView",
-    description: "SVG-based directed graph visualization showing task dependencies with blocks/relates_to edges, level-based layout, hover highlighting, and cycle detection.",
+    description: "Force-directed graph visualization showing task dependencies with blocks/relates_to edges, hover highlighting, and cycle detection.",
     category: "organism",
     propDefs: [],
     render: () => (

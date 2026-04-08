@@ -45,9 +45,15 @@ export function useDependencyGraph(projectId: string, statusFilter?: string) {
     loadRef.current?.();
   }, 200);
 
+  const hasFetchedRef = useRef(false);
+
   useEffect(() => {
-    setLoading(true);
-    load();
+    // Only show the loading state on first fetch — on filter changes, keep
+    // stale data visible so the parent doesn't unmount and re-mount the card.
+    if (!hasFetchedRef.current) {
+      setLoading(true);
+    }
+    load().then(() => { hasFetchedRef.current = true; });
     return subscribeEvents((event) => {
       if (event.entity_type === "task") throttledLoad();
     });

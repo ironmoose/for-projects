@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
 import { StatusDot } from "../atoms/StatusDot";
 import { Badge } from "../atoms/Badge";
 import { EmptyState } from "../molecules/EmptyState";
+import { Icon } from "../atoms/Icon";
+import { useForceGraph } from "../../hooks/useForceGraph";
 import type { TaskStatus } from "../../types";
 import type { GraphNode } from "../../api";
 
@@ -29,171 +31,80 @@ export interface DependencyGraphViewProps {
 
 const CARD_WIDTH = 200;
 const CARD_HEIGHT = 52;
-const CARD_GAP_X = 24;
-const CARD_GAP_Y = 64;
-const LEVEL_LABEL_WIDTH = 100;
-const PADDING = 16;
+const MIN_HEIGHT = 400;
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 3;
+const ZOOM_SENSITIVITY = 0.002;
 
 // ---------------------------------------------------------------------------
-// DFS-based level computation with back-edge (cycle) detection
+// Cycle detection (retained from previous implementation)
 // ---------------------------------------------------------------------------
 
-interface DFSLevelResult {
-  levels: Map<string, number>;
-  maxLevel: number;
-  backEdges: Set<string>;
-  cycleNodeIds: Set<string>;
-}
-
-function computeLevelsDFS(
+function detectCycles(
   taskIds: string[],
   edges: DependencyEdge[],
-): DFSLevelResult {
-  // Only use "blocks" edges for level computation
+): { backEdges: Set<string>; cycleNodeIds: Set<string> } {
   const blocksEdges = edges.filter((e) => e.dependency_type === "blocks");
-
   const taskSet = new Set(taskIds);
   const adjacency = new Map<string, string[]>();
-  const incomingCount = new Map<string, number>();
 
-  for (const id of taskIds) {
-    adjacency.set(id, []);
-    incomingCount.set(id, 0);
-  }
-
+  for (const id of taskIds) adjacency.set(id, []);
   for (const edge of blocksEdges) {
     if (!taskSet.has(edge.source_task_id) || !taskSet.has(edge.target_task_id)) continue;
     adjacency.get(edge.source_task_id)?.push(edge.target_task_id);
-    incomingCount.set(edge.target_task_id, (incomingCount.get(edge.target_task_id) ?? 0) + 1);
   }
 
-  const levels = new Map<string, number>();
   const backEdges = new Set<string>();
   const cycleNodeIds = new Set<string>();
-
-  // DFS states: 0 = unvisited, 1 = in-stack, 2 = done
-  const state = new Map<string, number>();
+  const state = new Map<string, number>(); // 0=unvisited, 1=in-stack, 2=done
   for (const id of taskIds) state.set(id, 0);
 
-  // Iterative DFS using an explicit stack
-  function dfs(startId: string, startLevel: number): void {
-    // Stack entries: [nodeId, level, childIndex]
-    const stack: Array<[string, number, number]> = [[startId, startLevel, 0]];
+  function dfs(startId: string): void {
+    const stack: Array<[string, number]> = [[startId, 0]];
     state.set(startId, 1);
-
-    const currentLevel = levels.get(startId);
-    if (currentLevel === undefined || startLevel > currentLevel) {
-      levels.set(startId, startLevel);
-    }
 
     while (stack.length > 0) {
       const top = stack[stack.length - 1];
       const nodeId = top[0];
-      const level = top[1];
       const children = adjacency.get(nodeId) ?? [];
 
-      if (top[2] >= children.length) {
-        // All children processed, pop
+      if (top[1] >= children.length) {
         state.set(nodeId, 2);
         stack.pop();
         continue;
       }
 
-      const childId = children[top[2]];
-      top[2]++;
+      const childId = children[top[1]];
+      top[1]++;
 
       const childState = state.get(childId) ?? 0;
       if (childState === 1) {
-        // Back-edge: child is in the current DFS stack (cycle)
         backEdges.add(`${nodeId}:${childId}`);
         cycleNodeIds.add(nodeId);
         cycleNodeIds.add(childId);
       } else if (childState === 0) {
-        // Tree edge: visit child at next level
-        const childLevel = level + 1;
-        const existing = levels.get(childId);
-        if (existing === undefined || childLevel > existing) {
-          levels.set(childId, childLevel);
-        }
         state.set(childId, 1);
-        stack.push([childId, childLevel, 0]);
-      } else {
-        // Cross/forward edge to already-completed node
-        // Update level if this path is deeper (diamond dependencies)
-        const childLevel = level + 1;
-        const existing = levels.get(childId);
-        if (existing !== undefined && childLevel > existing) {
-          // Re-propagate deeper levels through completed subtree
-          levels.set(childId, childLevel);
-          // Push for re-traversal to update descendants
-          state.set(childId, 1);
-          stack.push([childId, childLevel, 0]);
-        }
+        stack.push([childId, 0]);
       }
     }
   }
 
-  // Start DFS from root nodes (no incoming blocks edges)
-  const roots = taskIds.filter((id) => (incomingCount.get(id) ?? 0) === 0);
-  for (const rootId of roots) {
-    if (state.get(rootId) === 0) {
-      dfs(rootId, 0);
-    }
-  }
-
-  // Visit any remaining unvisited nodes (disconnected components, pure cycles)
   for (const id of taskIds) {
-    if (state.get(id) === 0) {
-      dfs(id, 0);
-    }
+    if (state.get(id) === 0) dfs(id);
   }
 
-  // Ensure every task has a level
-  for (const id of taskIds) {
-    if (!levels.has(id)) {
-      levels.set(id, 0);
-    }
-  }
-
-  let maxLevel = 0;
-  for (const level of levels.values()) {
-    if (level > maxLevel) maxLevel = level;
-  }
-
-  return { levels, maxLevel, backEdges, cycleNodeIds };
-}
-
-// ---------------------------------------------------------------------------
-// Arrow coordinate computation
-// ---------------------------------------------------------------------------
-
-interface CardPosition {
-  x: number;
-  y: number;
-}
-
-function computeCardPositions(
-  levelGroups: string[][],
-): Map<string, CardPosition> {
-  const positions = new Map<string, CardPosition>();
-
-  for (let level = 0; level < levelGroups.length; level++) {
-    const group = levelGroups[level];
-    const y = PADDING + level * (CARD_HEIGHT + CARD_GAP_Y);
-    for (let i = 0; i < group.length; i++) {
-      const x = LEVEL_LABEL_WIDTH + PADDING + i * (CARD_WIDTH + CARD_GAP_X);
-      positions.set(group[i], { x, y });
-    }
-  }
-
-  return positions;
+  return { backEdges, cycleNodeIds };
 }
 
 // ---------------------------------------------------------------------------
 // Status color helpers
 // ---------------------------------------------------------------------------
 
-function getStatusColor(status: TaskStatus, isBlocked: boolean, theme: ReturnType<typeof useTheme>["theme"]): string {
+function getStatusColor(
+  status: TaskStatus,
+  isBlocked: boolean,
+  theme: ReturnType<typeof useTheme>["theme"],
+): string {
   if (isBlocked) return theme.color.danger;
   switch (status) {
     case "done": return theme.color.success;
@@ -248,6 +159,8 @@ function TaskCard({
         position: "absolute",
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
+        // Center the card on its simulation point
+        transform: "translate(-50%, -50%)",
         background: hovered
           ? theme.color.surfaceContainerHighest
           : theme.color.surfaceContainerHigh,
@@ -265,6 +178,7 @@ function TaskCard({
         transition: `background ${theme.motion.fast} ${theme.motion.easing}, border-color ${theme.motion.fast} ${theme.motion.easing}, opacity ${theme.motion.fast} ${theme.motion.easing}`,
         opacity: isFaded ? 0.35 : 1,
         boxShadow: isHighlighted ? `0 0 8px ${theme.color.primary}33` : "none",
+        zIndex: isHighlighted ? 2 : 1,
         ...style,
       }}
     >
@@ -299,199 +213,136 @@ function TaskCard({
 }
 
 // ---------------------------------------------------------------------------
-// SVG Arrows
+// SVG edge rendering
 // ---------------------------------------------------------------------------
 
-function ArrowOverlay({
+function EdgeOverlay({
   edges,
-  positions,
+  posMap,
   backEdges,
   highlightedTaskId,
   theme,
-  svgWidth,
-  svgHeight,
+  width,
+  height,
 }: {
   edges: DependencyEdge[];
-  positions: Map<string, CardPosition>;
+  posMap: Map<string, { x: number; y: number }>;
   backEdges: Set<string>;
   highlightedTaskId: string | null;
   theme: ReturnType<typeof useTheme>["theme"];
-  svgWidth: number;
-  svgHeight: number;
+  width: number;
+  height: number;
 }) {
   return (
     <svg
-      width={svgWidth}
-      height={svgHeight}
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        pointerEvents: "none",
-        overflow: "visible",
-      }}
+      width={width}
+      height={height}
+      style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}
     >
       <defs>
-        <marker
-          id="arrow-blocks"
-          markerWidth="8"
-          markerHeight="6"
-          refX="8"
-          refY="3"
-          orient="auto"
-        >
-          <path d="M0,0 L8,3 L0,6 Z" fill={theme.color.textMuted} />
+        {/* Dot markers at the target end of each edge */}
+        <marker id="fg-dot" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <circle cx="4" cy="4" r="3" fill={theme.color.textMuted} />
         </marker>
-        <marker
-          id="arrow-blocks-hl"
-          markerWidth="8"
-          markerHeight="6"
-          refX="8"
-          refY="3"
-          orient="auto"
-        >
-          <path d="M0,0 L8,3 L0,6 Z" fill={theme.color.primary} />
+        <marker id="fg-dot-hl" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <circle cx="4" cy="4" r="3.5" fill={theme.color.primary} />
         </marker>
-        <marker
-          id="arrow-back-edge"
-          markerWidth="8"
-          markerHeight="6"
-          refX="8"
-          refY="3"
-          orient="auto"
-        >
-          <path d="M0,0 L8,3 L0,6 Z" fill={theme.color.danger} />
+        <marker id="fg-dot-cycle" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <circle cx="4" cy="4" r="3" fill={theme.color.danger} />
         </marker>
-        <marker
-          id="arrow-relates"
-          markerWidth="6"
-          markerHeight="6"
-          refX="3"
-          refY="3"
-          orient="auto"
-        >
-          <circle cx="3" cy="3" r="2" fill={theme.color.textFaint} />
+        <marker id="fg-dot-relates" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+          <circle cx="3" cy="3" r="2" fill={theme.color.textFaint} opacity={0.6} />
         </marker>
       </defs>
       {edges.map((edge, i) => {
-        const sourcePos = positions.get(edge.source_task_id);
-        const targetPos = positions.get(edge.target_task_id);
-        if (!sourcePos || !targetPos) return null;
+        const src = posMap.get(edge.source_task_id);
+        const tgt = posMap.get(edge.target_task_id);
+        if (!src || !tgt) return null;
 
-        const isRelatesToEdge = edge.dependency_type === "relates_to";
         const edgeKey = `${edge.source_task_id}:${edge.target_task_id}`;
-        const isBackEdge = backEdges.has(edgeKey);
+        const isBack = backEdges.has(edgeKey);
+        const isRelates = edge.dependency_type === "relates_to";
         const isRelated =
           highlightedTaskId === edge.source_task_id ||
           highlightedTaskId === edge.target_task_id;
-        const isHighlighted = highlightedTaskId !== null && isRelated;
+        const isHL = highlightedTaskId !== null && isRelated;
         const isFaded = highlightedTaskId !== null && !isRelated;
 
-        // Self-cycle: render a loop on the right side of the card
+        // Self-loop
         if (edge.source_task_id === edge.target_task_id) {
-          const cx = sourcePos.x + CARD_WIDTH + 16;
-          const cy = sourcePos.y + CARD_HEIGHT / 2;
-          const r = 14;
+          const cx = src.x + CARD_WIDTH / 2 + 16;
+          const cy = src.y;
           return (
             <g key={`${edgeKey}-${i}`} opacity={isFaded ? 0.2 : 0.7}>
-              <circle
-                cx={cx}
-                cy={cy}
-                r={r}
-                fill="none"
-                stroke={isHighlighted ? theme.color.primary : theme.color.danger}
-                strokeWidth={2}
-                strokeDasharray="6,3"
-              />
-              <text
-                x={cx}
-                y={cy + 1}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize="10"
-                fill={theme.color.danger}
-              >
-                {"↻"}
-              </text>
+              <circle cx={cx} cy={cy} r={14} fill="none"
+                stroke={isHL ? theme.color.primary : theme.color.danger}
+                strokeWidth={2} strokeDasharray="6,3" />
+              <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
+                fontSize="10" fill={theme.color.danger}>↻</text>
             </g>
           );
         }
 
-        // Back-edge (cycle): render as a curved red dashed path arcing to the right
-        if (isBackEdge) {
-          // Source bottom-center to target top-center, arcing right
-          const x1 = sourcePos.x + CARD_WIDTH;
-          const y1 = sourcePos.y + CARD_HEIGHT / 2;
-          const x2 = targetPos.x + CARD_WIDTH;
-          const y2 = targetPos.y + CARD_HEIGHT / 2;
-          const dx = Math.abs(x2 - x1);
-          const dy = Math.abs(y2 - y1);
-          const arcOffset = Math.max(40, Math.min(dx, dy) * 0.5 + 30);
-          const cx1 = Math.max(x1, x2) + arcOffset;
-          const cy1 = y1;
-          const cx2 = Math.max(x1, x2) + arcOffset;
-          const cy2 = y2;
-          const pathD = `M${x1},${y1} C${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`;
-          const strokeColor = isHighlighted ? theme.color.primary : theme.color.danger;
+        // Shorten the line so it doesn't overlap the card
+        const dx = tgt.x - src.x;
+        const dy = tgt.y - src.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const pad = 32; // pull back from card center
+        if (dist < pad * 2) return null; // too close to draw
 
+        const ux = dx / dist;
+        const uy = dy / dist;
+        const x1 = src.x + ux * pad;
+        const y1 = src.y + uy * pad;
+        const x2 = tgt.x - ux * pad;
+        const y2 = tgt.y - uy * pad;
+
+        if (isBack) {
+          // Back-edge: curved red dashed line
+          const mx = (x1 + x2) / 2;
+          const my = (y1 + y2) / 2;
+          const perpX = -(y2 - y1);
+          const perpY = x2 - x1;
+          const arcStrength = 0.3;
+          const cx1 = mx + perpX * arcStrength;
+          const cy1 = my + perpY * arcStrength;
           return (
-            <path
-              key={`${edgeKey}-${i}`}
-              d={pathD}
+            <path key={`${edgeKey}-${i}`}
+              d={`M${x1},${y1} Q${cx1},${cy1} ${x2},${y2}`}
               fill="none"
-              stroke={strokeColor}
-              strokeWidth={isHighlighted ? 2.5 : 2}
+              stroke={isHL ? theme.color.primary : theme.color.danger}
+              strokeWidth={isHL ? 3 : 2.5}
               strokeDasharray="6,3"
-              markerEnd={isHighlighted ? "url(#arrow-blocks-hl)" : "url(#arrow-back-edge)"}
+              strokeLinecap="round"
+              markerEnd={isHL ? "url(#fg-dot-hl)" : "url(#fg-dot-cycle)"}
               opacity={isFaded ? 0.2 : 0.7}
             />
           );
         }
 
-        // relates_to edges: gray dashed lines
-        if (isRelatesToEdge) {
-          const x1 = sourcePos.x + CARD_WIDTH / 2;
-          const y1 = sourcePos.y + CARD_HEIGHT;
-          const x2 = targetPos.x + CARD_WIDTH / 2;
-          const y2 = targetPos.y;
-          const strokeColor = isHighlighted ? theme.color.primary : theme.color.textFaint;
-
+        if (isRelates) {
           return (
-            <line
-              key={`${edgeKey}-${i}`}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={strokeColor}
-              strokeWidth={isHighlighted ? 1.5 : 1}
+            <line key={`${edgeKey}-${i}`}
+              x1={x1} y1={y1} x2={x2} y2={y2}
+              stroke={isHL ? theme.color.primary : theme.color.textFaint}
+              strokeWidth={isHL ? 2 : 1.5}
               strokeDasharray="6,4"
-              markerEnd="url(#arrow-relates)"
+              strokeLinecap="round"
+              markerEnd="url(#fg-dot-relates)"
               opacity={isFaded ? 0.15 : 0.5}
             />
           );
         }
 
-        // Normal blocks edge: solid line with arrowhead
-        const x1 = sourcePos.x + CARD_WIDTH / 2;
-        const y1 = sourcePos.y + CARD_HEIGHT;
-        const x2 = targetPos.x + CARD_WIDTH / 2;
-        const y2 = targetPos.y;
-        const strokeColor = isHighlighted
-          ? theme.color.primary
-          : theme.color.textFaint;
-
+        // Normal blocks edge
         return (
-          <line
-            key={`${edgeKey}-${i}`}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke={strokeColor}
-            strokeWidth={isHighlighted ? 2 : 1.5}
-            markerEnd={isHighlighted ? "url(#arrow-blocks-hl)" : "url(#arrow-blocks)"}
-            opacity={isFaded ? 0.2 : 0.7}
+          <line key={`${edgeKey}-${i}`}
+            x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={isHL ? theme.color.primary : theme.color.textMuted}
+            strokeWidth={isHL ? 3 : 2}
+            strokeLinecap="round"
+            markerEnd={isHL ? "url(#fg-dot-hl)" : "url(#fg-dot)"}
+            opacity={isFaded ? 0.2 : 0.8}
           />
         );
       })}
@@ -510,48 +361,217 @@ export function DependencyGraphView({
   onTaskClick,
 }: DependencyGraphViewProps) {
   const { theme } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [size, setSize] = useState({ width: 800, height: MIN_HEIGHT });
+
+  // Measure container width, use fixed min height
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      if (w > 0) setSize((prev) => ({ ...prev, width: w }));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Scale height with node count
+  const graphHeight = Math.max(MIN_HEIGHT, tasks.length * 60);
 
   const blockedSet = useMemo(() => new Set(blockedTaskIds), [blockedTaskIds]);
 
-  // Compute DFS-based levels with back-edge detection
-  const { levelGroups, positions, backEdges, cycleNodeIds, svgWidth, svgHeight } = useMemo(() => {
-    const taskIds = tasks.map((t) => t.id);
-    const result = computeLevelsDFS(taskIds, edges);
+  const { backEdges, cycleNodeIds } = useMemo(
+    () => detectCycles(tasks.map((t) => t.id), edges),
+    [tasks, edges],
+  );
 
-    // Group tasks by level
-    const groups: string[][] = [];
-    for (let l = 0; l <= result.maxLevel; l++) {
-      groups.push([]);
+  const { positions, drag, resetPositions } = useForceGraph(tasks, edges, size.width, graphHeight);
+
+  // -------------------------------------------------------------------------
+  // Zoom / pan state
+  // -------------------------------------------------------------------------
+  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+  const cameraRef = useRef(camera);
+  cameraRef.current = camera;
+
+  /** Convert screen-space pointer coords to graph-space coords */
+  const screenToGraph = useCallback(
+    (clientX: number, clientY: number) => {
+      const container = containerRef.current;
+      if (!container) return { gx: 0, gy: 0 };
+      const rect = container.getBoundingClientRect();
+      const cam = cameraRef.current;
+      const gx = (clientX - rect.left - cam.x) / cam.scale;
+      const gy = (clientY - rect.top - cam.y) / cam.scale;
+      return { gx, gy };
+    },
+    [],
+  );
+
+  // Wheel zoom — zoom toward cursor position
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+
+      // Pointer position relative to container
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+
+      setCamera((prev) => {
+        const factor = 1 - e.deltaY * ZOOM_SENSITIVITY;
+        const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * factor));
+        const ratio = newScale / prev.scale;
+        return {
+          scale: newScale,
+          // Adjust translate so the point under the cursor stays fixed
+          x: px - ratio * (px - prev.x),
+          y: py - ratio * (py - prev.y),
+        };
+      });
+    },
+    [],
+  );
+
+  // -------------------------------------------------------------------------
+  // Node drag + background pan
+  // -------------------------------------------------------------------------
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const didDragRef = useRef(false);
+  const dragStartPosRef = useRef({ x: 0, y: 0 });
+  const panStartRef = useRef({ x: 0, y: 0, camX: 0, camY: 0 });
+  const DRAG_THRESHOLD = 4;
+
+  // Node drag start
+  const handlePointerDown = useCallback(
+    (nodeId: string, e: React.PointerEvent) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation(); // Don't trigger background pan
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+      const { gx, gy } = screenToGraph(e.clientX, e.clientY);
+      dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+      didDragRef.current = false;
+      setDraggingId(nodeId);
+      drag.onDragStart(nodeId, gx, gy);
+    },
+    [drag, screenToGraph],
+  );
+
+  // Background pan start
+  const handleBgPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.button !== 0) return;
+      // Only start pan if clicking the background, not a node
+      if (draggingId) return;
+      e.preventDefault();
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+      dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+      didDragRef.current = false;
+      panStartRef.current = { x: e.clientX, y: e.clientY, camX: cameraRef.current.x, camY: cameraRef.current.y };
+      setIsPanning(true);
+    },
+    [draggingId],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const dx = e.clientX - dragStartPosRef.current.x;
+      const dy = e.clientY - dragStartPosRef.current.y;
+      if (!didDragRef.current && dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) {
+        didDragRef.current = true;
+      }
+
+      if (draggingId) {
+        const { gx, gy } = screenToGraph(e.clientX, e.clientY);
+        drag.onDrag(gx, gy);
+      } else if (isPanning) {
+        setCamera((prev) => ({
+          ...prev,
+          x: panStartRef.current.camX + dx,
+          y: panStartRef.current.camY + dy,
+        }));
+      }
+    },
+    [draggingId, isPanning, drag, screenToGraph],
+  );
+
+  const handlePointerUp = useCallback(() => {
+    if (draggingId) {
+      drag.onDragEnd();
+      setDraggingId(null);
     }
-    for (const task of tasks) {
-      const level = result.levels.get(task.id) ?? 0;
-      groups[level].push(task.id);
+    if (isPanning) {
+      setIsPanning(false);
+    }
+  }, [draggingId, isPanning, drag]);
+
+  /** Zoom by a step factor toward the center of the container */
+  const zoomByStep = useCallback((factor: number) => {
+    setCamera((prev) => {
+      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * factor));
+      const ratio = newScale / prev.scale;
+      const cx = size.width / 2;
+      const cy = graphHeight / 2;
+      return {
+        scale: newScale,
+        x: cx - ratio * (cx - prev.x),
+        y: cy - ratio * (cy - prev.y),
+      };
+    });
+  }, [size.width, graphHeight]);
+
+  const handleZoomIn = useCallback(() => zoomByStep(1.3), [zoomByStep]);
+  const handleZoomOut = useCallback(() => zoomByStep(1 / 1.3), [zoomByStep]);
+
+  /** Fit all nodes into view with padding */
+  const handleFitToView = useCallback(() => {
+    if (positions.length === 0) {
+      setCamera({ x: 0, y: 0, scale: 1 });
+      return;
     }
 
-    // Remove empty trailing levels
-    while (groups.length > 0 && groups[groups.length - 1].length === 0) {
-      groups.pop();
+    const PAD = 40; // padding around the bounding box
+    const halfW = CARD_WIDTH / 2;
+    const halfH = CARD_HEIGHT / 2;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of positions) {
+      minX = Math.min(minX, p.x - halfW);
+      minY = Math.min(minY, p.y - halfH);
+      maxX = Math.max(maxX, p.x + halfW);
+      maxY = Math.max(maxY, p.y + halfH);
     }
 
-    // Ensure at least one level
-    if (groups.length === 0) groups.push([]);
+    const bboxW = maxX - minX + PAD * 2;
+    const bboxH = maxY - minY + PAD * 2;
 
-    const maxCols = Math.max(1, ...groups.map((g) => g.length));
-    const pos = computeCardPositions(groups);
+    const scaleX = size.width / bboxW;
+    const scaleY = graphHeight / bboxH;
+    // Don't magnify past 1x — fit should shrink to fit, not blow up small graphs
+    const scale = Math.min(scaleX, scaleY, 1);
 
-    const width = LEVEL_LABEL_WIDTH + PADDING + maxCols * (CARD_WIDTH + CARD_GAP_X);
-    const height = PADDING + groups.length * (CARD_HEIGHT + CARD_GAP_Y);
+    // Center the bounding box in the viewport
+    const cx = (minX - PAD) * scale;
+    const cy = (minY - PAD) * scale;
+    const offsetX = (size.width - bboxW * scale) / 2 - cx;
+    const offsetY = (graphHeight - bboxH * scale) / 2 - cy;
 
-    return {
-      levelGroups: groups,
-      positions: pos,
-      backEdges: result.backEdges,
-      cycleNodeIds: result.cycleNodeIds,
-      svgWidth: width,
-      svgHeight: height,
-    };
-  }, [tasks, edges]);
+    setCamera({ x: offsetX, y: offsetY, scale });
+  }, [positions, size.width, graphHeight]);
+
+  const posMap = useMemo(() => {
+    const m = new Map<string, { x: number; y: number }>();
+    for (const p of positions) m.set(p.id, { x: p.x, y: p.y });
+    return m;
+  }, [positions]);
 
   const taskMap = useMemo(() => {
     const map = new Map<string, GraphNode>();
@@ -571,7 +591,6 @@ export function DependencyGraphView({
     return ids;
   }, [hoveredTaskId, edges]);
 
-  // Empty state
   if (edges.length === 0) {
     return (
       <EmptyState
@@ -584,85 +603,120 @@ export function DependencyGraphView({
 
   return (
     <div
+      ref={containerRef}
+      onPointerDown={handleBgPointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onWheel={handleWheel}
       style={{
         position: "relative",
-        overflowX: "auto",
-        overflowY: "hidden",
         width: "100%",
+        height: graphHeight,
+        overflow: "hidden",
+        cursor: draggingId ? "grabbing" : isPanning ? "grabbing" : "default",
+        touchAction: "none",
       }}
     >
+      {/* Transformed layer — zoom & pan applied here */}
       <div
         style={{
-          position: "relative",
-          width: svgWidth,
-          height: svgHeight,
-          minWidth: "100%",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          transformOrigin: "0 0",
+          transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
+          willChange: "transform",
         }}
       >
-        {/* SVG arrow overlay */}
-        <ArrowOverlay
+        {/* SVG edge overlay */}
+        <EdgeOverlay
           edges={edges}
-          positions={positions}
+          posMap={posMap}
           backEdges={backEdges}
           highlightedTaskId={hoveredTaskId}
           theme={theme}
-          svgWidth={svgWidth}
-          svgHeight={svgHeight}
+          width={size.width}
+          height={graphHeight}
         />
 
-        {/* Level labels */}
-        {levelGroups.map((_, levelIdx) => (
-          <div
-            key={`level-label-${levelIdx}`}
+        {/* Task cards */}
+        {positions.map((pos) => {
+          const task = taskMap.get(pos.id);
+          if (!task) return null;
+          const isBlocked = blockedSet.has(pos.id);
+          const isInCycle = cycleNodeIds.has(pos.id);
+          const isHighlighted = connectedIds !== null && connectedIds.has(pos.id);
+          const isFaded = connectedIds !== null && !connectedIds.has(pos.id);
+          const isDragging = draggingId === pos.id;
+
+          return (
+            <div
+              key={pos.id}
+              onMouseEnter={() => !draggingId && setHoveredTaskId(pos.id)}
+              onMouseLeave={() => !draggingId && setHoveredTaskId(null)}
+              onPointerDown={(e) => handlePointerDown(pos.id, e)}
+            >
+              <TaskCard
+                task={task}
+                isBlocked={isBlocked}
+                isInCycle={isInCycle}
+                isHighlighted={isHighlighted || isDragging}
+                isFaded={isFaded}
+                onClick={() => {
+                  if (!didDragRef.current) onTaskClick(pos.id);
+                }}
+                style={{
+                  left: pos.x,
+                  top: pos.y,
+                  cursor: isDragging ? "grabbing" : "grab",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Zoom controls */}
+      <div
+        onPointerDown={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          bottom: theme.spacing.sm,
+          right: theme.spacing.sm,
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          zIndex: 10,
+        }}
+      >
+        {[
+          { icon: "add", action: handleZoomIn, label: "Zoom in" },
+          { icon: "remove", action: handleZoomOut, label: "Zoom out" },
+          { icon: "fit_screen", action: handleFitToView, label: "Fit all nodes" },
+          { icon: "lock_open", action: resetPositions, label: "Unlock all nodes" },
+        ].map(({ icon, action, label }) => (
+          <button
+            key={icon}
+            onClick={action}
+            title={label}
             style={{
-              position: "absolute",
-              left: PADDING,
-              top: PADDING + levelIdx * (CARD_HEIGHT + CARD_GAP_Y) + (CARD_HEIGHT - 20) / 2,
-              width: LEVEL_LABEL_WIDTH - PADDING,
-              fontSize: theme.font.size.xxs,
-              fontFamily: theme.font.body,
-              fontWeight: 700,
+              width: 28,
+              height: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+              border: `1px solid ${theme.color.border}`,
+              borderRadius: theme.radius.sm,
+              background: theme.color.surfaceContainerHigh,
               color: theme.color.textMuted,
-              textTransform: "uppercase",
-              letterSpacing: theme.font.letterSpacing.wide,
-              whiteSpace: "nowrap",
+              cursor: "pointer",
             }}
           >
-            {levelIdx === 0 ? "Ready" : `Depth ${levelIdx}`}
-          </div>
+            <Icon name={icon} size={16} />
+          </button>
         ))}
-
-        {/* Task cards */}
-        {levelGroups.map((group) =>
-          group.map((taskId) => {
-            const task = taskMap.get(taskId);
-            if (!task) return null;
-            const pos = positions.get(taskId);
-            if (!pos) return null;
-            const isBlocked = blockedSet.has(taskId);
-            const isInCycle = cycleNodeIds.has(taskId);
-            const isHighlighted = connectedIds !== null && connectedIds.has(taskId);
-            const isFaded = connectedIds !== null && !connectedIds.has(taskId);
-
-            return (
-              <div
-                key={taskId}
-                onMouseEnter={() => setHoveredTaskId(taskId)}
-                onMouseLeave={() => setHoveredTaskId(null)}
-              >
-                <TaskCard
-                  task={task}
-                  isBlocked={isBlocked}
-                  isInCycle={isInCycle}
-                  isHighlighted={isHighlighted}
-                  isFaded={isFaded}
-                  onClick={() => onTaskClick(taskId)}
-                  style={{ left: pos.x, top: pos.y }}
-                />
-              </div>
-            );
-          }),
-        )}
       </div>
     </div>
   );
