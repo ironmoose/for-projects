@@ -58,7 +58,20 @@ export class TaskDependencyService implements ITaskDependencyService {
     return results;
   }
 
-  removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void {
+  removeDependencies(projectId: string, pairs: { source_task_id: string; target_task_id: string }[]): void {
+    // Validate tasks belong to the specified project
+    for (const pair of pairs) {
+      const sourceTask = this.taskRepo.findById(pair.source_task_id);
+      if (!sourceTask) throw new ServiceError(`task not found: ${pair.source_task_id}`, 404);
+
+      const targetTask = this.taskRepo.findById(pair.target_task_id);
+      if (!targetTask) throw new ServiceError(`task not found: ${pair.target_task_id}`, 404);
+
+      if (sourceTask.project_id !== projectId || targetTask.project_id !== projectId) {
+        throw new ServiceError("dependencies must be within the same project", 400);
+      }
+    }
+
     this.depRepo.removeDependencies(pairs);
 
     for (const pair of pairs) {

@@ -45,6 +45,8 @@ export class DocumentReferenceService implements IDocumentReferenceService {
     const documentIds = Object.keys(documents);
     if (documentIds.length === 0) return;
 
+    this.validateMergePatch(documents);
+
     for (const documentId of documentIds) {
       const value = documents[documentId];
 
@@ -52,22 +54,6 @@ export class DocumentReferenceService implements IDocumentReferenceService {
         // null means remove all references for this entity+document pair
         this.docRefRepo.removeReferencesForEntityDocument(entityType, entityId, documentId);
         continue;
-      }
-
-      // Validate each entry's type
-      for (const entry of value) {
-        if (!(DOCUMENT_REFERENCE_TYPES as readonly string[]).includes(entry.type)) {
-          throw new ServiceError(
-            `invalid reference type "${entry.type}". Valid types: ${DOCUMENT_REFERENCE_TYPES.join(", ")}`,
-            400,
-          );
-        }
-      }
-
-      // Validate document exists
-      const doc = this.documentRepo.findById(documentId);
-      if (!doc) {
-        throw new ServiceError(`document not found: ${documentId}`, 404);
       }
 
       // Extract types and set references (full replacement for this entity+document pair)

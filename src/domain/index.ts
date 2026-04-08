@@ -17,3 +17,4 @@ export { DocumentReferenceRepository } from "./repositories/document-references"
 export { DocumentReferenceService } from "./services/document-references";
 export { TaskDependencyRepository } from "./repositories/task-dependencies";
 export { TaskDependencyService } from "./services/task-dependencies";
+export { ActivityLogService } from "./services/activity-log";

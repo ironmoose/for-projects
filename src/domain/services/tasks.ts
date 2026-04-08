@@ -113,6 +113,7 @@ export class TaskService implements ITaskService {
   }
 
   update(inputs: UpdateTaskInput[]): Task[] {
+    const taskCache = new Map<string, Task>();
     for (const input of inputs) {
       if (input.title !== undefined && !input.title.trim()) {
         throw new ServiceError("title cannot be empty", 400);
@@ -140,6 +141,7 @@ export class TaskService implements ITaskService {
       }
       const existing = this.taskRepo.findById(input.id);
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);
+      taskCache.set(input.id, existing);
     }
 
     // Strip dependency arrays and documents from repo input
@@ -151,8 +153,7 @@ export class TaskService implements ITaskService {
       // Process dependency operations
       if (this.depService) {
         for (const input of inputs) {
-          const existing = this.taskRepo.findById(input.id);
-          if (!existing) continue;
+          const existing = taskCache.get(input.id)!;
 
           if (input.add_dependencies && input.add_dependencies.length > 0) {
             this.depService.addDependencies(
@@ -166,6 +167,7 @@ export class TaskService implements ITaskService {
           }
           if (input.remove_dependencies && input.remove_dependencies.length > 0) {
             this.depService.removeDependencies(
+              existing.project_id,
               input.remove_dependencies.map((d) => ({
                 source_task_id: d.task_id,
                 target_task_id: input.id,
@@ -184,8 +186,9 @@ export class TaskService implements ITaskService {
         }
       }
 
+      const inputById = new Map(inputs.map(i => [i.id, i]));
       for (const t of tasks) {
-        const input = inputs.find((i) => i.id === t.id);
+        const input = inputById.get(t.id);
         const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies" && k !== "documents");
         const added = input?.add_dependencies?.length ?? 0;
         const removed = input?.remove_dependencies?.length ?? 0;

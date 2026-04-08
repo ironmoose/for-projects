@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, EntityType } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, EntityType, ActivityLog } from "./entities";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -33,7 +33,7 @@ export interface ITaskService {
 
 export interface ITaskDependencyService {
   addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: string }[]): TaskDependency[];
-  removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void;
+  removeDependencies(projectId: string, pairs: { source_task_id: string; target_task_id: string }[]): void;
   getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean };
   getGraph(projectId: string, statusFilter?: string[]): { edges: TaskDependency[]; blocked_task_ids: string[] };
 }
@@ -47,6 +47,10 @@ export interface IDocumentReferenceService {
   getEntitiesForDocument(documentId: string): DocumentReference[];
   removeAllForEntity(entityType: EntityType, entityId: string): void;
   removeAllForDocument(documentId: string): void;
+}
+
+export interface IActivityLogService {
+  list(filter?: { entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Paginated<ActivityLog>;
 }
 
 export interface IDocumentService {

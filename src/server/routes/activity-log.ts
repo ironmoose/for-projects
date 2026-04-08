@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import type { ActivityLogRepository } from "../../domain/repositories/activity-log";
+import type { IActivityLogService } from "../../domain";
 
-export function activityLogRoutes(repo: ActivityLogRepository): Hono {
+export function activityLogRoutes(service: IActivityLogService): Hono {
   const app = new Hono();
 
   // GET /api/activity-log
@@ -13,17 +13,11 @@ export function activityLogRoutes(repo: ActivityLogRepository): Hono {
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
     const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
 
-    const filter = { entity_type, entity_id, limit, offset } as {
-      entity_type?: string;
-      entity_id?: string;
-      limit: number;
-      offset: number;
-    };
+    const filter: { entity_type?: string; entity_id?: string; limit: number; offset: number } = { limit, offset };
+    if (entity_type) filter.entity_type = entity_type;
+    if (entity_id) filter.entity_id = entity_id;
 
-    return c.json({
-      data: repo.findMany(filter),
-      total: repo.count(filter),
-    });
+    return c.json(service.list(filter));
   });
 
   return app;

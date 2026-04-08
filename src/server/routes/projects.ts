@@ -6,7 +6,7 @@ import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from "../../domain";
-import { validateDocumentsMergePatch, DocumentsMergePatchError } from "./validation";
+import { validateDocumentsMergePatch } from "./validation";
 
 export function projectRoutes(service: IProjectService, taskService?: ITaskService, depService?: ITaskDependencyService): Hono {
   const app = new Hono();
@@ -27,6 +27,12 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
   app.post("/", async (c) => {
     const body = await c.req.json<{ items: CreateProjectInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
+    for (let i = 0; i < body.items.length; i++) {
+      const item = body.items[i];
+      if (item.documents !== undefined) {
+        item.documents = validateDocumentsMergePatch(item.documents, i);
+      }
+    }
     const projects = service.create(body.items);
     return c.json(projects, 201);
   });
@@ -59,9 +65,10 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
   // DELETE /api/projects/:id/dependencies
   app.delete("/:id/dependencies", async (c) => {
     if (!depService) return c.json({ error: "dependency service not available" }, 500);
+    const projectId = c.req.param("id");
     const body = await c.req.json<{ items: { source_task_id: string; target_task_id: string }[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    depService.removeDependencies(body.items);
+    depService.removeDependencies(projectId, body.items);
     return c.body(null, 204);
   });
 
@@ -74,18 +81,11 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateProjectInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    try {
-      for (let i = 0; i < body.items.length; i++) {
-        const item = body.items[i];
-        if (item.documents !== undefined) {
-          item.documents = validateDocumentsMergePatch(item.documents, i);
-        }
+    for (let i = 0; i < body.items.length; i++) {
+      const item = body.items[i];
+      if (item.documents !== undefined) {
+        item.documents = validateDocumentsMergePatch(item.documents, i);
       }
-    } catch (err) {
-      if (err instanceof DocumentsMergePatchError) {
-        return c.json({ error: err.message }, 400);
-      }
-      throw err;
     }
     const projects = service.update(body.items);
     return c.json(projects);

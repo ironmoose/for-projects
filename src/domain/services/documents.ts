@@ -165,11 +165,12 @@ export class DocumentService implements IDocumentService {
       }
     }
 
+    const inputById = new Map(inputs.map(i => [i.id, i]));
     const results: (Document & { tags: string[] })[] = [];
     for (const doc of documents) {
       const tags = this.tagRepo.getTagsForEntity("document", doc.id).map((t) => t.kind);
       results.push({ ...doc, tags });
-      const fields = Object.keys(inputs.find((i) => i.id === doc.id) ?? {}).filter((k) => k !== "id");
+      const fields = Object.keys(inputById.get(doc.id) ?? {}).filter((k) => k !== "id");
       this.activityLog.insert({
         entity_type: "document",
         entity_id: doc.id,

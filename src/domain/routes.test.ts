@@ -1509,7 +1509,7 @@ describe("Project Dependency Endpoints", () => {
     expect(res.status).toBe(204);
   });
 
-  it("DELETE /projects/:id/dependencies with nonexistent edges is a no-op", async () => {
+  it("DELETE /projects/:id/dependencies with nonexistent task returns 404", async () => {
     const res = await req(`/projects/${projectId}/dependencies`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -1517,7 +1517,7 @@ describe("Project Dependency Endpoints", () => {
         items: [{ source_task_id: taskAId, target_task_id: "00000000000000000000000000" }],
       }),
     });
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(404);
   });
 
   it("DELETE /projects/:id/dependencies with non-array items returns 400", async () => {

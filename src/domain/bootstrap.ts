@@ -13,6 +13,7 @@ import { TaskService } from "./services/tasks";
 import { TaskDependencyService } from "./services/task-dependencies";
 import { DocumentReferenceService } from "./services/document-references";
 import { DocumentService } from "./services/documents";
+import { ActivityLogService } from "./services/activity-log";
 import { EventBus } from "./events";
 
 export interface AppContext {
@@ -23,6 +24,7 @@ export interface AppContext {
   taskDependencyService: TaskDependencyService;
   documentService: DocumentService;
   documentReferenceService: DocumentReferenceService;
+  activityLogService: ActivityLogService;
   activityLogRepo: ActivityLogRepository;
 }
 
@@ -45,6 +47,7 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
   const projectService = new ProjectService(projectRepo, activityLogRepo, eventBus, documentReferenceService);
   const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus, taskDependencyService, documentReferenceService);
   const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo);
+  const activityLogService = new ActivityLogService(activityLogRepo);
 
-  return { db, eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogRepo };
+  return { db, eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, activityLogRepo };
 }

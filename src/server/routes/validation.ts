@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DOCUMENT_REFERENCE_TYPES, type DocumentReferenceType } from "../../domain";
+import { ServiceError } from "../../domain";
 
 /**
  * Zod schema for the merge-patch `documents` field on project/task PATCH endpoints.
@@ -22,7 +23,7 @@ export const documentsMergePatchSchema = z.record(
 
 /**
  * Validate the `documents` merge-patch field from a request body item.
- * Returns the validated value or throws with a descriptive error.
+ * Returns the validated value or throws ServiceError(400).
  *
  * @param documents - Raw documents field from the request body
  * @param itemIndex - Index in the items array (for error messages)
@@ -41,17 +42,7 @@ export function validateDocumentsMergePatch(
       return `${issue.message}${path}`;
     });
     const prefix = itemIndex !== undefined ? `items[${itemIndex}].documents: ` : "Invalid documents merge-patch: ";
-    throw new DocumentsMergePatchError(
-      `${prefix}${issues.join("; ")}`,
-    );
+    throw new ServiceError(`${prefix}${issues.join("; ")}`, 400);
   }
   return result.data;
-}
-
-/** Error class for merge-patch validation failures. Used by routes to return 400. */
-export class DocumentsMergePatchError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "DocumentsMergePatchError";
-  }
 }

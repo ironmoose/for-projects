@@ -97,25 +97,32 @@ export class ProjectService implements IProjectService {
     const repoInputs = inputs.map(({ documents, ...rest }) => rest);
     const projects = this.repo.updateMany(repoInputs);
 
-    // Process document references merge-patch
-    for (const input of inputs) {
-      if (input.documents) {
-        this.docRefService.applyMergePatch("project", input.id, input.documents);
+    this.eventBus.beginBatch();
+    try {
+      // Process document references merge-patch
+      for (const input of inputs) {
+        if (input.documents) {
+          this.docRefService.applyMergePatch("project", input.id, input.documents);
+        }
       }
-    }
 
-    for (const p of projects) {
-      const input = inputs.find((i) => i.id === p.id);
-      const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "documents");
-      this.activityLog.insert({
-        entity_type: "project",
-        entity_id: p.id,
-        action: "updated",
-        summary: JSON.stringify({ fields }),
-      });
+      const inputById = new Map(inputs.map(i => [i.id, i]));
+      for (const p of projects) {
+        const input = inputById.get(p.id);
+        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "documents");
+        this.activityLog.insert({
+          entity_type: "project",
+          entity_id: p.id,
+          action: "updated",
+          summary: JSON.stringify({ fields }),
+        });
+      }
+      this.eventBus.emit({ type: "updated", entity_type: "project", ids: projects.map((p) => p.id) });
+
+      return projects;
+    } finally {
+      this.eventBus.flushBatch();
     }
-    this.eventBus.emit({ type: "updated", entity_type: "project", ids: projects.map((p) => p.id) });
-    return projects;
   }
 
   remove(ids: string[]): void {

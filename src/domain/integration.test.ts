@@ -1383,7 +1383,7 @@ describe("Task Dependency Service", () => {
   });
 
   it("removeDependencies removes specified pairs", () => {
-    ctx.taskDependencyService.removeDependencies([
+    ctx.taskDependencyService.removeDependencies(projectId, [
       { source_task_id: taskB, target_task_id: taskA },
     ]);
     const result = ctx.taskDependencyService.getDependencies(taskA);
