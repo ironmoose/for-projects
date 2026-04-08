@@ -1,4 +1,4 @@
-import { type Document, type DocumentSummary, type TagName, TAG_NAMES, toDocumentSummary } from "../entities";
+import { type Document, type DocumentSummary, type TagName, TAG_NAMES } from "../entities";
 import type { CreateDocumentInput, UpdateDocumentInput } from "../inputs";
 import type { IDocumentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
