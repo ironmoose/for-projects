@@ -387,7 +387,7 @@ export function DependencyGraphView({
     [tasks, edges],
   );
 
-  const { positions, drag, resetPositions } = useForceGraph(tasks, edges, size.width, graphHeight);
+  const { positions, drag, settled, resetPositions } = useForceGraph(tasks, edges, size.width, graphHeight);
 
   // -------------------------------------------------------------------------
   // Zoom / pan state
@@ -618,6 +618,44 @@ export function DependencyGraphView({
         touchAction: "none",
       }}
     >
+      {/* Loading spinner — visible while simulation computes */}
+      {!settled && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: theme.spacing.md,
+            zIndex: 20,
+            background: theme.color.surfaceContainer,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: theme.radius.full,
+              border: `3px solid ${theme.color.borderSubtle}`,
+              borderTopColor: theme.color.primary,
+              animation: "spin 0.8s linear infinite",
+            }}
+          />
+          <span
+            style={{
+              fontSize: theme.font.size.xs,
+              color: theme.color.textMuted,
+              fontFamily: theme.font.body,
+            }}
+          >
+            Computing layout{tasks.length > 20 ? ` for ${tasks.length} nodes` : ""}…
+          </span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
       {/* Transformed layer — zoom & pan applied here */}
       <div
         style={{
@@ -627,6 +665,8 @@ export function DependencyGraphView({
           transformOrigin: "0 0",
           transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
           willChange: "transform",
+          opacity: settled ? 1 : 0,
+          transition: `opacity ${theme.motion.normal} ${theme.motion.easing}`,
         }}
       >
         {/* SVG edge overlay */}

@@ -51,11 +51,12 @@ export function useForceGraph(
   edges: { source_task_id: string; target_task_id: string; dependency_type: string }[],
   width: number,
   height: number,
-): { positions: NodePosition[]; drag: DragHandlers } {
+): { positions: NodePosition[]; drag: DragHandlers; settled: boolean; resetPositions: () => void } {
   const simRef = useRef<Simulation<ForceNode, ForceLink> | null>(null);
   const nodesRef = useRef<ForceNode[]>([]);
   const dragNodeRef = useRef<ForceNode | null>(null);
   const [positions, setPositions] = useState<NodePosition[]>([]);
+  const [settled, setSettled] = useState(false);
 
   const syncPositions = useCallback(() => {
     setPositions(
@@ -69,8 +70,12 @@ export function useForceGraph(
     if (nodes.length === 0) {
       nodesRef.current = [];
       setPositions([]);
+      setSettled(true);
       return;
     }
+
+    // Reset settled so the loading state shows
+    setSettled(false);
 
     const forceNodes: ForceNode[] = nodes.map((n) => ({ id: n.id }));
     const forceLinks: ForceLink[] = edges.map((e) => ({
@@ -81,32 +86,42 @@ export function useForceGraph(
 
     nodesRef.current = forceNodes;
 
-    const sim = forceSimulation(forceNodes)
-      .force(
-        "link",
-        forceLink<ForceNode, ForceLink>(forceLinks)
-          .id((d) => d.id)
-          .distance(140)
-          .strength((link) => (link.edgeType === "blocks" ? 1 : 0.2)),
-      )
-      .force("charge", forceManyBody().strength(-400))
-      .force("center", forceCenter(width / 2, height / 2))
-      .force("collide", forceCollide(70))
-      .alphaDecay(0.02);
+    // Use requestAnimationFrame to let the loading spinner paint before
+    // the synchronous tick computation blocks the main thread.
+    let cancelled = false;
+    const rafId = requestAnimationFrame(() => {
+      if (cancelled) return;
 
-    // Compute initial layout synchronously — no animation flicker
-    sim.stop();
-    sim.tick(300);
-    syncPositions();
+      const sim = forceSimulation(forceNodes)
+        .force(
+          "link",
+          forceLink<ForceNode, ForceLink>(forceLinks)
+            .id((d) => d.id)
+            .distance(140)
+            .strength((link) => (link.edgeType === "blocks" ? 1 : 0.2)),
+        )
+        .force("charge", forceManyBody().strength(-400))
+        .force("center", forceCenter(width / 2, height / 2))
+        .force("collide", forceCollide(70))
+        .alphaDecay(0.02);
 
-    // Register tick handler for interactive use (drag). The simulation will
-    // idle at alpha ≈ 0 until onDragStart reheats it.
-    sim.on("tick", syncPositions);
+      // Compute initial layout synchronously
+      sim.stop();
+      sim.tick(300);
+      syncPositions();
+      setSettled(true);
 
-    simRef.current = sim;
+      // Register tick handler for interactive use (drag). The simulation will
+      // idle at alpha ≈ 0 until onDragStart reheats it.
+      sim.on("tick", syncPositions);
+
+      simRef.current = sim;
+    });
 
     return () => {
-      sim.stop();
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      simRef.current?.stop();
     };
   }, [nodes, edges, width, height, syncPositions]);
 
@@ -160,5 +175,5 @@ export function useForceGraph(
     sim.alpha(1).alphaTarget(0).restart();
   }, []);
 
-  return { positions, drag: { onDragStart, onDrag, onDragEnd }, resetPositions };
+  return { positions, drag: { onDragStart, onDrag, onDragEnd }, settled, resetPositions };
 }
