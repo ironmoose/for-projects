@@ -17,7 +17,6 @@ export { ActivityIndicator } from "./atoms/ActivityIndicator";
 export { ProgressBar } from "./atoms/ProgressBar";
 export type { ProgressBarSegment, ProgressBarProps } from "./atoms/ProgressBar";
 export { ReferenceTypeBadge } from "./atoms/ReferenceTypeBadge";
-export { Tile } from "./atoms/Tile";
 // Molecules
 export { Card } from "./molecules/Card";
 export { ExpandableCard } from "./molecules/ExpandableCard";

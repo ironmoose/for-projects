@@ -12,6 +12,8 @@ export function Icon({ name, size = 24, style, ...props }: IconProps) {
       style={{
         fontSize: size,
         lineHeight: 1,
+        color: "inherit",
+        fontVariationSettings: `'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' ${size}`,
         ...style,
       }}
       {...props}

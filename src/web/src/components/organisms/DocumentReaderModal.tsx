@@ -7,6 +7,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
 import { Textarea } from "../atoms/Textarea";
+import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
 import { TagPicker } from "../molecules/TagPicker";
@@ -210,7 +211,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                       size={18}
                       onClick={handleCopy}
                       aria-label="Copy markdown to clipboard"
-                      style={{ color: copied ? theme.color.success : undefined }}
+                      style={{ color: copied ? theme.color.success : theme.color.textMuted }}
                     />
                     <IconButton icon="edit" size={18} onClick={enterEditMode} aria-label="Edit document" />
                   </>
@@ -278,7 +279,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
             ) : (
               document.folder && (
                 <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: theme.font.size.xs, color: theme.color.textMuted }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>folder</span>
+                  <Icon name="folder" size={14} />
                   {document.folder}
                 </div>
               )
