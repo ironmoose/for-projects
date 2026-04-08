@@ -1029,7 +1029,7 @@ describe("get_dependency_graph", () => {
       expect(t.id).toBeTruthy();
       expect(t.title).toBeTruthy();
       expect(t.status).toBeTruthy();
-      expect(typeof t.is_blocked).toBe("boolean");
+      expect(typeof t.has_incomplete_blockers).toBe("boolean");
     }
 
     // Verify edges
