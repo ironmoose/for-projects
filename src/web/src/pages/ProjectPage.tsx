@@ -1294,27 +1294,19 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         <div style={{
           ...(isWide ? { flex: 1, minWidth: 0 } : {}),
         }}>
-          {/* Documents section */}
-          <div style={{ marginBottom: theme.spacing.xl }}>
-            <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
-              <h3
-                style={{
-                  margin: 0,
-                  fontFamily: theme.font.headline,
-                  fontSize: theme.font.size.lg,
-                  fontWeight: 700,
-                  color: theme.color.text,
-                }}
-              >
-                Documents
-              </h3>
+          <ExpandableCard
+            title="Documents"
+            defaultOpen={true}
+            style={{ marginBottom: theme.spacing.xl }}
+            headerAction={
               <Button variant="ghost" onClick={() => setShowDocPicker(true)}>
                 <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
                   <Icon name="edit_note" size={16} />
-                  Manage Documents
+                  Manage
                 </span>
               </Button>
-            </Stack>
+            }
+          >
             <ProjectDocumentTable
               documents={project.documents ?? []}
               selectedDocumentId={selectedDocumentId}
@@ -1327,7 +1319,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 updateDocuments([{ id: doc.document_id, favorite: !doc.favorite } as Parameters<typeof updateDocuments>[0][0]]).catch(() => {});
               }}
             />
-          </div>
+          </ExpandableCard>
         </div>
 
         {/* Right column -- tasks */}
