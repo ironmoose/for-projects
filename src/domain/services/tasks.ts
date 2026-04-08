@@ -27,37 +27,13 @@ export class TaskService implements ITaskService {
     if (repoFilter) delete (repoFilter as Record<string, unknown>).blocked;
 
     const data = this.taskRepo.findManySummary(repoFilter);
-    let total = this.taskRepo.count(repoFilter);
+    const total = this.taskRepo.count(repoFilter);
 
-    // Compute is_blocked if we have the dependency repo
-    if (this.depRepo && filter?.project_id) {
-      const blockedIds = new Set(this.depRepo.getBlockedTaskIds(filter.project_id));
-      const enriched = data.map((s) => ({ ...s, is_blocked: blockedIds.has(s.id) }));
-
-      if (blockedFilter !== undefined) {
-        const filtered = enriched.filter((s) => s.is_blocked === blockedFilter);
-        return { data: filtered, total: filtered.length };
-      }
-      return { data: enriched, total };
+    // is_blocked is materialized on the tasks table — just filter if requested
+    if (blockedFilter !== undefined) {
+      const filtered = data.filter((s) => s.is_blocked === blockedFilter);
+      return { data: filtered, total: filtered.length };
     }
-
-    // If no project_id, compute is_blocked per-task (grouped by project for efficiency)
-    if (this.depRepo) {
-      const blockedIdCache = new Map<string, Set<string>>();
-      const enriched = data.map((s) => {
-        if (!blockedIdCache.has(s.project_id)) {
-          blockedIdCache.set(s.project_id, new Set(this.depRepo!.getBlockedTaskIds(s.project_id)));
-        }
-        return { ...s, is_blocked: blockedIdCache.get(s.project_id)!.has(s.id) };
-      });
-
-      if (blockedFilter !== undefined) {
-        const filtered = enriched.filter((s) => s.is_blocked === blockedFilter);
-        return { data: filtered, total: filtered.length };
-      }
-      return { data: enriched, total };
-    }
-
     return { data, total };
   }
 
@@ -65,12 +41,11 @@ export class TaskService implements ITaskService {
     return this.taskRepo.findGraphSummaries(projectId, status);
   }
 
-  get(id: string): Task & { is_blocked: boolean; documents: DocumentReferenceDetail[] } {
+  get(id: string): Task & { documents: DocumentReferenceDetail[] } {
     const task = this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
-    const is_blocked = this.depRepo ? this.depRepo.isTaskBlocked(task.id) : false;
     const documents = this.docRefService?.findByEntity("task", id) ?? [];
-    return { ...task, is_blocked, documents };
+    return { ...task, documents };
   }
 
   create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[] {
@@ -151,7 +126,6 @@ export class TaskService implements ITaskService {
   }
 
   update(inputs: UpdateTaskInput[]): Task[] {
-    const completingProjectIds = new Set<string>();
     for (const input of inputs) {
       if (input.title !== undefined && !input.title.trim()) {
         throw new ServiceError("title cannot be empty", 400);
@@ -179,19 +153,6 @@ export class TaskService implements ITaskService {
       }
       const existing = this.taskRepo.findById(input.id);
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);
-      // Track project IDs for tasks being completed (for unblock detection)
-      if (this.depRepo && (input.status === "done" || input.status === "archived")) {
-        completingProjectIds.add(existing.project_id);
-      }
-    }
-
-    // Capture blocked state before update for unblock detection (one query per project)
-    let blockedBefore: Map<string, Set<string>> | undefined;
-    if (this.depRepo && completingProjectIds.size > 0) {
-      blockedBefore = new Map();
-      for (const pid of completingProjectIds) {
-        blockedBefore.set(pid, new Set(this.depRepo.getBlockedTaskIds(pid)));
-      }
     }
 
     // Strip dependency arrays and documents from repo input
@@ -254,49 +215,84 @@ export class TaskService implements ITaskService {
       }
       this.eventBus.emit({ type: "updated", entity_type: "task", ids: tasks.map((t) => t.id) });
 
-      // Post-update: check if completing tasks unblocked any dependents
-      // Uses before/after comparison of getBlockedTaskIds() instead of N+1 per-dependent queries
-      if (blockedBefore && blockedBefore.size > 0 && this.depRepo) {
-        // Identify a completing task per project for the activity log attribution
-        const completedTaskByProject = new Map<string, string>();
-        for (const task of tasks) {
-          const input = inputs.find((i) => i.id === task.id);
-          if (!input?.status) continue;
-          if (input.status !== "done" && input.status !== "archived") continue;
-          if (!completedTaskByProject.has(task.project_id)) {
-            completedTaskByProject.set(task.project_id, task.id);
-          }
-        }
-
-        for (const [projectId, beforeSet] of blockedBefore) {
-          const blockedAfter = new Set(this.depRepo.getBlockedTaskIds(projectId));
-          for (const taskId of beforeSet) {
-            if (!blockedAfter.has(taskId)) {
-              // This task was blocked before the update but is no longer blocked
-              this.activityLog.insert({
-                entity_type: "task",
-                entity_id: taskId,
-                action: "updated",
-                summary: JSON.stringify({
-                  event: "unblocked",
-                  unblocked_by: completedTaskByProject.get(projectId) ?? tasks[0].id,
-                  message: "Task unblocked: all blocking dependencies are now complete",
-                }),
-              });
-
-              this.eventBus.emit({
-                type: "updated",
-                entity_type: "task",
-                ids: [taskId],
-              });
-            }
-          }
-        }
-      }
+      // Recompute is_blocked for affected tasks after dependency/status changes
+      this.recomputeBlockedForUpdates(inputs, tasks);
 
       return tasks;
     } finally {
       this.eventBus.flushBatch();
+    }
+  }
+
+  /**
+   * After task updates (status changes, dependency adds/removes), recompute
+   * is_blocked for all tasks that could have been affected.
+   *
+   * Affected tasks: the updated tasks themselves (dependency edges may have
+   * changed) plus, when a task's status changed, all tasks in the same project
+   * that have incoming 'blocks' edges (since the blocker's status matters).
+   */
+  private recomputeBlockedForUpdates(inputs: UpdateTaskInput[], tasks: Task[]): void {
+    const taskIdsToRecompute = new Set<string>();
+
+    // Tasks that had dependency edges added/removed need recomputation
+    for (const input of inputs) {
+      if (input.add_dependencies?.length || input.remove_dependencies?.length) {
+        taskIdsToRecompute.add(input.id);
+      }
+    }
+
+    // Build a map of status-changing task IDs for unblock attribution
+    const statusChangedIds = new Set<string>();
+    // When a task's status changes, any task it blocks may have changed blocked state.
+    if (this.depRepo) {
+      for (const input of inputs) {
+        if (input.status === undefined) continue;
+        statusChangedIds.add(input.id);
+        const deps = this.depRepo.getDependenciesFrom(input.id);
+        for (const dep of deps) {
+          if (dep.dependency_type === "blocks") {
+            taskIdsToRecompute.add(dep.target_task_id);
+          }
+        }
+      }
+    }
+
+    if (taskIdsToRecompute.size > 0) {
+      // Snapshot before recompute for unblock detection
+      const beforeBlocked = new Set<string>();
+      for (const taskId of taskIdsToRecompute) {
+        const task = this.taskRepo.findById(taskId);
+        if (task?.is_blocked) beforeBlocked.add(taskId);
+      }
+
+      this.taskRepo.recomputeBlocked([...taskIdsToRecompute]);
+
+      // Detect unblocked tasks and emit activity/events
+      for (const taskId of taskIdsToRecompute) {
+        if (!beforeBlocked.has(taskId)) continue;
+        const task = this.taskRepo.findById(taskId);
+        if (task && !task.is_blocked) {
+          // Find which completing task unblocked this one
+          const unblockedBy = [...statusChangedIds].find((id) => {
+            // Check if this status-changed task had a blocks edge to the unblocked task
+            const deps = this.depRepo!.getDependenciesFrom(id);
+            return deps.some((d) => d.target_task_id === taskId && d.dependency_type === "blocks");
+          });
+
+          this.activityLog.insert({
+            entity_type: "task",
+            entity_id: taskId,
+            action: "updated",
+            summary: JSON.stringify({
+              event: "unblocked",
+              unblocked_by: unblockedBy ?? tasks[0].id,
+              message: "Task unblocked: all blocking dependencies are now complete",
+            }),
+          });
+          this.eventBus.emit({ type: "updated", entity_type: "task", ids: [taskId] });
+        }
+      }
     }
   }
 
@@ -312,10 +308,29 @@ export class TaskService implements ITaskService {
   }
 
   remove(ids: string[]): void {
+    // Collect dependents before deletion (CASCADE will remove edges)
+    const dependentsToRecompute = new Set<string>();
+    if (this.depRepo) {
+      for (const id of ids) {
+        const deps = this.depRepo.getDependenciesFrom(id);
+        for (const dep of deps) {
+          if (dep.dependency_type === "blocks" && !ids.includes(dep.target_task_id)) {
+            dependentsToRecompute.add(dep.target_task_id);
+          }
+        }
+      }
+    }
+
     for (const id of ids) {
       this.docRefService?.removeAllForEntity("task", id);
     }
     this.taskRepo.deleteMany(ids);
+
+    // Recompute is_blocked for dependents of deleted tasks
+    if (dependentsToRecompute.size > 0) {
+      this.taskRepo.recomputeBlocked([...dependentsToRecompute]);
+    }
+
     for (const id of ids) {
       this.activityLog.insert({
         entity_type: "task",

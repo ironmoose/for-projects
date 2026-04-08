@@ -20,6 +20,11 @@ export interface TaskRow {
 
 type TaskFilter = { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string };
 
+/** SQLite stores booleans as 0/1; normalize to JS boolean. */
+function normalizeTask(row: Record<string, unknown>): Task {
+  return { ...row, is_blocked: !!row.is_blocked } as Task;
+}
+
 export class TaskRepository {
   constructor(private db: Database) {}
 
@@ -69,7 +74,8 @@ export class TaskRepository {
   }
 
   findById(id: string): Task | null {
-    return this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Task | null;
+    const row = this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Record<string, unknown> | null;
+    return row ? normalizeTask(row) : null;
   }
 
   findMany(filter?: TaskFilter): Task[] {
@@ -78,9 +84,10 @@ export class TaskRepository {
     const { where, params } = this.buildWhereClause(filter);
     params.push(limit, offset);
 
-    return this.db
+    const rows = this.db
       .query(`SELECT * FROM tasks ${where}ORDER BY created_at ASC LIMIT ? OFFSET ?`)
-      .all(...params) as Task[];
+      .all(...params) as Record<string, unknown>[];
+    return rows.map(normalizeTask);
   }
 
   findManySummary(filter?: TaskFilter): TaskSummary[] {
@@ -90,7 +97,7 @@ export class TaskRepository {
     params.push(limit, offset);
 
     const rows = this.db
-      .query(`SELECT id, project_id, title, summary, status, effort, impact, category, group_key, (context IS NOT NULL) AS has_context, (acceptance_criteria IS NOT NULL) AS has_acceptance_criteria, 0 AS is_blocked, created_at, updated_at FROM tasks ${where}ORDER BY created_at ASC LIMIT ? OFFSET ?`)
+      .query(`SELECT id, project_id, title, summary, status, effort, impact, category, group_key, (context IS NOT NULL) AS has_context, (acceptance_criteria IS NOT NULL) AS has_acceptance_criteria, is_blocked, created_at, updated_at FROM tasks ${where}ORDER BY created_at ASC LIMIT ? OFFSET ?`)
       .all(...params) as (Omit<TaskSummary, "has_context" | "has_acceptance_criteria" | "is_blocked"> & { has_context: number; has_acceptance_criteria: number; is_blocked: number })[];
 
     return rows.map((r) => ({
@@ -193,7 +200,7 @@ export class TaskRepository {
         effort: (effort ?? null) as EffortLevel | null,
         impact: (impact ?? null) as ImpactLevel | null,
         category: (category ?? null) as TaskCategory | null,
-        is_blocked: existing.is_blocked ?? false,
+        is_blocked: existing.is_blocked,
         created_at: existing.created_at,
         updated_at: now,
       });
@@ -215,6 +222,23 @@ export class TaskRepository {
       result[row.project_id][row.status] = row.count;
     }
     return result;
+  }
+
+  /** Recompute is_blocked for the given task IDs based on current dependency state. */
+  recomputeBlocked(taskIds: string[]): void {
+    if (taskIds.length === 0) return;
+    const placeholders = taskIds.map(() => "?").join(", ");
+    this.db.query(
+      `UPDATE tasks SET is_blocked = (
+        EXISTS (
+          SELECT 1 FROM task_dependencies td
+          JOIN tasks st ON st.id = td.source_task_id
+          WHERE td.target_task_id = tasks.id
+            AND td.dependency_type = 'blocks'
+            AND st.status NOT IN ('done', 'archived')
+        )
+      ) WHERE id IN (${placeholders})`
+    ).run(...taskIds);
   }
 
   deleteMany(ids: string[]): void {

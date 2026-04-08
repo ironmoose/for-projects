@@ -44,7 +44,13 @@ export class TaskDependencyService implements ITaskDependencyService {
     // Phase 2: Persist
     const results = this.depRepo.addDependencies(deps);
 
-    // Phase 3: Side effects
+    // Phase 3: Recompute is_blocked for affected targets
+    const targetIds = [...new Set(deps.filter((d) => d.dependency_type === "blocks").map((d) => d.target_task_id))];
+    if (targetIds.length > 0) {
+      this.taskRepo.recomputeBlocked(targetIds);
+    }
+
+    // Phase 4: Side effects
     for (const dep of deps) {
       this.activityLog.insert({
         entity_type: "task",
@@ -60,6 +66,12 @@ export class TaskDependencyService implements ITaskDependencyService {
 
   removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void {
     this.depRepo.removeDependencies(pairs);
+
+    // Recompute is_blocked for targets whose edges were removed
+    const targetIds = [...new Set(pairs.map((p) => p.target_task_id))];
+    if (targetIds.length > 0) {
+      this.taskRepo.recomputeBlocked(targetIds);
+    }
 
     for (const pair of pairs) {
       this.activityLog.insert({

@@ -24,7 +24,7 @@ export interface IProjectService {
 export interface ITaskService {
   list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary>;
   listGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[];
-  get(id: string): Task & { is_blocked: boolean; documents: DocumentReferenceDetail[] };
+  get(id: string): Task & { documents: DocumentReferenceDetail[] };
   create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[];
   update(inputs: UpdateTaskInput[]): Task[];
   statusCounts(projectIds: string[]): Record<string, { total: number; counts: Record<string, number> }>;
