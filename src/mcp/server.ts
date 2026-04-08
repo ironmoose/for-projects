@@ -96,7 +96,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_tasks",
     {
-      description: "List task summaries, optionally filtered by title, project_id, group_key, status, effort, impact, category, and/or blocked. status accepts an array of status values (e.g. [\"in_progress\", \"todo\"]). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, is_blocked, timestamps). Use blocked=true to find tasks waiting on dependencies, blocked=false to find tasks ready to work on.",
+      description: "List task summaries, optionally filtered by title, project_id, group_key, status, effort, impact, category, and/or blocked. status accepts an array of status values (e.g. [\"in_progress\", \"todo\"]). Returns { data, total } where data contains task summaries (id, title, status, effort, impact, category, group_key, is_blocked, timestamps). Use blocked=true to find tasks marked as blocked, blocked=false to find unblocked tasks.",
       inputSchema: {
         title: z.string().max(255).optional(),
         project_id: z.string().max(26).optional(),
@@ -202,6 +202,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
+          is_blocked: z.boolean().optional(),
           documents: documentsMergePatchSchema,
           add_dependencies: z.array(z.object({
             task_id: z.string().max(26),

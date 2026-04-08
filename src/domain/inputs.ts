@@ -68,6 +68,7 @@ export interface UpdateTaskInput {
   effort?: EffortLevel | null;
   impact?: ImpactLevel | null;
   category?: TaskCategory | null;
+  is_blocked?: boolean;
   add_dependencies?: { task_id: string; type: DependencyType }[];
   remove_dependencies?: { task_id: string }[];
   /** Merge-patch for document references. Key = document_id. Array = replace types for that doc. null = remove all refs. Absent key = untouched. */

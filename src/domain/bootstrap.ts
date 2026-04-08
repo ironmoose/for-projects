@@ -43,7 +43,7 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
   const documentReferenceService = new DocumentReferenceService(documentReferenceRepo, documentRepo, activityLogRepo, eventBus);
   const taskDependencyService = new TaskDependencyService(taskDependencyRepo, taskRepo, activityLogRepo, eventBus);
   const projectService = new ProjectService(projectRepo, activityLogRepo, eventBus, documentReferenceService);
-  const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus, taskDependencyRepo, taskDependencyService, documentReferenceService);
+  const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus, taskDependencyService, documentReferenceService);
   const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo);
 
   return { db, eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogRepo };

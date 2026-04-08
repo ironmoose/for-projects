@@ -166,7 +166,7 @@ export class TaskRepository {
     return results;
   }
 
-  updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; acceptance_criteria?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null }[]): Task[] {
+  updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; acceptance_criteria?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null; is_blocked?: boolean }[]): Task[] {
     const now = new Date().toISOString();
     const results: Task[] = [];
 
@@ -183,10 +183,11 @@ export class TaskRepository {
       const effort = row.effort !== undefined ? row.effort : existing.effort;
       const impact = row.impact !== undefined ? row.impact : existing.impact;
       const category = row.category !== undefined ? row.category : existing.category;
+      const is_blocked = row.is_blocked !== undefined ? row.is_blocked : existing.is_blocked;
 
       this.db
-        .query("UPDATE tasks SET title = ?, summary = ?, context = ?, acceptance_criteria = ?, group_key = ?, status = ?, effort = ?, impact = ?, category = ?, updated_at = ? WHERE id = ?")
-        .run(title, summary, context, acceptance_criteria, group_key, status, effort, impact, category, now, row.id);
+        .query("UPDATE tasks SET title = ?, summary = ?, context = ?, acceptance_criteria = ?, group_key = ?, status = ?, effort = ?, impact = ?, category = ?, is_blocked = ?, updated_at = ? WHERE id = ?")
+        .run(title, summary, context, acceptance_criteria, group_key, status, effort, impact, category, is_blocked ? 1 : 0, now, row.id);
 
       results.push({
         id: row.id,
@@ -200,7 +201,7 @@ export class TaskRepository {
         effort: (effort ?? null) as EffortLevel | null,
         impact: (impact ?? null) as ImpactLevel | null,
         category: (category ?? null) as TaskCategory | null,
-        is_blocked: existing.is_blocked,
+        is_blocked,
         created_at: existing.created_at,
         updated_at: now,
       });
@@ -222,23 +223,6 @@ export class TaskRepository {
       result[row.project_id][row.status] = row.count;
     }
     return result;
-  }
-
-  /** Recompute is_blocked for the given task IDs based on current dependency state. */
-  recomputeBlocked(taskIds: string[]): void {
-    if (taskIds.length === 0) return;
-    const placeholders = taskIds.map(() => "?").join(", ");
-    this.db.query(
-      `UPDATE tasks SET is_blocked = (
-        EXISTS (
-          SELECT 1 FROM task_dependencies td
-          JOIN tasks st ON st.id = td.source_task_id
-          WHERE td.target_task_id = tasks.id
-            AND td.dependency_type = 'blocks'
-            AND st.status NOT IN ('done', 'archived')
-        )
-      ) WHERE id IN (${placeholders})`
-    ).run(...taskIds);
   }
 
   deleteMany(ids: string[]): void {

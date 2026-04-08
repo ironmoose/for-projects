@@ -6,7 +6,6 @@ import type { TaskRepository } from "../repositories/tasks";
 import type { ProjectRepository } from "../repositories/projects";
 import type { ActivityLogRepository } from "../repositories/activity-log";
 import type { EventBus } from "../events";
-import type { TaskDependencyRepository } from "../repositories/task-dependencies";
 
 export class TaskService implements ITaskService {
   constructor(
@@ -14,7 +13,6 @@ export class TaskService implements ITaskService {
     private projectRepo: ProjectRepository,
     private activityLog: ActivityLogRepository,
     private eventBus: EventBus,
-    private depRepo?: TaskDependencyRepository,
     private depService?: ITaskDependencyService,
     private docRefService?: IDocumentReferenceService,
   ) {}
@@ -215,84 +213,9 @@ export class TaskService implements ITaskService {
       }
       this.eventBus.emit({ type: "updated", entity_type: "task", ids: tasks.map((t) => t.id) });
 
-      // Recompute is_blocked for affected tasks after dependency/status changes
-      this.recomputeBlockedForUpdates(inputs, tasks);
-
       return tasks;
     } finally {
       this.eventBus.flushBatch();
-    }
-  }
-
-  /**
-   * After task updates (status changes, dependency adds/removes), recompute
-   * is_blocked for all tasks that could have been affected.
-   *
-   * Affected tasks: the updated tasks themselves (dependency edges may have
-   * changed) plus, when a task's status changed, all tasks in the same project
-   * that have incoming 'blocks' edges (since the blocker's status matters).
-   */
-  private recomputeBlockedForUpdates(inputs: UpdateTaskInput[], tasks: Task[]): void {
-    const taskIdsToRecompute = new Set<string>();
-
-    // Tasks that had dependency edges added/removed need recomputation
-    for (const input of inputs) {
-      if (input.add_dependencies?.length || input.remove_dependencies?.length) {
-        taskIdsToRecompute.add(input.id);
-      }
-    }
-
-    // Build a map of status-changing task IDs for unblock attribution
-    const statusChangedIds = new Set<string>();
-    // When a task's status changes, any task it blocks may have changed blocked state.
-    if (this.depRepo) {
-      for (const input of inputs) {
-        if (input.status === undefined) continue;
-        statusChangedIds.add(input.id);
-        const deps = this.depRepo.getDependenciesFrom(input.id);
-        for (const dep of deps) {
-          if (dep.dependency_type === "blocks") {
-            taskIdsToRecompute.add(dep.target_task_id);
-          }
-        }
-      }
-    }
-
-    if (taskIdsToRecompute.size > 0) {
-      // Snapshot before recompute for unblock detection
-      const beforeBlocked = new Set<string>();
-      for (const taskId of taskIdsToRecompute) {
-        const task = this.taskRepo.findById(taskId);
-        if (task?.is_blocked) beforeBlocked.add(taskId);
-      }
-
-      this.taskRepo.recomputeBlocked([...taskIdsToRecompute]);
-
-      // Detect unblocked tasks and emit activity/events
-      for (const taskId of taskIdsToRecompute) {
-        if (!beforeBlocked.has(taskId)) continue;
-        const task = this.taskRepo.findById(taskId);
-        if (task && !task.is_blocked) {
-          // Find which completing task unblocked this one
-          const unblockedBy = [...statusChangedIds].find((id) => {
-            // Check if this status-changed task had a blocks edge to the unblocked task
-            const deps = this.depRepo!.getDependenciesFrom(id);
-            return deps.some((d) => d.target_task_id === taskId && d.dependency_type === "blocks");
-          });
-
-          this.activityLog.insert({
-            entity_type: "task",
-            entity_id: taskId,
-            action: "updated",
-            summary: JSON.stringify({
-              event: "unblocked",
-              unblocked_by: unblockedBy ?? tasks[0].id,
-              message: "Task unblocked: all blocking dependencies are now complete",
-            }),
-          });
-          this.eventBus.emit({ type: "updated", entity_type: "task", ids: [taskId] });
-        }
-      }
     }
   }
 
@@ -308,29 +231,10 @@ export class TaskService implements ITaskService {
   }
 
   remove(ids: string[]): void {
-    // Collect dependents before deletion (CASCADE will remove edges)
-    const dependentsToRecompute = new Set<string>();
-    if (this.depRepo) {
-      for (const id of ids) {
-        const deps = this.depRepo.getDependenciesFrom(id);
-        for (const dep of deps) {
-          if (dep.dependency_type === "blocks" && !ids.includes(dep.target_task_id)) {
-            dependentsToRecompute.add(dep.target_task_id);
-          }
-        }
-      }
-    }
-
     for (const id of ids) {
       this.docRefService?.removeAllForEntity("task", id);
     }
     this.taskRepo.deleteMany(ids);
-
-    // Recompute is_blocked for dependents of deleted tasks
-    if (dependentsToRecompute.size > 0) {
-      this.taskRepo.recomputeBlocked([...dependentsToRecompute]);
-    }
-
     for (const id of ids) {
       this.activityLog.insert({
         entity_type: "task",
