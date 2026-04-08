@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
-import { PresenceCharm } from "../molecules/PresenceCharm";
 import { useTheme } from "../theme/ThemeContext";
+import { useWindowWidth, SMALL_BREAKPOINT } from "../../hooks/useWindowWidth";
 import type { Theme } from "../theme/theme";
 import type { DocumentSummary } from "../../types";
 import { formatDate } from "../../utils";
@@ -21,116 +21,88 @@ interface DocumentTableProps {
 }
 
 // ---------------------------------------------------------------------------
-// Grouping modes
+// Project chips — reused inside each card
 // ---------------------------------------------------------------------------
 
-type GroupMode = "folder" | "tag";
+function ProjectChips({ projects, compact, theme }: { projects: DocumentSummary["linked_projects"]; compact: boolean; theme: Theme }) {
+  if (projects.length === 0) return null;
 
-interface DocGroup {
-  key: string;
-  label: string;
-  icon: string;
-  docs: DocumentSummary[];
-}
-
-function groupByFolder(documents: DocumentSummary[]): DocGroup[] {
-  const map = new Map<string | null, DocumentSummary[]>();
-  for (const doc of documents) {
-    const key = doc.folder;
-    const list = map.get(key);
-    if (list) list.push(doc);
-    else map.set(key, [doc]);
+  if (compact) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 3,
+          fontSize: theme.font.size.xxs,
+          color: theme.color.textMuted,
+          fontWeight: 600,
+          fontFamily: theme.font.body,
+          flexShrink: 0,
+        }}
+      >
+        <Icon name="folder_special" size={12} style={{ color: theme.color.textFaint }} />
+        {projects.length}
+      </span>
+    );
   }
 
-  const keys = [...map.keys()].sort((a, b) => {
-    if (a === null) return 1;
-    if (b === null) return -1;
-    return a.localeCompare(b);
-  });
-
-  return keys.map((key) => ({
-    key: key ?? "__unfiled__",
-    label: key ?? "Unfiled",
-    icon: key ? "folder" : "folder_open",
-    docs: map.get(key)!,
-  }));
-}
-
-function groupByTag(documents: DocumentSummary[]): DocGroup[] {
-  const map = new Map<string, DocumentSummary[]>();
-  for (const doc of documents) {
-    const tag = doc.tags.length > 0 ? doc.tags[0] : "__untagged__";
-    const list = map.get(tag);
-    if (list) list.push(doc);
-    else map.set(tag, [doc]);
-  }
-
-  const keys = [...map.keys()].sort((a, b) => {
-    if (a === "__untagged__") return 1;
-    if (b === "__untagged__") return -1;
-    return a.localeCompare(b);
-  });
-
-  return keys.map((key) => ({
-    key,
-    label: key === "__untagged__" ? "Untagged" : key,
-    icon: key === "__untagged__" ? "label_off" : "label",
-    docs: map.get(key)!,
-  }));
-}
-
-function groupDocs(documents: DocumentSummary[], mode: GroupMode): DocGroup[] {
-  return mode === "folder" ? groupByFolder(documents) : groupByTag(documents);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+      {projects.map((p) => (
+        <span
+          key={p.id}
+          style={{
+            display: "inline-block",
+            maxWidth: 140,
+            padding: `1px ${theme.spacing.xs}`,
+            borderRadius: theme.radius.sm,
+            background: `${theme.color.primary}14`,
+            border: `1px solid ${theme.color.primary}30`,
+            color: theme.color.primary,
+            fontSize: theme.font.size.xxs,
+            fontWeight: 600,
+            fontFamily: theme.font.body,
+            letterSpacing: theme.font.letterSpacing.tight,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={p.title}
+        >
+          {p.title}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Root
+// Magazine card grid — the main export
 // ---------------------------------------------------------------------------
 
 export function DocumentTable({ documents, selectedDocumentId, onSelectDocument, onDeleteDocument, onToggleFavorite }: DocumentTableProps) {
   const { theme } = useTheme();
-  const [groupMode, setGroupMode] = useState<GroupMode>("folder");
-  const groups = useMemo(() => groupDocs(documents, groupMode), [documents, groupMode]);
+  const windowWidth = useWindowWidth();
+  const columns = windowWidth >= SMALL_BREAKPOINT ? 2 : 1;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.md }}>
-      {/* Group mode toggle */}
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
-        {(["folder", "tag"] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setGroupMode(mode)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-              borderRadius: theme.radius.md,
-              border: `1px solid ${groupMode === mode ? theme.color.primary : theme.color.borderSubtle}`,
-              background: groupMode === mode ? `${theme.color.primary}18` : "transparent",
-              color: groupMode === mode ? theme.color.primary : theme.color.textMuted,
-              fontSize: theme.font.size.xxs,
-              fontWeight: 600,
-              fontFamily: theme.font.body,
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
-          >
-            <Icon name={mode === "folder" ? "folder" : "label"} size={13} />
-            {mode === "folder" ? "Folder" : "Tag"}
-          </button>
-        ))}
-      </div>
-
-      {/* Grouped decks */}
-      {groups.map((group) => (
-        <DeckSection
-          key={group.key}
-          group={group}
-          selectedDocumentId={selectedDocumentId}
-          onSelectDocument={onSelectDocument}
-          onDeleteDocument={onDeleteDocument}
-          onToggleFavorite={onToggleFavorite}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gap: columns === 1 ? theme.spacing.sm : theme.spacing.md,
+      }}
+    >
+      {documents.map((doc) => (
+        <DocumentCard
+          key={doc.id}
+          doc={doc}
+          compact={columns === 1}
+          selected={selectedDocumentId === doc.id}
+          onSelect={() => onSelectDocument(doc.id)}
+          onDelete={() => onDeleteDocument(doc)}
+          onToggleFavorite={() => onToggleFavorite(doc)}
         />
       ))}
     </div>
@@ -138,348 +110,168 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
 }
 
 // ---------------------------------------------------------------------------
-// Collapsible deck section
+// Individual magazine card
 // ---------------------------------------------------------------------------
 
-interface DeckSectionProps {
-  group: DocGroup;
-  selectedDocumentId: string | null;
-  onSelectDocument: (id: string) => void;
-  onDeleteDocument: (doc: DocumentSummary) => void;
-  onToggleFavorite: (doc: DocumentSummary) => void;
-}
-
-function DeckSection({ group, selectedDocumentId, onSelectDocument, onDeleteDocument, onToggleFavorite }: DeckSectionProps) {
-  const { theme } = useTheme();
-  const [open, setOpen] = useState(true);
-
-  return (
-    <div>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen(!open)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setOpen(!open);
-          }
-        }}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: theme.spacing.sm,
-          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-          cursor: "pointer",
-          userSelect: "none",
-          borderRadius: theme.radius.md,
-        }}
-      >
-        <Icon
-          name="chevron_right"
-          size={16}
-          style={{
-            color: theme.color.textMuted,
-            transform: open ? "rotate(90deg)" : "rotate(0deg)",
-            transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
-            flexShrink: 0,
-          }}
-        />
-        <Icon
-          name={group.icon}
-          size={14}
-          style={{ color: theme.color.textMuted, flexShrink: 0 }}
-        />
-        <span
-          style={{
-            fontSize: theme.font.size.xs,
-            fontWeight: 700,
-            fontFamily: theme.font.headline,
-            letterSpacing: theme.font.letterSpacing.wide,
-            textTransform: "uppercase",
-            color: theme.color.textMuted,
-          }}
-        >
-          {group.label}
-        </span>
-        <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint, fontWeight: 400 }}>
-          {group.docs.length}
-        </span>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateRows: open ? "1fr" : "0fr",
-          transition: `grid-template-rows ${theme.motion.normal} ${theme.motion.easing}`,
-        }}
-      >
-        <div style={{ overflow: "hidden", minHeight: 0 }}>
-          <div style={{ paddingTop: theme.spacing.xs }}>
-            <DocumentDeck
-              docs={group.docs}
-              selectedDocumentId={selectedDocumentId}
-              onSelectDocument={onSelectDocument}
-              onDeleteDocument={onDeleteDocument}
-              onToggleFavorite={onToggleFavorite}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Document deck — cards stacked, focused card expands on hover
-// ---------------------------------------------------------------------------
-
-const CARD_COLLAPSED_H = 38;
-const CARD_EXPANDED_H = 120;
-const OVERLAP = 8;
-
-interface DocumentDeckProps {
-  docs: DocumentSummary[];
-  selectedDocumentId: string | null;
-  onSelectDocument: (id: string) => void;
-  onDeleteDocument: (doc: DocumentSummary) => void;
-  onToggleFavorite: (doc: DocumentSummary) => void;
-}
-
-function DocumentDeck({ docs, selectedDocumentId, onSelectDocument, onDeleteDocument, onToggleFavorite }: DocumentDeckProps) {
-  const { theme } = useTheme();
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-
-  const collapsedCount = docs.length - (focusedId ? 1 : 0);
-  const expandedCount = focusedId ? 1 : 0;
-  const deckHeight = focusedId
-    ? expandedCount * CARD_EXPANDED_H + collapsedCount * (CARD_COLLAPSED_H - OVERLAP) + OVERLAP
-    : docs.length * (CARD_COLLAPSED_H - OVERLAP) + OVERLAP;
-
-  return (
-    <div
-      style={{
-        position: "relative",
-        height: deckHeight,
-        transition: `height ${theme.motion.normal} ${theme.motion.easing}`,
-      }}
-      onMouseLeave={() => setFocusedId(null)}
-    >
-      {docs.map((doc, i) => {
-        const isFocused = focusedId === doc.id;
-        const isSelected = selectedDocumentId === doc.id;
-
-        let top: number;
-        if (!focusedId) {
-          top = i * (CARD_COLLAPSED_H - OVERLAP);
-        } else {
-          const focusedIdx = docs.findIndex((d) => d.id === focusedId);
-          if (i < focusedIdx) {
-            top = i * (CARD_COLLAPSED_H - OVERLAP);
-          } else if (i === focusedIdx) {
-            top = i * (CARD_COLLAPSED_H - OVERLAP);
-          } else {
-            top = focusedIdx * (CARD_COLLAPSED_H - OVERLAP) + CARD_EXPANDED_H + (i - focusedIdx - 1) * (CARD_COLLAPSED_H - OVERLAP);
-          }
-        }
-
-        return (
-          <DocumentDeckCard
-            key={doc.id}
-            doc={doc}
-            focused={isFocused}
-            selected={isSelected}
-            top={top}
-            zIndex={isFocused ? docs.length + 1 : isSelected ? docs.length : i}
-            onMouseEnter={() => setFocusedId(doc.id)}
-            onSelect={() => onSelectDocument(doc.id)}
-            onDelete={() => onDeleteDocument(doc)}
-            onToggleFavorite={() => onToggleFavorite(doc)}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Individual deck card
-// ---------------------------------------------------------------------------
-
-interface DocumentDeckCardProps {
+interface DocumentCardProps {
   doc: DocumentSummary;
-  focused: boolean;
+  compact: boolean;
   selected: boolean;
-  top: number;
-  zIndex: number;
-  onMouseEnter: () => void;
   onSelect: () => void;
   onDelete: () => void;
   onToggleFavorite: () => void;
 }
 
-function cardBorderColor(focused: boolean, selected: boolean, theme: Theme): string {
-  if (selected) return theme.glow.animated ? theme.glow.borderStrong : theme.color.primary;
-  if (focused) return theme.glow.animated ? theme.glow.borderMedium : theme.color.border;
-  return theme.glow.borderSubtle;
-}
-
-function cardShadow(focused: boolean, selected: boolean, theme: Theme): string {
-  if (focused) return theme.glow.animated ? theme.glow.shadowMd : theme.shadow.md;
-  if (selected) return theme.glow.animated ? theme.glow.shadowSm : theme.shadow.sm;
-  return "none";
-}
-
-function DocumentDeckCard({ doc, focused, selected, top, zIndex, onMouseEnter, onSelect, onDelete, onToggleFavorite }: DocumentDeckCardProps) {
+function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavorite }: DocumentCardProps) {
   const { theme } = useTheme();
-  const maxTags = 3;
+  const [hovered, setHovered] = useState(false);
+  const maxTags = compact ? 2 : 4;
   const overflowCount = doc.tags.length - maxTags;
+  const summaryLines = compact ? 2 : 3;
+
+  const borderColor = selected
+    ? theme.glow.animated ? theme.glow.borderStrong : theme.color.primary
+    : hovered
+      ? theme.glow.animated ? theme.glow.borderMedium : theme.color.border
+      : theme.glow.borderSubtle;
+
+  const shadow = selected
+    ? theme.glow.animated ? theme.glow.shadowSm : theme.shadow.sm
+    : hovered
+      ? theme.glow.animated ? theme.glow.shadowMd : theme.shadow.md
+      : "none";
 
   return (
     <div
-      onMouseEnter={onMouseEnter}
       onClick={onSelect}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top,
-        height: focused ? CARD_EXPANDED_H : CARD_COLLAPSED_H,
-        zIndex,
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${cardBorderColor(focused, selected, theme)}`,
-        background: focused || selected ? theme.color.surfaceContainerHigh : theme.color.surfaceContainer,
-        boxShadow: cardShadow(focused, selected, theme),
+        borderRadius: compact ? theme.radius.md : theme.radius.lg,
+        border: `1px solid ${borderColor}`,
+        background: selected ? theme.color.surfaceContainerHigh : theme.color.surfaceContainer,
+        boxShadow: shadow,
         cursor: "pointer",
-        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        padding: compact ? theme.spacing.sm : theme.spacing.md,
+        gap: compact ? theme.spacing.xs : theme.spacing.sm,
         transition: [
-          `top ${theme.motion.normal} ${theme.motion.easing}`,
-          `height ${theme.motion.normal} ${theme.motion.easing}`,
-          `border-color 0.2s`,
-          `box-shadow 0.25s`,
-          `background 0.15s`,
+          "border-color 0.2s",
+          "box-shadow 0.25s",
+          "background 0.15s",
         ].join(", "),
       }}
     >
-      {/* Top row — always visible: title + presence + favorite */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: theme.spacing.sm,
-          padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-          minHeight: CARD_COLLAPSED_H,
-          flexShrink: 0,
-        }}
-      >
+      {/* Header row: title + project count (compact) or favorite */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: theme.spacing.xs }}>
         <span
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: theme.font.size.sm,
+            fontSize: compact ? theme.font.size.xs : theme.font.size.sm,
             fontWeight: 600,
             fontFamily: theme.font.body,
             color: theme.color.text,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            lineHeight: theme.font.lineHeight.tight,
             letterSpacing: theme.font.letterSpacing.tight,
+            display: "-webkit-box",
+            WebkitLineClamp: compact ? 1 : 2,
+            WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
+            overflow: "hidden",
           }}
         >
           {doc.title}
         </span>
-        <PresenceCharm active={doc.has_content} label="Content" color={theme.color.success} />
+        {/* Compact: project count + favorite inline */}
+        {compact && doc.linked_projects.length > 0 && (
+          <ProjectChips projects={doc.linked_projects} compact theme={theme} />
+        )}
         {doc.favorite && (
-          <Icon name="star" size={14} style={{ color: theme.color.warning, flexShrink: 0 }} />
+          <Icon name="star" size={compact ? 12 : 14} style={{ color: theme.color.warning, flexShrink: 0, marginTop: 2 }} />
         )}
       </div>
 
-      {/* Expanded content — summary, tags, charms */}
+      {/* Summary — always visible */}
       <div
         style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: `0 ${theme.spacing.md} ${theme.spacing.sm}`,
-          opacity: focused ? 1 : 0,
-          transition: `opacity ${theme.motion.fast} ${theme.motion.easing}`,
-          pointerEvents: focused ? "auto" : "none",
+          fontSize: theme.font.size.xxs,
+          color: theme.color.textMuted,
+          lineHeight: theme.font.lineHeight.normal,
+          overflow: "hidden",
+          display: "-webkit-box",
+          WebkitLineClamp: summaryLines,
+          WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
+          minHeight: 0,
         }}
       >
-        {/* Summary */}
-        <div
-          style={{
-            fontSize: theme.font.size.xs,
-            color: theme.color.textMuted,
-            lineHeight: theme.font.lineHeight.normal,
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
-            minHeight: 0,
-          }}
-        >
-          {doc.summary || (
-            <span style={{ color: theme.color.textFaint, fontStyle: "italic" }}>No summary</span>
-          )}
-        </div>
+        {doc.summary || (
+          <span style={{ color: theme.color.textFaint, fontStyle: "italic" }}>No summary</span>
+        )}
+      </div>
 
-        {/* Footer: tags + date + charms */}
+      {/* Project chips — full chips on wide only */}
+      {!compact && doc.linked_projects.length > 0 && (
+        <ProjectChips projects={doc.linked_projects} compact={false} theme={theme} />
+      )}
+
+      {/* Footer: tags + date + actions */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: compact ? theme.spacing.xs : theme.spacing.sm,
+          marginTop: "auto",
+          paddingTop: compact ? theme.spacing.xs : theme.spacing.xs,
+          borderTop: `1px solid ${theme.color.borderSubtle}`,
+        }}
+      >
+        {/* Tags */}
+        {doc.tags.length > 0 ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+            {doc.tags.slice(0, maxTags).map((tag) => (
+              <TagChip key={tag} name={tag} />
+            ))}
+            {overflowCount > 0 && (
+              <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+                +{overflowCount}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div style={{ flex: 1 }} />
+        )}
+
+        {/* Date */}
+        <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint, flexShrink: 0 }}>
+          {formatDate(doc.updated_at)}
+        </span>
+
+        {/* Actions — always visible on mobile (no hover), hover-reveal on desktop */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: theme.spacing.sm,
-            marginTop: theme.spacing.xs,
+            gap: 0,
+            flexShrink: 0,
+            opacity: compact ? 1 : hovered ? 1 : 0,
+            transition: `opacity ${theme.motion.fast}`,
           }}
         >
-          {/* Tags */}
-          {doc.tags.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-              {doc.tags.slice(0, maxTags).map((tag) => (
-                <TagChip key={tag} name={tag} />
-              ))}
-              {overflowCount > 0 && (
-                <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
-                  +{overflowCount}
-                </span>
-              )}
-            </div>
-          )}
-          {doc.tags.length === 0 && <div style={{ flex: 1 }} />}
-
-          {/* Date */}
-          <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint, flexShrink: 0 }}>
-            {formatDate(doc.updated_at)}
-          </span>
-
-          {/* Charms */}
-          <div style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
-            <IconButton
-              icon={doc.favorite ? "star" : "star_border"}
-              size={14}
-              onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-              aria-label={doc.favorite ? "Remove from favorites" : "Add to favorites"}
-              style={{ width: 26, height: 26, minWidth: 26, color: doc.favorite ? theme.color.warning : theme.color.textFaint }}
-            />
-            <IconButton
-              icon="content_copy"
-              size={14}
-              onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(doc.title); }}
-              aria-label="Copy title"
-              style={{ width: 26, height: 26, minWidth: 26, color: theme.color.textFaint }}
-            />
-            <IconButton
-              icon="delete"
-              size={14}
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              aria-label="Delete document"
-              style={{ width: 26, height: 26, minWidth: 26, color: theme.color.textFaint }}
-            />
-          </div>
+          <IconButton
+            icon={doc.favorite ? "star" : "star_border"}
+            size={compact ? 13 : 14}
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+            aria-label={doc.favorite ? "Remove from favorites" : "Add to favorites"}
+            style={{ width: compact ? 24 : 26, height: compact ? 24 : 26, minWidth: compact ? 24 : 26, color: doc.favorite ? theme.color.warning : theme.color.textFaint }}
+          />
+          <IconButton
+            icon="delete"
+            size={compact ? 13 : 14}
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            aria-label="Delete document"
+            style={{ width: compact ? 24 : 26, height: compact ? 24 : 26, minWidth: compact ? 24 : 26, color: theme.color.textFaint }}
+          />
         </div>
       </div>
     </div>

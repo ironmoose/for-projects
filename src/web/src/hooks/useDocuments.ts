@@ -7,7 +7,7 @@ import { useThrottledCallback } from "./useThrottledCallback";
 
 const PAGE_SIZE = 20;
 
-export function useDocuments(filter?: { tag?: string; title?: string; favorite?: boolean; folder?: string }) {
+export function useDocuments(filter?: { tag?: string; title?: string; favorite?: boolean; folder?: string; project_id?: string }) {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -24,8 +24,10 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
 
   async function load() {
     try {
+      const { project_id, ...rest } = filterRef.current ?? {};
       const body = await fetchDocuments({
-        ...filterRef.current,
+        ...rest,
+        ...(project_id ? { entity_type: "project", entity_id: project_id } : {}),
         limit: PAGE_SIZE,
         offset: (pageRef.current - 1) * PAGE_SIZE,
       });
@@ -46,7 +48,7 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
 
   useEffect(() => {
     setPage(1);
-  }, [filter?.tag, filter?.title, filter?.favorite, filter?.folder]);
+  }, [filter?.tag, filter?.title, filter?.favorite, filter?.folder, filter?.project_id]);
 
   useEffect(() => {
     setLoading(true);
@@ -54,7 +56,7 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
     return subscribeEvents((event) => {
       if (event.entity_type === "document") throttledLoad();
     });
-  }, [subscribeEvents, throttledLoad, page, filter?.tag, filter?.title, filter?.favorite, filter?.folder]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscribeEvents, throttledLoad, page, filter?.tag, filter?.title, filter?.favorite, filter?.folder, filter?.project_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

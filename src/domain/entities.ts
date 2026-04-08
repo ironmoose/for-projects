@@ -131,6 +131,11 @@ export interface Document {
   updated_at: string;
 }
 
+export interface LinkedProject {
+  id: string;
+  title: string;
+}
+
 export interface DocumentSummary {
   id: string;
   title: string;
@@ -139,6 +144,7 @@ export interface DocumentSummary {
   has_content: boolean;
   favorite: boolean;
   tags: TagName[];
+  linked_projects: LinkedProject[];
   created_at: string;
   updated_at: string;
 }
@@ -158,7 +164,7 @@ export interface DocumentReferenceDetail {
   favorite: boolean;
 }
 
-export function toDocumentSummary(doc: Document, tags: TagName[] = []): DocumentSummary {
+export function toDocumentSummary(doc: Document, tags: TagName[] = [], linked_projects: LinkedProject[] = []): DocumentSummary {
   return {
     id: doc.id, title: doc.title,
     summary: doc.summary,
@@ -166,6 +172,7 @@ export function toDocumentSummary(doc: Document, tags: TagName[] = []): Document
     has_content: doc.content != null,
     favorite: doc.favorite,
     tags,
+    linked_projects,
     created_at: doc.created_at, updated_at: doc.updated_at,
   };
 }

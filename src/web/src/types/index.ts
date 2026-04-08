@@ -13,6 +13,7 @@ export type {
   DocumentReferenceSummary,
   DocumentReferenceDetail,
   DocumentReferenceType,
+  LinkedProject,
   ActivityLog,
   TaskStatus,
   EffortLevel,

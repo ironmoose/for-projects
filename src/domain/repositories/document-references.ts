@@ -132,6 +132,40 @@ export class DocumentReferenceRepository {
     }));
   }
 
+  /** Batch-fetch linked projects for multiple documents. Returns Map<document_id, {id, title}[]>. */
+  getProjectsForDocuments(documentIds: string[]): Map<string, { id: string; title: string }[]> {
+    if (documentIds.length === 0) return new Map();
+
+    const CHUNK_SIZE = 100;
+    const result = new Map<string, { id: string; title: string }[]>();
+
+    for (let i = 0; i < documentIds.length; i += CHUNK_SIZE) {
+      const chunk = documentIds.slice(i, i + CHUNK_SIZE);
+      const placeholders = chunk.map(() => "?").join(", ");
+      const rows = this.db
+        .query(
+          `SELECT DISTINCT dr.document_id, p.id AS project_id, p.title
+           FROM document_references dr
+           JOIN projects p ON dr.entity_id = p.id
+           WHERE dr.entity_type = 'project'
+             AND dr.document_id IN (${placeholders})
+           ORDER BY p.title`,
+        )
+        .all(...chunk) as { document_id: string; project_id: string; title: string }[];
+
+      for (const row of rows) {
+        let list = result.get(row.document_id);
+        if (!list) {
+          list = [];
+          result.set(row.document_id, list);
+        }
+        list.push({ id: row.project_id, title: row.title });
+      }
+    }
+
+    return result;
+  }
+
   getEntitiesForDocument(documentId: string): DocumentReference[] {
     return this.db
       .query(

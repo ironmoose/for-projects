@@ -163,10 +163,10 @@ const MOCK_TASKS: TaskSummary[] = [
 ];
 
 const MOCK_DOCUMENTS: DocumentSummary[] = [
-  { id: "01DOC001", title: "Architecture Decision Record: SQLite", summary: "Why we chose SQLite over Postgres for the project management tool", folder: "architecture", favorite: true, has_content: true, tags: ["architecture", "backend"], created_at: "2026-02-01T10:00:00Z", updated_at: "2026-03-15T14:30:00Z" },
-  { id: "01DOC002", title: "API Conventions Guide", summary: "Standards for REST endpoints, error handling, and validation", folder: "conventions", favorite: false, has_content: true, tags: ["conventions", "api"], created_at: "2026-02-10T09:00:00Z", updated_at: "2026-03-20T11:00:00Z" },
-  { id: "01DOC003", title: "Frontend Component Patterns", summary: "Atomic design patterns used across the UI", folder: "conventions", favorite: false, has_content: false, tags: ["ui", "conventions"], created_at: "2026-02-15T08:00:00Z", updated_at: "2026-02-15T08:00:00Z" },
-  { id: "01DOC004", title: "Sprint Retrospective Notes", summary: null, folder: null, favorite: false, has_content: true, tags: [], created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-01T10:00:00Z" },
+  { id: "01DOC001", title: "Architecture Decision Record: SQLite", summary: "Why we chose SQLite over Postgres for the project management tool", folder: "architecture", favorite: true, has_content: true, tags: ["architecture", "backend"], linked_projects: [{ id: "01PROJ001", title: "tab-for-projects" }], created_at: "2026-02-01T10:00:00Z", updated_at: "2026-03-15T14:30:00Z" },
+  { id: "01DOC002", title: "API Conventions Guide", summary: "Standards for REST endpoints, error handling, and validation", folder: "conventions", favorite: false, has_content: true, tags: ["conventions", "api"], linked_projects: [{ id: "01PROJ001", title: "tab-for-projects" }, { id: "01PROJ002", title: "another-project" }], created_at: "2026-02-10T09:00:00Z", updated_at: "2026-03-20T11:00:00Z" },
+  { id: "01DOC003", title: "Frontend Component Patterns", summary: "Atomic design patterns used across the UI", folder: "conventions", favorite: false, has_content: false, tags: ["ui", "conventions"], linked_projects: [], created_at: "2026-02-15T08:00:00Z", updated_at: "2026-02-15T08:00:00Z" },
+  { id: "01DOC004", title: "Sprint Retrospective Notes", summary: null, folder: null, favorite: false, has_content: true, tags: [], linked_projects: [], created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-01T10:00:00Z" },
 ];
 
 const MOCK_REFERENCES: DocumentReferenceDetail[] = [
@@ -989,7 +989,7 @@ export function registerAllComponents(): void {
 
   registerComponent({
     name: "DocumentTable",
-    description: "Data table displaying documents grouped by folder, with columns for favorite toggle, title with content indicator, tags, updated date, and delete action.",
+    description: "Magazine-style card grid for browsing documents. Shows title, summary, project chips, tags, and date on each card. Two columns on wide viewports, single column on narrow.",
     category: "organism",
     propDefs: [],
     render: () => (

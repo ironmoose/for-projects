@@ -63,6 +63,11 @@ export function AnimationStyles() {
         to   { opacity: 1; transform: translateY(0); }
       }
 
+      @keyframes slide-up {
+        from { transform: translateY(100%); }
+        to   { transform: translateY(0); }
+      }
+
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         20%      { transform: translateX(-3px); }

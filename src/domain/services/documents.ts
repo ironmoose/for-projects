@@ -41,8 +41,16 @@ export class DocumentService implements IDocumentService {
 
     const repoFilter = { ...filter, doc_ids: docIds };
     const summaries = this.documentRepo.findMany(repoFilter);
-    const tagMap = this.tagRepo.getTagsForEntities("document", summaries.map((s) => s.id));
-    const data = summaries.map((s) => ({ ...s, tags: tagMap.get(s.id) ?? [] }));
+    const ids = summaries.map((s) => s.id);
+    const tagMap = this.tagRepo.getTagsForEntities("document", ids);
+    const projectMap = this.docRefRepo
+      ? this.docRefRepo.getProjectsForDocuments(ids)
+      : new Map<string, { id: string; title: string }[]>();
+    const data = summaries.map((s) => ({
+      ...s,
+      tags: tagMap.get(s.id) ?? [],
+      linked_projects: projectMap.get(s.id) ?? [],
+    }));
     return {
       data,
       total: this.documentRepo.count(repoFilter),
