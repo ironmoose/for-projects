@@ -10,7 +10,7 @@ export function parseArgs(defaults: { port: number; portEnv: string }): ServerOp
   const args = process.argv.slice(2);
   let port = Number(process.env[defaults.portEnv]) || defaults.port;
   let host = process.env.PM_HOST ?? "0.0.0.0";
-  let dbPath: string | undefined = process.env.SQLITE_PATH;
+  let dbPath: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--port" && args[i + 1]) port = Number(args[++i]);

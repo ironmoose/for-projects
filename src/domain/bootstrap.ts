@@ -54,11 +54,11 @@ export async function bootstrap(dbPath?: string): Promise<AppContext> {
   const databaseUrl = getDatabaseUrl();
   const eventBus = new EventBus();
 
-  // Explicit dbPath always means SQLite (tests pass this to get isolated DBs)
+  // DATABASE_URL wins when present (unless tests pass an explicit dbPath)
   if (databaseUrl && !dbPath) {
     return bootstrapPostgres(databaseUrl, eventBus);
   }
-  return bootstrapSqlite(dbPath, eventBus);
+  return bootstrapSqlite(dbPath ?? process.env.SQLITE_PATH, eventBus);
 }
 
 async function bootstrapSqlite(dbPath: string | undefined, eventBus: EventBus): Promise<AppContext> {
