@@ -1,15 +1,15 @@
 import type { Database } from "bun:sqlite";
-import type { DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType } from "../entities";
+import type { DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType } from "../../entities";
 
 export class DocumentReferenceRepository {
   constructor(private db: Database) {}
 
-  setReferencesForEntityDocument(
+  async setReferencesForEntityDocument(
     entityType: string,
     entityId: string,
     documentId: string,
     types: DocumentReferenceType[],
-  ): void {
+  ): Promise<void> {
     this.db
       .query(
         "DELETE FROM document_references WHERE entity_type = ? AND entity_id = ? AND document_id = ?",
@@ -26,11 +26,11 @@ export class DocumentReferenceRepository {
     }
   }
 
-  removeReferencesForEntityDocument(
+  async removeReferencesForEntityDocument(
     entityType: string,
     entityId: string,
     documentId: string,
-  ): void {
+  ): Promise<void> {
     this.db
       .query(
         "DELETE FROM document_references WHERE entity_type = ? AND entity_id = ? AND document_id = ?",
@@ -38,19 +38,19 @@ export class DocumentReferenceRepository {
       .run(entityType, entityId, documentId);
   }
 
-  removeAllForEntity(entityType: string, entityId: string): void {
+  async removeAllForEntity(entityType: string, entityId: string): Promise<void> {
     this.db
       .query("DELETE FROM document_references WHERE entity_type = ? AND entity_id = ?")
       .run(entityType, entityId);
   }
 
-  removeAllForDocument(documentId: string): void {
+  async removeAllForDocument(documentId: string): Promise<void> {
     this.db
       .query("DELETE FROM document_references WHERE document_id = ?")
       .run(documentId);
   }
 
-  getReferencesForEntity(entityType: string, entityId: string): DocumentReference[] {
+  async getReferencesForEntity(entityType: string, entityId: string): Promise<DocumentReference[]> {
     return this.db
       .query(
         "SELECT * FROM document_references WHERE entity_type = ? AND entity_id = ? ORDER BY type, document_id",
@@ -58,10 +58,10 @@ export class DocumentReferenceRepository {
       .all(entityType, entityId) as DocumentReference[];
   }
 
-  getReferencesForEntityWithDocumentTitles(
+  async getReferencesForEntityWithDocumentTitles(
     entityType: string,
     entityId: string,
-  ): DocumentReferenceSummary[] {
+  ): Promise<DocumentReferenceSummary[]> {
     return this.db
       .query(
         `SELECT dr.document_id, d.title AS document_title, dr.type
@@ -73,10 +73,10 @@ export class DocumentReferenceRepository {
       .all(entityType, entityId) as DocumentReferenceSummary[];
   }
 
-  getReferencesForEntities(
+  async getReferencesForEntities(
     entityType: string,
     entityIds: string[],
-  ): Map<string, DocumentReferenceSummary[]> {
+  ): Promise<Map<string, DocumentReferenceSummary[]>> {
     if (entityIds.length === 0) return new Map();
 
     const CHUNK_SIZE = 100;
@@ -113,7 +113,7 @@ export class DocumentReferenceRepository {
   }
 
   /** Single-query join returning enriched reference details (title, summary, favorite). */
-  findByEntity(entityType: string, entityId: string): DocumentReferenceDetail[] {
+  async findByEntity(entityType: string, entityId: string): Promise<DocumentReferenceDetail[]> {
     const rows = this.db
       .query(
         `SELECT dr.document_id, dr.type, d.title, d.summary, d.favorite
@@ -133,7 +133,7 @@ export class DocumentReferenceRepository {
   }
 
   /** Batch-fetch linked projects for multiple documents. Returns Map<document_id, {id, title}[]>. */
-  getProjectsForDocuments(documentIds: string[]): Map<string, { id: string; title: string }[]> {
+  async getProjectsForDocuments(documentIds: string[]): Promise<Map<string, { id: string; title: string }[]>> {
     if (documentIds.length === 0) return new Map();
 
     const CHUNK_SIZE = 100;
@@ -166,7 +166,7 @@ export class DocumentReferenceRepository {
     return result;
   }
 
-  getEntitiesForDocument(documentId: string): DocumentReference[] {
+  async getEntitiesForDocument(documentId: string): Promise<DocumentReference[]> {
     return this.db
       .query(
         "SELECT * FROM document_references WHERE document_id = ? ORDER BY entity_type, entity_id",
@@ -174,7 +174,7 @@ export class DocumentReferenceRepository {
       .all(documentId) as DocumentReference[];
   }
 
-  getEntitiesForDocumentWithTitles(documentId: string): { entity_type: string; entity_id: string; entity_title: string; type: string }[] {
+  async getEntitiesForDocumentWithTitles(documentId: string): Promise<{ entity_type: string; entity_id: string; entity_title: string; type: string }[]> {
     const rows = this.db
       .query(
         `SELECT dr.entity_type, dr.entity_id, dr.type,

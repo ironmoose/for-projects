@@ -5,7 +5,7 @@ export function activityLogRoutes(service: IActivityLogService): Hono {
   const app = new Hono();
 
   // GET /api/activity-log
-  app.get("/", (c) => {
+  app.get("/", async (c) => {
     const entity_type = c.req.query("entity_type");
     const entity_id = c.req.query("entity_id");
     const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
@@ -17,7 +17,7 @@ export function activityLogRoutes(service: IActivityLogService): Hono {
     if (entity_type) filter.entity_type = entity_type;
     if (entity_id) filter.entity_id = entity_id;
 
-    return c.json(service.list(filter));
+    return c.json(await service.list(filter));
   });
 
   return app;

@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import { readdirSync, readFileSync, copyFileSync } from "node:fs";
 import { join, dirname, basename, extname } from "node:path";
 
-const MIGRATIONS_DIR = join(import.meta.dir, "migrations");
+const MIGRATIONS_DIR = join(import.meta.dir, "migrations", "sqlite");
 
 function ensureMigrationsTable(db: Database): void {
   db.run(`

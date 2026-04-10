@@ -1,26 +1,41 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
-import { ActivityLogRepository } from "./repositories/sqlite/activity-log";
+import { PgActivityLogRepository } from "./repositories/pg/activity-log";
+import { PgTagRepository } from "./repositories/pg/tags";
 import type { TagName } from "./entities";
 
+// ---------------------------------------------------------------------------
+// Skip entire suite when DATABASE_URL is not configured
+// ---------------------------------------------------------------------------
+const HAS_DATABASE_URL = !!process.env.DATABASE_URL;
+
 let ctx: AppContext;
-let tempDir: string;
-let activityLogRepo: ActivityLogRepository;
+let activityLogRepo: PgActivityLogRepository;
+
+async function cleanAll() {
+  const sql = ctx.pg!;
+  await sql`DELETE FROM document_references`;
+  await sql`DELETE FROM entity_tags`;
+  await sql`DELETE FROM task_dependencies`;
+  await sql`DELETE FROM activity_log`;
+  await sql`DELETE FROM tasks`;
+  await sql`DELETE FROM documents`;
+  await sql`DELETE FROM tags`;
+  await sql`DELETE FROM projects`;
+}
+
+describe.skipIf(!HAS_DATABASE_URL)("Postgres Integration", () => {
 
 beforeAll(async () => {
-  tempDir = mkdtempSync(join(tmpdir(), "integration-test-"));
-  const dbPath = join(tempDir, "test.db");
-  ctx = await bootstrap(dbPath);
-  activityLogRepo = new ActivityLogRepository(ctx.db!);
+  ctx = await bootstrap();
+  activityLogRepo = new PgActivityLogRepository(ctx.pg!);
+  await cleanAll();
 });
 
-afterAll(() => {
-  ctx.db!.close();
-  rmSync(tempDir, { recursive: true, force: true });
+afterAll(async () => {
+  await cleanAll();
+  await ctx.shutdown();
 });
 
 // ---------------------------------------------------------------------------
@@ -300,9 +315,8 @@ describe("Task CRUD", () => {
     expect(withFields).toBeTruthy();
     expect(withFields!.has_context).toBe(true);
     expect(withFields!.has_acceptance_criteria).toBe(true);
-    // Summary should not include the full text fields
-    expect((withFields as Record<string, unknown>)["context"]).toBeUndefined();
-    expect((withFields as Record<string, unknown>)["acceptance_criteria"]).toBeUndefined();
+    expect((withFields as unknown as Record<string, unknown>)["context"]).toBeUndefined();
+    expect((withFields as unknown as Record<string, unknown>)["acceptance_criteria"]).toBeUndefined();
 
     expect(withoutFields).toBeTruthy();
     expect(withoutFields!.has_context).toBe(false);
@@ -354,7 +368,6 @@ describe("Document CRUD", () => {
   });
 
   it("lists documents with pagination", async () => {
-    // Create a few documents for listing
     await ctx.documentService.create([
       { title: "Paginated A" },
       { title: "Paginated B" },
@@ -474,12 +487,12 @@ describe("Document CRUD", () => {
   });
 
   it("rejects invalid tag names on create", async () => {
-    await expect(ctx.documentService.create([{ title: "Bad Tag Doc", tags: ["invalid-tag"] as any }])).rejects.toThrow(ServiceError);
+    await expect(ctx.documentService.create([{ title: "Bad Tag Doc", tags: ["invalid-tag"] as unknown as TagName[] }])).rejects.toThrow(ServiceError);
   });
 
   it("rejects invalid tag names on update", async () => {
     const [doc] = await ctx.documentService.create([{ title: "Update Bad Tag Doc" }]);
-    await expect(ctx.documentService.update([{ id: doc.id, tags: ["not-a-tag"] as any }])).rejects.toThrow(ServiceError);
+    await expect(ctx.documentService.update([{ id: doc.id, tags: ["not-a-tag"] as unknown as TagName[] }])).rejects.toThrow(ServiceError);
   });
 
   it("batch creates multiple documents in one call", async () => {
@@ -546,16 +559,13 @@ describe("Document CRUD", () => {
     const beforeGet = await ctx.documentService.get(doc.id);
     expect(beforeGet.tags.length).toBe(2);
 
-    // Link to a project to verify cascade on that side too
     const [project] = await ctx.projectService.create([{ title: "Tag Cleanup Project" }]);
     await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
 
     await ctx.documentService.remove([doc.id]);
 
-    // Document is gone
     await expect(ctx.documentService.get(doc.id)).rejects.toThrow(ServiceError);
 
-    // Project-document link is also gone
     const projectAfter = await ctx.projectService.get(project.id);
     expect(projectAfter.documents.some((d) => d.document_id === doc.id)).toBe(false);
   });
@@ -580,8 +590,7 @@ describe("Document CRUD", () => {
 
 describe("Batch Tag Fetching", () => {
   it("getTagsForEntities returns correct tags for multiple documents", async () => {
-    const { TagRepository } = require("./repositories/sqlite/tags");
-    const tagRepo = new TagRepository(ctx.db!);
+    const tagRepo = new PgTagRepository(ctx.pg!);
 
     const [doc1] = await ctx.documentService.create([{ title: "Batch Tag Doc 1", tags: ["ui", "data"] }]);
     const [doc2] = await ctx.documentService.create([{ title: "Batch Tag Doc 2", tags: ["security"] }]);
@@ -591,12 +600,11 @@ describe("Batch Tag Fetching", () => {
 
     expect(tagMap.get(doc1.id)?.sort()).toEqual(["data", "ui"]);
     expect(tagMap.get(doc2.id)).toEqual(["security"]);
-    expect(tagMap.get(doc3.id)).toBeUndefined(); // no tags = not in map
+    expect(tagMap.get(doc3.id)).toBeUndefined();
   });
 
   it("getTagsForEntities returns empty Map for empty input", async () => {
-    const { TagRepository } = require("./repositories/sqlite/tags");
-    const tagRepo = new TagRepository(ctx.db!);
+    const tagRepo = new PgTagRepository(ctx.pg!);
 
     const tagMap = await tagRepo.getTagsForEntities("document", []);
     expect(tagMap.size).toBe(0);
@@ -752,10 +760,8 @@ describe("Document Search", () => {
 
   it("search and title can coexist (AND logic)", async () => {
     await ctx.documentService.create([{ title: "Combo FFF Doc", summary: "special combo summary" }]);
-    // Both match
     const both = await ctx.documentService.list({ search: "combo", title: "Combo FFF" });
     expect(both.data.some((d) => d.title === "Combo FFF Doc")).toBe(true);
-    // search matches but title filter does not
     const mismatch = await ctx.documentService.list({ search: "combo", title: "zzz_no_title_match" });
     expect(mismatch.data.some((d) => d.title === "Combo FFF Doc")).toBe(false);
   });
@@ -819,11 +825,9 @@ describe("Project-Document Linking", () => {
     const [doc] = await ctx.documentService.create([{ title: "Idempotent Doc" }]);
 
     await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
-    // Second attach should not throw
     await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
 
     const fetched = await ctx.projectService.get(project.id);
-    // Should still appear exactly once for this type
     const matches = fetched.documents.filter((d) => d.document_id === doc.id);
     expect(matches.length).toBe(1);
   });
@@ -843,8 +847,7 @@ describe("Project-Document Linking", () => {
     expect(linked!.title).toBe("Summary Doc");
     expect(linked!.document_id).toBe(doc.id);
     expect(linked!.type).toBe("reference");
-    // DocumentReferenceSummary should not include content field
-    expect((linked as any).content).toBeUndefined();
+    expect((linked as unknown as Record<string, unknown>).content).toBeUndefined();
   });
 
   it("cascade on document delete removes reference rows", async () => {
@@ -884,7 +887,6 @@ describe("Project-Document Linking", () => {
     const [project] = await ctx.projectService.create([{ title: "Silent Detach Project" }]);
     const [doc] = await ctx.documentService.create([{ title: "Never Attached Doc" }]);
 
-    // Detach a doc that was never attached — should not throw
     await ctx.projectService.update([{
         id: project.id,
         documents: { [doc.id]: null },
@@ -927,12 +929,10 @@ describe("Task-Document Merge-Patch via service", () => {
       documents: { [doc.id]: [{ type: "goal" }] },
     }]);
 
-    // Verify initial
     let fetched = await ctx.taskService.get(task.id);
     expect(fetched.documents).toHaveLength(1);
     expect(fetched.documents[0].type).toBe("goal");
 
-    // Replace with different types
     await ctx.taskService.update([{
       id: task.id,
       documents: { [doc.id]: [{ type: "design" }, { type: "reference" }] },
@@ -952,11 +952,9 @@ describe("Task-Document Merge-Patch via service", () => {
       documents: { [doc.id]: [{ type: "plan" }] },
     }]);
 
-    // Verify initial
     let fetched = await ctx.taskService.get(task.id);
     expect(fetched.documents).toHaveLength(1);
 
-    // Remove via null
     await ctx.taskService.update([{
       id: task.id,
       documents: { [doc.id]: null },
@@ -978,7 +976,6 @@ describe("Task-Document Merge-Patch via service", () => {
       },
     }]);
 
-    // Update only doc2; doc1 should be untouched
     await ctx.taskService.update([{
       id: task.id,
       documents: { [doc2.id]: [{ type: "note" }] },
@@ -988,8 +985,8 @@ describe("Task-Document Merge-Patch via service", () => {
     expect(fetched.documents).toHaveLength(2);
     const doc1Ref = fetched.documents.find((d) => d.document_id === doc1.id);
     const doc2Ref = fetched.documents.find((d) => d.document_id === doc2.id);
-    expect(doc1Ref?.type).toBe("goal"); // untouched
-    expect(doc2Ref?.type).toBe("note"); // updated
+    expect(doc1Ref?.type).toBe("goal");
+    expect(doc2Ref?.type).toBe("note");
   });
 
   it("task delete removes all document references", async () => {
@@ -1000,17 +997,13 @@ describe("Task-Document Merge-Patch via service", () => {
       documents: { [doc.id]: [{ type: "requirements" }, { type: "design" }] },
     }]);
 
-    // Verify references exist
     const fetched = await ctx.taskService.get(task.id);
     expect(fetched.documents).toHaveLength(2);
 
-    // Delete the task
     await ctx.taskService.remove([task.id]);
 
-    // Task is gone
     await expect(ctx.taskService.get(task.id)).rejects.toThrow(ServiceError);
 
-    // Document still exists (not cascaded)
     const doc2 = await ctx.documentService.get(doc.id);
     expect(doc2.title).toBe("Task Delete Doc");
   });
@@ -1028,13 +1021,11 @@ describe("Input Validation Edge Cases", () => {
     projectId = project.id;
   });
 
-  // --- Invalid enum values ---
-
   it("rejects task with invalid status enum", async () => {
     await expect(ctx.taskService.create([{
         project_id: projectId,
         title: "Bad status",
-        status: "invalid" as any,
+        status: "invalid" as unknown as "todo",
       }])).rejects.toThrow(ServiceError);
   });
 
@@ -1042,7 +1033,7 @@ describe("Input Validation Edge Cases", () => {
     await expect(ctx.taskService.create([{
         project_id: projectId,
         title: "Bad effort",
-        effort: "mega" as any,
+        effort: "mega" as unknown as "low",
       }])).rejects.toThrow(ServiceError);
   });
 
@@ -1050,7 +1041,7 @@ describe("Input Validation Edge Cases", () => {
     await expect(ctx.taskService.create([{
         project_id: projectId,
         title: "Bad impact",
-        impact: "none" as any,
+        impact: "none" as unknown as "low",
       }])).rejects.toThrow(ServiceError);
   });
 
@@ -1058,11 +1049,9 @@ describe("Input Validation Edge Cases", () => {
     await expect(ctx.taskService.create([{
         project_id: projectId,
         title: "Bad category",
-        category: "misc" as any,
+        category: "misc" as unknown as "feature",
       }])).rejects.toThrow(ServiceError);
   });
-
-  // --- Field length limits ---
 
   it("rejects task with group_key over 32 chars", async () => {
     await expect(ctx.taskService.create([{
@@ -1094,8 +1083,6 @@ describe("Input Validation Edge Cases", () => {
       }])).rejects.toThrow(ServiceError);
   });
 
-  // --- Boundary values ---
-
   it("accepts title of exactly 255 chars", async () => {
     const title = "a".repeat(255);
     const [project] = await ctx.projectService.create([{ title }]);
@@ -1106,8 +1093,6 @@ describe("Input Validation Edge Cases", () => {
   it("rejects whitespace-only title", async () => {
     await expect(ctx.projectService.create([{ title: "   " }])).rejects.toThrow(ServiceError);
   });
-
-  // --- Mixed batch atomicity ---
 
   it("rejects entire batch when any item fails validation", async () => {
     const countBefore = (await ctx.taskService.list({
@@ -1127,11 +1112,8 @@ describe("Input Validation Edge Cases", () => {
       offset: 0,
     })).total;
 
-    // No tasks should have been persisted
     expect(countAfter).toBe(countBefore);
   });
-
-  // --- Invalid enum on update ---
 
   it("rejects task update with invalid status enum", async () => {
     const [task] = await ctx.taskService.create([{
@@ -1141,7 +1123,7 @@ describe("Input Validation Edge Cases", () => {
 
     await expect(ctx.taskService.update([{
         id: task.id,
-        status: "completed" as any,
+        status: "completed" as unknown as "done",
       }])).rejects.toThrow(ServiceError);
   });
 });
@@ -1218,7 +1200,6 @@ describe("Task Dependency Service", () => {
     ]);
     expect(deps).toHaveLength(1);
     expect(deps[0].dependency_type).toBe("blocks");
-    // Both tasks should now be is_blocked (mutual blocking, both still todo)
     const depsA = await ctx.taskDependencyService.getDependencies(taskA);
     const depsB = await ctx.taskDependencyService.getDependencies(taskB);
     expect(depsA.is_blocked).toBe(true);
@@ -1226,7 +1207,6 @@ describe("Task Dependency Service", () => {
   });
 
   it("allows cyclic chains > 2 (X->Y->Z->X)", async () => {
-    // Use fresh tasks to avoid conflicts with earlier relates_to edges
     const [x] = await ctx.taskService.create([{ project_id: projectId, title: "Chain X" }]);
     const [y] = await ctx.taskService.create([{ project_id: projectId, title: "Chain Y" }]);
     const [z] = await ctx.taskService.create([{ project_id: projectId, title: "Chain Z" }]);
@@ -1240,7 +1220,6 @@ describe("Task Dependency Service", () => {
       { source_task_id: z.id, target_task_id: x.id, dependency_type: "blocks" },
     ]);
     expect(deps).toHaveLength(1);
-    // All three tasks should be is_blocked
     const depsX = await ctx.taskDependencyService.getDependencies(x.id);
     const depsY = await ctx.taskDependencyService.getDependencies(y.id);
     const depsZ = await ctx.taskDependencyService.getDependencies(z.id);
@@ -1250,7 +1229,6 @@ describe("Task Dependency Service", () => {
   });
 
   it("allows relates_to even if it would form a cycle in blocks graph", async () => {
-    // B->A as relates_to should be fine even though A blocks B
     const deps = await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: taskB, target_task_id: taskA, dependency_type: "relates_to" },
     ]);
@@ -1265,7 +1243,6 @@ describe("Task Dependency Service", () => {
       { source_task_id: bB.id, target_task_id: bA.id, dependency_type: "blocks" },
     ]);
     expect(deps).toHaveLength(2);
-    // Both edges should be persisted and both tasks blocked
     const depsA = await ctx.taskDependencyService.getDependencies(bA.id);
     const depsB = await ctx.taskDependencyService.getDependencies(bB.id);
     expect(depsA.blocked_by).toHaveLength(1);
@@ -1284,7 +1261,6 @@ describe("Task Dependency Service", () => {
       { source_task_id: c3.id, target_task_id: c1.id, dependency_type: "blocks" },
     ]);
     expect(deps).toHaveLength(3);
-    // All three tasks should be is_blocked
     const d1 = await ctx.taskDependencyService.getDependencies(c1.id);
     const d2 = await ctx.taskDependencyService.getDependencies(c2.id);
     const d3 = await ctx.taskDependencyService.getDependencies(c3.id);
@@ -1307,7 +1283,6 @@ describe("Task Dependency Service", () => {
   it("batch with relates_to does not trigger cycle detection", async () => {
     const [r1] = await ctx.taskService.create([{ project_id: projectId, title: "Rel1" }]);
     const [r2] = await ctx.taskService.create([{ project_id: projectId, title: "Rel2" }]);
-    // Both directions as relates_to should be fine
     const deps = await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: r1.id, target_task_id: r2.id, dependency_type: "relates_to" },
       { source_task_id: r2.id, target_task_id: r1.id, dependency_type: "relates_to" },
@@ -1317,11 +1292,8 @@ describe("Task Dependency Service", () => {
 
   it("getDependencies returns grouped shape with blocks, blocked_by, relates_to, is_blocked", async () => {
     const result = await ctx.taskDependencyService.getDependencies(taskB);
-    // B has: blocked_by (A->B blocks), relates_to (B->C relates_to, B->A relates_to)
-    // B does not block any task (no "blocks" from B with type=blocks)
     expect(result.blocked_by.length).toBeGreaterThanOrEqual(1);
     expect(result.relates_to.length).toBeGreaterThanOrEqual(1);
-    // A blocks B and A is still todo, so B is_blocked
     expect(result.is_blocked).toBe(true);
     expect(result.blocked_by.some((d) => d.task_id === taskA)).toBe(true);
   });
@@ -1329,7 +1301,6 @@ describe("Task Dependency Service", () => {
   it("getGraph returns edges and blocked_task_ids", async () => {
     const graph = await ctx.taskDependencyService.getGraph(projectId);
     expect(graph.edges.length).toBeGreaterThanOrEqual(1);
-    // B should be blocked (A->B blocks, A is still todo)
     expect(graph.blocked_task_ids).toContain(taskB);
   });
 
@@ -1338,7 +1309,6 @@ describe("Task Dependency Service", () => {
       { source_task_id: taskB, target_task_id: taskA },
     ]);
     const result = await ctx.taskDependencyService.getDependencies(taskA);
-    // B->A relates_to should be gone
     expect(result.relates_to.some((d) => d.task_id === taskB)).toBe(false);
   });
 
@@ -1377,13 +1347,11 @@ describe("Task Dependency Service", () => {
       { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "relates_to" },
     ]);
     expect(first[0].dependency_type).toBe("relates_to");
-    const firstCreatedAt = first[0].created_at;
 
     const second = await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
     ]);
     expect(second[0].dependency_type).toBe("blocks");
-    // created_at is refreshed by the UPSERT (may equal firstCreatedAt in fast tests)
     expect(second[0].created_at).toBeTruthy();
   });
 
@@ -1421,21 +1389,17 @@ describe("Task Dependency Service", () => {
     const [tB] = await ctx.taskService.create([{ project_id: p.id, title: "CB" }]);
     const [tC] = await ctx.taskService.create([{ project_id: p.id, title: "CC" }]);
 
-    // A blocks B
     await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
     ]);
-    // B relates_to C (no cycle concern)
     await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tB.id, target_task_id: tC.id, dependency_type: "relates_to" },
     ]);
-    // Upgrade B->C to blocks (should succeed — no cycle)
     const upgraded = await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tB.id, target_task_id: tC.id, dependency_type: "blocks" },
     ]);
     expect(upgraded[0].dependency_type).toBe("blocks");
 
-    // C->A as blocks creates cycle A->B->C->A — now allowed
     const cycleEdge = await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tC.id, target_task_id: tA.id, dependency_type: "blocks" },
     ]);
@@ -1447,7 +1411,6 @@ describe("Task Dependency Service", () => {
     const [p] = await ctx.projectService.create([{ title: "Cycle Blocked Test" }]);
     const [tA] = await ctx.taskService.create([{ project_id: p.id, title: "CycBlk A" }]);
     const [tB] = await ctx.taskService.create([{ project_id: p.id, title: "CycBlk B" }]);
-    // A blocks B, B blocks A
     await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
       { source_task_id: tB.id, target_task_id: tA.id, dependency_type: "blocks" },
@@ -1462,7 +1425,6 @@ describe("Task Dependency Service", () => {
     const [p] = await ctx.projectService.create([{ title: "Cycle Graph Test" }]);
     const [tA] = await ctx.taskService.create([{ project_id: p.id, title: "CycGrph A" }]);
     const [tB] = await ctx.taskService.create([{ project_id: p.id, title: "CycGrph B" }]);
-    // Create 2-node cycle
     await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
       { source_task_id: tB.id, target_task_id: tA.id, dependency_type: "blocks" },
@@ -1479,19 +1441,14 @@ describe("Task Dependency Service", () => {
     const [p] = await ctx.projectService.create([{ title: "Cycle Unblock Test" }]);
     const [tA] = await ctx.taskService.create([{ project_id: p.id, title: "CycUnblk A" }]);
     const [tB] = await ctx.taskService.create([{ project_id: p.id, title: "CycUnblk B" }]);
-    // Create 2-node cycle
     await ctx.taskDependencyService.addDependencies(p.id, [
       { source_task_id: tA.id, target_task_id: tB.id, dependency_type: "blocks" },
       { source_task_id: tB.id, target_task_id: tA.id, dependency_type: "blocks" },
     ]);
-    // Both blocked initially
     expect((await ctx.taskDependencyService.getDependencies(tA.id)).is_blocked).toBe(true);
     expect((await ctx.taskDependencyService.getDependencies(tB.id)).is_blocked).toBe(true);
-    // Mark A as done
     await ctx.taskService.update([{ id: tA.id, status: "done" }]);
-    // B should no longer be blocked (its only blocker A is done)
     expect((await ctx.taskDependencyService.getDependencies(tB.id)).is_blocked).toBe(false);
-    // A is still blocked by B (B is still todo), but that's expected
     expect((await ctx.taskDependencyService.getDependencies(tA.id)).is_blocked).toBe(true);
   });
 });
@@ -1533,7 +1490,6 @@ describe("Task is_blocked field", () => {
     await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: blocker.id, target_task_id: blocked.id, dependency_type: "blocks" },
     ]);
-    // is_blocked is a user-managed field, not derived from dependency edges
     expect((await ctx.taskService.get(blocked.id)).is_blocked).toBe(false);
   });
 
@@ -1566,7 +1522,6 @@ describe("Dependency Edge Cases", () => {
     const [task] = await ctx.taskService.create([{ project_id: project.id, title: "Global Task" }]);
     await ctx.taskService.update([{ id: task.id, is_blocked: true }]);
 
-    // List without project_id (global list)
     const result = await ctx.taskService.list({ limit: 200 });
     const found = result.data.find((t) => t.id === task.id);
     expect(found).toBeTruthy();
@@ -1582,10 +1537,8 @@ describe("Dependency Edge Cases", () => {
       { source_task_id: taskA.id, target_task_id: taskB.id, dependency_type: "blocks" },
     ]);
 
-    // Delete A
     await ctx.taskService.remove([taskA.id]);
 
-    // Dependencies for B should be empty
     const deps = await ctx.taskDependencyService.getDependencies(taskB.id);
     expect(deps.blocked_by).toHaveLength(0);
   });
@@ -1595,14 +1548,12 @@ describe("Dependency Edge Cases", () => {
     const [taskA] = await ctx.taskService.create([{ project_id: project.id, title: "Upsert A" }]);
     const [taskB] = await ctx.taskService.create([{ project_id: project.id, title: "Upsert B" }]);
 
-    // Add as relates_to
     await ctx.taskDependencyService.addDependencies(project.id, [
       { source_task_id: taskA.id, target_task_id: taskB.id, dependency_type: "relates_to" },
     ]);
     let deps = await ctx.taskDependencyService.getDependencies(taskB.id);
     expect(deps.relates_to.length).toBeGreaterThanOrEqual(1);
 
-    // Re-add as blocks (upsert)
     await ctx.taskDependencyService.addDependencies(project.id, [
       { source_task_id: taskA.id, target_task_id: taskB.id, dependency_type: "blocks" },
     ]);
@@ -1615,8 +1566,6 @@ describe("Dependency Edge Cases", () => {
     const [taskA] = await ctx.taskService.create([{ project_id: project.id, title: "Mapper A" }]);
     const [taskB] = await ctx.taskService.create([{ project_id: project.id, title: "Mapper B" }]);
 
-    // update taskB with add_dependencies [{task_id: taskA, type: blocks}]
-    // This should mean: taskA is the blocker (source), taskB is the blocked (target)
     await ctx.taskService.update([{
       id: taskB.id,
       add_dependencies: [{ task_id: taskA.id, type: "blocks" }],
@@ -1626,7 +1575,6 @@ describe("Dependency Edge Cases", () => {
     expect(deps.blocked_by.some((d) => d.task_id === taskA.id)).toBe(true);
     expect(deps.is_blocked).toBe(true);
 
-    // From A's perspective, A should appear in blocks
     const depsA = await ctx.taskDependencyService.getDependencies(taskA.id);
     expect(depsA.blocks.some((d) => d.task_id === taskB.id)).toBe(true);
   });
@@ -1639,29 +1587,19 @@ describe("Dependency Edge Cases", () => {
 describe("Activity Log Retention", () => {
   it("countAll returns correct count", async () => {
     const countBefore = await activityLogRepo.countAll();
-    // Creating a project generates an activity log entry
     await ctx.projectService.create([{ title: "Retention Count Test" }]);
     const countAfter = await activityLogRepo.countAll();
     expect(countAfter).toBe(countBefore + 1);
   });
 
   it("deleteOlderThan removes only entries before cutoff", async () => {
-    // Insert a backdated entry directly via the db
+    const sql = ctx.pg!;
     const oldDate = "2020-01-01T00:00:00.000Z";
-    ctx.db!
-      .query(
-        "INSERT INTO activity_log (id, entity_type, entity_id, action, summary, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-      .run("retention-old-1", "test", null, "created", "{}", oldDate);
-    ctx.db!
-      .query(
-        "INSERT INTO activity_log (id, entity_type, entity_id, action, summary, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-      .run("retention-old-2", "test", null, "created", "{}", "2020-06-15T00:00:00.000Z");
+    await sql`INSERT INTO activity_log (id, entity_type, entity_id, action, summary, created_at) VALUES ('retention-old-1', 'test', NULL, 'created', '{}', ${oldDate})`;
+    await sql`INSERT INTO activity_log (id, entity_type, entity_id, action, summary, created_at) VALUES ('retention-old-2', 'test', NULL, 'created', '{}', '2020-06-15T00:00:00.000Z')`;
 
     const countBefore = await activityLogRepo.countAll();
 
-    // Use a cutoff that is after the old entries but before any recent ones
     const cutoff = "2021-01-01T00:00:00.000Z";
     const deleted = await activityLogRepo.deleteOlderThan(cutoff);
 
@@ -1670,8 +1608,111 @@ describe("Activity Log Retention", () => {
   });
 
   it("deleteOlderThan returns 0 when no entries match", async () => {
-    // Use a very old cutoff that predates all entries
     const deleted = await activityLogRepo.deleteOlderThan("1970-01-01T00:00:00.000Z");
     expect(deleted).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Vector / Semantic Search (Postgres-specific)
+// ---------------------------------------------------------------------------
+
+describe("Semantic Search (pgvector)", () => {
+  // All vector tests use fake embeddings via repo directly — no Ollama dependency.
+
+  it("semanticSearch returns results when embeddings exist", async () => {
+    const sql = ctx.pg!;
+    const { PgDocumentRepository } = await import("./repositories/pg/documents");
+    const repo = new PgDocumentRepository(sql);
+
+    const [doc] = await ctx.documentService.create([{ title: "Vector Test Doc", summary: "Test summary" }]);
+    const fakeVec = new Array(768).fill(0.1);
+    const vecStr = `[${fakeVec.join(",")}]`;
+    await sql`UPDATE documents SET embedding = ${vecStr}::vector WHERE id = ${doc.id}`;
+
+    const results = await repo.semanticSearch(fakeVec, { limit: 5 });
+    expect(results).toBeArray();
+    expect(results.length).toBeGreaterThanOrEqual(1);
+    expect(results.find((r) => r.document_id === doc.id)).toBeTruthy();
+  });
+
+  it("semanticSearch returns results with reference context", async () => {
+    const sql = ctx.pg!;
+    const { PgDocumentRepository } = await import("./repositories/pg/documents");
+    const repo = new PgDocumentRepository(sql);
+
+    const [project] = await ctx.projectService.create([{ title: "Ref Project" }]);
+    const [doc] = await ctx.documentService.create([{ title: "Referenced Doc" }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "design" as const }] } }]);
+
+    const fakeVec = new Array(768).fill(0.2);
+    const vecStr = `[${fakeVec.join(",")}]`;
+    await sql`UPDATE documents SET embedding = ${vecStr}::vector WHERE id = ${doc.id}`;
+
+    const results = await repo.semanticSearch(fakeVec, { limit: 5 });
+    const match = results.find((r) => r.document_id === doc.id);
+    expect(match).toBeTruthy();
+    expect(match!.references.length).toBeGreaterThanOrEqual(1);
+    expect(match!.references[0].entity_type).toBe("project");
+    expect(match!.references[0].type).toBe("design");
+  });
+
+  it("semanticSearch returns empty for empty query via service", async () => {
+    const results = await ctx.documentService.semanticSearch("");
+    expect(results).toBeArray();
+    expect(results.length).toBe(0);
+  });
+
+  it("semanticSearch returns empty for whitespace-only query via service", async () => {
+    const results = await ctx.documentService.semanticSearch("   ");
+    expect(results).toBeArray();
+    expect(results.length).toBe(0);
+  });
+
+  it("documents table supports embedding column", async () => {
+    const sql = ctx.pg!;
+    const [doc] = await ctx.documentService.create([{ title: "Embedding Column Test" }]);
+
+    const fakeVec = new Array(768).fill(0.5);
+    const vecStr = `[${fakeVec.join(",")}]`;
+    await sql`UPDATE documents SET embedding = ${vecStr}::vector WHERE id = ${doc.id}`;
+
+    const rows = await sql<{ id: string; has_embedding: boolean }[]>`
+      SELECT id, (embedding IS NOT NULL) as has_embedding FROM documents WHERE id = ${doc.id}
+    `;
+    expect(rows.length).toBe(1);
+    expect(rows[0].has_embedding).toBe(true);
+  });
+
+  it("cosine similarity ordering ranks closer vectors higher", async () => {
+    const sql = ctx.pg!;
+    const { PgDocumentRepository } = await import("./repositories/pg/documents");
+    const repo = new PgDocumentRepository(sql);
+
+    // Clean all embeddings first so only our test docs have them
+    await sql`UPDATE documents SET embedding = NULL`;
+
+    const [docA] = await ctx.documentService.create([{ title: "Close Vec Doc" }]);
+    const [docB] = await ctx.documentService.create([{ title: "Far Vec Doc" }]);
+
+    // docA: close to query vector (all 0.1)
+    const closeVec = new Array(768).fill(0.1);
+    await sql`UPDATE documents SET embedding = ${`[${closeVec.join(",")}]`}::vector WHERE id = ${docA.id}`;
+
+    // docB: far from query vector (all -0.9)
+    const farVec = new Array(768).fill(-0.9);
+    await sql`UPDATE documents SET embedding = ${`[${farVec.join(",")}]`}::vector WHERE id = ${docB.id}`;
+
+    const queryVec = new Array(768).fill(0.1);
+    const results = await repo.semanticSearch(queryVec, { limit: 10 });
+
+    const idxA = results.findIndex((r) => r.document_id === docA.id);
+    const idxB = results.findIndex((r) => r.document_id === docB.id);
+    expect(idxA).toBeGreaterThanOrEqual(0);
+    expect(idxB).toBeGreaterThanOrEqual(0);
+    expect(idxA).toBeLessThan(idxB);
+    expect(results[idxA].similarity).toBeGreaterThan(results[idxB].similarity);
+  });
+});
+
+}); // end describe.skipIf

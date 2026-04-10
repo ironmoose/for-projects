@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Document, DocumentSummary } from "../entities";
+import type { Document, DocumentSummary } from "../../entities";
 
 export interface DocumentRow {
   id: string;
@@ -20,12 +20,12 @@ function toDocument(row: DocumentRow): Document {
 export class DocumentRepository {
   constructor(private db: Database) {}
 
-  findById(id: string): Document | null {
+  async findById(id: string): Promise<Document | null> {
     const row = this.db.query("SELECT * FROM documents WHERE id = ?").get(id) as DocumentRow | null;
     return row ? toDocument(row) : null;
   }
 
-  findMany(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[]; limit?: number; offset?: number }): DocumentSummary[] {
+  async findMany(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[]; limit?: number; offset?: number }): Promise<DocumentSummary[]> {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
@@ -68,7 +68,7 @@ export class DocumentRepository {
     return rows.map((r) => ({ ...r, has_content: !!r.has_content, folder: r.folder ?? null, favorite: !!r.favorite, tags: [] as string[] })) as DocumentSummary[];
   }
 
-  count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[] }): number {
+  async count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[] }): Promise<number> {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
     let join = "";
@@ -109,7 +109,7 @@ export class DocumentRepository {
     ).total;
   }
 
-  insertMany(rows: Omit<DocumentRow, "id" | "created_at" | "updated_at">[]): Document[] {
+  async insertMany(rows: Omit<DocumentRow, "id" | "created_at" | "updated_at">[]): Promise<Document[]> {
     const stmt = this.db.query(
       "INSERT INTO documents (id, title, summary, content, folder, favorite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
@@ -138,12 +138,12 @@ export class DocumentRepository {
     return results;
   }
 
-  updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean }[]): Document[] {
+  async updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean }[]): Promise<Document[]> {
     const now = new Date().toISOString();
     const results: Document[] = [];
 
     for (const row of rows) {
-      const existing = this.findById(row.id);
+      const existing = await this.findById(row.id);
       if (!existing) continue;
 
       const title = row.title !== undefined ? row.title : existing.title;
@@ -171,7 +171,7 @@ export class DocumentRepository {
     return results;
   }
 
-  deleteMany(ids: string[]): void {
+  async deleteMany(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     const placeholders = ids.map(() => "?").join(", ");
     this.db.query(`DELETE FROM documents WHERE id IN (${placeholders})`).run(...ids);

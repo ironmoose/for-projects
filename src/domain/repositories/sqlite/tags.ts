@@ -1,27 +1,27 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Tag, EntityType, TagName } from "../entities";
+import type { Tag, EntityType, TagName } from "../../entities";
 
 export class TagRepository {
   constructor(private db: Database) {}
 
-  findOrCreateByKind(kind: string): Tag {
+  async findOrCreateByKind(kind: string): Promise<Tag> {
     const now = new Date().toISOString();
     const id = ulid();
     this.db.query("INSERT OR IGNORE INTO tags (id, kind, created_at) VALUES (?, ?, ?)").run(id, kind, now);
     return this.db.query("SELECT * FROM tags WHERE kind = ?").get(kind) as Tag;
   }
 
-  findByKinds(kinds: string[]): Tag[] {
+  async findByKinds(kinds: string[]): Promise<Tag[]> {
     if (kinds.length === 0) return [];
     const placeholders = kinds.map(() => "?").join(", ");
     return this.db.query(`SELECT * FROM tags WHERE kind IN (${placeholders})`).all(...kinds) as Tag[];
   }
 
-  setTagsForEntity(entityType: EntityType, entityId: string, tagKinds: string[]): void {
+  async setTagsForEntity(entityType: EntityType, entityId: string, tagKinds: string[]): Promise<void> {
     this.db.exec("BEGIN TRANSACTION");
     try {
-      const tags = tagKinds.map((kind) => this.findOrCreateByKind(kind));
+      const tags = await Promise.all(tagKinds.map((kind) => this.findOrCreateByKind(kind)));
       this.db.query("DELETE FROM entity_tags WHERE entity_type = ? AND entity_id = ?").run(entityType, entityId);
 
       const stmt = this.db.query("INSERT INTO entity_tags (entity_type, entity_id, tag_id) VALUES (?, ?, ?)");
@@ -35,7 +35,7 @@ export class TagRepository {
     }
   }
 
-  getTagsForEntities(entityType: EntityType, entityIds: string[]): Map<string, TagName[]> {
+  async getTagsForEntities(entityType: EntityType, entityIds: string[]): Promise<Map<string, TagName[]>> {
     if (entityIds.length === 0) return new Map();
 
     const CHUNK_SIZE = 100;
@@ -63,13 +63,13 @@ export class TagRepository {
     return result;
   }
 
-  getTagsForEntity(entityType: EntityType, entityId: string): Tag[] {
+  async getTagsForEntity(entityType: EntityType, entityId: string): Promise<Tag[]> {
     return this.db
       .query("SELECT t.* FROM tags t JOIN entity_tags et ON et.tag_id = t.id WHERE et.entity_type = ? AND et.entity_id = ? ORDER BY t.kind")
       .all(entityType, entityId) as Tag[];
   }
 
-  findEntitiesByTag(tagKind: string, entityType?: EntityType): { entity_type: string; entity_id: string }[] {
+  async findEntitiesByTag(tagKind: string, entityType?: EntityType): Promise<{ entity_type: string; entity_id: string }[]> {
     const conditions: string[] = ["t.kind = ?"];
     const params: string[] = [tagKind];
 
@@ -85,7 +85,7 @@ export class TagRepository {
       .all(...params) as { entity_type: string; entity_id: string }[];
   }
 
-  removeTagsForEntity(entityType: EntityType, entityId: string): void {
+  async removeTagsForEntity(entityType: EntityType, entityId: string): Promise<void> {
     this.db.query("DELETE FROM entity_tags WHERE entity_type = ? AND entity_id = ?").run(entityType, entityId);
   }
 }

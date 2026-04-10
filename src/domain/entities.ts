@@ -149,6 +149,26 @@ export interface DocumentSummary {
   updated_at: string;
 }
 
+/** Semantic search result — document with similarity score and reference context. */
+export interface SemanticSearchResult {
+  document_id: string;
+  title: string;
+  summary: string | null;
+  folder: string | null;
+  favorite: boolean;
+  has_content: boolean;
+  tags: TagName[];
+  linked_projects: LinkedProject[];
+  created_at: string;
+  updated_at: string;
+  similarity: number;
+  references: {
+    entity_type: string;
+    entity_id: string;
+    type: DocumentReferenceType;
+  }[];
+}
+
 export interface DocumentReferenceSummary {
   document_id: string;
   document_title: string;

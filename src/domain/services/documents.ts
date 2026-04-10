@@ -1,12 +1,10 @@
-import { type Document, type DocumentSummary, type TagName, TAG_NAMES } from "../entities";
+import { type Document, type DocumentSummary, type SemanticSearchResult, type TagName, TAG_NAMES } from "../entities";
 import type { CreateDocumentInput, UpdateDocumentInput } from "../inputs";
 import type { IDocumentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
-import type { DocumentRepository } from "../repositories/documents";
-import type { TagRepository } from "../repositories/tags";
-import type { DocumentReferenceRepository } from "../repositories/document-references";
-import type { ActivityLogRepository } from "../repositories/activity-log";
+import type { IDocumentRepository, ITagRepository, IDocumentReferenceRepository, IActivityLogRepository } from "../repositories/interfaces";
 import type { EventBus } from "../events";
+import type { EmbeddingService } from "../embedding";
 
 const FOLDER_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -22,29 +20,30 @@ function isValidFolder(value: string): boolean {
 
 export class DocumentService implements IDocumentService {
   constructor(
-    private documentRepo: DocumentRepository,
-    private tagRepo: TagRepository,
-    private activityLog: ActivityLogRepository,
+    private documentRepo: IDocumentRepository,
+    private tagRepo: ITagRepository,
+    private activityLog: IActivityLogRepository,
     private eventBus: EventBus,
-    private docRefRepo?: DocumentReferenceRepository,
+    private docRefRepo?: IDocumentReferenceRepository,
+    private embeddingService?: EmbeddingService,
   ) {}
 
-  list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Paginated<DocumentSummary> {
+  async list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Promise<Paginated<DocumentSummary>> {
     let docIds: string[] | undefined;
     const entityType = filter?.entity_type;
     const entityId = filter?.entity_id;
     if (entityType && entityId && this.docRefRepo) {
-      const refs = this.docRefRepo.getReferencesForEntity(entityType, entityId);
+      const refs = await this.docRefRepo.getReferencesForEntity(entityType, entityId);
       docIds = [...new Set(refs.map((r) => r.document_id))];
       if (docIds.length === 0) return { data: [], total: 0 };
     }
 
     const repoFilter = { ...filter, doc_ids: docIds };
-    const summaries = this.documentRepo.findMany(repoFilter);
+    const summaries = await this.documentRepo.findMany(repoFilter);
     const ids = summaries.map((s) => s.id);
-    const tagMap = this.tagRepo.getTagsForEntities("document", ids);
+    const tagMap = await this.tagRepo.getTagsForEntities("document", ids);
     const projectMap = this.docRefRepo
-      ? this.docRefRepo.getProjectsForDocuments(ids)
+      ? await this.docRefRepo.getProjectsForDocuments(ids)
       : new Map<string, { id: string; title: string }[]>();
     const data = summaries.map((s) => ({
       ...s,
@@ -53,21 +52,21 @@ export class DocumentService implements IDocumentService {
     }));
     return {
       data,
-      total: this.documentRepo.count(repoFilter),
+      total: await this.documentRepo.count(repoFilter),
     };
   }
 
-  get(id: string): Document & { tags: string[]; referenced_by: { entity_type: string; entity_id: string; entity_title: string; type: string }[] } {
-    const doc = this.documentRepo.findById(id);
+  async get(id: string): Promise<Document & { tags: string[]; referenced_by: { entity_type: string; entity_id: string; entity_title: string; type: string }[] }> {
+    const doc = await this.documentRepo.findById(id);
     if (!doc) throw new ServiceError("document not found", 404);
-    const tags = this.tagRepo.getTagsForEntity("document", id).map((t) => t.kind);
+    const tags = (await this.tagRepo.getTagsForEntity("document", id)).map((t) => t.kind);
     const referenced_by = this.docRefRepo
-      ? this.docRefRepo.getEntitiesForDocumentWithTitles(id)
+      ? await this.docRefRepo.getEntitiesForDocumentWithTitles(id)
       : [];
     return { ...doc, tags, referenced_by };
   }
 
-  create(inputs: CreateDocumentInput[]): (Document & { tags: string[] })[] {
+  async create(inputs: CreateDocumentInput[]): Promise<(Document & { tags: string[] })[]> {
     for (const input of inputs) {
       if (!input.title?.trim()) {
         throw new ServiceError("title is required", 400);
@@ -105,21 +104,21 @@ export class DocumentService implements IDocumentService {
       favorite: input.favorite ? 1 : 0,
     }));
 
-    const documents = this.documentRepo.insertMany(rows);
+    const documents = await this.documentRepo.insertMany(rows);
 
     for (let i = 0; i < documents.length; i++) {
       const input = inputs[i];
       if (input.tags && input.tags.length > 0) {
         const normalized = input.tags.map((t) => t.toLowerCase());
-        this.tagRepo.setTagsForEntity("document", documents[i].id, normalized);
+        await this.tagRepo.setTagsForEntity("document", documents[i].id, normalized);
       }
     }
 
     const results: (Document & { tags: string[] })[] = [];
     for (const doc of documents) {
-      const tags = this.tagRepo.getTagsForEntity("document", doc.id).map((t) => t.kind);
+      const tags = (await this.tagRepo.getTagsForEntity("document", doc.id)).map((t) => t.kind);
       results.push({ ...doc, tags });
-      this.activityLog.insert({
+      await this.activityLog.insert({
         entity_type: "document",
         entity_id: doc.id,
         action: "created",
@@ -130,7 +129,7 @@ export class DocumentService implements IDocumentService {
     return results;
   }
 
-  update(inputs: UpdateDocumentInput[]): (Document & { tags: string[] })[] {
+  async update(inputs: UpdateDocumentInput[]): Promise<(Document & { tags: string[] })[]> {
     for (const input of inputs) {
       if (input.title !== undefined && !input.title.trim()) {
         throw new ServiceError("title cannot be empty", 400);
@@ -158,28 +157,28 @@ export class DocumentService implements IDocumentService {
           }
         }
       }
-      const existing = this.documentRepo.findById(input.id);
+      const existing = await this.documentRepo.findById(input.id);
       if (!existing) throw new ServiceError(`document not found: ${input.id}`, 404);
     }
 
     const repoInputs = inputs.map(({ tags, ...rest }) => rest);
-    const documents = this.documentRepo.updateMany(repoInputs);
+    const documents = await this.documentRepo.updateMany(repoInputs);
 
     for (let i = 0; i < documents.length; i++) {
       const input = inputs[i];
       if (input.tags !== undefined) {
         const normalized = input.tags.map((t) => t.toLowerCase());
-        this.tagRepo.setTagsForEntity("document", documents[i].id, normalized);
+        await this.tagRepo.setTagsForEntity("document", documents[i].id, normalized);
       }
     }
 
     const inputById = new Map(inputs.map(i => [i.id, i]));
     const results: (Document & { tags: string[] })[] = [];
     for (const doc of documents) {
-      const tags = this.tagRepo.getTagsForEntity("document", doc.id).map((t) => t.kind);
+      const tags = (await this.tagRepo.getTagsForEntity("document", doc.id)).map((t) => t.kind);
       results.push({ ...doc, tags });
       const fields = Object.keys(inputById.get(doc.id) ?? {}).filter((k) => k !== "id");
-      this.activityLog.insert({
+      await this.activityLog.insert({
         entity_type: "document",
         entity_id: doc.id,
         action: "updated",
@@ -190,14 +189,14 @@ export class DocumentService implements IDocumentService {
     return results;
   }
 
-  remove(ids: string[]): void {
+  async remove(ids: string[]): Promise<void> {
     for (const id of ids) {
-      this.docRefRepo?.removeAllForDocument(id);
-      this.tagRepo.removeTagsForEntity("document", id);
+      if (this.docRefRepo) await this.docRefRepo.removeAllForDocument(id);
+      await this.tagRepo.removeTagsForEntity("document", id);
     }
-    this.documentRepo.deleteMany(ids);
+    await this.documentRepo.deleteMany(ids);
     for (const id of ids) {
-      this.activityLog.insert({
+      await this.activityLog.insert({
         entity_type: "document",
         entity_id: id,
         action: "deleted",
@@ -205,5 +204,31 @@ export class DocumentService implements IDocumentService {
       });
     }
     this.eventBus.emit({ type: "deleted", entity_type: "document", ids });
+  }
+
+  async semanticSearch(query: string, filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]> {
+    if (!query.trim()) return [];
+
+    // No embedding service or repo doesn't support vector search → empty
+    if (!this.embeddingService || !this.documentRepo.semanticSearch) return [];
+
+    const queryEmbedding = await this.embeddingService.embedQuery(query);
+    if (!queryEmbedding) return [];
+
+    const results = await this.documentRepo.semanticSearch(queryEmbedding, filter);
+    if (results.length === 0) return results;
+
+    // Enrich with tags and linked projects (same pattern as list())
+    const ids = results.map((r) => r.document_id);
+    const tagMap = await this.tagRepo.getTagsForEntities("document", ids);
+    const projectMap = this.docRefRepo
+      ? await this.docRefRepo.getProjectsForDocuments(ids)
+      : new Map<string, { id: string; title: string }[]>();
+
+    return results.map((r) => ({
+      ...r,
+      tags: tagMap.get(r.document_id) ?? [],
+      linked_projects: projectMap.get(r.document_id) ?? [],
+    }));
   }
 }

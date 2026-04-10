@@ -32,7 +32,7 @@ beforeAll(async () => {
   app.get("/health", (c) => {
     let dbOk = false;
     try {
-      const row = ctx.db.query("SELECT 1 AS ok").get() as { ok: number } | null;
+      const row = ctx.db!.query("SELECT 1 AS ok").get() as { ok: number } | null;
       dbOk = row?.ok === 1;
     } catch {
       dbOk = false;
@@ -54,7 +54,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  ctx.db.close();
+  ctx.db!.close();
   rmSync(tempDir, { recursive: true, force: true });
 });
 
@@ -175,7 +175,7 @@ describe("Task Routes", () => {
   let projectId: string;
 
   beforeAll(async () => {
-    const [p] = ctx.projectService.create([{ title: "Task Route Project" }]);
+    const [p] = await ctx.projectService.create([{ title: "Task Route Project" }]);
     projectId = p.id;
   });
 
@@ -415,8 +415,8 @@ describe("Task Routes", () => {
 
   it("GET /tasks/status-counts returns counts for multiple projects", async () => {
     // Create a second project with tasks in different statuses
-    const [p2] = ctx.projectService.create([{ title: "Status Counts Project 2" }]);
-    ctx.taskService.create([
+    const [p2] = await ctx.projectService.create([{ title: "Status Counts Project 2" }]);
+    await ctx.taskService.create([
       { project_id: p2.id, title: "SC Todo", status: "todo" },
       { project_id: p2.id, title: "SC Done", status: "done" },
       { project_id: p2.id, title: "SC Done 2", status: "done" },
@@ -441,7 +441,7 @@ describe("Task Routes", () => {
   });
 
   it("GET /tasks/status-counts returns empty for project with no tasks", async () => {
-    const [emptyProject] = ctx.projectService.create([{ title: "Empty Status Counts Project" }]);
+    const [emptyProject] = await ctx.projectService.create([{ title: "Empty Status Counts Project" }]);
     const res = await req(`/tasks/status-counts?project_ids=${emptyProject.id}`);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -458,8 +458,8 @@ describe("Task Routes", () => {
   });
 
   it("GET /tasks/status-counts handles mixed statuses correctly", async () => {
-    const [p3] = ctx.projectService.create([{ title: "Mixed Status Project" }]);
-    ctx.taskService.create([
+    const [p3] = await ctx.projectService.create([{ title: "Mixed Status Project" }]);
+    await ctx.taskService.create([
       { project_id: p3.id, title: "Mixed 1", status: "todo" },
       { project_id: p3.id, title: "Mixed 2", status: "todo" },
       { project_id: p3.id, title: "Mixed 3", status: "archived" },
@@ -1013,7 +1013,7 @@ describe("Extended Project Routes", () => {
 
 describe("Extended Task Routes", () => {
   it("PATCH /tasks with documents merge-patch attaches documents, verify via GET", async () => {
-    const [project] = ctx.projectService.create([{ title: "Task MP Attach Project" }]);
+    const [project] = await ctx.projectService.create([{ title: "Task MP Attach Project" }]);
     const [doc] = await (await req("/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1045,7 +1045,7 @@ describe("Extended Task Routes", () => {
   });
 
   it("PATCH /tasks with documents merge-patch null removes document", async () => {
-    const [project] = ctx.projectService.create([{ title: "Task MP Detach Project" }]);
+    const [project] = await ctx.projectService.create([{ title: "Task MP Detach Project" }]);
     const [doc] = await (await req("/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1084,7 +1084,7 @@ describe("Extended Task Routes", () => {
   });
 
   it("POST /tasks with documents creates task with references attached", async () => {
-    const [project] = ctx.projectService.create([{ title: "Task MP Create Project" }]);
+    const [project] = await ctx.projectService.create([{ title: "Task MP Create Project" }]);
     const [doc] = await (await req("/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1123,11 +1123,11 @@ describe("Documents Merge-Patch Validation", () => {
   let docId: string;
 
   beforeAll(async () => {
-    const [project] = ctx.projectService.create([{ title: "MergePatch Test Project" }]);
+    const [project] = await ctx.projectService.create([{ title: "MergePatch Test Project" }]);
     projectId = project.id;
-    const [task] = ctx.taskService.create([{ project_id: projectId, title: "MergePatch Test Task" }]);
+    const [task] = await ctx.taskService.create([{ project_id: projectId, title: "MergePatch Test Task" }]);
     taskId = task.id;
-    const [doc] = ctx.documentService.create([{ title: "MergePatch Test Doc" }]);
+    const [doc] = await ctx.documentService.create([{ title: "MergePatch Test Doc" }]);
     docId = doc.id;
   });
 
@@ -1263,7 +1263,7 @@ describe("Documents Merge-Patch Validation", () => {
   });
 
   it("PATCH /projects with mixed set and null operations accepted", async () => {
-    const [doc2] = ctx.documentService.create([{ title: "MergePatch Doc 2" }]);
+    const [doc2] = await ctx.documentService.create([{ title: "MergePatch Doc 2" }]);
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1380,7 +1380,7 @@ describe("Batch Endpoint Validation", () => {
 
   it("PATCH /tasks with invalid status enum returns 400", async () => {
     // Create a valid task first
-    const [p] = ctx.projectService.create([{ title: "Enum Route Project" }]);
+    const [p] = await ctx.projectService.create([{ title: "Enum Route Project" }]);
     const createRes = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1408,9 +1408,9 @@ describe("Project Dependency Endpoints", () => {
   let taskCId: string;
 
   beforeAll(async () => {
-    const [project] = ctx.projectService.create([{ title: "Dep Endpoint Project" }]);
+    const [project] = await ctx.projectService.create([{ title: "Dep Endpoint Project" }]);
     projectId = project.id;
-    const tasks = ctx.taskService.create([
+    const tasks = await ctx.taskService.create([
       { project_id: projectId, title: "Dep Task A" },
       { project_id: projectId, title: "Dep Task B" },
       { project_id: projectId, title: "Dep Task C" },
@@ -1473,8 +1473,8 @@ describe("Project Dependency Endpoints", () => {
   });
 
   it("POST /projects/:id/dependencies with cross-project tasks returns 400", async () => {
-    const [otherProject] = ctx.projectService.create([{ title: "Other Dep Project" }]);
-    const [otherTask] = ctx.taskService.create([{ project_id: otherProject.id, title: "Other Task" }]);
+    const [otherProject] = await ctx.projectService.create([{ title: "Other Dep Project" }]);
+    const [otherTask] = await ctx.taskService.create([{ project_id: otherProject.id, title: "Other Task" }]);
     const res = await req(`/projects/${projectId}/dependencies`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1543,9 +1543,9 @@ describe("Task Dependency Routes", () => {
   let taskCId: string;
 
   beforeAll(async () => {
-    const [project] = ctx.projectService.create([{ title: "Task Dep Route Project" }]);
+    const [project] = await ctx.projectService.create([{ title: "Task Dep Route Project" }]);
     projectId = project.id;
-    const tasks = ctx.taskService.create([
+    const tasks = await ctx.taskService.create([
       { project_id: projectId, title: "Dep Route Task A" },
       { project_id: projectId, title: "Dep Route Task B" },
       { project_id: projectId, title: "Dep Route Task C" },
@@ -1573,7 +1573,7 @@ describe("Task Dependency Routes", () => {
 
   it("PATCH /tasks with remove_dependencies removes dependency and returns 200", async () => {
     // First add a dependency to remove
-    ctx.taskDependencyService.addDependencies(projectId, [
+    await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: taskAId, target_task_id: taskCId, dependency_type: "blocks" },
     ]);
 
@@ -1651,8 +1651,8 @@ describe("Task Dependency Routes", () => {
   });
 
   it("PATCH /tasks with add_dependencies for cross-project task returns 400", async () => {
-    const [otherProject] = ctx.projectService.create([{ title: "Other Route Dep Project" }]);
-    const [otherTask] = ctx.taskService.create([{ project_id: otherProject.id, title: "Other Route Task" }]);
+    const [otherProject] = await ctx.projectService.create([{ title: "Other Route Dep Project" }]);
+    const [otherTask] = await ctx.taskService.create([{ project_id: otherProject.id, title: "Other Route Task" }]);
 
     const res = await req("/tasks", {
       method: "PATCH",
@@ -1685,9 +1685,9 @@ describe("Task Dependency Routes", () => {
 
   it("DELETE /tasks cleans up dependency rows via CASCADE", async () => {
     // Create fresh tasks for this test
-    const [depA] = ctx.taskService.create([{ project_id: projectId, title: "CASCADE Source" }]);
-    const [depB] = ctx.taskService.create([{ project_id: projectId, title: "CASCADE Target" }]);
-    ctx.taskDependencyService.addDependencies(projectId, [
+    const [depA] = await ctx.taskService.create([{ project_id: projectId, title: "CASCADE Source" }]);
+    const [depB] = await ctx.taskService.create([{ project_id: projectId, title: "CASCADE Target" }]);
+    await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: depA.id, target_task_id: depB.id, dependency_type: "blocks" },
     ]);
 
@@ -1748,12 +1748,12 @@ describe("Dependency Graph Status Filtering", () => {
   let taskCId: string; // done — blocks taskD
   let taskDId: string; // todo — blocked by taskC (but taskC is done, so not actually blocked)
 
-  beforeAll(() => {
-    const [project] = ctx.projectService.create([{ title: "Dep Graph Filter Project" }]);
+  beforeAll(async () => {
+    const [project] = await ctx.projectService.create([{ title: "Dep Graph Filter Project" }]);
     projectId = project.id;
 
     // Create tasks — all default to "todo"
-    const tasks = ctx.taskService.create([
+    const tasks = await ctx.taskService.create([
       { project_id: projectId, title: "Filter Task A" },
       { project_id: projectId, title: "Filter Task B" },
       { project_id: projectId, title: "Filter Task C" },
@@ -1765,19 +1765,19 @@ describe("Dependency Graph Status Filtering", () => {
     taskDId = tasks[3].id;
 
     // Set statuses: B -> in_progress, C -> done
-    ctx.taskService.update([{ id: taskBId, status: "in_progress" }]);
-    ctx.taskService.update([{ id: taskCId, status: "done" }]);
+    await ctx.taskService.update([{ id: taskBId, status: "in_progress" }]);
+    await ctx.taskService.update([{ id: taskCId, status: "done" }]);
 
     // A blocks B
-    ctx.taskDependencyService.addDependencies(projectId, [
+    await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: taskAId, target_task_id: taskBId, dependency_type: "blocks" },
     ]);
     // C blocks D
-    ctx.taskDependencyService.addDependencies(projectId, [
+    await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: taskCId, target_task_id: taskDId, dependency_type: "blocks" },
     ]);
     // B relates_to C
-    ctx.taskDependencyService.addDependencies(projectId, [
+    await ctx.taskDependencyService.addDependencies(projectId, [
       { source_task_id: taskBId, target_task_id: taskCId, dependency_type: "relates_to" },
     ]);
   });

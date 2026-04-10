@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:1.3.4 AS base
 WORKDIR /app
 
 # Install dependencies
@@ -6,12 +6,13 @@ FROM base AS deps
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
-# Build web assets
+# Build web assets — only copy what vite needs (@domain types + web source)
 FROM base AS build
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
-COPY src/ src/
 COPY tsconfig.json ./
+COPY src/domain/ src/domain/
+COPY src/web/ src/web/
 RUN cd src/web && bun x vite build
 
 # Runtime
@@ -27,7 +28,6 @@ USER bun
 
 ENV PM_HOST=0.0.0.0
 ENV PM_PORT=3000
-ENV SQLITE_PATH=/app/data/sqlite.db
 EXPOSE 3000
 
 CMD ["bun", "run", "src/index.ts"]

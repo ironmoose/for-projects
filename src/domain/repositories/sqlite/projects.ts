@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Project, ProjectSummary } from "../entities";
+import type { Project, ProjectSummary } from "../../entities";
 
 export interface ProjectRow {
   id: string;
@@ -32,11 +32,11 @@ export class ProjectRepository {
     return { where, params };
   }
 
-  findById(id: string): Project | null {
+  async findById(id: string): Promise<Project | null> {
     return this.db.query("SELECT * FROM projects WHERE id = ?").get(id) as Project | null;
   }
 
-  findMany(filter?: ProjectFilter): Project[] {
+  async findMany(filter?: ProjectFilter): Promise<Project[]> {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const { where, params } = this.buildWhereClause(filter);
@@ -47,7 +47,7 @@ export class ProjectRepository {
       .all(...params) as Project[];
   }
 
-  findManySummary(filter?: ProjectFilter): ProjectSummary[] {
+  async findManySummary(filter?: ProjectFilter): Promise<ProjectSummary[]> {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const { where, params } = this.buildWhereClause(filter);
@@ -58,7 +58,7 @@ export class ProjectRepository {
       .all(...params) as ProjectSummary[];
   }
 
-  count(filter?: ProjectFilter): number {
+  async count(filter?: ProjectFilter): Promise<number> {
     const { where, params } = this.buildWhereClause(filter);
 
     return (
@@ -68,7 +68,7 @@ export class ProjectRepository {
     ).total;
   }
 
-  insertMany(rows: Omit<ProjectRow, "id" | "created_at" | "updated_at">[]): Project[] {
+  async insertMany(rows: Omit<ProjectRow, "id" | "created_at" | "updated_at">[]): Promise<Project[]> {
     const stmt = this.db.query(
       "INSERT INTO projects (id, title, summary, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
     );
@@ -94,12 +94,12 @@ export class ProjectRepository {
     return results;
   }
 
-  updateMany(rows: { id: string; title?: string; summary?: string | null }[]): Project[] {
+  async updateMany(rows: { id: string; title?: string; summary?: string | null }[]): Promise<Project[]> {
     const now = new Date().toISOString();
     const results: Project[] = [];
 
     for (const row of rows) {
-      const existing = this.findById(row.id);
+      const existing = await this.findById(row.id);
       if (!existing) continue;
 
       const title = row.title !== undefined ? row.title : existing.title;
@@ -121,7 +121,7 @@ export class ProjectRepository {
     return results;
   }
 
-  deleteMany(ids: string[]): void {
+  async deleteMany(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     const placeholders = ids.map(() => "?").join(", ");
     this.db.query(`DELETE FROM projects WHERE id IN (${placeholders})`).run(...ids);

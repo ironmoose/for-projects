@@ -6,6 +6,7 @@ export { useProjects } from "./useProjects";
 export { useProject } from "./useProject";
 export { useActivityLog } from "./useActivityLog";
 export { useDocuments } from "./useDocuments";
+export { useHealth } from "./useHealth";
 export { useDocument } from "./useDocument";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";

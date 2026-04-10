@@ -5,7 +5,12 @@ Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 ## Quick reference
 
 - `bun run build` — build frontend assets
-- `bun test` — run tests
+- `bun test` — run tests (SQLite-backed, no external deps)
+- `bun scripts/smoke-tests/pg-migration-test.ts` — test Postgres migrations against local Docker (requires `docker-compose up postgres`)
+- `bun scripts/smoke-tests/pg-smoke-test.ts` — verify Postgres schema, vector columns, and HNSW indexes
+- `bun scripts/smoke-tests/embedding-smoke-test.ts` — test Ollama embedding pipeline end-to-end
+- `bun scripts/smoke-tests/semantic-search-smoke-test.ts` — test vector similarity search
+- `bun scripts/migrate-sqlite-to-pg.ts` — dry-run SQLite→Postgres data migration (add `--commit` to write)
 
 ## Conventions
 
@@ -31,6 +36,12 @@ Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 | note | Freeform — anything that doesn't fit above |
 
 References are "dumb pointers" — they do not enrich the document; the document is already enriched with its own title, summary, tags, and content.
+
+### Embeddings
+
+`projects`, `tasks`, and `documents` each have a `vector(768)` embedding column (pgvector, nomic-embed-text via Ollama). Embeddings are **opt-in**: set `EMBEDDINGS_ENABLED=true` to activate the pipeline (default: `false`). When disabled, Postgres runs without Ollama and embedding columns stay NULL. Embeddings are generated asynchronously via the embedding pipeline (`embedding-pipeline.ts`) on create/update events.
+
+`buildEmbeddingText()` in `embedding.ts` controls what gets embedded: `title` + `summary`, with `context` and `acceptance_criteria` for tasks. For documents without a summary, the first 500 chars of `content` are used as a fallback (`CONTENT_FALLBACK_LIMIT`). **If the summary column max length changes, update `CONTENT_FALLBACK_LIMIT` to match** — the two should stay in sync so the fallback produces vectors of comparable weight.
 
 ## Architecture
 
@@ -111,5 +122,8 @@ Documents page at `/documents` with list/detail modes. Tag filtering, title sear
 
 ## Testing
 
-ALWAYS attempt to test changes to the api and domain modules by using the dev server hosted at http://localhost:3000. 
-NEVER attempt to run the dev server or docker support established in this repository.
+- ALWAYS update tests alongside code changes. Tests are not a separate step — they ship with the code.
+- ALWAYS run `bun test` after changes to domain or API code and confirm they pass.
+- ALWAYS run Postgres smoke tests (`bun scripts/smoke-tests/pg-migration-test.ts`, `pg-smoke-test.ts`, `embedding-smoke-test.ts`, `semantic-search-smoke-test.ts`) after changes to Postgres migrations, repositories, schema, or embeddings.
+- Test API changes against the dev server at http://localhost:3000 when it's running.
+- NEVER attempt to start the dev server or Docker services — assume they're already running if needed.

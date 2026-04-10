@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, SemanticSearchResult, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -222,6 +222,30 @@ export async function updateDocuments(inputs: Array<{ id: string; title?: string
 
 export async function deleteDocuments(ids: string[]): Promise<void> {
   await apiFetch("/api/documents", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+}
+
+export async function searchDocuments(params: { q: string; tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]> {
+  const res = await apiFetch(`/api/documents/search${qs(params)}`);
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Health API
+// ---------------------------------------------------------------------------
+
+export interface HealthStatus {
+  status: string;
+  version: string;
+  backend: "sqlite" | "postgres";
+  uptime_seconds: number;
+  database: string;
+  ollama?: string;
+  timestamp: string;
+}
+
+export async function fetchHealth(): Promise<HealthStatus> {
+  const res = await apiFetch("/api/health");
+  return res.json();
 }
 
 // ---------------------------------------------------------------------------

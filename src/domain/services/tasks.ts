@@ -2,43 +2,41 @@ import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentRefere
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
 import type { ITaskService, ITaskDependencyService, IDocumentReferenceService, Paginated } from "../services";
 import { ServiceError } from "../errors";
-import type { TaskRepository } from "../repositories/tasks";
-import type { ProjectRepository } from "../repositories/projects";
-import type { ActivityLogRepository } from "../repositories/activity-log";
+import type { ITaskRepository, IProjectRepository, IActivityLogRepository } from "../repositories/interfaces";
 import type { EventBus } from "../events";
 
 export class TaskService implements ITaskService {
   constructor(
-    private taskRepo: TaskRepository,
-    private projectRepo: ProjectRepository,
-    private activityLog: ActivityLogRepository,
+    private taskRepo: ITaskRepository,
+    private projectRepo: IProjectRepository,
+    private activityLog: IActivityLogRepository,
     private eventBus: EventBus,
     private depService?: ITaskDependencyService,
     private docRefService?: IDocumentReferenceService,
   ) {}
 
 
-  list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Paginated<TaskSummary> {
-    const data = this.taskRepo.findManySummary(filter);
-    const total = this.taskRepo.count(filter);
+  async list(filter?: { id?: string; limit?: number; offset?: number; project_id?: string; group_key?: string; status?: string[]; effort?: string; impact?: string; category?: string; title?: string; blocked?: boolean }): Promise<Paginated<TaskSummary>> {
+    const data = await this.taskRepo.findManySummary(filter);
+    const total = await this.taskRepo.count(filter);
     return { data, total };
   }
 
-  listGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[] {
-    return this.taskRepo.findGraphSummaries(projectId, status);
+  async listGraphSummaries(projectId: string, status?: string[]): Promise<GraphTaskSummary[]> {
+    return await this.taskRepo.findGraphSummaries(projectId, status);
   }
 
-  get(id: string): Task & { documents: DocumentReferenceDetail[] } {
-    const task = this.taskRepo.findById(id);
+  async get(id: string): Promise<Task & { documents: DocumentReferenceDetail[] }> {
+    const task = await this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
-    const documents = this.docRefService?.findByEntity("task", id) ?? [];
+    const documents = this.docRefService ? await this.docRefService.findByEntity("task", id) : [];
     return { ...task, documents };
   }
 
-  create(inputs: CreateTaskInput[]): (Task & { documents: DocumentReferenceSummary[] })[] {
+  async create(inputs: CreateTaskInput[]): Promise<(Task & { documents: DocumentReferenceSummary[] })[]> {
     // Validate all inputs before any writes
     for (const input of inputs) {
-      const project = this.projectRepo.findById(input.project_id);
+      const project = await this.projectRepo.findById(input.project_id);
       if (!project) {
         throw new ServiceError(`project not found: ${input.project_id}`, 404);
       }
@@ -74,7 +72,7 @@ export class TaskService implements ITaskService {
       }
       // Pre-validate document references so we fail before creating the entity
       if (input.documents && this.docRefService) {
-        this.docRefService.validateMergePatch(input.documents);
+        await this.docRefService.validateMergePatch(input.documents);
       }
     }
 
@@ -91,18 +89,18 @@ export class TaskService implements ITaskService {
       category: input.category ?? null,
     }));
 
-    const tasks = this.taskRepo.insertMany(rows);
+    const tasks = await this.taskRepo.insertMany(rows);
 
     // Create document references for each task
     for (let i = 0; i < tasks.length; i++) {
       const input = inputs[i];
       if (input.documents && this.docRefService) {
-        this.docRefService.applyMergePatch("task", tasks[i].id, input.documents);
+        await this.docRefService.applyMergePatch("task", tasks[i].id, input.documents);
       }
     }
 
     for (const t of tasks) {
-      this.activityLog.insert({
+      await this.activityLog.insert({
         entity_type: "task",
         entity_id: t.id,
         action: "created",
@@ -112,13 +110,15 @@ export class TaskService implements ITaskService {
     this.eventBus.emit({ type: "created", entity_type: "task", ids: tasks.map((t) => t.id) });
 
     // Return tasks with their document references
-    return tasks.map((t) => ({
-      ...t,
-      documents: this.docRefService?.getReferencesForEntity("task", t.id) ?? [],
-    }));
+    const results: (Task & { documents: DocumentReferenceSummary[] })[] = [];
+    for (const t of tasks) {
+      const docs = this.docRefService ? await this.docRefService.getReferencesForEntity("task", t.id) : [];
+      results.push({ ...t, documents: docs });
+    }
+    return results;
   }
 
-  update(inputs: UpdateTaskInput[]): Task[] {
+  async update(inputs: UpdateTaskInput[]): Promise<Task[]> {
     const taskCache = new Map<string, Task>();
     for (const input of inputs) {
       if (input.title !== undefined && !input.title.trim()) {
@@ -151,14 +151,14 @@ export class TaskService implements ITaskService {
       if (input.category !== undefined && input.category !== null && !(TASK_CATEGORIES as readonly string[]).includes(input.category)) {
         throw new ServiceError(`category must be one of: ${(TASK_CATEGORIES as readonly string[]).join(", ")}`, 400);
       }
-      const existing = this.taskRepo.findById(input.id);
+      const existing = await this.taskRepo.findById(input.id);
       if (!existing) throw new ServiceError(`task not found: ${input.id}`, 404);
       taskCache.set(input.id, existing);
     }
 
     // Strip dependency arrays and documents from repo input
     const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, documents, ...rest }) => rest);
-    const tasks = this.taskRepo.updateMany(repoInputs);
+    const tasks = await this.taskRepo.updateMany(repoInputs);
 
     this.eventBus.beginBatch();
     try {
@@ -168,7 +168,7 @@ export class TaskService implements ITaskService {
           const existing = taskCache.get(input.id)!;
 
           if (input.add_dependencies && input.add_dependencies.length > 0) {
-            this.depService.addDependencies(
+            await this.depService.addDependencies(
               existing.project_id,
               input.add_dependencies.map((d) => ({
                 source_task_id: d.task_id,
@@ -178,7 +178,7 @@ export class TaskService implements ITaskService {
             );
           }
           if (input.remove_dependencies && input.remove_dependencies.length > 0) {
-            this.depService.removeDependencies(
+            await this.depService.removeDependencies(
               existing.project_id,
               input.remove_dependencies.map((d) => ({
                 source_task_id: d.task_id,
@@ -193,7 +193,7 @@ export class TaskService implements ITaskService {
       if (this.docRefService) {
         for (const input of inputs) {
           if (input.documents) {
-            this.docRefService.applyMergePatch("task", input.id, input.documents);
+            await this.docRefService.applyMergePatch("task", input.id, input.documents);
           }
         }
       }
@@ -208,7 +208,7 @@ export class TaskService implements ITaskService {
         if (added > 0) summaryObj.added_dependencies = added;
         if (removed > 0) summaryObj.removed_dependencies = removed;
         if (input?.documents) summaryObj.documents_changed = Object.keys(input.documents).length;
-        this.activityLog.insert({
+        await this.activityLog.insert({
           entity_type: "task",
           entity_id: t.id,
           action: "updated",
@@ -223,8 +223,8 @@ export class TaskService implements ITaskService {
     }
   }
 
-  statusCounts(projectIds: string[]): Record<string, { total: number; counts: Record<string, number> }> {
-    const rawCounts = this.taskRepo.getStatusCountsByProject(projectIds);
+  async statusCounts(projectIds: string[]): Promise<Record<string, { total: number; counts: Record<string, number> }>> {
+    const rawCounts = await this.taskRepo.getStatusCountsByProject(projectIds);
     const result: Record<string, { total: number; counts: Record<string, number> }> = {};
     for (const projectId of projectIds) {
       const counts = rawCounts[projectId] ?? {};
@@ -234,13 +234,13 @@ export class TaskService implements ITaskService {
     return result;
   }
 
-  remove(ids: string[]): void {
+  async remove(ids: string[]): Promise<void> {
     for (const id of ids) {
-      this.docRefService?.removeAllForEntity("task", id);
+      if (this.docRefService) await this.docRefService.removeAllForEntity("task", id);
     }
-    this.taskRepo.deleteMany(ids);
+    await this.taskRepo.deleteMany(ids);
     for (const id of ids) {
-      this.activityLog.insert({
+      await this.activityLog.insert({
         entity_type: "task",
         entity_id: id,
         action: "deleted",

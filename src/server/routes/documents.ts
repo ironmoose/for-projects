@@ -9,7 +9,7 @@ export function documentRoutes(service: IDocumentService): Hono {
   const app = new Hono();
 
   // GET /api/documents
-  app.get("/", (c) => {
+  app.get("/", async (c) => {
     const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
@@ -30,27 +30,44 @@ export function documentRoutes(service: IDocumentService): Hono {
     if (folder) filter.folder = folder;
     if (entity_type) filter.entity_type = entity_type;
     if (entity_id) filter.entity_id = entity_id;
-    return c.json(service.list(filter));
+    return c.json(await service.list(filter));
   });
 
   // POST /api/documents
   app.post("/", async (c) => {
     const body = await c.req.json<{ items: CreateDocumentInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    const documents = service.create(body.items);
+    const documents = await service.create(body.items);
     return c.json(documents, 201);
   });
 
+  // GET /api/documents/search — semantic search
+  app.get("/search", async (c) => {
+    const query = c.req.query("q") ?? "";
+    if (!query.trim()) return c.json({ error: "q parameter is required" }, 400);
+    const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 50) : 20;
+    const tag = c.req.query("tag");
+    const folder = c.req.query("folder");
+    const rawFav = c.req.query("favorite");
+    const favorite = rawFav === "true" ? true : rawFav === "false" ? false : undefined;
+    const filter: { tag?: string; folder?: string; favorite?: boolean; limit: number } = { limit };
+    if (tag) filter.tag = tag;
+    if (folder) filter.folder = folder;
+    if (favorite !== undefined) filter.favorite = favorite;
+    return c.json(await service.semanticSearch(query, filter));
+  });
+
   // GET /api/documents/:id
-  app.get("/:id", (c) => {
-    return c.json(service.get(c.req.param("id")));
+  app.get("/:id", async (c) => {
+    return c.json(await service.get(c.req.param("id")));
   });
 
   // PATCH /api/documents
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateDocumentInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    const documents = service.update(body.items);
+    const documents = await service.update(body.items);
     return c.json(documents);
   });
 
@@ -58,7 +75,7 @@ export function documentRoutes(service: IDocumentService): Hono {
   app.delete("/", async (c) => {
     const body = await c.req.json<{ ids: string[] }>();
     if (!Array.isArray(body.ids)) return c.json({ error: "ids array is required" }, 400);
-    service.remove(body.ids);
+    await service.remove(body.ids);
     return c.body(null, 204);
   });
 

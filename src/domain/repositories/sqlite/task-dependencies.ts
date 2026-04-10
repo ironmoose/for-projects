@@ -1,10 +1,10 @@
 import type { Database } from "bun:sqlite";
-import type { TaskDependency, TaskDependencyDetail, DependencyType } from "../entities";
+import type { TaskDependency, TaskDependencyDetail, DependencyType } from "../../entities";
 
 export class TaskDependencyRepository {
   constructor(private db: Database) {}
 
-  addDependencies(deps: { source_task_id: string; target_task_id: string; dependency_type: DependencyType }[]): TaskDependency[] {
+  async addDependencies(deps: { source_task_id: string; target_task_id: string; dependency_type: DependencyType }[]): Promise<TaskDependency[]> {
     const stmt = this.db.query(
       `INSERT INTO task_dependencies (source_task_id, target_task_id, dependency_type, created_at) VALUES (?, ?, ?, ?)
        ON CONFLICT(source_task_id, target_task_id) DO UPDATE SET dependency_type = excluded.dependency_type, created_at = excluded.created_at`
@@ -21,7 +21,7 @@ export class TaskDependencyRepository {
     });
   }
 
-  removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): void {
+  async removeDependencies(pairs: { source_task_id: string; target_task_id: string }[]): Promise<void> {
     const stmt = this.db.query(
       "DELETE FROM task_dependencies WHERE source_task_id = ? AND target_task_id = ?"
     );
@@ -30,7 +30,7 @@ export class TaskDependencyRepository {
     }
   }
 
-  getDependenciesFrom(taskId: string): TaskDependencyDetail[] {
+  async getDependenciesFrom(taskId: string): Promise<TaskDependencyDetail[]> {
     return this.db.query(
       `SELECT td.*, st.title AS source_task_title, st.status AS source_task_status, tt.title AS target_task_title, tt.status AS target_task_status
        FROM task_dependencies td
@@ -41,7 +41,7 @@ export class TaskDependencyRepository {
     ).all(taskId) as TaskDependencyDetail[];
   }
 
-  getDependenciesTo(taskId: string): TaskDependencyDetail[] {
+  async getDependenciesTo(taskId: string): Promise<TaskDependencyDetail[]> {
     return this.db.query(
       `SELECT td.*, st.title AS source_task_title, st.status AS source_task_status, tt.title AS target_task_title, tt.status AS target_task_status
        FROM task_dependencies td
@@ -52,7 +52,7 @@ export class TaskDependencyRepository {
     ).all(taskId) as TaskDependencyDetail[];
   }
 
-  getGraphForProject(projectId: string): TaskDependency[] {
+  async getGraphForProject(projectId: string): Promise<TaskDependency[]> {
     return this.db.query(
       `SELECT td.*
        FROM task_dependencies td
@@ -62,7 +62,7 @@ export class TaskDependencyRepository {
     ).all(projectId) as TaskDependency[];
   }
 
-  getBlockedTaskIds(projectId: string): string[] {
+  async getBlockedTaskIds(projectId: string): Promise<string[]> {
     const rows = this.db.query(
       `SELECT DISTINCT td.target_task_id
        FROM task_dependencies td
@@ -75,7 +75,7 @@ export class TaskDependencyRepository {
     return rows.map((r) => r.target_task_id);
   }
 
-  isTaskBlocked(taskId: string): boolean {
+  async isTaskBlocked(taskId: string): Promise<boolean> {
     const row = this.db.query(
       `SELECT 1 FROM task_dependencies td
        JOIN tasks st ON st.id = td.source_task_id

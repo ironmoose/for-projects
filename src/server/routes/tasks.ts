@@ -11,7 +11,7 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
   const app = new Hono();
 
   // GET /api/tasks
-  app.get("/", (c) => {
+  app.get("/", async (c) => {
     const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
@@ -35,7 +35,7 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
     if (title) filter.title = title;
     if (blockedParam === "true") filter.blocked = true;
     if (blockedParam === "false") filter.blocked = false;
-    return c.json(service.list(filter));
+    return c.json(await service.list(filter));
   });
 
   // POST /api/tasks
@@ -48,26 +48,26 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
         item.documents = validateDocumentsMergePatch(item.documents, i);
       }
     }
-    const tasks = service.create(body.items);
+    const tasks = await service.create(body.items);
     return c.json(tasks, 201);
   });
 
   // GET /api/tasks/status-counts
-  app.get("/status-counts", (c) => {
+  app.get("/status-counts", async (c) => {
     const raw = c.req.query("project_ids") ?? "";
     const projectIds = raw.split(",").map((s) => s.trim()).filter(Boolean);
-    return c.json(service.statusCounts(projectIds));
+    return c.json(await service.statusCounts(projectIds));
   });
 
   // GET /api/tasks/:id/dependencies
-  app.get("/:id/dependencies", (c) => {
+  app.get("/:id/dependencies", async (c) => {
     if (!depService) return c.json({ error: "dependency service not available" }, 500);
-    return c.json(depService.getDependencies(c.req.param("id")));
+    return c.json(await depService.getDependencies(c.req.param("id")));
   });
 
   // GET /api/tasks/:id
-  app.get("/:id", (c) => {
-    return c.json(service.get(c.req.param("id")));
+  app.get("/:id", async (c) => {
+    return c.json(await service.get(c.req.param("id")));
   });
 
   // PATCH /api/tasks
@@ -80,7 +80,7 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
         item.documents = validateDocumentsMergePatch(item.documents, i);
       }
     }
-    const tasks = service.update(body.items);
+    const tasks = await service.update(body.items);
     return c.json(tasks);
   });
 
@@ -88,7 +88,7 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
   app.delete("/", async (c) => {
     const body = await c.req.json<{ ids: string[] }>();
     if (!Array.isArray(body.ids)) return c.json({ error: "ids array is required" }, 400);
-    service.remove(body.ids);
+    await service.remove(body.ids);
     return c.body(null, 204);
   });
 

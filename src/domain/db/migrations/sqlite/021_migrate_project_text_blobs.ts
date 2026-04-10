@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { DocumentReferenceType } from "../../entities";
-import { shouldMigrate, generateDocumentTitle, FIELD_TO_REFERENCE_TYPE } from "../migration-utils";
+import type { DocumentReferenceType } from "../../../entities";
+import { shouldMigrate, generateDocumentTitle, FIELD_TO_REFERENCE_TYPE } from "../../migration-utils";
 
 /**
  * Migration 021: Migrate project text blobs (goal, requirements, design)

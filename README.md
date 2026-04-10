@@ -1,221 +1,294 @@
-# tab-for-projects
+# Tab for Projects
 
-A self-contained project management tool. Install it, run it, and get a web UI and REST API with zero configuration.
+A self-contained project management tool with a web UI, REST API, and MCP server. Manage projects, tasks, and a knowledge base of documents — all from a single process.
 
-All your data stays local in a single SQLite file — no external databases, no cloud accounts, no setup wizards.
+Built with TypeScript, Bun, Hono, React, and SQLite. Optionally runs on PostgreSQL with vector embeddings for semantic search.
 
-## Quick start
+## Quick Start
+
+### Install and run (SQLite, zero config)
 
 ```bash
-# install bun (the only prerequisite)
-curl -fsSL https://bun.sh/install | bash
+bun install
+bun run serve
+# Open http://localhost:3000
+```
 
-# install tab-for-projects
+### Run with Docker (PostgreSQL + semantic search)
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+# Open http://localhost:3000
+```
+
+The Docker stack includes PostgreSQL with pgvector, Ollama for embeddings, and the app server. The first launch pulls the `nomic-embed-text` model (~270MB); subsequent starts skip the download.
+
+### Global install
+
+```bash
 bun install -g @x4lt7ab/tab-for-projects
-
-# run it
 tab-for-projects
 ```
 
-Open `http://localhost:3000` and you're ready to go.
+## Features
 
-If `tab-for-projects` is not found, add bun's global bin directory to your PATH:
+- **Projects** — organize work into projects with titles, summaries, and linked documents
+- **Tasks** — track work items with status, effort, impact, category, grouping, and dependency graphs
+- **Knowledge Base** — a document store with markdown content, tags, folders, and favorites
+- **Semantic Search** — vector similarity search across documents (PostgreSQL + Ollama)
+- **MCP Server** — 14 tools for AI assistants to read and write project data
+- **Real-time Updates** — WebSocket push keeps the UI in sync across tabs
+- **Themes** — four built-in color themes including an animated synthwave mode
 
-```bash
-echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
+## Architecture
+
+Single process, single port (default 3000):
+
 ```
+/api/*   REST API (projects, tasks, documents, activity log, health)
+/mcp     MCP endpoint (Model Context Protocol for AI tool use)
+/ws      WebSocket (broadcast-only domain events)
+/*       Static web assets + SPA fallback
+```
+
+Data flow:
+
+```
+Route handler -> Service -> Repository -> SQLite or PostgreSQL
+```
+
+No ORMs. Raw SQL. Dependencies wired explicitly in `bootstrap.ts`.
 
 ## Configuration
 
-Everything works out of the box. If you need to customize, use environment variables or CLI flags:
+All configuration is via environment variables. Copy `.env.example` to `.env` and uncomment what you need.
 
-| Environment variable | CLI flag        | Default                               | Description                  |
-|----------------------|-----------------|---------------------------------------|------------------------------|
-| `PM_PORT`            | `--port`        | `3000`                                | HTTP port                    |
-| `PM_HOST`            | `--host`        | `127.0.0.1`                           | Bind address                 |
-| `SQLITE_PATH`        | `--sqlite-path` | *(required)*                          | Full path to SQLite database |
+### Database
 
-CLI flags take precedence over environment variables.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SQLITE_PATH` | `./data/sqlite.db` | Path to SQLite database file. Used when `DATABASE_URL` is not set. |
+| `DATABASE_URL` | — | PostgreSQL connection string. When set, the app uses Postgres instead of SQLite. |
 
-```bash
-tab-for-projects --port 8080 --sqlite-path /opt/tab-for-projects/data/sqlite.db
-```
+### Embeddings
 
-## Your data
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMBEDDINGS_ENABLED` | `false` | Set to `true` to activate the embedding pipeline. Requires PostgreSQL and Ollama. |
+| `OLLAMA_HOST` | — | Ollama API URL (e.g., `http://localhost:11435`). Required when embeddings are enabled. |
 
-All data is stored in a single SQLite file at the path you specify via `SQLITE_PATH`.
+### Server
 
-**Back up** your data at any time:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PM_HOST` | `0.0.0.0` | Bind address for the HTTP server. |
+| `PM_PORT` | `3000` | Port for the HTTP server. |
 
-```bash
-sqlite3 /path/to/your/sqlite.db ".backup /path/to/backup.db"
-```
+### Docker Compose
 
-**Start fresh** by deleting the database file and restarting. A new one is created automatically.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PG_PORT` | `5433` | Host port mapped to PostgreSQL. |
+| `OLLAMA_PORT` | `11435` | Host port mapped to Ollama. |
+| `POSTGRES_DB` | `tab_projects` | PostgreSQL database name. |
+| `POSTGRES_USER` | `tab_projects` | PostgreSQL user. |
+| `POSTGRES_PASSWORD` | `tab_projects` | PostgreSQL password. |
 
-## API
+## Web UI
 
-tab-for-projects exposes a REST API alongside the web UI. All endpoints return JSON.
+Access the web UI at `http://localhost:3000`. Navigation is via the top bar.
+
+### Pages
+
+| Page | Path | Description |
+|------|------|-------------|
+| Dashboard | `/` | Project list. Create projects, see task status summaries. |
+| Project Detail | `/projects/{id}` | Tasks, dependency graph, and linked documents for a single project. |
+| Knowledge Base | `/documents` | Browse, search, filter, create, and read documents. |
+| Activity | `/activity` | Chronological log of all create/update/delete events. |
+| Themes | `/themes` | Switch between color themes. |
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `?` | Show keyboard shortcuts help |
+| `g h` | Go to Dashboard |
+| `g d` | Go to Knowledge Base |
+| `g a` | Go to Activity |
+
+### Search
+
+The Knowledge Base search bar supports two modes:
+
+- **Keyword search** (default) — filters documents by title substring match.
+- **Semantic search** — uses vector similarity to find documents by meaning. Available when the backend runs PostgreSQL with Ollama embeddings enabled.
+
+When semantic search is available, a toggle button appears inside the search bar. Click it to switch modes — the button slides across the input. Search icon (right side) for keyword mode, brain icon (left side) for semantic mode.
+
+### Themes
+
+Four built-in themes, selectable from the Themes page:
+
+| Theme | Description |
+|-------|-------------|
+| Deep Teal | Dark teal background with cyan accents. The default. |
+| Ember | Warm dark background with orange accents. |
+| Nord | Cool arctic dark with ice-blue accents. |
+| Synth | Neon retrowave with animated color-cycling glow effects. |
+
+## Data Model
+
+### Projects
+
+Projects are containers for tasks. They have a title, an optional summary (max 1000 chars), and linked documents.
+
+### Tasks
+
+Tasks belong to a project. Each task has:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Required. |
+| `summary` | string or null | Short description (max 1000 chars). |
+| `context` | string or null | Background, rationale, or freeform notes. |
+| `acceptance_criteria` | string or null | What "done" looks like. |
+| `status` | enum | `todo`, `in_progress`, `done`, `archived` |
+| `effort` | enum or null | `trivial`, `low`, `medium`, `high`, `extreme` |
+| `impact` | enum or null | `trivial`, `low`, `medium`, `high`, `extreme` |
+| `category` | enum or null | `feature`, `bugfix`, `refactor`, `test`, `perf`, `infra`, `docs`, `security`, `design`, `chore` |
+| `group_key` | string or null | Freeform grouping label. |
+| `is_blocked` | boolean | Whether the task is blocked. Set by the user, not computed. |
+
+### Task Dependencies
+
+Tasks can be linked with two edge types:
+
+- **blocks** — "Task A blocks Task B" means B can't proceed until A is done.
+- **relates_to** — An informational link between related tasks.
+
+Dependencies are visible on the project detail page as an interactive force-directed graph.
+
+### Documents
+
+Documents are top-level knowledge base entities. They can exist standalone or be linked to projects and tasks via typed references.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Required. |
+| `summary` | string or null | Shown in list views (max 1000 chars). |
+| `content` | string or null | Full markdown body. |
+| `folder` | string or null | Flat grouping label (lowercase, alphanumeric + hyphens, max 64 chars). |
+| `favorite` | boolean | Pin to favorites filter. |
+| `tags` | enum array | 1-3 tags from the closed set below. |
+
+### Tags
+
+Tags are a closed enum of 15 values, organized into three categories:
+
+| Category | Tags |
+|----------|------|
+| **Domain** | `ui`, `data`, `integration`, `infra`, `domain` |
+| **Content Type** | `architecture`, `conventions`, `guide`, `reference`, `decision`, `troubleshooting` |
+| **Concern** | `security`, `performance`, `testing`, `accessibility` |
+
+### Document References
+
+Documents are linked to projects and tasks via typed references. The same document can be attached to multiple entities with different reference types.
+
+| Reference Type | When to use |
+|----------------|-------------|
+| `goal` | What the entity is trying to achieve |
+| `plan` | Steps and strategy to get there |
+| `requirements` | Constraints, specs, acceptance criteria |
+| `design` | Architectural decisions, technical shape |
+| `reference` | Supporting material, context, background |
+| `note` | Anything that doesn't fit the above |
+
+## REST API
+
+All create and update endpoints use batch semantics with `{ items: [...] }` request bodies. All responses are JSON.
 
 ### Projects
 
 ```
-GET    /api/projects          List all projects
-POST   /api/projects          Create a project
-GET    /api/projects/:id      Get a project
-PATCH  /api/projects/:id      Update a project
-DELETE /api/projects/:id      Delete a project
+GET    /api/projects                    List projects (paginated)
+GET    /api/projects/:id                Get project with linked documents
+POST   /api/projects                    Create projects  { items: [{ title, summary? }] }
+PATCH  /api/projects                    Update projects  { items: [{ id, title?, summary?, documents? }] }
+DELETE /api/projects                    Delete projects  { ids: [...] }
 ```
-
-**Create a project:**
-
-```bash
-curl -X POST http://localhost:3000/api/projects \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Website Redesign", "description": "Q2 refresh"}'
-```
-
-**Response:**
-
-```json
-{
-  "id": "01JABBCD1234EFGH5678IJKL",
-  "name": "Website Redesign",
-  "description": "Q2 refresh",
-  "status": "active",
-  "created_at": "2026-03-23T12:00:00.000Z",
-  "updated_at": "2026-03-23T12:00:00.000Z"
-}
-```
-
-Project status can be `active`, `paused`, `completed`, or `archived`.
 
 ### Tasks
 
 ```
-GET    /api/projects/:id/tasks                List tasks (paginated, filterable)
-GET    /api/projects/:id/tasks/by-number/:n   Get a task by project-scoped number
-POST   /api/projects/:id/tasks                Create a task
-PATCH  /api/projects/:id/tasks/:id            Update a task
-DELETE /api/projects/:id/tasks/:id            Delete a task
+GET    /api/tasks                       List tasks (filterable)
+GET    /api/tasks/:id                   Get full task detail
+POST   /api/tasks                       Create tasks     { items: [{ project_id, title, ... }] }
+PATCH  /api/tasks                       Update tasks     { items: [{ id, ... }] }
+DELETE /api/tasks                       Delete tasks     { ids: [...] }
 ```
 
-**Create a task:**
+Task list query parameters: `project_id`, `status`, `effort`, `impact`, `category`, `group_key`, `title`, `blocked`.
 
-```bash
-curl -X POST http://localhost:3000/api/projects/01JABBCD1234EFGH5678IJKL/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Design homepage hero", "description": "## Requirements\n\n- Full-bleed image\n- CTA button", "type": "design", "effort": "moderate"}'
+Task update supports dependency management via `add_dependencies` and `remove_dependencies` arrays.
+
+### Documents
+
+```
+GET    /api/documents                   List documents (paginated, filterable)
+GET    /api/documents/:id               Get document with tags and references
+GET    /api/documents/search?q=...      Semantic search (Postgres + embeddings only)
+POST   /api/documents                   Create documents { items: [{ title, summary?, content?, tags?, folder?, favorite? }] }
+PATCH  /api/documents                   Update documents { items: [{ id, ... }] }
+DELETE /api/documents                   Delete documents { ids: [...] }
 ```
 
-**Response:**
+Document list query parameters: `tag`, `title`, `search`, `favorite`, `folder`, `entity_type` + `entity_id`.
+
+Semantic search query parameters: `q` (required), `tag`, `folder`, `favorite`, `limit`.
+
+### Document References (merge-patch)
+
+Project and task create/update endpoints accept a `documents` field with merge-patch semantics:
 
 ```json
 {
-  "id": "01JABBCD1234EFGH5678IJKL",
-  "number": 1,
-  "title": "Design homepage hero",
-  "description": "## Requirements\n\n- Full-bleed image\n- CTA button",
-  "status": "todo",
-  "type": "design",
-  "effort": "moderate",
-  "priority": null,
-  "created_at": "2026-03-25T12:00:00.000Z",
-  "updated_at": "2026-03-25T12:00:00.000Z"
+  "documents": {
+    "doc-123": [{"type": "design"}, {"type": "reference"}],
+    "doc-456": [{"type": "goal"}],
+    "doc-789": null
+  }
 }
 ```
 
-**Task fields:**
+- **Key with array** — replaces all reference types for that document on this entity.
+- **Key with null** — removes all references to that document.
+- **Key absent** — no change.
 
-| Field | Type | Notes |
-|-------|------|-------|
-| `title` | string | Required. 1–500 characters. |
-| `description` | string | Optional. Up to 10,000 characters. Supports [Markdown](#markdown-in-descriptions). |
-| `status` | string | `todo`, `in_progress`, or `done`. Default: `todo`. |
-| `type` | string \| null | `research`, `implementation`, `review`, `design`, `planning`, `testing`, or `documentation`. |
-| `effort` | string \| null | `trivial`, `low`, `moderate`, `high`, or `extreme`. |
-| `priority` | integer \| null | 1–10. |
-
-**Filtering tasks:**
-
-The list endpoint accepts query parameters to filter and paginate results:
-
-| Parameter | Description |
-|-----------|-------------|
-| `status` | Filter by task status |
-| `type` | Filter by task type |
-| `effort` | Filter by effort level |
-| `tag` | Filter by exact tag name |
-| `tag_prefix` | Filter by tag prefix (e.g., `agent` matches `agent:researcher`) |
-| `limit` | Results per page (1–500, default 100) |
-| `offset` | Pagination offset (default 0) |
-
-```bash
-curl "http://localhost:3000/api/projects/01JABBCD1234EFGH5678IJKL/tasks?status=todo&type=design&limit=25"
-```
-
-### Tags
-
-Tags are labels you can attach to tasks. Tag names are lowercase alphanumeric with hyphens and colons as namespace separators (e.g., `frontend`, `agent:researcher`, `priority:high`).
+### Other Endpoints
 
 ```
-GET    /api/tags                          List all tags (filterable by prefix)
-POST   /api/tags                          Create a tag
-DELETE /api/tags/:id                      Delete a tag
-GET    /api/tags/:name/tasks              Find tasks by exact tag (cross-project)
-GET    /api/tags/prefix/:prefix/tasks     Find tasks by tag prefix (cross-project)
-GET    /api/projects/:id/tasks/:id/tags Get tags for a task
-POST   /api/projects/:id/tasks/:id/tags Add a tag to a task (auto-creates if needed)
-DELETE /api/projects/:id/tasks/:id/tags/:tagId  Remove a tag from a task
+GET    /api/projects/:id/dependency-graph   Task dependency graph (nodes + edges)
+GET    /api/tasks/status-counts?project_ids=...  Task counts by status per project
+GET    /api/activity-log                    Activity log (paginated)
+GET    /api/health                          Health check (db, ollama, backend type)
 ```
 
-**Add a tag to a task:**
+## MCP Server
 
-```bash
-curl -X POST http://localhost:3000/api/projects/01JABBCD1234EFGH5678IJKL/tasks/01JABBCE5678MNOP9012QRST/tags \
-  -H "Content-Type: application/json" \
-  -d '{"name": "frontend"}'
-```
+The MCP endpoint at `/mcp` exposes 14 tools for AI assistants. Connect any MCP-compatible client to `http://localhost:3000/mcp`.
 
-### Markdown in descriptions
+### Setup
 
-Task descriptions support [GitHub Flavored Markdown](https://github.github.com/gfm/) (GFM). The web UI renders descriptions with full styling — headings, lists, tables, code blocks with syntax highlighting, blockquotes, links, and emphasis.
-
-Markdown is stored as-is and rendered client-side. The API accepts and returns raw Markdown strings.
-
-**Supported syntax:**
-
-- Headings (`#`, `##`, `###`)
-- Bold, italic, strikethrough
-- Ordered and unordered lists (including nested)
-- Task lists (`- [x]`, `- [ ]`)
-- Fenced code blocks with language hints
-- Inline code
-- Tables (GFM)
-- Blockquotes
-- Links (open in new tab)
-- Horizontal rules
-
-### Health check
-
-```
-GET /api/health    Returns {"status": "ok"}
-```
-
-## MCP server
-
-tab-for-projects includes a [Model Context Protocol](https://modelcontextprotocol.io) server at `/mcp`, letting AI assistants manage your projects and tasks directly.
-
-The MCP endpoint is served on the same port as the API and web UI — no separate process needed.
-
-### Claude Code
+**Claude Code:**
 
 ```bash
 claude mcp add tab-for-projects --transport http http://localhost:3000/mcp
 ```
 
-Or add it to your project's `.mcp.json`:
+**Claude Desktop** (Settings > Developer > Edit Config):
 
 ```json
 {
@@ -227,159 +300,154 @@ Or add it to your project's `.mcp.json`:
 }
 ```
 
-### Claude Desktop
+**Cursor** (Settings > MCP Servers > Add):
 
-Open **Settings > Developer > Edit Config** and add to `claude_desktop_config.json`:
+- Name: `tab-for-projects`
+- Type: `url`  
+- URL: `http://localhost:3000/mcp`
+
+**Any MCP client:**
 
 ```json
 {
   "mcpServers": {
     "tab-for-projects": {
+      "type": "streamable-http",
       "url": "http://localhost:3000/mcp"
     }
   }
 }
 ```
 
-Restart Claude Desktop after saving.
+### Tools
 
-### Cursor
+| Tool | Description |
+|------|-------------|
+| `list_projects` | List projects with pagination and title search. |
+| `get_project` | Get a project with its linked document references. |
+| `create_project` | Create projects with optional document links. |
+| `update_project` | Update projects. Supports document merge-patch. |
+| `list_tasks` | List tasks with filters for status, effort, impact, category, blocked, group. |
+| `get_task` | Get full task detail including context, acceptance criteria, and document references. |
+| `create_task` | Create tasks in a project. |
+| `update_task` | Update tasks. Supports dependency management. |
+| `list_documents` | List documents with tag, folder, search, and favorite filters. |
+| `get_document` | Get full document content with tags and entity references. |
+| `create_document` | Create documents with markdown content, tags, and folder. |
+| `update_document` | Update documents. Tag array replaces all existing tags. |
+| `get_dependency_graph` | Get the task dependency graph for a project. |
+| `search_documents` | Semantic search using vector similarity. Requires Postgres + embeddings. |
 
-Open **Settings > MCP Servers > Add new MCP server** and use:
+## WebSocket
 
-- **Name:** `tab-for-projects`
-- **Type:** `url`
-- **URL:** `http://localhost:3000/mcp`
+Connect to `ws://localhost:3000/ws` for real-time domain events. The connection is broadcast-only — client messages are ignored.
 
-### Remote access
-
-To make tab-for-projects accessible from the local network, bind to all interfaces:
-
-```bash
-tab-for-projects --host 0.0.0.0
-```
-
-Then from another machine, point your MCP client at the server:
-
-```bash
-claude mcp add tab-for-projects --transport http http://192.168.1.100:3000/mcp
-```
-
-Replace `192.168.1.100` with the host's actual IP address.
-
-### Custom database path
+Event shape:
 
 ```json
 {
-  "mcpServers": {
-    "tab-for-projects": {
-      "url": "http://localhost:3000/mcp"
-    }
-  }
+  "type": "created | updated | deleted",
+  "entity_type": "project | task | document",
+  "ids": ["01JABBCD..."]
 }
 ```
 
-Start the server with a custom database path:
+The web UI uses this to auto-refresh without polling.
+
+## Development
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `bun run dev` | Start dev server with hot reload (API watch + Vite watch). |
+| `bun run build` | Build frontend assets. |
+| `bun run start` | Start production server (SQLite). |
+| `bun run serve` | Build then start. |
+| `bun test` | Run all tests (SQLite-backed, no external deps). |
+| `bun run typecheck` | TypeScript type checking. |
+| `bun run prune` | Clean up old activity log entries. |
+
+### Smoke Tests
+
+These require the Docker Compose services to be running.
 
 ```bash
-tab-for-projects --sqlite-path /path/to/your/sqlite.db
+bun scripts/smoke-tests/pg-migration-test.ts           # Postgres migrations
+bun scripts/smoke-tests/pg-smoke-test.ts               # Schema, vectors, indexes
+bun scripts/smoke-tests/embedding-smoke-test.ts        # Ollama embedding pipeline
+bun scripts/smoke-tests/semantic-search-smoke-test.ts  # Vector similarity search
 ```
 
-### Available tools
-
-**Projects**
-
-| Tool | Description |
-|---|---|
-| `list_projects` | List all projects |
-| `get_project` | Get a project by ID |
-| `create_project` | Create a new project (name, optional description/status) |
-| `update_project` | Update a project's name, description, or status |
-| `delete_project` | Delete a project by ID |
-
-**Tasks**
-
-| Tool | Description |
-|---|---|
-| `list_tasks` | List tasks in a project (filterable by status, type, effort, tag, tag prefix) |
-| `get_task_by_number` | Get a task by its project-scoped number |
-| `create_task` | Create a task (title, optional description/status/type/effort/priority) |
-| `update_task` | Update a task's fields (supports type, effort, priority — pass null to clear) |
-| `delete_task` | Delete a task by ID |
-
-**Tags**
-
-| Tool | Description |
-|---|---|
-| `list_tags` | List all tags (filterable by prefix) |
-| `create_tag` | Create a tag (lowercase alphanumeric, hyphens, colons) |
-| `delete_tag` | Delete a tag by ID |
-| `add_tag_to_task` | Add a tag to a task (auto-creates if tag doesn't exist) |
-| `remove_tag_from_task` | Remove a tag from a task |
-| `get_task_tags` | Get all tags for a task |
-| `find_tasks_by_tag` | Find tasks with a given tag (cross-project) |
-
-Task descriptions support Markdown (GFM) — see [Markdown in descriptions](#markdown-in-descriptions).
-
-Task status: `todo`, `in_progress`, `done`. Task type: `research`, `implementation`, `review`, `design`, `planning`, `testing`, `documentation`. Task effort: `trivial`, `low`, `moderate`, `high`, `extreme`. Priority: 1–10. Project status: `active`, `paused`, `completed`, `archived`.
-
-## Deploying
-
-### systemd (Linux)
-
-```ini
-# /etc/systemd/system/tab-for-projects.service
-[Unit]
-Description=tab-for-projects
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/home/pm/.bun/bin/tab-for-projects
-Environment=PM_HOST=0.0.0.0
-Environment=SQLITE_PATH=/var/lib/project-management/sqlite.db
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
+### SQLite to PostgreSQL Migration
 
 ```bash
-sudo systemctl enable --now tab-for-projects
+bun scripts/migrate-sqlite-to-pg.ts          # Dry run
+bun scripts/migrate-sqlite-to-pg.ts --commit # Write data
 ```
 
-### launchd (macOS)
+### Project Structure
 
-```xml
-<!-- ~/Library/LaunchAgents/com.alttab.tab-for-projects.plist -->
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>com.alttab.tab-for-projects</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/Users/you/.bun/bin/tab-for-projects</string>
-  </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>SQLITE_PATH</key>
-    <string>/Users/you/.tab/project-management/sqlite.db</string>
-  </dict>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-</dict>
-</plist>
 ```
+src/
+  domain/              Core logic — entities, services, repositories, migrations
+    db/
+      migrations/
+        sqlite/        SQLite migration files
+        pg/            PostgreSQL migration files
+    repositories/
+      sqlite/          SQLite repository implementations
+      pg/              PostgreSQL repository implementations
+    services/          Service implementations
+  server/              HTTP server and route handlers
+  mcp/                 MCP server and tool registration
+  web/                 React frontend (Vite)
+    src/
+      components/      UI component library (atoms, molecules, organisms, templates)
+      hooks/           React hooks
+      pages/           Page components
+scripts/               Maintenance and smoke test scripts
+```
+
+### Conventions
+
+- TypeScript strict mode, no `any`.
+- IDs are ULIDs, generated server-side.
+- Timestamps are ISO 8601 UTC strings.
+- SQL lives in repositories only — never in routes or services.
+- Validation happens in services; routes parse HTTP and return errors.
+- Dependencies wired explicitly in `bootstrap.ts` — no globals or service locators.
+
+## Deployment Modes
+
+### SQLite (default)
+
+Zero configuration. Data stored in a single file. No vector search.
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.alttab.tab-for-projects.plist
+SQLITE_PATH=./data/sqlite.db bun run src/index.ts
 ```
+
+### PostgreSQL + Embeddings
+
+Full feature set including semantic search. Requires PostgreSQL with pgvector and Ollama with `nomic-embed-text`.
+
+```bash
+DATABASE_URL=postgresql://user:pass@host:5432/db \
+EMBEDDINGS_ENABLED=true \
+OLLAMA_HOST=http://localhost:11434 \
+bun run src/index.ts
+```
+
+### Docker Compose
+
+Manages all services (app, Postgres, Ollama) together:
+
+```bash
+docker compose up -d --build
+```
+
+Image versions are pinned in `docker-compose.yml` and `Dockerfile` to avoid unnecessary re-pulls on rebuild.
 
 ## Upgrading
 
@@ -387,11 +455,7 @@ launchctl load ~/Library/LaunchAgents/com.alttab.tab-for-projects.plist
 bun install -g @x4lt7ab/tab-for-projects@latest
 ```
 
-Restart the server after upgrading. Database migrations run automatically — your data is preserved.
-
-## Contributing
-
-tab-for-projects is built with TypeScript, Bun, Hono, and React. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and architecture details.
+Restart the server after upgrading. Database migrations run automatically on startup.
 
 ## License
 

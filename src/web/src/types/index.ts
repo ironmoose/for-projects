@@ -9,6 +9,7 @@ export type {
   TaskSummary,
   Document,
   DocumentSummary,
+  SemanticSearchResult,
   DocumentReference,
   DocumentReferenceSummary,
   DocumentReferenceDetail,

@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { Task, TaskSummary, GraphTaskSummary, TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from "../entities";
+import type { Task, TaskSummary, GraphTaskSummary, TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from "../../entities";
 
 export interface TaskRow {
   id: string;
@@ -77,12 +77,12 @@ export class TaskRepository {
     return { where, params };
   }
 
-  findById(id: string): Task | null {
+  async findById(id: string): Promise<Task | null> {
     const row = this.db.query("SELECT * FROM tasks WHERE id = ?").get(id) as Record<string, unknown> | null;
     return row ? normalizeTask(row) : null;
   }
 
-  findMany(filter?: TaskFilter): Task[] {
+  async findMany(filter?: TaskFilter): Promise<Task[]> {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const { where, params } = this.buildWhereClause(filter);
@@ -94,7 +94,7 @@ export class TaskRepository {
     return rows.map(normalizeTask);
   }
 
-  findManySummary(filter?: TaskFilter): TaskSummary[] {
+  async findManySummary(filter?: TaskFilter): Promise<TaskSummary[]> {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const { where, params } = this.buildWhereClause(filter);
@@ -113,7 +113,7 @@ export class TaskRepository {
   }
 
   /** Lightweight query for dependency graph -- no TEXT columns, no LIMIT. */
-  findGraphSummaries(projectId: string, status?: string[]): GraphTaskSummary[] {
+  async findGraphSummaries(projectId: string, status?: string[]): Promise<GraphTaskSummary[]> {
     if (status && status.length > 0) {
       const placeholders = status.map(() => "?").join(", ");
       return this.db
@@ -125,7 +125,7 @@ export class TaskRepository {
       .all(projectId) as GraphTaskSummary[];
   }
 
-  count(filter?: TaskFilter): number {
+  async count(filter?: TaskFilter): Promise<number> {
     const { where, params } = this.buildWhereClause(filter);
 
     return (
@@ -135,7 +135,7 @@ export class TaskRepository {
     ).total;
   }
 
-  insertMany(rows: Omit<TaskRow, "id" | "created_at" | "updated_at">[]): Task[] {
+  async insertMany(rows: Omit<TaskRow, "id" | "created_at" | "updated_at">[]): Promise<Task[]> {
     const stmt = this.db.query(
       "INSERT INTO tasks (id, project_id, title, summary, context, acceptance_criteria, group_key, status, effort, impact, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
@@ -170,12 +170,12 @@ export class TaskRepository {
     return results;
   }
 
-  updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; acceptance_criteria?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null; is_blocked?: boolean }[]): Task[] {
+  async updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; acceptance_criteria?: string | null; group_key?: string | null; status?: string; effort?: string | null; impact?: string | null; category?: string | null; is_blocked?: boolean }[]): Promise<Task[]> {
     const now = new Date().toISOString();
     const results: Task[] = [];
 
     for (const row of rows) {
-      const existing = this.findById(row.id);
+      const existing = await this.findById(row.id);
       if (!existing) continue;
 
       const title = row.title !== undefined ? row.title : existing.title;
@@ -214,7 +214,7 @@ export class TaskRepository {
     return results;
   }
 
-  getStatusCountsByProject(projectIds: string[]): Record<string, Record<string, number>> {
+  async getStatusCountsByProject(projectIds: string[]): Promise<Record<string, Record<string, number>>> {
     if (projectIds.length === 0) return {};
     const placeholders = projectIds.map(() => "?").join(", ");
     const rows = this.db
@@ -229,7 +229,7 @@ export class TaskRepository {
     return result;
   }
 
-  deleteMany(ids: string[]): void {
+  async deleteMany(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     const placeholders = ids.map(() => "?").join(", ");
     this.db.query(`DELETE FROM tasks WHERE id IN (${placeholders})`).run(...ids);

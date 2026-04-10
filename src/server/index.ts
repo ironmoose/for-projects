@@ -10,6 +10,7 @@ import { etag } from "hono/etag";
 import { join } from "path";
 import { readFileSync, existsSync } from "fs";
 import { bootstrap, ServiceError } from "../domain";
+import { createEmbeddingService } from "../domain/embedding";
 import type { DomainEvent } from "../domain/events";
 import { parseArgs, parseCorsOrigins, logListening, type ServerOptions } from "../domain/args";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -58,43 +59,35 @@ export class Server {
     app.route("/api/tasks", taskRoutes(ctx.taskService, ctx.taskDependencyService));
     app.route("/api/documents", documentRoutes(ctx.documentService));
     app.route("/api/activity-log", activityLogRoutes(ctx.activityLogService));
-    app.get("/api/health", (c) => {
+    app.get("/api/health", async (c) => {
       let dbOk = false;
       try {
-        const row = ctx.db.query("SELECT 1 AS ok").get() as { ok: number } | null;
-        dbOk = row?.ok === 1;
+        if (ctx.backend === "sqlite" && ctx.db) {
+          const row = ctx.db.query("SELECT 1 AS ok").get() as { ok: number } | null;
+          dbOk = row?.ok === 1;
+        } else if (ctx.backend === "postgres" && ctx.pg) {
+          const [row] = await ctx.pg`SELECT 1 AS ok`;
+          dbOk = row?.ok === 1;
+        }
       } catch {
         dbOk = false;
+      }
+
+      let ollamaOk: boolean | undefined;
+      if (ctx.backend === "postgres") {
+        ollamaOk = await createEmbeddingService().healthCheck();
       }
 
       return c.json({
         status: dbOk ? "ok" : "degraded",
         version,
+        backend: ctx.backend,
         uptime_seconds: Math.floor((Date.now() - startedAt) / 1000),
         database: dbOk ? "connected" : "unreachable",
+        ...(ollamaOk !== undefined && { ollama: ollamaOk ? "connected" : "unreachable" }),
         timestamp: new Date().toISOString(),
-        activity_log_count: ctx.activityLogRepo.countAll(),
       });
     });
-
-    // -- Activity log retention ------------------------------------
-    let retentionDays = parseInt(process.env.PM_ACTIVITY_LOG_RETENTION_DAYS ?? "30", 10);
-    if (Number.isNaN(retentionDays)) retentionDays = 30;
-
-    if (retentionDays > 0) {
-      const retentionMs = retentionDays * 24 * 60 * 60 * 1000;
-
-      function runRetention() {
-        const cutoff = new Date(Date.now() - retentionMs).toISOString();
-        const deleted = ctx.activityLogRepo.deleteOlderThan(cutoff);
-        if (deleted > 0) {
-          process.stderr.write(`[retention] Deleted ${deleted} activity log entries older than ${retentionDays} days\n`);
-        }
-      }
-
-      runRetention();
-      setInterval(runRetention, 24 * 60 * 60 * 1000);
-    }
 
     // -- MCP --------------------------------------------------------
     app.use("/mcp", logger((str) => process.stderr.write(str + "\n")));

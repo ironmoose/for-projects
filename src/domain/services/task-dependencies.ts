@@ -2,20 +2,18 @@ import type { TaskDependency, TaskDependencyDetail, NormalizedDependencyDetail, 
 import { DEPENDENCY_TYPES, toNormalizedDependency } from "../entities";
 import type { ITaskDependencyService } from "../services";
 import { ServiceError } from "../errors";
-import type { TaskDependencyRepository } from "../repositories/task-dependencies";
-import type { TaskRepository } from "../repositories/tasks";
-import type { ActivityLogRepository } from "../repositories/activity-log";
+import type { ITaskDependencyRepository, ITaskRepository, IActivityLogRepository } from "../repositories/interfaces";
 import type { EventBus } from "../events";
 
 export class TaskDependencyService implements ITaskDependencyService {
   constructor(
-    private depRepo: TaskDependencyRepository,
-    private taskRepo: TaskRepository,
-    private activityLog: ActivityLogRepository,
+    private depRepo: ITaskDependencyRepository,
+    private taskRepo: ITaskRepository,
+    private activityLog: IActivityLogRepository,
     private eventBus: EventBus,
   ) {}
 
-  addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: DependencyType }[]): TaskDependency[] {
+  async addDependencies(projectId: string, deps: { source_task_id: string; target_task_id: string; dependency_type: DependencyType }[]): Promise<TaskDependency[]> {
     // Phase 1: Validate all inputs
     for (const dep of deps) {
       // Validate dependency_type
@@ -29,10 +27,10 @@ export class TaskDependencyService implements ITaskDependencyService {
       }
 
       // Both tasks must exist
-      const sourceTask = this.taskRepo.findById(dep.source_task_id);
+      const sourceTask = await this.taskRepo.findById(dep.source_task_id);
       if (!sourceTask) throw new ServiceError(`task not found: ${dep.source_task_id}`, 404);
 
-      const targetTask = this.taskRepo.findById(dep.target_task_id);
+      const targetTask = await this.taskRepo.findById(dep.target_task_id);
       if (!targetTask) throw new ServiceError(`task not found: ${dep.target_task_id}`, 404);
 
       // Both tasks must belong to the specified project
@@ -42,11 +40,11 @@ export class TaskDependencyService implements ITaskDependencyService {
     }
 
     // Phase 2: Persist
-    const results = this.depRepo.addDependencies(deps);
+    const results = await this.depRepo.addDependencies(deps);
 
     // Phase 3: Side effects
     for (const dep of deps) {
-      this.activityLog.insert({
+      await this.activityLog.insert({
         entity_type: "task",
         entity_id: dep.target_task_id,
         action: "created",
@@ -58,13 +56,13 @@ export class TaskDependencyService implements ITaskDependencyService {
     return results;
   }
 
-  removeDependencies(projectId: string, pairs: { source_task_id: string; target_task_id: string }[]): void {
+  async removeDependencies(projectId: string, pairs: { source_task_id: string; target_task_id: string }[]): Promise<void> {
     // Validate tasks belong to the specified project
     for (const pair of pairs) {
-      const sourceTask = this.taskRepo.findById(pair.source_task_id);
+      const sourceTask = await this.taskRepo.findById(pair.source_task_id);
       if (!sourceTask) throw new ServiceError(`task not found: ${pair.source_task_id}`, 404);
 
-      const targetTask = this.taskRepo.findById(pair.target_task_id);
+      const targetTask = await this.taskRepo.findById(pair.target_task_id);
       if (!targetTask) throw new ServiceError(`task not found: ${pair.target_task_id}`, 404);
 
       if (sourceTask.project_id !== projectId || targetTask.project_id !== projectId) {
@@ -72,10 +70,10 @@ export class TaskDependencyService implements ITaskDependencyService {
       }
     }
 
-    this.depRepo.removeDependencies(pairs);
+    await this.depRepo.removeDependencies(pairs);
 
     for (const pair of pairs) {
-      this.activityLog.insert({
+      await this.activityLog.insert({
         entity_type: "task",
         entity_id: pair.target_task_id,
         action: "deleted",
@@ -85,9 +83,9 @@ export class TaskDependencyService implements ITaskDependencyService {
     this.eventBus.emit({ type: "updated", entity_type: "task", ids: [...new Set(pairs.flatMap((p) => [p.source_task_id, p.target_task_id]))] });
   }
 
-  getDependencies(taskId: string): { blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean } {
-    const from = this.depRepo.getDependenciesFrom(taskId);
-    const to = this.depRepo.getDependenciesTo(taskId);
+  async getDependencies(taskId: string): Promise<{ blocks: NormalizedDependencyDetail[]; blocked_by: NormalizedDependencyDetail[]; relates_to: NormalizedDependencyDetail[]; is_blocked: boolean }> {
+    const from = await this.depRepo.getDependenciesFrom(taskId);
+    const to = await this.depRepo.getDependenciesTo(taskId);
 
     const rawBlocks = from.filter((d) => d.dependency_type === "blocks");
     const rawBlockedBy = to.filter((d) => d.dependency_type === "blocks");
@@ -113,16 +111,16 @@ export class TaskDependencyService implements ITaskDependencyService {
     return { blocks, blocked_by, relates_to, is_blocked };
   }
 
-  getGraph(projectId: string, statusFilter?: string[]): { edges: TaskDependency[]; blocked_task_ids: string[] } {
-    const allEdges = this.depRepo.getGraphForProject(projectId);
-    const blocked_task_ids = this.depRepo.getBlockedTaskIds(projectId);
+  async getGraph(projectId: string, statusFilter?: string[]): Promise<{ edges: TaskDependency[]; blocked_task_ids: string[] }> {
+    const allEdges = await this.depRepo.getGraphForProject(projectId);
+    const blocked_task_ids = await this.depRepo.getBlockedTaskIds(projectId);
 
     if (!statusFilter || statusFilter.length === 0) {
       return { edges: allEdges, blocked_task_ids };
     }
 
     const allowedStatuses = new Set(statusFilter);
-    const tasks = this.taskRepo.findGraphSummaries(projectId);
+    const tasks = await this.taskRepo.findGraphSummaries(projectId);
     const visibleTaskIds = new Set(
       tasks.filter((t) => allowedStatuses.has(t.status)).map((t) => t.id),
     );
@@ -133,9 +131,9 @@ export class TaskDependencyService implements ITaskDependencyService {
     return { edges, blocked_task_ids };
   }
 
-  isBlocked(taskId: string): boolean {
-    const task = this.taskRepo.findById(taskId);
+  async isBlocked(taskId: string): Promise<boolean> {
+    const task = await this.taskRepo.findById(taskId);
     if (!task) throw new ServiceError(`task not found: ${taskId}`, 404);
-    return this.depRepo.isTaskBlocked(taskId);
+    return await this.depRepo.isTaskBlocked(taskId);
   }
 }

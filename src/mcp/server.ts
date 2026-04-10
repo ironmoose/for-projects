@@ -24,9 +24,9 @@ export interface McpServiceContext {
   documentService: IDocumentService;
 }
 
-function handle<T>(fn: () => T) {
+async function handle<T>(fn: () => T | Promise<T>) {
   try {
-    const result = fn();
+    const result = await fn();
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   } catch (err) {
     if (err instanceof ServiceError) {
@@ -220,9 +220,9 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
         status: z.array(z.enum([...TASK_STATUSES])).optional(),
       },
     },
-    ({ project_id, status }) => handle(() => {
-      const { edges } = taskDependencyService.getGraph(project_id, status);
-      const tasks = taskService.listGraphSummaries(project_id, status);
+    ({ project_id, status }) => handle(async () => {
+      const { edges } = await taskDependencyService.getGraph(project_id, status);
+      const tasks = await taskService.listGraphSummaries(project_id, status);
       return {
         tasks: tasks.map((t) => ({
           id: t.id,
@@ -304,6 +304,21 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ items }) => handle(() => documentService.update(items))
+  );
+
+  server.registerTool(
+    "search_documents",
+    {
+      description: "Semantic search across documents using vector similarity. Returns documents ranked by relevance with their entity references (which projects/tasks link to them and how). Requires Postgres backend with embeddings. Query should describe what you're looking for in natural language.",
+      inputSchema: {
+        query: z.string().max(500).describe("Natural language search query"),
+        tag: z.string().max(50).optional(),
+        folder: z.string().max(64).optional(),
+        favorite: z.boolean().optional(),
+        limit: z.number().int().min(1).max(50).optional(),
+      },
+    },
+    ({ query, tag, folder, favorite, limit }) => handle(() => documentService.semanticSearch(query, { tag, folder, favorite, limit }))
   );
 
   return server;

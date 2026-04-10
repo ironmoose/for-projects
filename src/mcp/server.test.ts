@@ -42,7 +42,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await client.close();
   await server.close();
-  ctx.db.close();
+  ctx.db!.close();
   rmSync(tempDir, { recursive: true, force: true });
 });
 

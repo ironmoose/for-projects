@@ -12,7 +12,7 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
   const app = new Hono();
 
   // GET /api/projects
-  app.get("/", (c) => {
+  app.get("/", async (c) => {
     const rawLimit = parseInt(c.req.query("limit") ?? "", 10);
     const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 200) : 50;
     const rawOffset = parseInt(c.req.query("offset") ?? "", 10);
@@ -20,7 +20,7 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
     const filter: { limit: number; offset: number; title?: string } = { limit, offset };
     const title = c.req.query("title");
     if (title) filter.title = title;
-    return c.json(service.list(filter));
+    return c.json(await service.list(filter));
   });
 
   // POST /api/projects
@@ -33,18 +33,18 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
         item.documents = validateDocumentsMergePatch(item.documents, i);
       }
     }
-    const projects = service.create(body.items);
+    const projects = await service.create(body.items);
     return c.json(projects, 201);
   });
 
   // GET /api/projects/:id/dependency-graph
-  app.get("/:id/dependency-graph", (c) => {
+  app.get("/:id/dependency-graph", async (c) => {
     if (!depService || !taskService) return c.json({ error: "dependency service not available" }, 500);
     const projectId = c.req.param("id");
     const rawStatus = c.req.query("status");
     const status = rawStatus ? rawStatus.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
-    const { edges, blocked_task_ids } = depService.getGraph(projectId, status);
-    const tasks = taskService.listGraphSummaries(projectId, status);
+    const { edges, blocked_task_ids } = await depService.getGraph(projectId, status);
+    const tasks = await taskService.listGraphSummaries(projectId, status);
     return c.json({
       tasks: tasks.map((t) => ({ id: t.id, title: t.title, status: t.status })),
       edges,
@@ -58,7 +58,7 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
     const projectId = c.req.param("id");
     const body = await c.req.json<{ items: { source_task_id: string; target_task_id: string; dependency_type: string }[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    const results = depService.addDependencies(projectId, body.items);
+    const results = await depService.addDependencies(projectId, body.items);
     return c.json(results, 201);
   });
 
@@ -68,13 +68,13 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
     const projectId = c.req.param("id");
     const body = await c.req.json<{ items: { source_task_id: string; target_task_id: string }[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    depService.removeDependencies(projectId, body.items);
+    await depService.removeDependencies(projectId, body.items);
     return c.body(null, 204);
   });
 
   // GET /api/projects/:id
-  app.get("/:id", (c) => {
-    return c.json(service.get(c.req.param("id")));
+  app.get("/:id", async (c) => {
+    return c.json(await service.get(c.req.param("id")));
   });
 
   // PATCH /api/projects
@@ -87,7 +87,7 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
         item.documents = validateDocumentsMergePatch(item.documents, i);
       }
     }
-    const projects = service.update(body.items);
+    const projects = await service.update(body.items);
     return c.json(projects);
   });
 
@@ -95,7 +95,7 @@ export function projectRoutes(service: IProjectService, taskService?: ITaskServi
   app.delete("/", async (c) => {
     const body = await c.req.json<{ ids: string[] }>();
     if (!Array.isArray(body.ids)) return c.json({ error: "ids array is required" }, 400);
-    service.remove(body.ids);
+    await service.remove(body.ids);
     return c.body(null, 204);
   });
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useTheme,
   PageHeader,
@@ -9,13 +9,13 @@ import {
   CreateDocumentOverlay,
 } from "../components";
 import { Icon } from "../components/atoms/Icon";
-import { Input } from "../components/atoms/Input";
+import { SearchToggle } from "../components/molecules/SearchToggle";
 import { Overlay } from "../components/atoms/Overlay";
 import { SectionLabel } from "../components/atoms/SectionLabel";
 import { DocumentTable } from "../components/organisms/DocumentTable";
 import { DocumentReaderModal } from "../components/organisms/DocumentReaderModal";
 import { useDocuments } from "../hooks/useDocuments";
-import { useProjects } from "../hooks";
+import { useProjects, useHealth } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { useWindowWidth, SMALL_BREAKPOINT } from "../hooks/useWindowWidth";
 import { ApiError } from "../api";
@@ -42,6 +42,9 @@ interface SidebarProps {
   onFavoriteChange: (v: boolean) => void;
   activeCount: number;
   onClearAll: () => void;
+  semanticSearchAvailable?: boolean;
+  semanticMode?: boolean;
+  onSemanticModeChange?: (v: boolean) => void;
 }
 
 function Sidebar(props: SidebarProps) {
@@ -55,19 +58,10 @@ function SidebarInner({
   folders, selectedFolder, onFolderChange,
   favorite, onFavoriteChange,
   activeCount, onClearAll,
+  semanticSearchAvailable, semanticMode, onSemanticModeChange,
   mobile,
 }: SidebarProps & { mobile: boolean }) {
   const { theme } = useTheme();
-  const [localTitle, setLocalTitle] = useState(title);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => { setLocalTitle(title); }, [title]);
-
-  function handleTitleInput(value: string) {
-    setLocalTitle(value);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onTitleChange(value), 350);
-  }
 
   const sectionGap = theme.spacing.lg;
   const itemGap = theme.spacing.xs;
@@ -86,13 +80,13 @@ function SidebarInner({
     >
       {/* Search — desktop sidebar only */}
       {!mobile && (
-        <div>
-          <Input
-            placeholder="Search..."
-            value={localTitle}
-            onChange={(e) => handleTitleInput(e.target.value)}
-          />
-        </div>
+        <SearchToggle
+          value={title}
+          onChange={onTitleChange}
+          semantic={semanticMode ?? false}
+          onSemanticChange={(v) => onSemanticModeChange?.(v)}
+          toggleVisible={semanticSearchAvailable}
+        />
       )}
 
       {activeCount > 0 && (
@@ -328,23 +322,17 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
 
 function MobileSearchBar({
   title, onTitleChange, activeCount, onOpenFilters,
+  semanticSearchAvailable, semanticMode, onSemanticModeChange,
 }: {
   title: string;
   onTitleChange: (v: string) => void;
   activeCount: number;
   onOpenFilters: () => void;
+  semanticSearchAvailable?: boolean;
+  semanticMode?: boolean;
+  onSemanticModeChange?: (v: boolean) => void;
 }) {
   const { theme } = useTheme();
-  const [localTitle, setLocalTitle] = useState(title);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => { setLocalTitle(title); }, [title]);
-
-  function handleTitleInput(value: string) {
-    setLocalTitle(value);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onTitleChange(value), 350);
-  }
 
   return (
     <div
@@ -360,10 +348,13 @@ function MobileSearchBar({
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <Input
+        <SearchToggle
+          value={title}
+          onChange={onTitleChange}
+          semantic={semanticMode ?? false}
+          onSemanticChange={(v) => onSemanticModeChange?.(v)}
+          toggleVisible={semanticSearchAvailable}
           placeholder="Search knowledge base..."
-          value={localTitle}
-          onChange={(e) => handleTitleInput(e.target.value)}
         />
       </div>
       <button
@@ -408,6 +399,7 @@ export function DocumentsPage() {
   const [favoriteFilter, setFavoriteFilter] = useState(false);
   const [projectFilter, setProjectFilter] = useState("");
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const [semanticMode, setSemanticMode] = useState(false);
 
   // Entity state
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null);
@@ -416,6 +408,7 @@ export function DocumentsPage() {
 
   // Data
   const { projects } = useProjects();
+  const { semanticSearchAvailable } = useHealth();
 
   const filter = {
     ...(titleFilter ? { title: titleFilter } : {}),
@@ -425,8 +418,10 @@ export function DocumentsPage() {
     ...(projectFilter ? { project_id: projectFilter } : {}),
   };
 
-  const { documents, loading, total, totalPages, page, setPage, create, update, remove } = useDocuments(
+  const useSemanticSearch = semanticSearchAvailable && semanticMode;
+  const { documents, loading, total, totalPages, page, setPage, create, update, remove, isSemanticResults } = useDocuments(
     Object.keys(filter).length > 0 ? filter : undefined,
+    { semanticSearch: useSemanticSearch },
   );
 
   const knownFolders = useMemo(() => {
@@ -437,7 +432,8 @@ export function DocumentsPage() {
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [documents]);
 
-  const sorted = [...documents].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  // Semantic results are pre-sorted by similarity; standard results sort by recency
+  const sorted = isSemanticResults ? documents : [...documents].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 
   const activeFilterCount = [tagFilter, folderFilter, favoriteFilter, projectFilter].filter(Boolean).length;
 
@@ -495,6 +491,9 @@ export function DocumentsPage() {
     onFavoriteChange: setFavoriteFilter,
     activeCount: activeFilterCount,
     onClearAll: clearAllFilters,
+    semanticSearchAvailable,
+    semanticMode,
+    onSemanticModeChange: setSemanticMode,
   };
 
   return (
@@ -544,6 +543,9 @@ export function DocumentsPage() {
             onTitleChange={setTitleFilter}
             activeCount={activeFilterCount}
             onOpenFilters={() => setShowBottomSheet(true)}
+            semanticSearchAvailable={semanticSearchAvailable}
+            semanticMode={semanticMode}
+            onSemanticModeChange={setSemanticMode}
           />
         )}
 
@@ -575,7 +577,7 @@ export function DocumentsPage() {
           )}
         </div>
 
-        {totalPages > 1 && (
+        {totalPages > 1 && !isSemanticResults && (
           <Pagination
             page={page}
             totalPages={totalPages}

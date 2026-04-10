@@ -1,19 +1,19 @@
 import type { ActivityLog } from "../entities";
 import type { IActivityLogService, Paginated } from "../services";
-import type { ActivityLogRepository } from "../repositories/activity-log";
+import type { IActivityLogRepository } from "../repositories/interfaces";
 
 export class ActivityLogService implements IActivityLogService {
-  constructor(private repo: ActivityLogRepository) {}
+  constructor(private repo: IActivityLogRepository) {}
 
-  list(filter?: {
+  async list(filter?: {
     entity_type?: string;
     entity_id?: string;
     limit?: number;
     offset?: number;
-  }): Paginated<ActivityLog> {
+  }): Promise<Paginated<ActivityLog>> {
     return {
-      data: this.repo.findMany(filter),
-      total: this.repo.count(filter),
+      data: await this.repo.findMany(filter),
+      total: await this.repo.count(filter),
     };
   }
 }

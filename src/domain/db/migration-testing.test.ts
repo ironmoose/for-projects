@@ -10,7 +10,7 @@ import { runMigrations } from "./migrator";
 // Helpers
 // ---------------------------------------------------------------------------
 
-const MIGRATIONS_DIR = join(import.meta.dir, "migrations");
+const MIGRATIONS_DIR = join(import.meta.dir, "migrations", "sqlite");
 
 function createTestDb(): { db: Database; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), "migration-testing-"));

@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { ActivityLog } from "../entities";
+import type { ActivityLog } from "../../entities";
 
 export interface InsertActivityLog {
   entity_type: string;
@@ -12,7 +12,7 @@ export interface InsertActivityLog {
 export class ActivityLogRepository {
   constructor(private db: Database) {}
 
-  insert(row: InsertActivityLog): ActivityLog {
+  async insert(row: InsertActivityLog): Promise<ActivityLog> {
     const id = ulid();
     const now = new Date().toISOString();
     this.db
@@ -23,12 +23,12 @@ export class ActivityLogRepository {
     return this.db.query("SELECT * FROM activity_log WHERE id = ?").get(id) as ActivityLog;
   }
 
-  findMany(filter?: {
+  async findMany(filter?: {
     entity_type?: string;
     entity_id?: string;
     limit?: number;
     offset?: number;
-  }): ActivityLog[] {
+  }): Promise<ActivityLog[]> {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     const conditions: string[] = [];
@@ -51,7 +51,7 @@ export class ActivityLogRepository {
       .all(...params) as ActivityLog[];
   }
 
-  count(filter?: { entity_type?: string; entity_id?: string }): number {
+  async count(filter?: { entity_type?: string; entity_id?: string }): Promise<number> {
     const conditions: string[] = [];
     const params: string[] = [];
 
@@ -73,13 +73,13 @@ export class ActivityLogRepository {
     ).total;
   }
 
-  countAll(): number {
+  async countAll(): Promise<number> {
     return (
       this.db.query("SELECT COUNT(*) as total FROM activity_log").get() as { total: number }
     ).total;
   }
 
-  deleteOlderThan(cutoffDate: string): number {
+  async deleteOlderThan(cutoffDate: string): Promise<number> {
     const result = this.db
       .query("DELETE FROM activity_log WHERE created_at < ?")
       .run(cutoffDate);
