@@ -15,9 +15,12 @@ interface SearchToggleProps {
   debounceMs?: number;
 }
 
-const TOGGLE_SIZE = 30;
 const PADDING_H = 10;
-const GAP = 6;
+const PILL_H = 28;
+const PILL_W = 28;
+const TOGGLE_GAP = 2;
+const TOGGLE_PAD = 3;
+const TOGGLE_W = PILL_W * 2 + TOGGLE_GAP + TOGGLE_PAD * 2;
 
 export function SearchToggle({
   value,
@@ -44,7 +47,6 @@ export function SearchToggle({
   }
 
   const showToggle = toggleVisible;
-  const toggleOffset = showToggle ? TOGGLE_SIZE + GAP : 0;
 
   // Colors
   const borderColor = focused
@@ -53,13 +55,6 @@ export function SearchToggle({
   const focusShadow = focused
     ? isSynth ? `0 0 12px ${sg(19)}, inset 0 0 6px ${sg(5)}` : `0 0 0 2px ${theme.color.primary}30`
     : isSynth ? `0 0 4px ${sg(6)}` : "none";
-
-  const toggleColor = semantic
-    ? theme.color.primary
-    : theme.color.textMuted;
-  const toggleBg = semantic
-    ? `${theme.color.primary}20`
-    : `${theme.color.textFaint}15`;
 
   return (
     <div
@@ -76,7 +71,6 @@ export function SearchToggle({
         overflow: "hidden",
       }}
     >
-      {/* Input field */}
       <input
         type="text"
         value={localValue}
@@ -94,40 +88,98 @@ export function SearchToggle({
           fontFamily: theme.font.body,
           fontSize: theme.font.size.sm,
           paddingLeft: PADDING_H,
-          paddingRight: showToggle ? toggleOffset + PADDING_H : PADDING_H,
+          paddingRight: showToggle ? TOGGLE_W + PADDING_H + 4 : PADDING_H,
           minWidth: 0,
         }}
       />
 
-      {/* Toggle button — pinned right, icon swaps in place */}
+      {/* Inline segmented toggle — two icons with a sliding pill */}
       {showToggle && (
-        <button
-          type="button"
-          onClick={() => onSemanticChange(!semantic)}
-          title={semantic ? "Switch to keyword search" : "Switch to semantic search"}
-          aria-label={semantic ? "Switch to keyword search" : "Switch to semantic search"}
+        <div
           style={{
             position: "absolute",
-            top: 3,
             right: 4,
-            width: TOGGLE_SIZE,
-            height: TOGGLE_SIZE,
-            borderRadius: theme.radius.md,
-            border: "none",
-            background: toggleBg,
-            color: toggleColor,
-            cursor: "pointer",
+            top: "50%",
+            transform: "translateY(-50%)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            transition: "background 0.2s, color 0.2s",
-            zIndex: 2,
-            padding: 0,
-            flexShrink: 0,
+            height: PILL_H + TOGGLE_PAD * 2,
+            borderRadius: theme.radius.md,
+            background: `${theme.color.textFaint}10`,
+            padding: TOGGLE_PAD,
+            gap: TOGGLE_GAP,
           }}
         >
-          <Icon name={semantic ? "neurology" : "search"} size={16} />
-        </button>
+          {/* Sliding pill */}
+          <div
+            style={{
+              position: "absolute",
+              top: TOGGLE_PAD,
+              left: semantic
+                ? TOGGLE_PAD + PILL_W + TOGGLE_GAP
+                : TOGGLE_PAD,
+              width: PILL_W,
+              height: PILL_H,
+              borderRadius: theme.radius.md - 1,
+              background: isSynth ? sg(12) : `${theme.color.primary}18`,
+              border: `1px solid ${isSynth ? sg(25) : `${theme.color.primary}30`}`,
+              transition: "left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              zIndex: 0,
+            }}
+          />
+
+          {/* Keyword */}
+          <button
+            type="button"
+            onClick={() => onSemanticChange(false)}
+            title="Keyword search"
+            aria-label="Keyword search"
+            style={{
+              position: "relative",
+              zIndex: 1,
+              width: PILL_W,
+              height: PILL_H,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              background: "transparent",
+              color: !semantic ? theme.color.primary : theme.color.textMuted,
+              cursor: "pointer",
+              transition: "color 0.2s",
+              padding: 0,
+              borderRadius: theme.radius.md - 1,
+            }}
+          >
+            <Icon name="search" size={15} />
+          </button>
+
+          {/* Semantic */}
+          <button
+            type="button"
+            onClick={() => onSemanticChange(true)}
+            title="Semantic search"
+            aria-label="Semantic search"
+            style={{
+              position: "relative",
+              zIndex: 1,
+              width: PILL_W,
+              height: PILL_H,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              background: "transparent",
+              color: semantic ? theme.color.primary : theme.color.textMuted,
+              cursor: "pointer",
+              transition: "color 0.2s",
+              padding: 0,
+              borderRadius: theme.radius.md - 1,
+            }}
+          >
+            <Icon name="neurology" size={15} />
+          </button>
+        </div>
       )}
     </div>
   );

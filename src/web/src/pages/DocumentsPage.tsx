@@ -341,6 +341,7 @@ function MobileSearchBar({
         top: 0,
         zIndex: 10,
         background: theme.color.surface,
+        paddingTop: theme.spacing.sm,
         paddingBottom: theme.spacing.sm,
         display: "flex",
         gap: theme.spacing.sm,
