@@ -10,8 +10,11 @@ services:
         condition: service_completed_successfully
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-tab_projects}:${POSTGRES_PASSWORD:-tab_projects}@postgres:5432/${POSTGRES_DB:-tab_projects}
+      - SQLITE_PATH=/app/data/sqlite.db
       - EMBEDDINGS_ENABLED=true
       - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - ./.local/data:/app/data:ro
 
   postgres:
     image: pgvector/pgvector:0.8.0-pg17

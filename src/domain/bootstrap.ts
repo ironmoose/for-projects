@@ -1,7 +1,9 @@
-import type { Database } from "bun:sqlite";
+import { Database } from "bun:sqlite";
+import { existsSync } from "node:fs";
 import { createDatabase } from "./db/connection";
 import { runMigrations } from "./db/migrator";
 import { type PgClient, createPgClient, initPgSchema, getDatabaseUrl, pgShutdown } from "./db/pg-connection";
+import { migrateSqliteToPg } from "./db/sqlite-to-pg";
 import { ProjectRepository } from "./repositories/sqlite/projects";
 import { TaskRepository } from "./repositories/sqlite/tasks";
 import { DocumentRepository } from "./repositories/sqlite/documents";
@@ -88,6 +90,9 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   const pg = createPgClient({ databaseUrl });
   await initPgSchema(pg);
 
+  // Auto-migrate from SQLite if Postgres is empty and a SQLite DB exists
+  await autoMigrateFromSqlite(pg);
+
   const projectRepo = new PgProjectRepository(pg);
   const taskRepo = new PgTaskRepository(pg);
   const documentRepo = new PgDocumentRepository(pg);
@@ -130,4 +135,43 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
 
   console.log("[bootstrap] Postgres backend active");
   return { db: null, pg, backend: "postgres", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, shutdown };
+}
+
+/**
+ * Auto-migrate data from SQLite → Postgres on first Postgres startup.
+ *
+ * Runs only when:
+ *   1. SQLITE_PATH is set and the file exists
+ *   2. Postgres activity_log is empty (fresh database)
+ *
+ * This makes the transition from SQLite to Postgres seamless — start the app
+ * with DATABASE_URL and your existing data comes along automatically.
+ */
+async function autoMigrateFromSqlite(pg: PgClient): Promise<void> {
+  const sqlitePath = process.env.SQLITE_PATH;
+  if (!sqlitePath || !existsSync(sqlitePath)) return;
+
+  // Check if Postgres already has data
+  const [row] = await pg<{ count: string }[]>`SELECT COUNT(*) AS count FROM activity_log LIMIT 1`;
+  if (Number(row.count) > 0) return;
+
+  console.log(`[bootstrap] Postgres is empty — auto-migrating from ${sqlitePath}`);
+
+  const lite = new Database(sqlitePath, { readonly: true });
+  lite.run("PRAGMA foreign_keys = OFF");
+
+  try {
+    const results = await migrateSqliteToPg(lite, pg);
+    const total = results.reduce((sum, r) => sum + r.rows, 0);
+    for (const r of results) {
+      if (r.rows > 0) console.log(`[migrate]   ${r.table}: ${r.rows} rows`);
+    }
+    console.log(`[migrate] Done — ${total} total rows migrated`);
+  } catch (err) {
+    console.error("[migrate] Auto-migration failed:", err);
+    console.error("[migrate] Postgres will start empty. Run the migration manually:");
+    console.error(`[migrate]   bun scripts/migrate-sqlite-to-pg.ts --commit`);
+  } finally {
+    lite.close();
+  }
 }
