@@ -19,8 +19,8 @@ export interface IProjectRepository {
   findMany(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Promise<Project[]>;
   findManySummary(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Promise<ProjectSummary[]>;
   count(filter?: { id?: string; title?: string }): Promise<number>;
-  insertMany(rows: { title: string; summary?: string | null }[]): Promise<Project[]>;
-  updateMany(rows: { id: string; title?: string; summary?: string | null }[]): Promise<Project[]>;
+  insertMany(rows: { title: string; summary?: string | null; context?: string | null; requirements?: string | null }[]): Promise<Project[]>;
+  updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; requirements?: string | null }[]): Promise<Project[]>;
   deleteMany(ids: string[]): Promise<void>;
 }
 

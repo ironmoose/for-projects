@@ -6,6 +6,8 @@ export interface ProjectRow {
   id: string;
   title: string;
   summary: string | null;
+  context: string | null;
+  requirements: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,9 +55,10 @@ export class ProjectRepository {
     const { where, params } = this.buildWhereClause(filter);
     params.push(limit, offset);
 
-    return this.db
-      .query(`SELECT id, title, summary, created_at, updated_at FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-      .all(...params) as ProjectSummary[];
+    return (this.db
+      .query(`SELECT id, title, summary, (context IS NOT NULL) AS has_context, (requirements IS NOT NULL) AS has_requirements, created_at, updated_at FROM projects ${where}ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+      .all(...params) as (Omit<ProjectSummary, "has_context" | "has_requirements"> & { has_context: 0 | 1; has_requirements: 0 | 1 })[])
+      .map((r) => ({ ...r, has_context: !!r.has_context, has_requirements: !!r.has_requirements }));
   }
 
   async count(filter?: ProjectFilter): Promise<number> {
@@ -70,7 +73,7 @@ export class ProjectRepository {
 
   async insertMany(rows: Omit<ProjectRow, "id" | "created_at" | "updated_at">[]): Promise<Project[]> {
     const stmt = this.db.query(
-      "INSERT INTO projects (id, title, summary, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO projects (id, title, summary, context, requirements, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
     const now = new Date().toISOString();
     const ids: string[] = [];
@@ -78,7 +81,7 @@ export class ProjectRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.title, row.summary ?? null, now, now);
+      stmt.run(id, row.title, row.summary ?? null, row.context ?? null, row.requirements ?? null, now, now);
     }
 
     const results: Project[] = [];
@@ -87,6 +90,8 @@ export class ProjectRepository {
         id: ids[i],
         title: rows[i].title,
         summary: rows[i].summary ?? null,
+        context: rows[i].context ?? null,
+        requirements: rows[i].requirements ?? null,
         created_at: now,
         updated_at: now,
       });
@@ -94,7 +99,7 @@ export class ProjectRepository {
     return results;
   }
 
-  async updateMany(rows: { id: string; title?: string; summary?: string | null }[]): Promise<Project[]> {
+  async updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; requirements?: string | null }[]): Promise<Project[]> {
     const now = new Date().toISOString();
     const results: Project[] = [];
 
@@ -104,15 +109,19 @@ export class ProjectRepository {
 
       const title = row.title !== undefined ? row.title : existing.title;
       const summary = row.summary !== undefined ? row.summary : existing.summary;
+      const context = row.context !== undefined ? row.context : existing.context;
+      const requirements = row.requirements !== undefined ? row.requirements : existing.requirements;
 
       this.db
-        .query("UPDATE projects SET title = ?, summary = ?, updated_at = ? WHERE id = ?")
-        .run(title, summary, now, row.id);
+        .query("UPDATE projects SET title = ?, summary = ?, context = ?, requirements = ?, updated_at = ? WHERE id = ?")
+        .run(title, summary, context, requirements, now, row.id);
 
       results.push({
         id: row.id,
         title,
         summary,
+        context,
+        requirements,
         created_at: existing.created_at,
         updated_at: now,
       });

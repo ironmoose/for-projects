@@ -30,6 +30,8 @@ export interface UpdateDocumentInput {
 export interface CreateProjectInput {
   title: string;
   summary?: string;
+  context?: string;
+  requirements?: string;
   /** Merge-patch for document references on create. Key = document_id. Array = types for that doc. null values are silently ignored (no existing refs to remove). */
   documents?: DocumentsMergePatch;
 }
@@ -38,6 +40,8 @@ export interface UpdateProjectInput {
   id: string;
   title?: string;
   summary?: string | null;
+  context?: string | null;
+  requirements?: string | null;
   /** Merge-patch for document references. Key = document_id. Array = replace types for that doc. null = remove all refs. Absent key = untouched. */
   documents?: DocumentsMergePatch;
 }

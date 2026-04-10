@@ -38,6 +38,8 @@ export interface Project {
   id: string;
   title: string;
   summary: string | null;
+  context: string | null;
+  requirements: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +74,8 @@ export interface ProjectSummary {
   id: string;
   title: string;
   summary: string | null;
+  has_context: boolean;
+  has_requirements: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +110,7 @@ export interface GraphTaskSummary {
 export function toProjectSummary(p: Project): ProjectSummary {
   return {
     id: p.id, title: p.title, summary: p.summary,
+    has_context: p.context != null, has_requirements: p.requirements != null,
     created_at: p.created_at, updated_at: p.updated_at,
   };
 }

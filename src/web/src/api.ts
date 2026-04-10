@@ -84,12 +84,12 @@ export async function fetchProject(id: string): Promise<ProjectDetail> {
 
 export type DocumentsMergePatch = Record<string, { type: DocumentReferenceType }[] | null>;
 
-export async function createProjects(inputs: Array<{ title: string; summary?: string }>): Promise<Project[]> {
+export async function createProjects(inputs: Array<{ title: string; summary?: string; context?: string; requirements?: string }>): Promise<Project[]> {
   const res = await apiFetch("/api/projects", jsonPost({ items: inputs }));
   return res.json();
 }
 
-export async function updateProjects(inputs: Array<{ id: string; title?: string; summary?: string | null; documents?: DocumentsMergePatch }>): Promise<Project[]> {
+export async function updateProjects(inputs: Array<{ id: string; title?: string; summary?: string | null; context?: string | null; requirements?: string | null; documents?: DocumentsMergePatch }>): Promise<Project[]> {
   const res = await apiFetch("/api/projects", jsonPatch({ items: inputs }));
   return res.json();
 }

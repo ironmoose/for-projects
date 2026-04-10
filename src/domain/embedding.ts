@@ -130,6 +130,7 @@ export function buildEmbeddingText(entity: {
   content?: string | null;
   context?: string | null;
   acceptance_criteria?: string | null;
+  requirements?: string | null;
 }): string {
   const parts: string[] = [];
   if (entity.title) parts.push(entity.title);
@@ -140,5 +141,6 @@ export function buildEmbeddingText(entity: {
   }
   if (entity.context) parts.push(entity.context.slice(0, EMBEDDING_FIELD_LIMIT));
   if (entity.acceptance_criteria) parts.push(entity.acceptance_criteria.slice(0, EMBEDDING_FIELD_LIMIT));
+  if (entity.requirements) parts.push(entity.requirements.slice(0, EMBEDDING_FIELD_LIMIT));
   return parts.join("\n\n");
 }

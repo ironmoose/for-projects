@@ -85,7 +85,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_project",
     {
-      description: "Retrieve a single project by ID. Returns title, summary, timestamps, and a `documents` array of linked references (document_id, type, title, summary, favorite).",
+      description: "Retrieve a single project by ID. Returns title, summary, context, requirements, timestamps, and a `documents` array of linked references (document_id, type, title, summary, favorite).",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => projectService.get(id))
@@ -125,11 +125,13 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "create_project",
     {
-      description: "Create projects. Pass an `items` array with required title and optional summary (max 1000 chars). Rich content lives in linked documents via the documents merge-patch field.",
+      description: "Create projects. Pass an `items` array with required title, optional summary (max 1000 chars), optional context (max 100K chars, freeform background/rationale), and optional requirements (max 100K chars, freeform constraints/specs). Rich content lives in linked documents via the documents merge-patch field.",
       inputSchema: {
         items: z.array(z.object({
           title: z.string().max(255),
           summary: z.string().max(1000).optional(),
+          context: z.string().max(100_000).optional(),
+          requirements: z.string().max(100_000).optional(),
           documents: documentsMergePatchSchema,
         })),
       },
@@ -140,12 +142,14 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_project",
     {
-      description: "Update projects by ID. Pass an `items` array. Only provided fields are changed. Use the documents merge-patch field to manage document references.",
+      description: "Update projects by ID. Pass an `items` array. Only provided fields are changed. Supports context (freeform background/rationale, max 100K chars) and requirements (freeform constraints/specs, max 100K chars). Use the documents merge-patch field to manage document references.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
           title: z.string().max(255).optional(),
           summary: z.string().max(1000).optional(),
+          context: z.string().max(100_000).optional(),
+          requirements: z.string().max(100_000).optional(),
           documents: documentsMergePatchSchema,
         })),
       },

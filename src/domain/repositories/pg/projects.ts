@@ -34,7 +34,7 @@ export class PgProjectRepository {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     return this.sql<ProjectSummary[]>`
-      SELECT id, title, summary, created_at, updated_at FROM projects ${this.where(filter)}
+      SELECT id, title, summary, (context IS NOT NULL) AS has_context, (requirements IS NOT NULL) AS has_requirements, created_at, updated_at FROM projects ${this.where(filter)}
       ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
     `;
   }
@@ -44,22 +44,22 @@ export class PgProjectRepository {
     return Number(row.total);
   }
 
-  async insertMany(rows: { title: string; summary?: string | null }[]): Promise<Project[]> {
+  async insertMany(rows: { title: string; summary?: string | null; context?: string | null; requirements?: string | null }[]): Promise<Project[]> {
     const now = new Date().toISOString();
     const results: Project[] = [];
 
     for (const row of rows) {
       const id = ulid();
       await this.sql`
-        INSERT INTO projects (id, title, summary, created_at, updated_at)
-        VALUES (${id}, ${row.title}, ${row.summary ?? null}, ${now}, ${now})
+        INSERT INTO projects (id, title, summary, context, requirements, created_at, updated_at)
+        VALUES (${id}, ${row.title}, ${row.summary ?? null}, ${row.context ?? null}, ${row.requirements ?? null}, ${now}, ${now})
       `;
-      results.push({ id, title: row.title, summary: row.summary ?? null, created_at: now, updated_at: now });
+      results.push({ id, title: row.title, summary: row.summary ?? null, context: row.context ?? null, requirements: row.requirements ?? null, created_at: now, updated_at: now });
     }
     return results;
   }
 
-  async updateMany(rows: { id: string; title?: string; summary?: string | null }[]): Promise<Project[]> {
+  async updateMany(rows: { id: string; title?: string; summary?: string | null; context?: string | null; requirements?: string | null }[]): Promise<Project[]> {
     const now = new Date().toISOString();
     const results: Project[] = [];
 
@@ -69,12 +69,14 @@ export class PgProjectRepository {
 
       const title = row.title !== undefined ? row.title : existing.title;
       const summary = row.summary !== undefined ? row.summary : existing.summary;
+      const context = row.context !== undefined ? row.context : existing.context;
+      const requirements = row.requirements !== undefined ? row.requirements : existing.requirements;
 
       await this.sql`
-        UPDATE projects SET title = ${title}, summary = ${summary}, updated_at = ${now}
+        UPDATE projects SET title = ${title}, summary = ${summary}, context = ${context}, requirements = ${requirements}, updated_at = ${now}
         WHERE id = ${row.id}
       `;
-      results.push({ id: row.id, title, summary, created_at: existing.created_at, updated_at: now });
+      results.push({ id: row.id, title, summary, context, requirements, created_at: existing.created_at, updated_at: now });
     }
     return results;
   }

@@ -39,6 +39,12 @@ export class ProjectService implements IProjectService {
       if (input.summary !== undefined && input.summary.length > 1000) {
         throw new ServiceError("summary must be 1000 characters or fewer", 400);
       }
+      if (input.context !== undefined && input.context.length > 100_000) {
+        throw new ServiceError("context must be 100,000 characters or fewer", 400);
+      }
+      if (input.requirements !== undefined && input.requirements.length > 100_000) {
+        throw new ServiceError("requirements must be 100,000 characters or fewer", 400);
+      }
       // Pre-validate document references so we fail before creating the entity
       if (input.documents) {
         await this.docRefService.validateMergePatch(input.documents);
@@ -48,6 +54,8 @@ export class ProjectService implements IProjectService {
     const rows = inputs.map((input) => ({
       title: input.title,
       summary: input.summary ?? null,
+      context: input.context ?? null,
+      requirements: input.requirements ?? null,
     }));
 
     const projects = await this.repo.insertMany(rows);
@@ -88,6 +96,12 @@ export class ProjectService implements IProjectService {
       }
       if (input.summary !== undefined && input.summary !== null && input.summary.length > 1000) {
         throw new ServiceError("summary must be 1000 characters or fewer", 400);
+      }
+      if (input.context !== undefined && input.context !== null && input.context.length > 100_000) {
+        throw new ServiceError("context must be 100,000 characters or fewer", 400);
+      }
+      if (input.requirements !== undefined && input.requirements !== null && input.requirements.length > 100_000) {
+        throw new ServiceError("requirements must be 100,000 characters or fewer", 400);
       }
       const existing = await this.repo.findById(input.id);
       if (!existing) throw new ServiceError(`project not found: ${input.id}`, 404);

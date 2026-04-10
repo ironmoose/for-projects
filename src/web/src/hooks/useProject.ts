@@ -51,7 +51,7 @@ export function useProject(projectId: string) {
     });
   }, [projectId, subscribeEvents, throttledLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function updateProject(input: { title?: string; summary?: string | null; documents?: DocumentsMergePatch }) {
+  async function updateProject(input: { title?: string; summary?: string | null; context?: string | null; requirements?: string | null; documents?: DocumentsMergePatch }) {
     if (!project) return;
     try {
       await updateProjects([{ id: project.id, ...input }]);

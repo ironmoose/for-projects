@@ -9,12 +9,14 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS projects (
-    id          TEXT PRIMARY KEY,
-    title       TEXT NOT NULL,
-    summary     TEXT,
-    embedding   vector(768),
-    created_at  TIMESTAMPTZ NOT NULL,
-    updated_at  TIMESTAMPTZ NOT NULL
+    id           TEXT PRIMARY KEY,
+    title        TEXT NOT NULL,
+    summary      TEXT,
+    context      TEXT,
+    requirements TEXT,
+    embedding    vector(768),
+    created_at   TIMESTAMPTZ NOT NULL,
+    updated_at   TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS tasks (

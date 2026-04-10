@@ -13,6 +13,7 @@ import {
   DetailPageLayout,
   BackButton,
   ExpandableCard,
+  Markdown,
   MetadataTable,
   EmptyState,
   ConfirmDialog,
@@ -694,196 +695,157 @@ function TaskDetailPanel({
         </div>
 
         {/* Summary -- editable (accordion) */}
-        <div style={{ marginBottom: theme.spacing.md }}>
-          <SectionLabel style={{ marginBottom: theme.spacing.xs }}>Summary</SectionLabel>
-          <ExpandableCard
-            title=""
-            open={expandedCard === "summary"}
-            onToggle={(isOpen) => setExpandedCard(isOpen ? "summary" : null)}
-            variant="flat"
-            headerAction={
-              !editingSummary ? (
-                <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }} aria-label="Edit summary" />
-              ) : undefined
-            }
-          >
-            {editingSummary ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-                <Textarea
-                  value={summaryValue}
-                  onChange={(e) => setSummaryValue(e.target.value)}
-                  autoFocus
-                  rows={4}
-                  placeholder="Task summary..."
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                />
-                <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
-                  <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(task.summary ?? ""); }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSummarySave}>Save</Button>
-                </div>
+        <ExpandableCard
+          title="Summary"
+          open={expandedCard === "summary"}
+          onToggle={(isOpen) => setExpandedCard(isOpen ? "summary" : null)}
+          variant="flat"
+          style={{ marginBottom: theme.spacing.md }}
+          headerAction={
+            !editingSummary ? (
+              <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }} aria-label="Edit summary" />
+            ) : undefined
+          }
+        >
+          {editingSummary ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={summaryValue}
+                onChange={(e) => setSummaryValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Task summary..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(task.summary ?? ""); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSummarySave}>Save</Button>
               </div>
-            ) : task.summary ? (
-              <p
-                onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }}
-                style={{
-                  margin: 0,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.text,
-                  cursor: "pointer",
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.5,
-                }}
-                title="Click to edit summary"
-              >
-                {task.summary}
-              </p>
-            ) : (
-              <p
-                onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }}
-                style={{
-                  margin: 0,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.textFaint,
-                  fontStyle: "italic",
-                  cursor: "pointer",
-                }}
-                title="Click to add summary"
-              >
-                No summary
-              </p>
-            )}
-          </ExpandableCard>
-        </div>
+            </div>
+          ) : task.summary ? (
+            <div onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }} style={{ cursor: "pointer" }} title="Click to edit summary">
+              <Markdown>{task.summary}</Markdown>
+            </div>
+          ) : (
+            <p
+              onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.textFaint,
+                fontStyle: "italic",
+                cursor: "pointer",
+              }}
+              title="Click to add summary"
+            >
+              No summary
+            </p>
+          )}
+        </ExpandableCard>
 
         {/* Context -- editable (accordion) */}
-        <div style={{ marginBottom: theme.spacing.md }}>
-          <SectionLabel style={{ marginBottom: theme.spacing.xs }}>Context</SectionLabel>
-          <ExpandableCard
-            title=""
-            open={expandedCard === "context"}
-            onToggle={(isOpen) => setExpandedCard(isOpen ? "context" : null)}
-            variant="flat"
-            headerAction={
-              !editingContext ? (
-                <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("context"); setEditingContext(true); }} aria-label="Edit context" />
-              ) : undefined
-            }
-          >
-            {editingContext ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-                <Textarea
-                  value={contextValue}
-                  onChange={(e) => setContextValue(e.target.value)}
-                  autoFocus
-                  rows={4}
-                  placeholder="Task context..."
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                />
-                <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
-                  <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(task.context ?? ""); }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleContextSave}>Save</Button>
-                </div>
+        <ExpandableCard
+          title="Context"
+          open={expandedCard === "context"}
+          onToggle={(isOpen) => setExpandedCard(isOpen ? "context" : null)}
+          variant="flat"
+          style={{ marginBottom: theme.spacing.md }}
+          headerAction={
+            !editingContext ? (
+              <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("context"); setEditingContext(true); }} aria-label="Edit context" />
+            ) : undefined
+          }
+        >
+          {editingContext ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={contextValue}
+                onChange={(e) => setContextValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Task context..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(task.context ?? ""); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleContextSave}>Save</Button>
               </div>
-            ) : task.context ? (
-              <p
-                onClick={() => { setExpandedCard("context"); setEditingContext(true); }}
-                style={{
-                  margin: 0,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.text,
-                  cursor: "pointer",
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.5,
-                }}
-                title="Click to edit context"
-              >
-                {task.context}
-              </p>
-            ) : (
-              <p
-                onClick={() => { setExpandedCard("context"); setEditingContext(true); }}
-                style={{
-                  margin: 0,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.textFaint,
-                  fontStyle: "italic",
-                  cursor: "pointer",
-                }}
-                title="Click to add context"
-              >
-                No context
-              </p>
-            )}
-          </ExpandableCard>
-        </div>
+            </div>
+          ) : task.context ? (
+            <div onClick={() => { setExpandedCard("context"); setEditingContext(true); }} style={{ cursor: "pointer" }} title="Click to edit context">
+              <Markdown>{task.context}</Markdown>
+            </div>
+          ) : (
+            <p
+              onClick={() => { setExpandedCard("context"); setEditingContext(true); }}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.textFaint,
+                fontStyle: "italic",
+                cursor: "pointer",
+              }}
+              title="Click to add context"
+            >
+              No context
+            </p>
+          )}
+        </ExpandableCard>
 
         {/* Acceptance Criteria -- editable (accordion) */}
-        <div style={{ marginBottom: theme.spacing.md }}>
-          <SectionLabel style={{ marginBottom: theme.spacing.xs }}>Acceptance Criteria</SectionLabel>
-          <ExpandableCard
-            title=""
-            open={expandedCard === "acceptance_criteria"}
-            onToggle={(isOpen) => setExpandedCard(isOpen ? "acceptance_criteria" : null)}
-            variant="flat"
-            headerAction={
-              !editingAC ? (
-                <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }} aria-label="Edit acceptance criteria" />
-              ) : undefined
-            }
-          >
-            {editingAC ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-                <Textarea
-                  value={acValue}
-                  onChange={(e) => setACValue(e.target.value)}
-                  autoFocus
-                  rows={4}
-                  placeholder="Acceptance criteria..."
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                />
-                <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
-                  <Button variant="ghost" onClick={() => { setEditingAC(false); setACValue(task.acceptance_criteria ?? ""); }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleACSave}>Save</Button>
-                </div>
+        <ExpandableCard
+          title="Acceptance Criteria"
+          open={expandedCard === "acceptance_criteria"}
+          onToggle={(isOpen) => setExpandedCard(isOpen ? "acceptance_criteria" : null)}
+          variant="flat"
+          style={{ marginBottom: theme.spacing.md }}
+          headerAction={
+            !editingAC ? (
+              <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }} aria-label="Edit acceptance criteria" />
+            ) : undefined
+          }
+        >
+          {editingAC ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={acValue}
+                onChange={(e) => setACValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Acceptance criteria..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingAC(false); setACValue(task.acceptance_criteria ?? ""); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleACSave}>Save</Button>
               </div>
-            ) : task.acceptance_criteria ? (
-              <p
-                onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }}
-                style={{
-                  margin: 0,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.text,
-                  cursor: "pointer",
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.5,
-                }}
-                title="Click to edit acceptance criteria"
-              >
-                {task.acceptance_criteria}
-              </p>
-            ) : (
-              <p
-                onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }}
-                style={{
-                  margin: 0,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.textFaint,
-                  fontStyle: "italic",
-                  cursor: "pointer",
-                }}
-                title="Click to add acceptance criteria"
-              >
-                No acceptance criteria
-              </p>
-            )}
-          </ExpandableCard>
-        </div>
+            </div>
+          ) : task.acceptance_criteria ? (
+            <div onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }} style={{ cursor: "pointer" }} title="Click to edit acceptance criteria">
+              <Markdown>{task.acceptance_criteria}</Markdown>
+            </div>
+          ) : (
+            <p
+              onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }}
+              style={{
+                margin: 0,
+                fontSize: theme.font.size.sm,
+                color: theme.color.textFaint,
+                fontStyle: "italic",
+                cursor: "pointer",
+              }}
+              title="Click to add acceptance criteria"
+            >
+              No acceptance criteria
+            </p>
+          )}
+        </ExpandableCard>
 
         {/* Dependencies -- always visible */}
         <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.sm }}>
@@ -977,9 +939,14 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const [titleValue, setTitleValue] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // Summary editing
+  // Accordion + editing state for summary/context/requirements
+  const [expandedCard, setExpandedCard] = useState<"summary" | "context" | "requirements" | null>(null);
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryValue, setSummaryValue] = useState("");
+  const [editingContext, setEditingContext] = useState(false);
+  const [contextValue, setContextValue] = useState("");
+  const [editingRequirements, setEditingRequirements] = useState(false);
+  const [requirementsValue, setRequirementsValue] = useState("");
 
   const [showDocPicker, setShowDocPicker] = useState(false);
 
@@ -1080,6 +1047,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   // Summary editing handlers
   function handleStartEditSummary() {
     if (!project) return;
+    setExpandedCard("summary");
     setEditingSummary(true);
     setSummaryValue(project.summary ?? "");
   }
@@ -1089,6 +1057,36 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     await updateProject({ summary: trimmed || null });
     setEditingSummary(false);
     setSummaryValue("");
+  }
+
+  // Context editing handlers
+  function handleStartEditContext() {
+    if (!project) return;
+    setExpandedCard("context");
+    setEditingContext(true);
+    setContextValue(project.context ?? "");
+  }
+
+  async function handleSaveContext() {
+    const trimmed = contextValue.trim();
+    await updateProject({ context: trimmed || null });
+    setEditingContext(false);
+    setContextValue("");
+  }
+
+  // Requirements editing handlers
+  function handleStartEditRequirements() {
+    if (!project) return;
+    setExpandedCard("requirements");
+    setEditingRequirements(true);
+    setRequirementsValue(project.requirements ?? "");
+  }
+
+  async function handleSaveRequirements() {
+    const trimmed = requirementsValue.trim();
+    await updateProject({ requirements: trimmed || null });
+    setEditingRequirements(false);
+    setRequirementsValue("");
   }
 
   if (notFound) {
@@ -1203,62 +1201,134 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           </div>
         </Stack>
 
-        {/* Summary -- full width, editable */}
-        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.xl }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
-            <SectionLabel>Summary</SectionLabel>
-            {!editingSummary && (
+        {/* Summary -- expandable card */}
+        <ExpandableCard
+          title="Summary"
+          open={expandedCard === "summary"}
+          onToggle={(isOpen) => setExpandedCard(isOpen ? "summary" : null)}
+          variant="flat"
+          style={{ marginBottom: theme.spacing.md }}
+          headerAction={
+            !editingSummary ? (
               <IconButton icon="edit" size={14} onClick={handleStartEditSummary} aria-label="Edit summary" />
-            )}
-          </div>
+            ) : undefined
+          }
+        >
           {editingSummary ? (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setEditingSummary(false); } }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
               <Textarea
                 value={summaryValue}
                 onChange={(e) => setSummaryValue(e.target.value)}
-                rows={4}
-                style={{ width: "100%", boxSizing: "border-box" }}
                 autoFocus
+                rows={4}
+                placeholder="Project summary..."
+                style={{ width: "100%", boxSizing: "border-box" }}
               />
-              <Stack direction="row" gap="sm" justify="flex-end" style={{ marginTop: theme.spacing.sm }}>
-                <Button variant="ghost" onClick={() => setEditingSummary(false)}>Cancel</Button>
-                <Button variant="primary" onClick={handleSaveSummary}>Save</Button>
-              </Stack>
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(project.summary ?? ""); }}>Cancel</Button>
+                <Button onClick={handleSaveSummary}>Save</Button>
+              </div>
             </div>
           ) : project.summary ? (
-            <p
-              onClick={handleStartEditSummary}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.text,
-                cursor: "pointer",
-                whiteSpace: "pre-wrap",
-                lineHeight: 1.5,
-              }}
-              title="Click to edit summary"
-            >
-              {project.summary}
-            </p>
+            <div onClick={handleStartEditSummary} style={{ cursor: "pointer" }} title="Click to edit summary">
+              <Markdown>{project.summary}</Markdown>
+            </div>
           ) : (
             <p
               onClick={handleStartEditSummary}
-              style={{
-                margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
-                fontStyle: "italic",
-                cursor: "pointer",
-              }}
+              style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic", cursor: "pointer" }}
               title="Click to add summary"
             >
               No summary
             </p>
           )}
-        </Card>
+        </ExpandableCard>
+
+        {/* Context -- expandable card */}
+        <ExpandableCard
+          title="Context"
+          open={expandedCard === "context"}
+          onToggle={(isOpen) => setExpandedCard(isOpen ? "context" : null)}
+          variant="flat"
+          style={{ marginBottom: theme.spacing.md }}
+          headerAction={
+            !editingContext ? (
+              <IconButton icon="edit" size={14} onClick={handleStartEditContext} aria-label="Edit context" />
+            ) : undefined
+          }
+        >
+          {editingContext ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={contextValue}
+                onChange={(e) => setContextValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Project context..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(project.context ?? ""); }}>Cancel</Button>
+                <Button onClick={handleSaveContext}>Save</Button>
+              </div>
+            </div>
+          ) : project.context ? (
+            <div onClick={handleStartEditContext} style={{ cursor: "pointer" }} title="Click to edit context">
+              <Markdown>{project.context}</Markdown>
+            </div>
+          ) : (
+            <p
+              onClick={handleStartEditContext}
+              style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic", cursor: "pointer" }}
+              title="Click to add context"
+            >
+              No context
+            </p>
+          )}
+        </ExpandableCard>
+
+        {/* Requirements -- expandable card */}
+        <ExpandableCard
+          title="Requirements"
+          open={expandedCard === "requirements"}
+          onToggle={(isOpen) => setExpandedCard(isOpen ? "requirements" : null)}
+          variant="flat"
+          style={{ marginBottom: theme.spacing.xl }}
+          headerAction={
+            !editingRequirements ? (
+              <IconButton icon="edit" size={14} onClick={handleStartEditRequirements} aria-label="Edit requirements" />
+            ) : undefined
+          }
+        >
+          {editingRequirements ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+              <Textarea
+                value={requirementsValue}
+                onChange={(e) => setRequirementsValue(e.target.value)}
+                autoFocus
+                rows={4}
+                placeholder="Project requirements..."
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={() => { setEditingRequirements(false); setRequirementsValue(project.requirements ?? ""); }}>Cancel</Button>
+                <Button onClick={handleSaveRequirements}>Save</Button>
+              </div>
+            </div>
+          ) : project.requirements ? (
+            <div onClick={handleStartEditRequirements} style={{ cursor: "pointer" }} title="Click to edit requirements">
+              <Markdown>{project.requirements}</Markdown>
+            </div>
+          ) : (
+            <p
+              onClick={handleStartEditRequirements}
+              style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic", cursor: "pointer" }}
+              title="Click to add requirements"
+            >
+              No requirements
+            </p>
+          )}
+        </ExpandableCard>
 
         {/* Dependency Graph (collapsible) */}
         {!graphLoading && graph && (
