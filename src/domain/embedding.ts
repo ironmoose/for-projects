@@ -117,6 +117,13 @@ export function createEmbeddingService(options?: Partial<OllamaOptions>): Embedd
 /** Max characters of content to use as a summary fallback for embedding. */
 const CONTENT_FALLBACK_LIMIT = 500;
 
+/**
+ * Max characters of context/acceptance_criteria to include in embedding text.
+ * nomic-embed-text has an 8192-token context window (~32K chars). We cap these
+ * fields so that title + summary + context + AC fit comfortably within that limit.
+ */
+const EMBEDDING_FIELD_LIMIT = 2000;
+
 export function buildEmbeddingText(entity: {
   title?: string;
   summary?: string | null;
@@ -131,7 +138,7 @@ export function buildEmbeddingText(entity: {
   } else if (entity.content) {
     parts.push(entity.content.slice(0, CONTENT_FALLBACK_LIMIT));
   }
-  if (entity.context) parts.push(entity.context);
-  if (entity.acceptance_criteria) parts.push(entity.acceptance_criteria);
+  if (entity.context) parts.push(entity.context.slice(0, EMBEDDING_FIELD_LIMIT));
+  if (entity.acceptance_criteria) parts.push(entity.acceptance_criteria.slice(0, EMBEDDING_FIELD_LIMIT));
   return parts.join("\n\n");
 }

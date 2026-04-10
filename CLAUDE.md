@@ -22,7 +22,7 @@ Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 - Validation happens in services; routes parse HTTP and return errors
 - Dependencies wired explicitly in `bootstrap.ts` — no globals or service locators
 - No DEFAULT values in the schema
-- Document-first: all rich content is stored as documents, linked to entities via typed references. Projects and tasks hold only `title` and `summary` (max 1000 chars) inline. Tasks also have `context` (freeform background/rationale) and `acceptance_criteria` (freeform completion criteria) as inline text fields.
+- Document-first: all rich content is stored as documents, linked to entities via typed references. Projects and tasks hold only `title` and `summary` (max 1000 chars) inline. Tasks also have `context` (freeform background/rationale, max 100K chars) and `acceptance_criteria` (freeform completion criteria, max 100K chars) as inline text fields.
 
 ### Document reference types
 
@@ -41,7 +41,7 @@ References are "dumb pointers" — they do not enrich the document; the document
 
 `projects`, `tasks`, and `documents` each have a `vector(768)` embedding column (pgvector, nomic-embed-text via Ollama). Embeddings are **opt-in**: set `EMBEDDINGS_ENABLED=true` to activate the pipeline (default: `false`). When disabled, Postgres runs without Ollama and embedding columns stay NULL. Embeddings are generated asynchronously via the embedding pipeline (`embedding-pipeline.ts`) on create/update events.
 
-`buildEmbeddingText()` in `embedding.ts` controls what gets embedded: `title` + `summary`, with `context` and `acceptance_criteria` for tasks. For documents without a summary, the first 500 chars of `content` are used as a fallback (`CONTENT_FALLBACK_LIMIT`). **If the summary column max length changes, update `CONTENT_FALLBACK_LIMIT` to match** — the two should stay in sync so the fallback produces vectors of comparable weight.
+`buildEmbeddingText()` in `embedding.ts` controls what gets embedded: `title` + `summary`, with `context` and `acceptance_criteria` for tasks (truncated to 2000 chars each via `EMBEDDING_FIELD_LIMIT` to fit within nomic-embed-text's 8K token window). For documents without a summary, the first 500 chars of `content` are used as a fallback (`CONTENT_FALLBACK_LIMIT`). **If the summary column max length changes, update `CONTENT_FALLBACK_LIMIT` to match** — the two should stay in sync so the fallback produces vectors of comparable weight.
 
 ## Architecture
 

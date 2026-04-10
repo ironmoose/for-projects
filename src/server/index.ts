@@ -42,7 +42,7 @@ export class Server {
     // -- Global middleware ------------------------------------------
     app.use("*", secureHeaders());
     app.use("*", compress());
-    app.use("/api/*", bodyLimit({ maxSize: 1 * 1024 * 1024 }));
+    app.use("/api/*", bodyLimit({ maxSize: 5 * 1024 * 1024 }));
     app.use(
       "*",
       cors({

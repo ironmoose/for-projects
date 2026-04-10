@@ -52,11 +52,11 @@ export class TaskService implements ITaskService {
       if (input.group_key !== undefined && input.group_key.length > 32) {
         throw new ServiceError("group_key must be 32 characters or fewer", 400);
       }
-      if (input.context !== undefined && input.context.length > 5000) {
-        throw new ServiceError("context must be 5000 characters or fewer", 400);
+      if (input.context !== undefined && input.context.length > 100_000) {
+        throw new ServiceError("context must be 100000 characters or fewer", 400);
       }
-      if (input.acceptance_criteria !== undefined && input.acceptance_criteria.length > 5000) {
-        throw new ServiceError("acceptance_criteria must be 5000 characters or fewer", 400);
+      if (input.acceptance_criteria !== undefined && input.acceptance_criteria.length > 100_000) {
+        throw new ServiceError("acceptance_criteria must be 100000 characters or fewer", 400);
       }
       if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
         throw new ServiceError(`status must be one of: ${(TASK_STATUSES as readonly string[]).join(", ")}`, 400);
@@ -133,11 +133,11 @@ export class TaskService implements ITaskService {
       if (input.group_key !== undefined && input.group_key !== null && input.group_key.length > 32) {
         throw new ServiceError("group_key must be 32 characters or fewer", 400);
       }
-      if (input.context !== undefined && input.context !== null && input.context.length > 5000) {
-        throw new ServiceError("context must be 5000 characters or fewer", 400);
+      if (input.context !== undefined && input.context !== null && input.context.length > 100_000) {
+        throw new ServiceError("context must be 100000 characters or fewer", 400);
       }
-      if (input.acceptance_criteria !== undefined && input.acceptance_criteria !== null && input.acceptance_criteria.length > 5000) {
-        throw new ServiceError("acceptance_criteria must be 5000 characters or fewer", 400);
+      if (input.acceptance_criteria !== undefined && input.acceptance_criteria !== null && input.acceptance_criteria.length > 100_000) {
+        throw new ServiceError("acceptance_criteria must be 100000 characters or fewer", 400);
       }
       if (input.status !== undefined && !(TASK_STATUSES as readonly string[]).includes(input.status)) {
         throw new ServiceError(`status must be one of: ${(TASK_STATUSES as readonly string[]).join(", ")}`, 400);
