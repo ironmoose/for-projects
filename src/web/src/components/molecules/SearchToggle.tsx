@@ -76,39 +76,7 @@ export function SearchToggle({
         overflow: "hidden",
       }}
     >
-      {/* Sliding toggle pill */}
-      {showToggle && (
-        <button
-          type="button"
-          onClick={() => onSemanticChange(!semantic)}
-          title={semantic ? "Switch to keyword search" : "Switch to semantic search"}
-          aria-label={semantic ? "Switch to keyword search" : "Switch to semantic search"}
-          style={{
-            position: "absolute",
-            top: 3,
-            // Slide from right to left
-            left: semantic ? 4 : `calc(100% - ${TOGGLE_SIZE + 4}px)`,
-            width: TOGGLE_SIZE,
-            height: TOGGLE_SIZE,
-            borderRadius: theme.radius.md,
-            border: "none",
-            background: toggleBg,
-            color: toggleColor,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "left 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, color 0.2s",
-            zIndex: 2,
-            padding: 0,
-            flexShrink: 0,
-          }}
-        >
-          <Icon name={semantic ? "neurology" : "search"} size={16} />
-        </button>
-      )}
-
-      {/* Input field — padding shifts to make room for toggle */}
+      {/* Input field */}
       <input
         type="text"
         value={localValue}
@@ -125,12 +93,42 @@ export function SearchToggle({
           color: theme.color.text,
           fontFamily: theme.font.body,
           fontSize: theme.font.size.sm,
-          paddingLeft: semantic ? toggleOffset + PADDING_H : PADDING_H,
-          paddingRight: semantic ? PADDING_H : toggleOffset + PADDING_H,
-          transition: "padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          paddingLeft: PADDING_H,
+          paddingRight: showToggle ? toggleOffset + PADDING_H : PADDING_H,
           minWidth: 0,
         }}
       />
+
+      {/* Toggle button — pinned right, icon swaps in place */}
+      {showToggle && (
+        <button
+          type="button"
+          onClick={() => onSemanticChange(!semantic)}
+          title={semantic ? "Switch to keyword search" : "Switch to semantic search"}
+          aria-label={semantic ? "Switch to keyword search" : "Switch to semantic search"}
+          style={{
+            position: "absolute",
+            top: 3,
+            right: 4,
+            width: TOGGLE_SIZE,
+            height: TOGGLE_SIZE,
+            borderRadius: theme.radius.md,
+            border: "none",
+            background: toggleBg,
+            color: toggleColor,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.2s, color 0.2s",
+            zIndex: 2,
+            padding: 0,
+            flexShrink: 0,
+          }}
+        >
+          <Icon name={semantic ? "neurology" : "search"} size={16} />
+        </button>
+      )}
     </div>
   );
 }

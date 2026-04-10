@@ -35,6 +35,7 @@ import type {
 } from "./services";
 import { createEmbeddingService, type EmbeddingService } from "./embedding";
 import { startEmbeddingPipeline } from "./embedding-pipeline";
+import { backfillEmbeddings } from "./embedding-backfill";
 
 export interface AppContext {
   db: Database | null;
@@ -91,7 +92,7 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   await initPgSchema(pg);
 
   // Auto-migrate from SQLite if Postgres is empty and a SQLite DB exists
-  await autoMigrateFromSqlite(pg);
+  const didMigrate = await autoMigrateFromSqlite(pg);
 
   const projectRepo = new PgProjectRepository(pg);
   const taskRepo = new PgTaskRepository(pg);
@@ -128,6 +129,13 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo, embeddingService);
   const activityLogService = new ActivityLogService(activityLogRepo);
 
+  // Backfill embeddings for migrated data (fire-and-forget)
+  if (didMigrate && embeddingsEnabled && embeddingService) {
+    backfillEmbeddings(pg, embeddingService).catch((err: unknown) => {
+      console.error("[bootstrap] Embedding backfill failed:", err);
+    });
+  }
+
   const shutdown = async () => {
     unsubEmbed?.();
     await pgShutdown(pg);
@@ -147,13 +155,13 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
  * This makes the transition from SQLite to Postgres seamless — start the app
  * with DATABASE_URL and your existing data comes along automatically.
  */
-async function autoMigrateFromSqlite(pg: PgClient): Promise<void> {
+async function autoMigrateFromSqlite(pg: PgClient): Promise<boolean> {
   const sqlitePath = process.env.SQLITE_PATH;
-  if (!sqlitePath || !existsSync(sqlitePath)) return;
+  if (!sqlitePath || !existsSync(sqlitePath)) return false;
 
   // Check if Postgres already has data
   const [row] = await pg<{ count: string }[]>`SELECT COUNT(*) AS count FROM activity_log LIMIT 1`;
-  if (Number(row.count) > 0) return;
+  if (Number(row.count) > 0) return false;
 
   console.log(`[bootstrap] Postgres is empty — auto-migrating from ${sqlitePath}`);
 
@@ -167,10 +175,12 @@ async function autoMigrateFromSqlite(pg: PgClient): Promise<void> {
       if (r.rows > 0) console.log(`[migrate]   ${r.table}: ${r.rows} rows`);
     }
     console.log(`[migrate] Done — ${total} total rows migrated`);
+    return total > 0;
   } catch (err) {
     console.error("[migrate] Auto-migration failed:", err);
     console.error("[migrate] Postgres will start empty. Run the migration manually:");
     console.error(`[migrate]   bun scripts/migrate-sqlite-to-pg.ts --commit`);
+    return false;
   } finally {
     lite.close();
   }
