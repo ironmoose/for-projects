@@ -1,4 +1,5 @@
 import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, SemanticSearchResult, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, EntityType, ActivityLog } from "./entities";
+import type { TreeEntry } from "./connectors/types";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -6,6 +7,7 @@ import type {
   UpdateTaskInput,
   CreateDocumentInput,
   UpdateDocumentInput,
+  ImportDocumentInput,
 } from "./inputs";
 
 export interface Paginated<T> {
@@ -51,6 +53,13 @@ export interface IDocumentReferenceService {
 
 export interface IActivityLogService {
   list(filter?: { entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Promise<Paginated<ActivityLog>>;
+}
+
+export interface ISourceService {
+  import(input: ImportDocumentInput): Promise<Document & { tags: string[] }>;
+  importBatch(inputs: ImportDocumentInput[]): Promise<(Document & { tags: string[] })[]>;
+  refresh(documentId: string): Promise<Document & { tags: string[] }>;
+  browseRepo(repoUrl: string, query?: string): Promise<TreeEntry[]>;
 }
 
 export interface IDocumentService {

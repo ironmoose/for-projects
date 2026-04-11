@@ -32,10 +32,13 @@ import type {
   IDocumentService,
   IDocumentReferenceService,
   IActivityLogService,
+  ISourceService,
 } from "./services";
 import { createEmbeddingService, type EmbeddingService } from "./embedding";
 import { startEmbeddingPipeline } from "./embedding-pipeline";
 import { backfillEmbeddings } from "./embedding-backfill";
+import { ConnectorRegistry, GitHubConnector } from "./connectors";
+import { SourceService } from "./services/sources";
 
 export interface AppContext {
   db: Database | null;
@@ -48,6 +51,7 @@ export interface AppContext {
   documentService: IDocumentService;
   documentReferenceService: IDocumentReferenceService;
   activityLogService: IActivityLogService;
+  sourceService: ISourceService;
   shutdown: () => Promise<void>;
 }
 
@@ -81,10 +85,14 @@ async function bootstrapSqlite(dbPath: string | undefined, eventBus: EventBus): 
   const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo);
   const activityLogService = new ActivityLogService(activityLogRepo);
 
+  const connectorRegistry = new ConnectorRegistry();
+  connectorRegistry.register(new GitHubConnector());
+  const sourceService = new SourceService(documentRepo, tagRepo, activityLogRepo, eventBus, connectorRegistry);
+
   const shutdown = async () => { db.close(); };
 
   console.log("[bootstrap] SQLite backend active");
-  return { db, pg: null, backend: "sqlite", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, shutdown };
+  return { db, pg: null, backend: "sqlite", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, sourceService, shutdown };
 }
 
 async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promise<AppContext> {
@@ -129,6 +137,10 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo, embeddingService);
   const activityLogService = new ActivityLogService(activityLogRepo);
 
+  const connectorRegistry = new ConnectorRegistry();
+  connectorRegistry.register(new GitHubConnector());
+  const sourceService = new SourceService(documentRepo, tagRepo, activityLogRepo, eventBus, connectorRegistry);
+
   // Backfill embeddings for migrated data (fire-and-forget)
   if (didMigrate && embeddingsEnabled && embeddingService) {
     backfillEmbeddings(pg, embeddingService).catch((err: unknown) => {
@@ -142,7 +154,7 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   };
 
   console.log("[bootstrap] Postgres backend active");
-  return { db: null, pg, backend: "postgres", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, shutdown };
+  return { db: null, pg, backend: "postgres", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, sourceService, shutdown };
 }
 
 /**

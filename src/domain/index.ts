@@ -18,3 +18,6 @@ export { DocumentReferenceService } from "./services/document-references";
 export { TaskDependencyRepository } from "./repositories/sqlite/task-dependencies";
 export { TaskDependencyService } from "./services/task-dependencies";
 export { ActivityLogService } from "./services/activity-log";
+export { SourceService } from "./services/sources";
+export { ConnectorRegistry, GitHubConnector } from "./connectors";
+export type { SourceConnector, FetchResult, TreeEntry } from "./connectors";

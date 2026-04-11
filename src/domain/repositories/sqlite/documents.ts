@@ -9,12 +9,22 @@ export interface DocumentRow {
   content: string | null;
   folder: string | null;
   favorite: number;
+  source_url: string | null;
+  source_type: string | null;
+  source_fetched_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
 function toDocument(row: DocumentRow): Document {
-  return { ...row, favorite: !!row.favorite, folder: row.folder ?? null };
+  return {
+    ...row,
+    favorite: !!row.favorite,
+    folder: row.folder ?? null,
+    source_url: row.source_url ?? null,
+    source_type: (row.source_type as Document['source_type']) ?? null,
+    source_fetched_at: row.source_fetched_at ?? null,
+  };
 }
 
 export class DocumentRepository {
@@ -63,9 +73,9 @@ export class DocumentRepository {
     params.push(limit, offset);
 
     const rows = this.db
-      .query(`SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content, d.folder, d.favorite, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
+      .query(`SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content, d.folder, d.favorite, d.source_type, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
       .all(...params) as (Omit<DocumentSummary, "has_content" | "favorite" | "tags"> & { has_content: number; favorite: number })[];
-    return rows.map((r) => ({ ...r, has_content: !!r.has_content, folder: r.folder ?? null, favorite: !!r.favorite, tags: [] as string[] })) as DocumentSummary[];
+    return rows.map((r) => ({ ...r, has_content: !!r.has_content, folder: r.folder ?? null, favorite: !!r.favorite, source_type: r.source_type ?? null, tags: [] as string[] })) as DocumentSummary[];
   }
 
   async count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[] }): Promise<number> {
@@ -111,7 +121,7 @@ export class DocumentRepository {
 
   async insertMany(rows: Omit<DocumentRow, "id" | "created_at" | "updated_at">[]): Promise<Document[]> {
     const stmt = this.db.query(
-      "INSERT INTO documents (id, title, summary, content, folder, favorite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO documents (id, title, summary, content, folder, favorite, source_url, source_type, source_fetched_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const now = new Date().toISOString();
     const ids: string[] = [];
@@ -119,7 +129,7 @@ export class DocumentRepository {
     for (const row of rows) {
       const id = ulid();
       ids.push(id);
-      stmt.run(id, row.title, row.summary ?? null, row.content ?? null, row.folder ?? null, row.favorite ?? 0, now, now);
+      stmt.run(id, row.title, row.summary ?? null, row.content ?? null, row.folder ?? null, row.favorite ?? 0, row.source_url ?? null, row.source_type ?? null, row.source_fetched_at ?? null, now, now);
     }
 
     const results: Document[] = [];
@@ -131,6 +141,9 @@ export class DocumentRepository {
         content: rows[i].content ?? null,
         folder: rows[i].folder ?? null,
         favorite: !!rows[i].favorite,
+        source_url: rows[i].source_url ?? null,
+        source_type: (rows[i].source_type as Document['source_type']) ?? null,
+        source_fetched_at: rows[i].source_fetched_at ?? null,
         created_at: now,
         updated_at: now,
       });
@@ -138,7 +151,7 @@ export class DocumentRepository {
     return results;
   }
 
-  async updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean }[]): Promise<Document[]> {
+  async updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean; source_url?: string | null; source_type?: string | null; source_fetched_at?: string | null }[]): Promise<Document[]> {
     const now = new Date().toISOString();
     const results: Document[] = [];
 
@@ -151,10 +164,13 @@ export class DocumentRepository {
       const content = row.content !== undefined ? row.content : existing.content;
       const folder = row.folder !== undefined ? row.folder : existing.folder;
       const favorite = row.favorite !== undefined ? (row.favorite ? 1 : 0) : (existing.favorite ? 1 : 0);
+      const source_url = row.source_url !== undefined ? row.source_url : existing.source_url;
+      const source_type = row.source_type !== undefined ? row.source_type : existing.source_type;
+      const source_fetched_at = row.source_fetched_at !== undefined ? row.source_fetched_at : existing.source_fetched_at;
 
       this.db
-        .query("UPDATE documents SET title = ?, summary = ?, content = ?, folder = ?, favorite = ?, updated_at = ? WHERE id = ?")
-        .run(title, summary, content, folder, favorite, now, row.id);
+        .query("UPDATE documents SET title = ?, summary = ?, content = ?, folder = ?, favorite = ?, source_url = ?, source_type = ?, source_fetched_at = ?, updated_at = ? WHERE id = ?")
+        .run(title, summary, content, folder, favorite, source_url, source_type, source_fetched_at, now, row.id);
 
       results.push({
         id: row.id,
@@ -163,6 +179,9 @@ export class DocumentRepository {
         content,
         folder,
         favorite: !!favorite,
+        source_url,
+        source_type: (source_type as Document['source_type']) ?? null,
+        source_fetched_at,
         created_at: existing.created_at,
         updated_at: now,
       });

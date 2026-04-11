@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import type {
   IDocumentService,
+  ISourceService,
   CreateDocumentInput,
   UpdateDocumentInput,
+  ImportDocumentInput,
 } from "../../domain";
 
-export function documentRoutes(service: IDocumentService): Hono {
+export function documentRoutes(service: IDocumentService, sourceService?: ISourceService): Hono {
   const app = new Hono();
 
   // GET /api/documents
@@ -41,6 +43,24 @@ export function documentRoutes(service: IDocumentService): Hono {
     return c.json(documents, 201);
   });
 
+  // POST /api/documents/import — import from external URL(s)
+  // Accepts single: { url, folder?, tags?, favorite? }
+  // Or batch: { items: [{ url, folder?, tags?, favorite? }, ...] }
+  if (sourceService) {
+    app.post("/import", async (c) => {
+      const body = await c.req.json<ImportDocumentInput | { items: ImportDocumentInput[] }>();
+      if ("items" in body && Array.isArray(body.items)) {
+        if (body.items.length === 0) return c.json({ error: "items array must not be empty" }, 400);
+        const docs = await sourceService.importBatch(body.items);
+        return c.json(docs, 201);
+      }
+      const single = body as ImportDocumentInput;
+      if (!single.url?.trim()) return c.json({ error: "url is required" }, 400);
+      const doc = await sourceService.import(single);
+      return c.json(doc, 201);
+    });
+  }
+
   // GET /api/documents/search — semantic search
   app.get("/search", async (c) => {
     const query = c.req.query("q") ?? "";
@@ -57,6 +77,14 @@ export function documentRoutes(service: IDocumentService): Hono {
     if (favorite !== undefined) filter.favorite = favorite;
     return c.json(await service.semanticSearch(query, filter));
   });
+
+  // POST /api/documents/:id/refresh — refresh sourced document
+  if (sourceService) {
+    app.post("/:id/refresh", async (c) => {
+      const doc = await sourceService.refresh(c.req.param("id"));
+      return c.json(doc);
+    });
+  }
 
   // GET /api/documents/:id
   app.get("/:id", async (c) => {

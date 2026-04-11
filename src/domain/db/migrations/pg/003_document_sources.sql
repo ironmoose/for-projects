@@ -1,0 +1,3 @@
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS source_url TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS source_type TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS source_fetched_at TEXT;

@@ -6,16 +6,18 @@ import type { IDocumentRepository, ITagRepository, IDocumentReferenceRepository,
 import type { EventBus } from "../events";
 import type { EmbeddingService } from "../embedding";
 
-const FOLDER_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+/** Allows path segments separated by `/`. Each segment: lowercase alphanumeric, hyphens, dots, underscores. */
+const FOLDER_PATTERN = /^[a-z0-9._][a-z0-9._-]*(\/[a-z0-9._][a-z0-9._-]*)*$/;
 
 function normalizeFolder(value: string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
-  const trimmed = value.trim().toLowerCase();
+  // Lowercase, trim, collapse duplicate slashes, strip trailing slash
+  const trimmed = value.trim().toLowerCase().replace(/\/+/g, "/").replace(/\/$/, "");
   return trimmed === "" ? null : trimmed;
 }
 
 function isValidFolder(value: string): boolean {
-  return value.length <= 64 && FOLDER_PATTERN.test(value);
+  return value.length <= 255 && FOLDER_PATTERN.test(value);
 }
 
 export class DocumentService implements IDocumentService {
@@ -83,7 +85,7 @@ export class DocumentService implements IDocumentService {
       if (input.folder !== undefined) {
         input.folder = normalizeFolder(input.folder);
         if (input.folder !== null && !isValidFolder(input.folder)) {
-          throw new ServiceError("folder must be lowercase alphanumeric and hyphens, max 64 chars", 400);
+          throw new ServiceError("folder must be lowercase alphanumeric, hyphens, dots, underscores, and forward slashes, max 255 chars", 400);
         }
       }
       if (input.tags) {
@@ -146,7 +148,7 @@ export class DocumentService implements IDocumentService {
       if (input.folder !== undefined) {
         input.folder = normalizeFolder(input.folder);
         if (input.folder !== null && !isValidFolder(input.folder)) {
-          throw new ServiceError("folder must be lowercase alphanumeric and hyphens, max 64 chars", 400);
+          throw new ServiceError("folder must be lowercase alphanumeric, hyphens, dots, underscores, and forward slashes, max 255 chars", 400);
         }
       }
       if (input.tags) {

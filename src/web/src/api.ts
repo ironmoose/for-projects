@@ -229,6 +229,32 @@ export async function searchDocuments(params: { q: string; tag?: string; folder?
   return res.json();
 }
 
+export async function importDocument(input: { url: string; folder?: string; tags?: string[]; favorite?: boolean }): Promise<Document & { tags: string[] }> {
+  const res = await apiFetch("/api/documents/import", jsonPost(input));
+  return res.json();
+}
+
+export async function refreshDocument(id: string): Promise<Document & { tags: string[] }> {
+  const res = await apiFetch(`/api/documents/${encodeURIComponent(id)}/refresh`, { method: "POST" });
+  return res.json();
+}
+
+export interface GitHubTreeEntry {
+  path: string;
+  size: number;
+  url: string;
+}
+
+export async function browseGitHubRepo(repo: string, query?: string): Promise<{ entries: GitHubTreeEntry[]; total: number }> {
+  const res = await apiFetch(`/api/sources/github/tree${qs({ repo, q: query })}`);
+  return res.json();
+}
+
+export async function importDocumentBatch(inputs: { url: string; folder?: string; tags?: string[]; favorite?: boolean }[]): Promise<(Document & { tags: string[] })[]> {
+  const res = await apiFetch("/api/documents/import", jsonPost({ items: inputs }));
+  return res.json();
+}
+
 // ---------------------------------------------------------------------------
 // Health API
 // ---------------------------------------------------------------------------

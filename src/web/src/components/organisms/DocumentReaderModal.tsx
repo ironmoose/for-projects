@@ -3,6 +3,8 @@ import { useTheme } from "../theme/ThemeContext";
 import { useToastContext } from "../ToastContext";
 import { useDocument } from "../../hooks/useDocument";
 import { useDocuments } from "../../hooks/useDocuments";
+import { refreshDocument as apiRefreshDocument } from "../../api";
+import { relativeTime } from "../../utils";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
@@ -38,6 +40,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
   const [editFolder, setEditFolder] = useState("");
   const [editTags, setEditTags] = useState<TagName[]>([]);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleCopy = useCallback(async () => {
     if (!document) return;
@@ -52,6 +55,19 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
       copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.showToast("Failed to copy", "error");
+    }
+  }, [document, toast]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!document || !document.source_type) return;
+    setRefreshing(true);
+    try {
+      await apiRefreshDocument(document.id);
+      toast.showToast("Document refreshed", "success");
+    } catch (err) {
+      toast.showToast(err instanceof Error ? err.message : "Failed to refresh", "error");
+    } finally {
+      setRefreshing(false);
     }
   }, [document, toast]);
 
@@ -283,6 +299,49 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                   {document.folder}
                 </div>
               )
+            )}
+
+            {/* Source info — read mode only */}
+            {!editing && document.source_type && document.source_url && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: theme.spacing.sm,
+                  fontSize: theme.font.size.xs,
+                  color: theme.color.textMuted,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Icon name="link" size={14} />
+                  <a
+                    href={document.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: theme.color.primary, textDecoration: "none" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {document.source_url.length > 60
+                      ? document.source_url.slice(0, 60) + "..."
+                      : document.source_url}
+                  </a>
+                </span>
+                {document.source_fetched_at && (
+                  <span style={{ color: theme.color.textFaint, fontSize: theme.font.size.xxs }}>
+                    Fetched {relativeTime(document.source_fetched_at)}
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleRefresh}
+                  loading={refreshing}
+                  disabled={refreshing}
+                >
+                  Refresh
+                </Button>
+              </div>
             )}
 
             {/* Summary section */}

@@ -7,6 +7,9 @@ import {
   ConfirmDialog,
   Button,
   CreateDocumentOverlay,
+  ImportDocumentOverlay,
+  GitHubBrowserOverlay,
+  FolderTileGrid,
 } from "../components";
 import { Icon } from "../components/atoms/Icon";
 import { SearchToggle } from "../components/molecules/SearchToggle";
@@ -18,7 +21,7 @@ import { useDocuments } from "../hooks/useDocuments";
 import { useProjects, useHealth } from "../hooks";
 import { useToastContext } from "../components/ToastContext";
 import { useWindowWidth, SMALL_BREAKPOINT } from "../hooks/useWindowWidth";
-import { ApiError } from "../api";
+import { ApiError, importDocument } from "../api";
 import { TAG_CATEGORIES } from "../types";
 import type { Theme } from "../components/theme/theme";
 import type { DocumentSummary, TagName } from "../types";
@@ -401,28 +404,37 @@ export function DocumentsPage() {
   const [projectFilter, setProjectFilter] = useState("");
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [semanticMode, setSemanticMode] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "directory">("grid");
+  /** Current path in directory navigation (e.g., "facebook-react/src"). Empty = root. */
+  const [directoryPath, setDirectoryPath] = useState("");
 
   // Entity state
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
+  const [showImportOverlay, setShowImportOverlay] = useState(false);
+  const [showGitHubBrowser, setShowGitHubBrowser] = useState(false);
 
   // Data
   const { projects } = useProjects();
   const { semanticSearchAvailable } = useHealth();
 
+  // __unfiled__ is a client-side sentinel for "no folder" — don't pass to API
+  const isUnfiledView = folderFilter === "__unfiled__";
   const filter = {
     ...(titleFilter ? { title: titleFilter } : {}),
     ...(tagFilter ? { tag: tagFilter } : {}),
-    ...(folderFilter ? { folder: folderFilter } : {}),
+    ...(!isUnfiledView && folderFilter ? { folder: folderFilter } : {}),
     ...(favoriteFilter ? { favorite: true as const } : {}),
     ...(projectFilter ? { project_id: projectFilter } : {}),
   };
 
   const useSemanticSearch = semanticSearchAvailable && semanticMode;
+  // Directory mode needs all documents to build the tree; grid mode uses standard pagination
+  const pageSize = viewMode === "directory" ? 500 : undefined;
   const { documents, loading, total, totalPages, page, setPage, create, update, remove, isSemanticResults } = useDocuments(
     Object.keys(filter).length > 0 ? filter : undefined,
-    { semanticSearch: useSemanticSearch },
+    { semanticSearch: useSemanticSearch, pageSize },
   );
 
   const knownFolders = useMemo(() => {
@@ -453,7 +465,7 @@ export function DocumentsPage() {
     activeFilters.push({ key: "tag", label: tagFilter, icon: "label", onRemove: () => setTagFilter("") });
   }
   if (folderFilter) {
-    activeFilters.push({ key: "folder", label: folderFilter, icon: "folder", onRemove: () => setFolderFilter("") });
+    activeFilters.push({ key: "folder", label: isUnfiledView ? "Unfiled" : folderFilter, icon: "folder", onRemove: () => setFolderFilter("") });
   }
   if (favoriteFilter) {
     activeFilters.push({ key: "favorite", label: "Favorites", icon: "star", onRemove: () => setFavoriteFilter(false) });
@@ -530,12 +542,59 @@ export function DocumentsPage() {
           title="Knowledge Base"
           subtitle={total > 0 ? `${total} document${total !== 1 ? "s" : ""}` : undefined}
           trailing={
-            <Button size="sm" onClick={() => setShowCreateOverlay(true)}>
-              New Document
-            </Button>
+            <div style={{ display: "flex", gap: theme.spacing.sm, alignItems: "center" }}>
+              {/* View mode toggle */}
+              <div style={{ display: "flex", border: `1px solid ${theme.color.borderSubtle}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
+                <button
+                  onClick={() => setViewMode("directory")}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 30, height: 28, border: "none", cursor: "pointer",
+                    background: viewMode === "directory" ? `${theme.color.primary}18` : "transparent",
+                    color: viewMode === "directory" ? theme.color.primary : theme.color.textMuted,
+                  }}
+                  title="Directory view"
+                >
+                  <Icon name="folder" size={15} />
+                </button>
+                <button
+                  onClick={() => setViewMode("grid")}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 30, height: 28, border: "none", cursor: "pointer",
+                    borderLeft: `1px solid ${theme.color.borderSubtle}`,
+                    background: viewMode === "grid" ? `${theme.color.primary}18` : "transparent",
+                    color: viewMode === "grid" ? theme.color.primary : theme.color.textMuted,
+                  }}
+                  title="Grid view"
+                >
+                  <Icon name="grid_view" size={15} />
+                </button>
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setShowGitHubBrowser(true)}>
+                Browse GitHub
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowImportOverlay(true)}>
+                Import URL
+              </Button>
+              <Button size="sm" onClick={() => setShowCreateOverlay(true)}>
+                New Document
+              </Button>
+            </div>
           }
           style={{ marginBottom: isWide ? theme.spacing.lg : theme.spacing.sm }}
         />
+
+        {/* Breadcrumb — directory mode with active path */}
+        {viewMode === "directory" && (directoryPath || isUnfiledView) && (
+          <DirectoryBreadcrumb
+            path={isUnfiledView ? "__unfiled__" : directoryPath}
+            onNavigate={(path) => {
+              setDirectoryPath(path);
+              if (!path) setFolderFilter("");
+            }}
+          />
+        )}
 
         {/* Mobile: sticky search bar */}
         {!isWide && (
@@ -567,13 +626,25 @@ export function DocumentsPage() {
                 : "No documents yet."}
               variant="card"
             />
+          ) : viewMode === "directory" && !isSemanticResults && !titleFilter && !isUnfiledView ? (
+            <DirectoryView
+              documents={sorted}
+              currentPath={directoryPath}
+              selectedDocumentId={selectedDocumentId}
+              onNavigate={(path) => setDirectoryPath(path)}
+              onSelectUnfiled={() => { setDirectoryPath(""); setFolderFilter("__unfiled__"); }}
+              onSelectDocument={(id) => setSelectedDocumentId(id)}
+              onDeleteDocument={(doc) => setDeleteTarget(doc)}
+              onToggleFavorite={(doc) => update(doc.id, { favorite: !doc.favorite })}
+            />
           ) : (
             <DocumentTable
-              documents={sorted}
+              documents={isUnfiledView ? sorted.filter(d => !d.folder) : sorted}
               selectedDocumentId={selectedDocumentId}
               onSelectDocument={(id) => setSelectedDocumentId(id)}
               onDeleteDocument={(doc) => setDeleteTarget(doc)}
               onToggleFavorite={(doc) => update(doc.id, { favorite: !doc.favorite })}
+              groupByFolder={false}
             />
           )}
         </div>
@@ -611,6 +682,30 @@ export function DocumentsPage() {
         />
       )}
 
+      {showGitHubBrowser && (
+        <GitHubBrowserOverlay
+          folders={knownFolders}
+          onDone={() => showToast("Files imported", "success")}
+          onClose={() => setShowGitHubBrowser(false)}
+        />
+      )}
+
+      {showImportOverlay && (
+        <ImportDocumentOverlay
+          folders={knownFolders}
+          onImport={async (fields) => {
+            try {
+              await importDocument(fields);
+              showToast("Document imported", "success");
+            } catch (err) {
+              showToast(err instanceof ApiError ? err.message : "Failed to import document");
+              throw err;
+            }
+          }}
+          onClose={() => setShowImportOverlay(false)}
+        />
+      )}
+
       {showCreateOverlay && (
         <CreateDocumentOverlay
           folders={knownFolders}
@@ -624,6 +719,156 @@ export function DocumentsPage() {
             }
           }}
           onClose={() => setShowCreateOverlay(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Directory breadcrumb
+// ---------------------------------------------------------------------------
+
+function DirectoryBreadcrumb({ path, onNavigate }: { path: string; onNavigate: (path: string) => void }) {
+  const { theme } = useTheme();
+
+  if (path === "__unfiled__") {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginBottom: theme.spacing.md }}>
+        <BreadcrumbLink label="All Folders" icon="folder" onClick={() => onNavigate("")} theme={theme} />
+        <Icon name="chevron_right" size={14} style={{ color: theme.color.textFaint }} />
+        <span style={{ fontSize: theme.font.size.xs, fontFamily: theme.font.body, color: theme.color.text, fontWeight: 600 }}>
+          Unfiled
+        </span>
+      </div>
+    );
+  }
+
+  const segments = path.split("/");
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginBottom: theme.spacing.md, flexWrap: "wrap" }}>
+      <BreadcrumbLink label="All Folders" icon="folder" onClick={() => onNavigate("")} theme={theme} />
+      {segments.map((segment, i) => {
+        const isLast = i === segments.length - 1;
+        const pathUpTo = segments.slice(0, i + 1).join("/");
+        return (
+          <span key={pathUpTo} style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+            <Icon name="chevron_right" size={14} style={{ color: theme.color.textFaint }} />
+            {isLast ? (
+              <span style={{ fontSize: theme.font.size.xs, fontFamily: theme.font.body, color: theme.color.text, fontWeight: 600 }}>
+                {segment}
+              </span>
+            ) : (
+              <BreadcrumbLink label={segment} onClick={() => onNavigate(pathUpTo)} theme={theme} />
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function BreadcrumbLink({ label, icon, onClick, theme }: { label: string; icon?: string; onClick: () => void; theme: Theme }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 4,
+        border: "none", background: "transparent", cursor: "pointer",
+        fontSize: theme.font.size.xs, fontFamily: theme.font.body,
+        color: theme.color.primary, fontWeight: 600, padding: 0,
+      }}
+    >
+      {icon && <Icon name={icon} size={14} />}
+      {label}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Directory view — combines folder tiles + documents at current level
+// ---------------------------------------------------------------------------
+
+function DirectoryView({
+  documents, currentPath, selectedDocumentId,
+  onNavigate, onSelectUnfiled, onSelectDocument, onDeleteDocument, onToggleFavorite,
+}: {
+  documents: DocumentSummary[];
+  currentPath: string;
+  selectedDocumentId: string | null;
+  onNavigate: (path: string) => void;
+  onSelectUnfiled: () => void;
+  onSelectDocument: (id: string) => void;
+  onDeleteDocument: (doc: DocumentSummary) => void;
+  onToggleFavorite: (doc: DocumentSummary) => void;
+}) {
+  const { theme } = useTheme();
+
+  // Compute documents at exactly this path (not deeper)
+  const docsAtLevel = useMemo(() => {
+    if (!currentPath) return documents.filter(d => !d.folder);
+    const prefix = currentPath + "/";
+    return documents.filter(d =>
+      d.folder === currentPath || // exact match — doc is filed at this folder
+      false // don't include docs in subfolders
+    );
+  }, [documents, currentPath]);
+
+  // Check if folder tiles will render
+  const hasSubfolders = useMemo(() => {
+    if (!currentPath) {
+      return documents.some(d => d.folder);
+    }
+    const prefix = currentPath + "/";
+    return documents.some(d => d.folder && d.folder.startsWith(prefix) && d.folder !== currentPath);
+  }, [documents, currentPath]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.lg }}>
+      {/* Folder tiles */}
+      <FolderTileGrid
+        documents={documents}
+        currentPath={currentPath}
+        onNavigate={onNavigate}
+        onSelectUnfiled={onSelectUnfiled}
+      />
+
+      {/* Documents at this level */}
+      {docsAtLevel.length > 0 && (
+        <div>
+          {hasSubfolders && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: theme.spacing.xs,
+              marginBottom: theme.spacing.sm, paddingLeft: theme.spacing.sm,
+            }}>
+              <Icon name="description" size={15} style={{ color: theme.color.textFaint }} />
+              <span style={{
+                fontSize: theme.font.size.xs, fontWeight: 700,
+                fontFamily: theme.font.body, color: theme.color.textMuted,
+              }}>
+                Documents
+              </span>
+              <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+                {docsAtLevel.length}
+              </span>
+            </div>
+          )}
+          <DocumentTable
+            documents={docsAtLevel}
+            selectedDocumentId={selectedDocumentId}
+            onSelectDocument={onSelectDocument}
+            onDeleteDocument={onDeleteDocument}
+            onToggleFavorite={onToggleFavorite}
+          />
+        </div>
+      )}
+
+      {/* Empty state when no subfolders and no docs at this level */}
+      {!hasSubfolders && docsAtLevel.length === 0 && (
+        <EmptyState
+          icon="folder_open"
+          message="This folder is empty."
+          variant="card"
         />
       )}
     </div>

@@ -44,8 +44,8 @@ export interface IDocumentRepository {
   findById(id: string): Promise<Document | null>;
   findMany(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[]; limit?: number; offset?: number }): Promise<DocumentSummary[]>;
   count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[] }): Promise<number>;
-  insertMany(rows: { title: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: number | boolean }[]): Promise<Document[]>;
-  updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean }[]): Promise<Document[]>;
+  insertMany(rows: { title: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: number | boolean; source_url?: string | null; source_type?: string | null; source_fetched_at?: string | null }[]): Promise<Document[]>;
+  updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean; source_url?: string | null; source_type?: string | null; source_fetched_at?: string | null }[]): Promise<Document[]>;
   deleteMany(ids: string[]): Promise<void>;
   /** Vector similarity search. Returns null if not supported (SQLite). */
   semanticSearch?(queryEmbedding: number[], filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]>;

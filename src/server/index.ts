@@ -18,6 +18,7 @@ import { projectRoutes } from "./routes/projects";
 import { taskRoutes } from "./routes/tasks";
 import { activityLogRoutes } from "./routes/activity-log";
 import { documentRoutes } from "./routes/documents";
+import { sourceRoutes } from "./routes/sources";
 import { createMcpHttpHandler } from "../mcp/server";
 import type { ServerWebSocket } from "bun";
 
@@ -57,7 +58,8 @@ export class Server {
     app.use("/api/*", logger((str) => process.stderr.write(str + "\n")));
     app.route("/api/projects", projectRoutes(ctx.projectService, ctx.taskService, ctx.taskDependencyService));
     app.route("/api/tasks", taskRoutes(ctx.taskService, ctx.taskDependencyService));
-    app.route("/api/documents", documentRoutes(ctx.documentService));
+    app.route("/api/documents", documentRoutes(ctx.documentService, ctx.sourceService));
+    app.route("/api/sources", sourceRoutes(ctx.sourceService));
     app.route("/api/activity-log", activityLogRoutes(ctx.activityLogService));
     app.get("/api/health", async (c) => {
       let dbOk = false;

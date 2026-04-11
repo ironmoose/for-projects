@@ -1,4 +1,4 @@
-import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType, DocumentReferenceType } from './entities';
+import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType, DocumentReferenceType, SourceType } from './entities';
 
 /**
  * Merge-patch for document references on an entity.
@@ -23,6 +23,13 @@ export interface UpdateDocumentInput {
   summary?: string | null;
   content?: string | null;
   folder?: string | null;
+  tags?: TagName[];
+  favorite?: boolean;
+}
+
+export interface ImportDocumentInput {
+  url: string;
+  folder?: string;
   tags?: TagName[];
   favorite?: boolean;
 }

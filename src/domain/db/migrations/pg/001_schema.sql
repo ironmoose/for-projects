@@ -48,15 +48,18 @@ CREATE INDEX IF NOT EXISTS idx_tasks_group_key ON tasks(project_id, group_key);
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS documents (
-    id          TEXT PRIMARY KEY,
-    title       TEXT NOT NULL,
-    summary     TEXT,
-    content     TEXT,
-    folder      TEXT,
-    favorite    BOOLEAN NOT NULL DEFAULT false,
-    embedding   vector(768),
-    created_at  TIMESTAMPTZ NOT NULL,
-    updated_at  TIMESTAMPTZ NOT NULL
+    id                TEXT PRIMARY KEY,
+    title             TEXT NOT NULL,
+    summary           TEXT,
+    content           TEXT,
+    folder            TEXT,
+    favorite          BOOLEAN NOT NULL DEFAULT false,
+    source_url        TEXT,
+    source_type       TEXT,
+    source_fetched_at TIMESTAMPTZ,
+    embedding         vector(768),
+    created_at        TIMESTAMPTZ NOT NULL,
+    updated_at        TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_documents_folder ON documents(folder);
 

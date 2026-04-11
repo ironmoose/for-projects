@@ -16,6 +16,7 @@ function toDocumentSummary(r: SemanticSearchResult): DocumentSummary {
     folder: r.folder,
     has_content: r.has_content,
     favorite: r.favorite,
+    source_type: null,
     tags: r.tags,
     linked_projects: r.linked_projects,
     created_at: r.created_at,
@@ -23,7 +24,7 @@ function toDocumentSummary(r: SemanticSearchResult): DocumentSummary {
   };
 }
 
-export function useDocuments(filter?: { tag?: string; title?: string; favorite?: boolean; folder?: string; project_id?: string }, options?: { semanticSearch?: boolean }) {
+export function useDocuments(filter?: { tag?: string; title?: string; favorite?: boolean; folder?: string; project_id?: string }, options?: { semanticSearch?: boolean; pageSize?: number }) {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -46,6 +47,8 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
       const currentFilter = filterRef.current;
       const useSemanticSearch = optionsRef.current?.semanticSearch && currentFilter?.title?.trim();
 
+      const effectivePageSize = optionsRef.current?.pageSize ?? PAGE_SIZE;
+
       if (useSemanticSearch) {
         // Semantic search mode — query is the title filter text
         const results = await searchDocuments({
@@ -53,7 +56,7 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
           tag: currentFilter?.tag,
           folder: currentFilter?.folder,
           favorite: currentFilter?.favorite || undefined,
-          limit: PAGE_SIZE,
+          limit: effectivePageSize,
         });
         setDocuments(results.map(toDocumentSummary));
         setTotal(results.length);
@@ -64,8 +67,8 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
         const body = await fetchDocuments({
           ...rest,
           ...(project_id ? { entity_type: "project", entity_id: project_id } : {}),
-          limit: PAGE_SIZE,
-          offset: (pageRef.current - 1) * PAGE_SIZE,
+          limit: effectivePageSize,
+          offset: (pageRef.current - 1) * effectivePageSize,
         });
         setDocuments(body.data);
         setTotal(body.total);
@@ -86,7 +89,7 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
 
   useEffect(() => {
     setPage(1);
-  }, [filter?.tag, filter?.title, filter?.favorite, filter?.folder, filter?.project_id]);
+  }, [filter?.tag, filter?.title, filter?.favorite, filter?.folder, filter?.project_id, options?.pageSize]);
 
   useEffect(() => {
     setLoading(true);
@@ -94,9 +97,10 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
     return subscribeEvents((event) => {
       if (event.entity_type === "document") throttledLoad();
     });
-  }, [subscribeEvents, throttledLoad, page, filter?.tag, filter?.title, filter?.favorite, filter?.folder, filter?.project_id, options?.semanticSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscribeEvents, throttledLoad, page, filter?.tag, filter?.title, filter?.favorite, filter?.folder, filter?.project_id, options?.semanticSearch, options?.pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const effectivePageSize = options?.pageSize ?? PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
 
   async function create(input: { title: string; summary?: string; content?: string; tags?: string[]; favorite?: boolean; folder?: string | null }) {
     await createDocuments([input]);

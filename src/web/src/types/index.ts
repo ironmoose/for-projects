@@ -23,6 +23,7 @@ export type {
   EntityType,
   ActivityAction,
   TagName,
+  SourceType,
 } from '@domain/entities';
 
 export {
@@ -35,6 +36,7 @@ export {
   TAG_NAMES,
   TAG_CATEGORIES,
   DOCUMENT_REFERENCE_TYPES,
+  SOURCE_TYPES,
 } from '@domain/entities';
 
 // ---------------------------------------------------------------------------

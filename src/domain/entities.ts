@@ -15,6 +15,9 @@ export type DocumentReferenceType = typeof DOCUMENT_REFERENCE_TYPES[number];
 export const DEPENDENCY_TYPES = ['blocks', 'relates_to'] as const;
 export type DependencyType = typeof DEPENDENCY_TYPES[number];
 
+export const SOURCE_TYPES = ['github'] as const;
+export type SourceType = typeof SOURCE_TYPES[number];
+
 export const ENTITY_TYPES = ['project', 'task', 'document'] as const;
 export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
 
@@ -132,6 +135,9 @@ export interface Document {
   content: string | null;
   folder: string | null;
   favorite: boolean;
+  source_url: string | null;
+  source_type: SourceType | null;
+  source_fetched_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -148,6 +154,7 @@ export interface DocumentSummary {
   folder: string | null;
   has_content: boolean;
   favorite: boolean;
+  source_type: SourceType | null;
   tags: TagName[];
   linked_projects: LinkedProject[];
   created_at: string;
@@ -196,6 +203,7 @@ export function toDocumentSummary(doc: Document, tags: TagName[] = [], linked_pr
     folder: doc.folder,
     has_content: doc.content != null,
     favorite: doc.favorite,
+    source_type: doc.source_type ?? null,
     tags,
     linked_projects,
     created_at: doc.created_at, updated_at: doc.updated_at,
