@@ -125,19 +125,32 @@ export class PgDocumentRepository {
     const where = this.sql`WHERE ${conditions.reduce((a, b) => this.sql`${a} AND ${b}`)}`;
 
     // Hybrid scoring: vector similarity + keyword boost for title/summary matches.
-    // Title match adds +0.15, summary-only match adds +0.05.
-    // This corrects ranking for short keyword queries where exact title matches
-    // should outrank semantically-adjacent but topically-off results.
+    // Boost scales inversely with query length — short keyword queries benefit
+    // most from exact matching; longer natural language queries lean on vectors.
     const queryText = filter?.queryText;
 
-    const similarityExpr = queryText
-      ? this.sql`(1 - (d.embedding <=> ${vectorStr}::vector)) + CASE
+    const similarityExpr = (() => {
+      if (!queryText) return this.sql`1 - (d.embedding <=> ${vectorStr}::vector)`;
+
+      // Scale boost inversely with query word count:
+      //   1-2 words → full boost (keyword queries like "Agent")
+      //   3-5 words → half boost (short phrases)
+      //   6+  words → minimal boost (natural language, let vectors dominate)
+      const wordCount = queryText.trim().split(/\s+/).length;
+      const boostScale = wordCount <= 2 ? 1.0 : wordCount <= 5 ? 0.5 : 0.15;
+
+      // Numeric boost literals are inlined via sql.unsafe() to avoid Postgres
+      // type inference issues with parameterized CASE/THEN values (see 466fc86).
+      const titleBoost = this.sql.unsafe((0.15 * boostScale).toFixed(4));
+      const summaryBoost = this.sql.unsafe((0.05 * boostScale).toFixed(4));
+
+      return this.sql`(1 - (d.embedding <=> ${vectorStr}::vector)) + CASE
           WHEN to_tsvector('english', d.title) @@ plainto_tsquery('english', ${queryText})
-            THEN 0.15
+            THEN ${titleBoost}
           WHEN to_tsvector('english', coalesce(d.summary, '')) @@ plainto_tsquery('english', ${queryText})
-            THEN 0.05
-          ELSE 0 END`
-      : this.sql`1 - (d.embedding <=> ${vectorStr}::vector)`;
+            THEN ${summaryBoost}
+          ELSE 0 END`;
+    })();
 
     // Fetch documents ranked by hybrid score
     const docs = await this.sql<{ id: string; title: string; summary: string | null; folder: string | null; favorite: boolean; has_content: boolean; created_at: string; updated_at: string; similarity: string }[]>`

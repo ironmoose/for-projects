@@ -1736,15 +1736,30 @@ describe("Semantic Search (pgvector)", () => {
     expect(pureB).toBeTruthy();
     expect(pureA!.similarity).toBeCloseTo(pureB!.similarity, 5);
 
-    // With queryText "Agent" — title match should boost docWithKeyword
+    // With short queryText "Agent" (1 word) — full title boost of 0.15
     const hybridResults = await repo.semanticSearch(sameVec, { limit: 10, queryText: "Agent" });
     const hybridA = hybridResults.find((r) => r.document_id === docWithKeyword.id);
     const hybridB = hybridResults.find((r) => r.document_id === docWithout.id);
     expect(hybridA).toBeTruthy();
     expect(hybridB).toBeTruthy();
     expect(hybridA!.similarity).toBeGreaterThan(hybridB!.similarity);
-    // Title boost should add ~0.15
     expect(hybridA!.similarity - hybridB!.similarity).toBeCloseTo(0.15, 1);
+
+    // With medium queryText (4 words) — half boost of 0.075
+    const medResults = await repo.semanticSearch(sameVec, { limit: 10, queryText: "Agent architecture design patterns" });
+    const medA = medResults.find((r) => r.document_id === docWithKeyword.id);
+    const medB = medResults.find((r) => r.document_id === docWithout.id);
+    expect(medA).toBeTruthy();
+    expect(medB).toBeTruthy();
+    expect(medA!.similarity - medB!.similarity).toBeCloseTo(0.075, 2);
+
+    // With long queryText (7 words) — minimal boost of 0.0225
+    const longResults = await repo.semanticSearch(sameVec, { limit: 10, queryText: "how do agent orchestration patterns work overall" });
+    const longA = longResults.find((r) => r.document_id === docWithKeyword.id);
+    const longB = longResults.find((r) => r.document_id === docWithout.id);
+    expect(longA).toBeTruthy();
+    expect(longB).toBeTruthy();
+    expect(longA!.similarity - longB!.similarity).toBeCloseTo(0.0225, 2);
   });
 });
 
