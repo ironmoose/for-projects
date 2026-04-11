@@ -308,7 +308,7 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
           {doc.title}
         </span>
         {/* Source indicator */}
-        {doc.source_type && (
+        {doc.source_type && !doc.source_url && (
           <Icon name="link" size={compact ? 12 : 13} style={{ color: theme.color.textFaint, flexShrink: 0, marginTop: 2 }} title="Imported from external source" />
         )}
         {/* Compact: project count + favorite inline */}
@@ -368,6 +368,33 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
           </div>
         ) : (
           <div style={{ flex: 1 }} />
+        )}
+
+        {/* Source provenance */}
+        {doc.source_type && doc.source_url && (
+          <a
+            href={doc.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title={doc.source_url}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 3,
+              fontSize: theme.font.size.xxs,
+              color: theme.color.textMuted,
+              textDecoration: "none",
+              flexShrink: 0,
+              padding: "1px 6px",
+              borderRadius: theme.radius.sm,
+              background: theme.color.surfaceRaised,
+              border: `1px solid ${theme.color.borderSubtle}`,
+            }}
+          >
+            <Icon name="link" size={10} />
+            {doc.source_type}
+          </a>
         )}
 
         {/* Date */}

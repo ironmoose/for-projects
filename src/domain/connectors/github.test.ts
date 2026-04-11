@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { parseGitHubUrl, parseGitHubRepoUrl, toRawUrl, deriveTitle, deriveSuggestedFolder, GitHubConnector } from './github';
+import { parseGitHubUrl, parseGitHubRepoUrl, toRawUrl, deriveTitle, GitHubConnector } from './github';
 import { ConnectorRegistry } from './registry';
 
 describe('parseGitHubUrl', () => {
@@ -61,28 +61,6 @@ describe('deriveTitle', () => {
   it('extracts filename from nested path', () => {
     expect(deriveTitle({ owner: 'o', repo: 'r', ref: 'main', path: 'docs/api/guide.md' }))
       .toBe('o/r — guide.md');
-  });
-});
-
-describe('deriveSuggestedFolder', () => {
-  it('returns repo prefix for root files', () => {
-    expect(deriveSuggestedFolder({ owner: 'facebook', repo: 'react', ref: 'main', path: 'README.md' }))
-      .toBe('facebook-react');
-  });
-
-  it('includes directory path for nested files', () => {
-    expect(deriveSuggestedFolder({ owner: 'facebook', repo: 'react', ref: 'main', path: 'src/components/Button.tsx' }))
-      .toBe('facebook-react/src/components');
-  });
-
-  it('handles single-level nesting', () => {
-    expect(deriveSuggestedFolder({ owner: 'o', repo: 'r', ref: 'main', path: 'docs/guide.md' }))
-      .toBe('o-r/docs');
-  });
-
-  it('lowercases everything', () => {
-    expect(deriveSuggestedFolder({ owner: 'Facebook', repo: 'React', ref: 'main', path: 'Src/Utils.ts' }))
-      .toBe('facebook-react/src');
   });
 });
 

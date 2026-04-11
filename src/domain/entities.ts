@@ -155,6 +155,7 @@ export interface DocumentSummary {
   has_content: boolean;
   favorite: boolean;
   source_type: SourceType | null;
+  source_url: string | null;
   tags: TagName[];
   linked_projects: LinkedProject[];
   created_at: string;

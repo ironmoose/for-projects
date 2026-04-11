@@ -58,8 +58,7 @@ export class SourceService implements ISourceService {
       throw new ServiceError(`Failed to fetch from source: ${msg}`, 502);
     }
 
-    // Use connector's suggested folder when none specified
-    const effectiveFolder = folder ?? (result.suggestedFolder || null);
+    const effectiveFolder = folder;
 
     const now = new Date().toISOString();
     const [doc] = await this.documentRepo.insertMany([{

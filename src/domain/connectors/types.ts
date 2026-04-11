@@ -2,8 +2,6 @@ export interface FetchResult {
   title: string;
   content: string;
   summary?: string;
-  /** Suggested folder for grouping (e.g., "owner-repo"). Connector-derived, user can override. */
-  suggestedFolder?: string;
 }
 
 /** An entry in a repository file tree. */

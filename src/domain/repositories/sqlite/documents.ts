@@ -73,9 +73,9 @@ export class DocumentRepository {
     params.push(limit, offset);
 
     const rows = this.db
-      .query(`SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content, d.folder, d.favorite, d.source_type, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
+      .query(`SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content, d.folder, d.favorite, d.source_type, d.source_url, d.created_at, d.updated_at FROM documents d${join} ${where}ORDER BY d.created_at DESC LIMIT ? OFFSET ?`)
       .all(...params) as (Omit<DocumentSummary, "has_content" | "favorite" | "tags"> & { has_content: number; favorite: number })[];
-    return rows.map((r) => ({ ...r, has_content: !!r.has_content, folder: r.folder ?? null, favorite: !!r.favorite, source_type: r.source_type ?? null, tags: [] as string[] })) as DocumentSummary[];
+    return rows.map((r) => ({ ...r, has_content: !!r.has_content, folder: r.folder ?? null, favorite: !!r.favorite, source_type: r.source_type ?? null, source_url: r.source_url ?? null, tags: [] as string[] })) as DocumentSummary[];
   }
 
   async count(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; doc_ids?: string[] }): Promise<number> {

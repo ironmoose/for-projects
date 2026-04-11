@@ -44,20 +44,6 @@ export function deriveTitle(parsed: ParsedGitHubUrl): string {
 }
 
 /**
- * Derive a nested folder path from a GitHub file URL.
- * e.g., owner=facebook, repo=react, path=src/components/Button.tsx
- *   → "facebook-react/src/components"
- * Root files (README.md) → "facebook-react"
- */
-export function deriveSuggestedFolder(parsed: ParsedGitHubUrl): string {
-  const repoPrefix = `${parsed.owner}-${parsed.repo}`.toLowerCase();
-  const parts = parsed.path.split('/');
-  if (parts.length <= 1) return repoPrefix; // file at repo root
-  const dirPath = parts.slice(0, -1).join('/').toLowerCase();
-  return `${repoPrefix}/${dirPath}`;
-}
-
-/**
  * Parse a GitHub repo or tree URL into owner/repo and optional ref/subtree.
  * Accepts:
  *   - https://github.com/owner/repo
@@ -100,7 +86,6 @@ export class GitHubConnector implements SourceConnector {
     return {
       title: deriveTitle(parsed),
       content,
-      suggestedFolder: deriveSuggestedFolder(parsed),
     };
   }
 

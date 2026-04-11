@@ -17,6 +17,7 @@ function toDocumentSummary(r: SemanticSearchResult): DocumentSummary {
     has_content: r.has_content,
     favorite: r.favorite,
     source_type: null,
+    source_url: null,
     tags: r.tags,
     linked_projects: r.linked_projects,
     created_at: r.created_at,

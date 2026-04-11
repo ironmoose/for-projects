@@ -626,7 +626,7 @@ export function DocumentsPage() {
                 : "No documents yet."}
               variant="card"
             />
-          ) : viewMode === "directory" && !isSemanticResults && !titleFilter && !isUnfiledView ? (
+          ) : viewMode === "directory" && !isSemanticResults && !isUnfiledView ? (
             <DirectoryView
               documents={sorted}
               currentPath={directoryPath}
