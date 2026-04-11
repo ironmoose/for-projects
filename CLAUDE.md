@@ -41,7 +41,7 @@ References are "dumb pointers" — they do not enrich the document; the document
 
 `projects`, `tasks`, and `documents` each have a `vector(768)` embedding column (pgvector, nomic-embed-text via Ollama). Embeddings are **opt-in**: set `EMBEDDINGS_ENABLED=true` to activate the pipeline (default: `false`). When disabled, Postgres runs without Ollama and embedding columns stay NULL. Embeddings are generated asynchronously via the embedding pipeline (`embedding-pipeline.ts`) on create/update events.
 
-`buildEmbeddingText()` in `embedding.ts` controls what gets embedded: `title` + `summary`, with `context` and `acceptance_criteria` for tasks (truncated to 2000 chars each via `EMBEDDING_FIELD_LIMIT` to fit within nomic-embed-text's 8K token window). For documents without a summary, the first 500 chars of `content` are used as a fallback (`CONTENT_FALLBACK_LIMIT`). **If the summary column max length changes, update `CONTENT_FALLBACK_LIMIT` to match** — the two should stay in sync so the fallback produces vectors of comparable weight.
+`buildEmbeddingText()` in `embedding.ts` controls what gets embedded: title is repeated 3× (`TITLE_REPEAT`) to dominate the vector, followed by summary (truncated to 200 chars via `SUMMARY_LIMIT`), then `context` and `acceptance_criteria` for tasks (truncated to 500 chars each via `EMBEDDING_FIELD_LIMIT`). For documents without a summary, the first 500 chars of `content` are used as a fallback (`CONTENT_FALLBACK_LIMIT`). Semantic search applies a minimum similarity threshold of 0.4 to filter low-precision results. **If the summary column max length changes, update `CONTENT_FALLBACK_LIMIT` to match** — the two should stay in sync so the fallback produces vectors of comparable weight.
 
 ## Architecture
 
@@ -67,11 +67,11 @@ Core tables: `projects`, `tasks`, `document_references`, `activity_log`.
 **task_dependencies:** `source_task_id`, `target_task_id`, `dependency_type`, `created_at` — supports `blocks` and `relates_to` edge types. Edges are informational only — they do not enforce `is_blocked`, which is a user-managed field on tasks.
 
 Knowledge base tables (migration 009+):
-- `documents` — id, title, summary, content, folder, favorite, created_at, updated_at (top-level entity)
+- `documents` — id, title, summary, content, folder, favorite, source_url, source_type, source_fetched_at, created_at, updated_at (top-level entity). `source_url` (TEXT nullable) is the original external URL; `source_type` (TEXT nullable) identifies the connector (e.g., `'github'`); `source_fetched_at` (TEXT nullable, ISO 8601 UTC) records when content was last fetched.
 - `tags` — id, name (unique index), created_at
 - `entity_tags` — entity_type, entity_id, tag_id (polymorphic join; composite PK; no FK on entity_id)
 
-Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 024 added `folder` column to `documents`. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks. Migration 027 materialized `is_blocked` as a column on tasks (previously computed at read time from dependency edges; now a plain user-managed boolean).
+Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 024 added `folder` column to `documents`. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks. Migration 027 materialized `is_blocked` as a column on tasks (previously computed at read time from dependency edges; now a plain user-managed boolean). Migration 029 added `source_url`, `source_type`, `source_fetched_at` to `documents`.
 
 ### REST API
 
@@ -87,6 +87,8 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 - `GET /api/documents` — list with pagination, `?tag`, `?title`, `?search`, `?favorite`, `?folder`, `?entity_type`+`?entity_id` filters
 - `GET /api/documents/:id` — full content with tags
 - `DELETE /api/documents` — `{ids: [...]}` batch delete
+- `POST /api/documents/import` — `{url, folder?, tags?, favorite?}` — import content from an external URL via source connectors
+- `POST /api/documents/:id/refresh` — re-fetch content from the document's original source
 
 The `documents` field on project/task endpoints uses merge-patch semantics:
 ```json
@@ -111,6 +113,18 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 - **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`
 
 `create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields. `update_task` accepts `is_blocked` boolean. `get_task` returns all fields in the response.
+
+### Source connectors
+
+Plugin system for importing external content into documents. `SourceConnector` interface (`src/domain/connectors/types.ts`) defines two methods: `canHandle(url)` and `fetch(url)`. `ConnectorRegistry` (`registry.ts`) holds registered connectors and resolves URLs to the appropriate one. `SourceService` orchestrates import (create document from URL) and refresh (re-fetch content for an existing document).
+
+Current connectors:
+- `GitHubConnector` — fetches public files and READMEs from GitHub repositories
+
+**Adding a new connector:**
+1. Implement `SourceConnector` interface (`canHandle` + `fetch`)
+2. Add the type string to `SOURCE_TYPES` in `entities.ts`
+3. Register the connector in `bootstrap.ts`
 
 ### Tagging system
 

@@ -22,13 +22,14 @@ export class PgDocumentRepository {
 
     const rows = await this.sql<(Omit<DocumentSummary, "has_content" | "tags"> & { has_content: boolean })[]>`
       SELECT d.id, d.title, d.summary, (d.content IS NOT NULL) as has_content,
-        d.folder, d.favorite, d.created_at, d.updated_at
+        d.folder, d.favorite, d.source_type, d.created_at, d.updated_at
       FROM documents d ${join} ${where}
       ORDER BY d.created_at DESC LIMIT ${limit} OFFSET ${offset}
     `;
     return rows.map((r) => ({
       ...r,
       folder: r.folder ?? null,
+      source_type: r.source_type ?? null,
       tags: [] as string[],
       linked_projects: [],
     })) as DocumentSummary[];
@@ -42,27 +43,31 @@ export class PgDocumentRepository {
     return Number(row.total);
   }
 
-  async insertMany(rows: { title: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: number | boolean }[]): Promise<Document[]> {
+  async insertMany(rows: { title: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: number | boolean; source_url?: string | null; source_type?: string | null; source_fetched_at?: string | null }[]): Promise<Document[]> {
     const now = new Date().toISOString();
     const results: Document[] = [];
 
     for (const row of rows) {
       const id = ulid();
       const favorite = !!(row.favorite);
+      const source_url = row.source_url ?? null;
+      const source_type = row.source_type ?? null;
+      const source_fetched_at = row.source_fetched_at ?? null;
       await this.sql`
-        INSERT INTO documents (id, title, summary, content, folder, favorite, created_at, updated_at)
-        VALUES (${id}, ${row.title}, ${row.summary ?? null}, ${row.content ?? null}, ${row.folder ?? null}, ${favorite}, ${now}, ${now})
+        INSERT INTO documents (id, title, summary, content, folder, favorite, source_url, source_type, source_fetched_at, created_at, updated_at)
+        VALUES (${id}, ${row.title}, ${row.summary ?? null}, ${row.content ?? null}, ${row.folder ?? null}, ${favorite}, ${source_url}, ${source_type}, ${source_fetched_at}, ${now}, ${now})
       `;
       results.push({
         id, title: row.title, summary: row.summary ?? null,
         content: row.content ?? null, folder: row.folder ?? null,
-        favorite, created_at: now, updated_at: now,
+        favorite, source_url, source_type: (source_type as Document['source_type']),
+        source_fetched_at, created_at: now, updated_at: now,
       });
     }
     return results;
   }
 
-  async updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean }[]): Promise<Document[]> {
+  async updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean; source_url?: string | null; source_type?: string | null; source_fetched_at?: string | null }[]): Promise<Document[]> {
     const now = new Date().toISOString();
     const results: Document[] = [];
 
@@ -75,13 +80,17 @@ export class PgDocumentRepository {
       const content = row.content !== undefined ? row.content : existing.content;
       const folder = row.folder !== undefined ? row.folder : existing.folder;
       const favorite = row.favorite !== undefined ? row.favorite : existing.favorite;
+      const source_url = row.source_url !== undefined ? row.source_url : existing.source_url;
+      const source_type = row.source_type !== undefined ? row.source_type : existing.source_type;
+      const source_fetched_at = row.source_fetched_at !== undefined ? row.source_fetched_at : existing.source_fetched_at;
 
       await this.sql`
         UPDATE documents SET title = ${title}, summary = ${summary}, content = ${content},
-          folder = ${folder}, favorite = ${favorite}, updated_at = ${now}
+          folder = ${folder}, favorite = ${favorite}, source_url = ${source_url},
+          source_type = ${source_type}, source_fetched_at = ${source_fetched_at}, updated_at = ${now}
         WHERE id = ${row.id}
       `;
-      results.push({ id: row.id, title, summary, content, folder, favorite, created_at: existing.created_at, updated_at: now });
+      results.push({ id: row.id, title, summary, content, folder, favorite, source_url, source_type: (source_type as Document['source_type']), source_fetched_at, created_at: existing.created_at, updated_at: now });
     }
     return results;
   }
@@ -93,9 +102,13 @@ export class PgDocumentRepository {
 
   async semanticSearch(queryEmbedding: number[], filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]> {
     const limit = filter?.limit ?? 20;
+    const MIN_SIMILARITY = 0.4;
     const vectorStr = `[${queryEmbedding.join(",")}]`;
 
-    const conditions: Fragment[] = [this.sql`d.embedding IS NOT NULL`];
+    const conditions: Fragment[] = [
+      this.sql`d.embedding IS NOT NULL`,
+      this.sql`1 - (d.embedding <=> ${vectorStr}::vector) >= ${MIN_SIMILARITY}`,
+    ];
     let join: Fragment = this.sql``;
 
     if (filter?.tag) {

@@ -117,12 +117,22 @@ export function createEmbeddingService(options?: Partial<OllamaOptions>): Embedd
 /** Max characters of content to use as a summary fallback for embedding. */
 const CONTENT_FALLBACK_LIMIT = 500;
 
+/** Max characters of summary to include in embedding text. */
+const SUMMARY_LIMIT = 200;
+
 /**
  * Max characters of context/acceptance_criteria to include in embedding text.
- * nomic-embed-text has an 8192-token context window (~32K chars). We cap these
- * fields so that title + summary + context + AC fit comfortably within that limit.
+ * Kept short so title dominates the vector — verbose fields dilute
+ * search discrimination as the document count grows.
  */
-const EMBEDDING_FIELD_LIMIT = 2000;
+const EMBEDDING_FIELD_LIMIT = 500;
+
+/**
+ * Number of times to repeat the title in the embedding text.
+ * Repetition increases the title's weight in the resulting vector,
+ * making search more responsive to title-level concepts.
+ */
+const TITLE_REPEAT = 3;
 
 export function buildEmbeddingText(entity: {
   title?: string;
@@ -133,9 +143,11 @@ export function buildEmbeddingText(entity: {
   requirements?: string | null;
 }): string {
   const parts: string[] = [];
-  if (entity.title) parts.push(entity.title);
+  if (entity.title) {
+    for (let i = 0; i < TITLE_REPEAT; i++) parts.push(entity.title);
+  }
   if (entity.summary) {
-    parts.push(entity.summary);
+    parts.push(entity.summary.slice(0, SUMMARY_LIMIT));
   } else if (entity.content) {
     parts.push(entity.content.slice(0, CONTENT_FALLBACK_LIMIT));
   }
