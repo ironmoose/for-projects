@@ -83,8 +83,9 @@ export class DocumentService implements IDocumentService {
         throw new ServiceError("content must be 50000 characters or fewer", 400);
       }
       if (input.folder !== undefined) {
-        input.folder = normalizeFolder(input.folder);
-        if (input.folder !== null && !isValidFolder(input.folder)) {
+        const normalizedFolder = normalizeFolder(input.folder);
+        input.folder = normalizedFolder ?? undefined;
+        if (normalizedFolder !== null && !isValidFolder(normalizedFolder)) {
           throw new ServiceError("folder must be lowercase alphanumeric, hyphens, dots, underscores, and forward slashes, max 255 chars", 400);
         }
       }
@@ -146,8 +147,9 @@ export class DocumentService implements IDocumentService {
         throw new ServiceError("content must be 50000 characters or fewer", 400);
       }
       if (input.folder !== undefined) {
-        input.folder = normalizeFolder(input.folder);
-        if (input.folder !== null && !isValidFolder(input.folder)) {
+        const normalizedFolder = normalizeFolder(input.folder);
+        input.folder = normalizedFolder;
+        if (normalizedFolder !== null && !isValidFolder(normalizedFolder)) {
           throw new ServiceError("folder must be lowercase alphanumeric, hyphens, dots, underscores, and forward slashes, max 255 chars", 400);
         }
       }

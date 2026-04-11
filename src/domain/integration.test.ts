@@ -301,8 +301,8 @@ describe("Task CRUD", () => {
     expect(withFields!.has_context).toBe(true);
     expect(withFields!.has_acceptance_criteria).toBe(true);
     // Summary should not include the full text fields
-    expect((withFields as Record<string, unknown>)["context"]).toBeUndefined();
-    expect((withFields as Record<string, unknown>)["acceptance_criteria"]).toBeUndefined();
+    expect((withFields as unknown as Record<string, unknown>)["context"]).toBeUndefined();
+    expect((withFields as unknown as Record<string, unknown>)["acceptance_criteria"]).toBeUndefined();
 
     expect(withoutFields).toBeTruthy();
     expect(withoutFields!.has_context).toBe(false);

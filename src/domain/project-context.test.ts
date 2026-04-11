@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { bootstrap, type AppContext } from "./bootstrap";
+import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory } from "./entities";
 
 let ctx: AppContext;
 let tempDir: string;
@@ -27,7 +28,7 @@ async function createProject(title: string, summary?: string) {
   return p;
 }
 
-async function createTask(projectId: string, title: string, opts?: { status?: string; effort?: string; impact?: string; category?: string; group_key?: string }) {
+async function createTask(projectId: string, title: string, opts?: { status?: TaskStatus; effort?: EffortLevel; impact?: ImpactLevel; category?: TaskCategory; group_key?: string }) {
   const [t] = await ctx.taskService.create([{
     project_id: projectId,
     title,
@@ -79,11 +80,12 @@ describe("ProjectContextService", () => {
       max_tokens: 8000,
     });
 
-    const health = result.health as Record<string, Record<string, number>>;
+    const health = result.health as Record<string, unknown>;
     expect(health.total_tasks).toBe(4);
-    expect(health.by_status.todo).toBe(2);
-    expect(health.by_status.in_progress).toBe(1);
-    expect(health.by_status.done).toBe(1);
+    const byStatus = (health as Record<string, Record<string, number>>).by_status;
+    expect(byStatus.todo).toBe(2);
+    expect(byStatus.in_progress).toBe(1);
+    expect(byStatus.done).toBe(1);
   });
 
   it("includes blocked tasks in blockers section", async () => {

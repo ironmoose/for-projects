@@ -205,6 +205,7 @@ export function toDocumentSummary(doc: Document, tags: TagName[] = [], linked_pr
     has_content: doc.content != null,
     favorite: doc.favorite,
     source_type: doc.source_type ?? null,
+    source_url: doc.source_url ?? null,
     tags,
     linked_projects,
     created_at: doc.created_at, updated_at: doc.updated_at,
