@@ -15,6 +15,7 @@ import {
   type ITaskService,
   type ITaskDependencyService,
   type IDocumentService,
+  type ISourceService,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -22,6 +23,7 @@ export interface McpServiceContext {
   taskService: ITaskService;
   taskDependencyService: ITaskDependencyService;
   documentService: IDocumentService;
+  sourceService: ISourceService;
 }
 
 async function handle<T>(fn: () => T | Promise<T>) {
@@ -60,7 +62,7 @@ const documentsMergePatchSchema = z.record(
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, taskDependencyService, documentService } = ctx;
+  const { projectService, taskService, taskDependencyService, documentService, sourceService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -323,6 +325,24 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ query, tag, folder, favorite, limit }) => handle(() => documentService.semanticSearch(query, { tag, folder, favorite, limit }))
+  );
+
+  // -- Source import ----------------------------------------------------
+
+  server.registerTool(
+    "import_document",
+    {
+      description: "Import a document from an external URL using a source connector (e.g. GitHub files and READMEs). The connector auto-detects the source type from the URL, fetches the content, and creates a document. Returns the created document with tags.",
+      inputSchema: {
+        items: z.array(z.object({
+          url: z.string().max(2048).describe("External URL to import (e.g. a GitHub file URL)"),
+          folder: z.string().max(64).optional().describe("Flat folder grouping. Lowercase alphanumeric + hyphens only."),
+          tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
+          favorite: z.boolean().optional(),
+        })),
+      },
+    },
+    ({ items }) => handle(() => sourceService.importBatch(items))
   );
 
   return server;

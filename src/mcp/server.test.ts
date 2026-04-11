@@ -1161,3 +1161,24 @@ describe("dependency error cases via MCP", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Import document via MCP
+// ---------------------------------------------------------------------------
+
+describe("import_document", () => {
+  it("returns error for unsupported URL", async () => {
+    const result = await callTool("import_document", {
+      items: [{ url: "https://example.com/not-a-known-source" }],
+    });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/no connector/i);
+  });
+
+  it("returns error when url is empty", async () => {
+    const result = await callTool("import_document", {
+      items: [{ url: "" }],
+    });
+    expect(result.isError).toBe(true);
+  });
+});
+
