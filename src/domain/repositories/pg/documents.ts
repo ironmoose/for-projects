@@ -128,16 +128,14 @@ export class PgDocumentRepository {
     // Title match adds +0.15, summary-only match adds +0.05.
     // This corrects ranking for short keyword queries where exact title matches
     // should outrank semantically-adjacent but topically-off results.
-    const TITLE_BOOST = 0.15;
-    const SUMMARY_BOOST = 0.05;
     const queryText = filter?.queryText;
 
     const similarityExpr = queryText
       ? this.sql`(1 - (d.embedding <=> ${vectorStr}::vector)) + CASE
           WHEN to_tsvector('english', d.title) @@ plainto_tsquery('english', ${queryText})
-            THEN ${TITLE_BOOST}
+            THEN 0.15
           WHEN to_tsvector('english', coalesce(d.summary, '')) @@ plainto_tsquery('english', ${queryText})
-            THEN ${SUMMARY_BOOST}
+            THEN 0.05
           ELSE 0 END`
       : this.sql`1 - (d.embedding <=> ${vectorStr}::vector)`;
 
