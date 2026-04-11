@@ -192,7 +192,7 @@ export class ProjectContextService implements IProjectContextService {
     const todo = allTasks.filter((t) => t.status === "todo" && !t.is_blocked).map(toTaskBrief);
     const recentlyDone = allTasks
       .filter((t) => t.status === "done")
-      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+      .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))
       .slice(0, 10)
       .map(toTaskBrief);
 
@@ -217,7 +217,7 @@ export class ProjectContextService implements IProjectContextService {
         return allTasks.some((t) => t.id === a.entity_id);
       }),
     ]
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
       .slice(0, 20)
       .map(toActivityBrief);
 
