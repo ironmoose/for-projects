@@ -22,42 +22,67 @@ bun run dev
 
 ```
 src/
-├── domain/                  Core business logic and data access
-│   ├── index.ts             Domain barrel export
-│   ├── args.ts              CLI argument parsing and server utilities
-│   ├── bootstrap.ts         Wires up DB, repositories, and services
-│   ├── entities.ts          Entity types (Project, Task)
-│   ├── errors.ts            ServiceError
-│   ├── inputs.ts            Create/Update input types
-│   ├── services.ts          Service interfaces
-│   ├── statuses.ts          Status enums
+├── index.ts                     Entry point (#!/usr/bin/env bun)
+├── domain/                      Core business logic and data access
+│   ├── bootstrap.ts             Wires up DB, repositories, services, connectors
+│   ├── entities.ts              Entity types, enums, and validation constants
+│   ├── events.ts                Domain event bus (for embedding pipeline)
+│   ├── embedding.ts             Ollama embedding client and text builder
+│   ├── embedding-pipeline.ts    Event-driven async embedding generation
+│   ├── embedding-backfill.ts    One-time backfill for migrated data
+│   ├── connectors/              Source connectors (GitHub, etc.)
+│   │   ├── types.ts             SourceConnector interface
+│   │   ├── registry.ts          ConnectorRegistry — resolves URLs to connectors
+│   │   └── github.ts            GitHubConnector — files and READMEs
 │   ├── db/
-│   │   ├── connection.ts    SQLite connection (bun:sqlite, WAL mode)
-│   │   └── schema.ts        Table definitions and migrations
+│   │   ├── connection.ts        SQLite connection (bun:sqlite, WAL mode)
+│   │   ├── pg-connection.ts     PostgreSQL connection (postgres.js)
+│   │   ├── migrator.ts          SQLite migration runner
+│   │   ├── pg-migrator.ts       PostgreSQL migration runner
+│   │   └── migrations/
+│   │       ├── sqlite/          29 SQLite migration files
+│   │       └── pg/              4 PostgreSQL migration files (with pgvector)
 │   ├── repositories/
-│   │   ├── projects.ts      ProjectRepository — all SQL for projects
-│   │   └── tasks.ts         TaskRepository — all SQL for tasks
+│   │   ├── sqlite/              SQLite implementations (7 repositories)
+│   │   └── pg/                  PostgreSQL implementations (9 repositories, incl. embedding)
 │   └── services/
-│       ├── projects.ts      ProjectService
-│       └── tasks.ts         TaskService
-├── server/                  Single Hono server (API + MCP + static web)
-│   ├── index.ts             Entrypoint — Server class, starts on port 3000
+│       ├── projects.ts          ProjectService
+│       ├── tasks.ts             TaskService
+│       ├── documents.ts         DocumentService (incl. semantic search)
+│       ├── activity-log.ts      ActivityLogService
+│       ├── document-references.ts  DocumentReferenceService
+│       ├── task-dependencies.ts TaskDependencyService
+│       └── sources.ts           SourceService (import, refresh, repo browsing)
+├── server/                      Single Hono server (API + MCP + static web)
+│   ├── index.ts                 Server class, middleware, WebSocket handler
 │   └── routes/
-│       ├── projects.ts      HTTP handlers for /api/projects
-│       └── tasks.ts         HTTP handlers for /api/projects/:id/tasks
-├── mcp/                     MCP tool definitions
-│   ├── index.ts             MCP barrel export
-│   ├── server.ts            MCP tool registration and HTTP handler
-│   └── standalone.ts        Standalone MCP server (for separate-process use)
-└── web/                     Vite + React frontend
-    ├── index.html
+│       ├── projects.ts          /api/projects
+│       ├── tasks.ts             /api/tasks
+│       ├── documents.ts         /api/documents (incl. import, search, refresh)
+│       ├── sources.ts           /api/sources (GitHub tree browsing)
+│       ├── activity-log.ts      /api/activity-log
+│       └── validation.ts        Shared input validation helpers
+├── mcp/                         MCP tool definitions (14 tools)
+│   ├── server.ts                MCP tool registration and HTTP handler
+│   └── standalone.ts            Standalone MCP server (for separate-process use)
+└── web/                         Vite + React frontend
     ├── vite.config.ts
     ├── tsconfig.json
     └── src/
         ├── main.tsx
         ├── App.tsx
         ├── api.ts
-        └── components/
+        ├── components/          UI component library (atoms, molecules, organisms)
+        ├── hooks/               Custom React hooks
+        └── pages/               Page components (dashboard, projects, documents, etc.)
+scripts/
+├── prune-activity-log.ts        Clean up old activity log entries
+├── migrate-sqlite-to-pg.ts      SQLite → PostgreSQL data migration
+└── smoke-tests/
+    ├── pg-migration-test.ts     Test Postgres migrations end-to-end
+    ├── pg-smoke-test.ts         Verify schema, vectors, HNSW indexes
+    ├── embedding-smoke-test.ts  Test Ollama embedding pipeline
+    └── semantic-search-smoke-test.ts  Test vector similarity search
 ```
 
 ## Architecture
@@ -67,7 +92,8 @@ src/
 Everything runs in one process on one port (default 3000):
 
 - `/api/*` — REST API (with request logging)
-- `/mcp` — MCP endpoint (no logging)
+- `/mcp` — MCP endpoint (14 tools, no logging)
+- `/ws` — WebSocket (broadcast-only domain events)
 - `/*` — static web assets + SPA fallback
 
 ### Request lifecycle
@@ -75,15 +101,15 @@ Everything runs in one process on one port (default 3000):
 An HTTP request flows through three layers:
 
 ```
-Route handler  →  Service  →  Repository  →  SQLite
+Route handler  →  Service  →  Repository  →  SQLite or PostgreSQL
 ```
 
-1. **Route handlers** (`src/server/routes/`) parse the request, validate input, and return HTTP responses. They never write SQL.
+1. **Route handlers** (`src/server/routes/`) parse the request and return HTTP responses. They never write SQL.
 2. **Services** (`src/domain/services/`) contain business logic and validation. They sit between route handlers and repositories.
-3. **Repositories** (`src/domain/repositories/`) own all database queries. They accept typed inputs, return typed outputs, and are the only code that imports `bun:sqlite`.
-4. **Database** (`src/domain/db/`) manages the connection and schema. Migrations run once at startup.
+3. **Repositories** (`src/domain/repositories/sqlite/` or `pg/`) own all database queries. They accept typed inputs and return typed outputs.
+4. **Database** (`src/domain/db/`) manages connections and migrations. Migrations run once at startup.
 
-This separation means you can test business logic by swapping in a mock repository, and you can change query structure without touching HTTP code.
+The app auto-detects the backend: if `DATABASE_URL` is set it uses PostgreSQL, otherwise SQLite. Repository interfaces are identical across backends — the service layer doesn't know which database it's talking to.
 
 ### Dependency wiring
 
@@ -100,63 +126,73 @@ Most features follow the same steps:
 
 ### 1. Add the migration
 
-Add a `CREATE TABLE` statement to `src/domain/db/schema.ts`:
+Add a new numbered SQL file in `src/domain/db/migrations/sqlite/` (and `pg/` if supporting PostgreSQL). The migrator runs files in order by filename.
 
-```typescript
-db.run(`
-  CREATE TABLE IF NOT EXISTS tasks (
+```sql
+-- src/domain/db/migrations/sqlite/030_my_feature.sql
+CREATE TABLE IF NOT EXISTS my_table (
     id          TEXT PRIMARY KEY,
-    project_id  TEXT NOT NULL REFERENCES projects(id),
     title       TEXT NOT NULL,
-    status      TEXT NOT NULL DEFAULT 'todo',
-    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-  )
-`);
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
 ```
+
+Convention: no DEFAULT values in the schema — the service layer provides all values explicitly.
 
 ### 2. Create the repository
 
-Add `src/domain/repositories/tasks.ts`. Define your types and a repository class:
+Add a repository in `src/domain/repositories/sqlite/` (and `pg/` for PostgreSQL). Implement the shared interface:
 
 ```typescript
-export interface Task { ... }
-export type CreateTaskInput = Pick<Task, "project_id" | "title">;
-
-export class TaskRepository {
+// src/domain/repositories/sqlite/my-feature.ts
+export class MyFeatureRepository {
   constructor(private db: Database) {}
 
-  findByProject(projectId: string): Task[] { ... }
-  create(input: CreateTaskInput): Task { ... }
+  findAll(): MyFeature[] { ... }
+  create(input: CreateMyFeatureInput): MyFeature { ... }
 }
 ```
 
-### 3. Create the route handler
+### 3. Create the service
 
-Add `src/server/routes/tasks.ts`. Accept the service as a parameter:
+Add a service in `src/domain/services/`. Services own validation and business logic:
 
 ```typescript
-export function taskRoutes(service: ITaskService): Hono {
+export class MyFeatureService {
+  constructor(private repo: MyFeatureRepository) {}
+
+  create(input: CreateMyFeatureInput): MyFeature {
+    // validate, then delegate to repo
+  }
+}
+```
+
+### 4. Create the route handler
+
+Add `src/server/routes/my-feature.ts`. Accept the service as a parameter:
+
+```typescript
+export function myFeatureRoutes(service: IMyFeatureService): Hono {
   const app = new Hono();
-  app.get("/", (c) => c.json(service.findByProjectId(c.req.param("projectId")!)));
+  app.get("/", (c) => c.json(service.findAll()));
   return app;
 }
 ```
 
-### 4. Wire it up
+### 5. Wire it up
 
-In `src/server/index.ts`:
+In `src/domain/bootstrap.ts`, create the repository and service. In `src/server/index.ts`, mount the route:
 
 ```typescript
-const ctx = bootstrap();
-app.route("/api/projects/:projectId/tasks", taskRoutes(ctx.taskService));
+app.route("/api/my-feature", myFeatureRoutes(ctx.myFeatureService));
 ```
 
-### 5. Test it
+### 6. Test it
 
 ```bash
-bun run dev &
-curl -s http://localhost:3000/api/tasks?project_id=... | jq
+bun test                    # Run automated tests
+curl -s http://localhost:3000/api/my-feature | jq   # Manual check
 ```
 
 ## Conventions
@@ -165,8 +201,9 @@ curl -s http://localhost:3000/api/tasks?project_id=... | jq
 - **IDs** are ULIDs, generated server-side. Never accept client-generated IDs.
 - **Timestamps** are ISO 8601 strings in UTC.
 - **SQL lives in repositories only.** If you're writing a query in a route handler or service, move it to the repository.
-- **No ORMs.** We use raw SQL via `bun:sqlite`. Keep queries simple and readable.
-- **Validation happens in route handlers.** Return `400` with a `{"error": "..."}` body for bad input.
+- **No ORMs.** Raw SQL via `bun:sqlite` (SQLite) or `postgres` (PostgreSQL). Keep queries simple and readable.
+- **Validation happens in services.** Route handlers parse HTTP input and return errors; services enforce business rules.
+- **No DEFAULT values in the schema.** Services provide all column values explicitly.
 
 ## Running tests
 
@@ -175,6 +212,19 @@ bun test
 ```
 
 Tests use an in-memory SQLite database so they run fast and don't touch your local data.
+
+### Smoke tests (PostgreSQL + embeddings)
+
+These verify the Postgres backend, pgvector indexes, and Ollama integration. They require Docker Compose services to be running (`docker compose up -d`).
+
+```bash
+bun scripts/smoke-tests/pg-migration-test.ts           # Drop + recreate schema, run all migrations
+bun scripts/smoke-tests/pg-smoke-test.ts               # Verify schema, vector columns, HNSW indexes
+bun scripts/smoke-tests/embedding-smoke-test.ts        # Generate a test embedding via Ollama
+bun scripts/smoke-tests/semantic-search-smoke-test.ts  # Insert test data and run vector search
+```
+
+Run these after changes to Postgres migrations, repositories, schema, or embedding code.
 
 ## Testing locally
 

@@ -267,6 +267,18 @@ Project and task create/update endpoints accept a `documents` field with merge-p
 - **Key with null** — removes all references to that document.
 - **Key absent** — no change.
 
+### Document Import
+
+Import content from external URLs into the knowledge base via source connectors.
+
+```
+POST   /api/documents/import               Import from URL  { url, folder?, tags?, favorite? }
+POST   /api/documents/:id/refresh           Re-fetch content from original source
+GET    /api/sources/github/tree?repo=...    Browse files in a GitHub repository
+```
+
+The import endpoint detects the source type (currently GitHub) and fetches the content automatically. Imported documents track their `source_url`, `source_type`, and `source_fetched_at` so they can be refreshed later.
+
 ### Other Endpoints
 
 ```
@@ -378,6 +390,26 @@ bun scripts/smoke-tests/pg-smoke-test.ts               # Schema, vectors, indexe
 bun scripts/smoke-tests/embedding-smoke-test.ts        # Ollama embedding pipeline
 bun scripts/smoke-tests/semantic-search-smoke-test.ts  # Vector similarity search
 ```
+
+### Managing Embeddings
+
+Embeddings power semantic search and require PostgreSQL with pgvector and Ollama running the `nomic-embed-text` model. The Docker Compose stack handles all of this automatically.
+
+**How it works:** When `EMBEDDINGS_ENABLED=true`, an event-driven pipeline listens for entity creates and updates. Each change triggers an async embedding generation via Ollama — the HTTP request returns immediately while the embedding is computed in the background.
+
+**Verifying the pipeline:**
+
+```bash
+# Verify Ollama is healthy and the model is loaded
+bun scripts/smoke-tests/embedding-smoke-test.ts
+
+# Verify vector search returns ranked results
+bun scripts/smoke-tests/semantic-search-smoke-test.ts
+```
+
+**Backfill after migration:** When migrating from SQLite to PostgreSQL, existing entities have no embeddings. The server automatically runs a one-time backfill on startup — it finds all rows with `NULL` embedding columns and generates vectors for them. Progress is logged to the console.
+
+**Manual verification:** The health endpoint at `/api/health` reports Ollama connectivity and the current backend type. If `ollama` shows as unreachable, embeddings will degrade gracefully — search falls back to keyword matching and new entities simply skip embedding generation.
 
 ### SQLite to PostgreSQL Migration
 

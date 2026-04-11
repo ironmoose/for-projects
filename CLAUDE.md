@@ -46,12 +46,12 @@ References are "dumb pointers" — they do not enrich the document; the document
 ## Architecture
 
 ```
-Route handler → Service → Repository → SQLite
+Route handler → Service → Repository → SQLite or PostgreSQL
 ```
 
 Single process, single port (default 3000):
 - `/api/*` — REST API (projects, tasks, documents, activity-log, health)
-- `/mcp` — MCP endpoint (13 tools: create/read/update for projects, tasks, documents; dependency graph)
+- `/mcp` — MCP endpoint (14 tools: create/read/update/search for projects, tasks, documents; dependency graph)
 - `/*` — static web assets + SPA fallback
 
 ### Data model
@@ -89,6 +89,8 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 - `DELETE /api/documents` — `{ids: [...]}` batch delete
 - `POST /api/documents/import` — `{url, folder?, tags?, favorite?}` — import content from an external URL via source connectors
 - `POST /api/documents/:id/refresh` — re-fetch content from the document's original source
+- `GET /api/documents/search?q=...` — semantic vector search (Postgres + embeddings only); additional filters: `tag`, `folder`, `favorite`, `limit`
+- `GET /api/sources/github/tree?repo=owner/repo&q=filter` — browse files in a GitHub repository
 
 The `documents` field on project/task endpoints uses merge-patch semantics:
 ```json
@@ -106,11 +108,13 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 
 ### MCP tools
 
-13 tools total (no delete tools — deletion is REST-only):
+14 tools total (no delete tools — deletion is REST-only):
 - **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`
 - **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`
 - **Dependencies:** `get_dependency_graph` (returns tasks and edges only; no blocker computation)
-- **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`
+- **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`, `search_documents`
+
+`search_documents` performs semantic vector search (Postgres + embeddings only). Returns documents ranked by hybrid similarity (vector + keyword boost). Parameters: `query` (required), `tag`, `folder`, `favorite`, `limit`.
 
 `create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields. `update_task` accepts `is_blocked` boolean. `get_task` returns all fields in the response.
 
