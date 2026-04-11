@@ -100,7 +100,7 @@ export class PgDocumentRepository {
     await this.sql`DELETE FROM documents WHERE id IN ${this.sql(ids)}`;
   }
 
-  async semanticSearch(queryEmbedding: number[], filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]> {
+  async semanticSearch(queryEmbedding: number[], filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number; queryText?: string }): Promise<SemanticSearchResult[]> {
     const limit = filter?.limit ?? 20;
     const MIN_SIMILARITY = 0.4;
     const vectorStr = `[${queryEmbedding.join(",")}]`;
@@ -124,14 +124,31 @@ export class PgDocumentRepository {
 
     const where = this.sql`WHERE ${conditions.reduce((a, b) => this.sql`${a} AND ${b}`)}`;
 
-    // Fetch documents ranked by cosine similarity
+    // Hybrid scoring: vector similarity + keyword boost for title/summary matches.
+    // Title match adds +0.15, summary-only match adds +0.05.
+    // This corrects ranking for short keyword queries where exact title matches
+    // should outrank semantically-adjacent but topically-off results.
+    const TITLE_BOOST = 0.15;
+    const SUMMARY_BOOST = 0.05;
+    const queryText = filter?.queryText;
+
+    const similarityExpr = queryText
+      ? this.sql`(1 - (d.embedding <=> ${vectorStr}::vector)) + CASE
+          WHEN to_tsvector('english', d.title) @@ plainto_tsquery('english', ${queryText})
+            THEN ${TITLE_BOOST}
+          WHEN to_tsvector('english', coalesce(d.summary, '')) @@ plainto_tsquery('english', ${queryText})
+            THEN ${SUMMARY_BOOST}
+          ELSE 0 END`
+      : this.sql`1 - (d.embedding <=> ${vectorStr}::vector)`;
+
+    // Fetch documents ranked by hybrid score
     const docs = await this.sql<{ id: string; title: string; summary: string | null; folder: string | null; favorite: boolean; has_content: boolean; created_at: string; updated_at: string; similarity: string }[]>`
       SELECT d.id, d.title, d.summary, d.folder, d.favorite,
         (d.content IS NOT NULL AND d.content <> '') as has_content,
         d.created_at, d.updated_at,
-        1 - (d.embedding <=> ${vectorStr}::vector) as similarity
+        ${similarityExpr} as similarity
       FROM documents d ${join} ${where}
-      ORDER BY d.embedding <=> ${vectorStr}::vector
+      ORDER BY similarity DESC
       LIMIT ${limit}
     `;
 

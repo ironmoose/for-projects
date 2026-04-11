@@ -1713,6 +1713,39 @@ describe("Semantic Search (pgvector)", () => {
     expect(idxA).toBeLessThan(idxB);
     expect(results[idxA].similarity).toBeGreaterThan(results[idxB].similarity);
   });
+
+  it("semanticSearch hybrid boost ranks title matches higher", async () => {
+    const sql = ctx.pg!;
+    const { PgDocumentRepository } = await import("./repositories/pg/documents");
+    const repo = new PgDocumentRepository(sql);
+
+    // Two docs with identical embeddings — only title differs
+    const [docWithKeyword] = await ctx.documentService.create([{ title: "Agent Architecture Guide", summary: "How agents work" }]);
+    const [docWithout] = await ctx.documentService.create([{ title: "REST API Reference", summary: "Endpoint documentation" }]);
+
+    const sameVec = new Array(768).fill(0.1);
+    const vecStr = `[${sameVec.join(",")}]`;
+    await sql`UPDATE documents SET embedding = ${vecStr}::vector WHERE id = ${docWithKeyword.id}`;
+    await sql`UPDATE documents SET embedding = ${vecStr}::vector WHERE id = ${docWithout.id}`;
+
+    // Without queryText — same vector means same score, tied ranking
+    const pureResults = await repo.semanticSearch(sameVec, { limit: 10 });
+    const pureA = pureResults.find((r) => r.document_id === docWithKeyword.id);
+    const pureB = pureResults.find((r) => r.document_id === docWithout.id);
+    expect(pureA).toBeTruthy();
+    expect(pureB).toBeTruthy();
+    expect(pureA!.similarity).toBeCloseTo(pureB!.similarity, 5);
+
+    // With queryText "Agent" — title match should boost docWithKeyword
+    const hybridResults = await repo.semanticSearch(sameVec, { limit: 10, queryText: "Agent" });
+    const hybridA = hybridResults.find((r) => r.document_id === docWithKeyword.id);
+    const hybridB = hybridResults.find((r) => r.document_id === docWithout.id);
+    expect(hybridA).toBeTruthy();
+    expect(hybridB).toBeTruthy();
+    expect(hybridA!.similarity).toBeGreaterThan(hybridB!.similarity);
+    // Title boost should add ~0.15
+    expect(hybridA!.similarity - hybridB!.similarity).toBeCloseTo(0.15, 1);
+  });
 });
 
 }); // end describe.skipIf

@@ -217,7 +217,7 @@ export class DocumentService implements IDocumentService {
     const queryEmbedding = await this.embeddingService.embedQuery(query);
     if (!queryEmbedding) return [];
 
-    const results = await this.documentRepo.semanticSearch(queryEmbedding, filter);
+    const results = await this.documentRepo.semanticSearch(queryEmbedding, { ...filter, queryText: query });
     if (results.length === 0) return results;
 
     // Enrich with tags and linked projects (same pattern as list())
