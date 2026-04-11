@@ -195,4 +195,10 @@ export class DocumentRepository {
     const placeholders = ids.map(() => "?").join(", ");
     this.db.query(`DELETE FROM documents WHERE id IN (${placeholders})`).run(...ids);
   }
+
+  async findIdsByFolder(folder: string): Promise<string[]> {
+    const escaped = folder.replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const rows = this.db.query("SELECT id FROM documents WHERE folder = ? OR folder LIKE ? ESCAPE '\\'").all(folder, escaped + "/%") as { id: string }[];
+    return rows.map((r) => r.id);
+  }
 }

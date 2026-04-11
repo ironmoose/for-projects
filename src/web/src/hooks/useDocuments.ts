@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ApiError, createDocuments, deleteDocuments, fetchDocuments, searchDocuments, updateDocuments } from "../api";
+import { ApiError, createDocuments, deleteDocuments, deleteDocumentsByFolder, fetchDocuments, searchDocuments, updateDocuments } from "../api";
 import type { DocumentSummary, SemanticSearchResult } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToastContext } from "../components/ToastContext";
@@ -115,5 +115,9 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
     await deleteDocuments(ids);
   }
 
-  return { documents, loading, total, totalPages, page, setPage, create, update, remove, isSemanticResults };
+  async function removeByFolder(folder: string) {
+    await deleteDocumentsByFolder(folder);
+  }
+
+  return { documents, loading, total, totalPages, page, setPage, create, update, remove, removeByFolder, isSemanticResults };
 }

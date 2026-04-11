@@ -47,6 +47,7 @@ export interface IDocumentRepository {
   insertMany(rows: { title: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: number | boolean; source_url?: string | null; source_type?: string | null; source_fetched_at?: string | null }[]): Promise<Document[]>;
   updateMany(rows: { id: string; title?: string; summary?: string | null; content?: string | null; folder?: string | null; favorite?: boolean; source_url?: string | null; source_type?: string | null; source_fetched_at?: string | null }[]): Promise<Document[]>;
   deleteMany(ids: string[]): Promise<void>;
+  findIdsByFolder(folder: string): Promise<string[]>;
   /** Vector similarity search. Returns null if not supported (SQLite). */
   semanticSearch?(queryEmbedding: number[], filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number; queryText?: string }): Promise<SemanticSearchResult[]>;
 }

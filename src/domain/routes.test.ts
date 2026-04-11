@@ -758,6 +758,92 @@ describe("Document Routes", () => {
     expect(check.status).toBe(404);
   });
 
+  it("DELETE /documents by folder deletes all docs in that folder", async () => {
+    // Create docs in a folder and one outside it
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          { title: "Folder Doc 1", folder: "delete-test" },
+          { title: "Folder Doc 2", folder: "delete-test" },
+          { title: "Other Doc", folder: "keep-this" },
+        ],
+      }),
+    });
+
+    const res = await req("/documents", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder: "delete-test" }),
+    });
+    expect(res.status).toBe(204);
+
+    // Docs in the folder should be gone
+    const listRes = await req("/documents?folder=delete-test");
+    const list = await listRes.json();
+    expect(list.data.length).toBe(0);
+
+    // Doc in other folder should remain
+    const otherRes = await req("/documents?folder=keep-this");
+    const other = await otherRes.json();
+    expect(other.data.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("DELETE /documents by folder deletes nested subfolders recursively", async () => {
+    await req("/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          { title: "Root Doc", folder: "recursive-test" },
+          { title: "Child Doc", folder: "recursive-test/sub" },
+          { title: "Deep Doc", folder: "recursive-test/sub/deep" },
+          { title: "Sibling Doc", folder: "recursive-test-other" },
+        ],
+      }),
+    });
+
+    const res = await req("/documents", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder: "recursive-test" }),
+    });
+    expect(res.status).toBe(204);
+
+    // All docs under recursive-test (including nested) should be gone
+    const listRes = await req("/documents?folder=recursive-test");
+    expect((await listRes.json()).data.length).toBe(0);
+    const subRes = await req("/documents?folder=recursive-test/sub");
+    expect((await subRes.json()).data.length).toBe(0);
+    const deepRes = await req("/documents?folder=recursive-test/sub/deep");
+    expect((await deepRes.json()).data.length).toBe(0);
+
+    // Sibling folder with similar prefix should NOT be deleted
+    const siblingRes = await req("/documents?folder=recursive-test-other");
+    expect((await siblingRes.json()).data.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("DELETE /documents rejects both ids and folder", async () => {
+    const res = await req("/documents", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: ["fake-id"], folder: "some-folder" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("not both");
+  });
+
+  it("DELETE /documents rejects empty body", async () => {
+    const res = await req("/documents", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("PATCH /documents with tags=[] clears all tags", async () => {
     const create = await req("/documents", {
       method: "POST",

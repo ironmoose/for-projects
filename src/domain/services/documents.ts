@@ -191,6 +191,12 @@ export class DocumentService implements IDocumentService {
     return results;
   }
 
+  async removeByFolder(folder: string): Promise<void> {
+    const ids = await this.documentRepo.findIdsByFolder(folder);
+    if (ids.length === 0) return;
+    await this.remove(ids);
+  }
+
   async remove(ids: string[]): Promise<void> {
     for (const id of ids) {
       if (this.docRefRepo) await this.docRefRepo.removeAllForDocument(id);

@@ -410,6 +410,7 @@ export function DocumentsPage() {
 
   // Entity state
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null);
+  const [deleteFolderTarget, setDeleteFolderTarget] = useState<{ path: string; docCount: number } | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [showImportOverlay, setShowImportOverlay] = useState(false);
@@ -432,7 +433,7 @@ export function DocumentsPage() {
   const useSemanticSearch = semanticSearchAvailable && semanticMode;
   // Directory mode needs all documents to build the tree; grid mode uses standard pagination
   const pageSize = viewMode === "directory" ? 500 : undefined;
-  const { documents, loading, total, totalPages, page, setPage, create, update, remove, isSemanticResults } = useDocuments(
+  const { documents, loading, total, totalPages, page, setPage, create, update, remove, removeByFolder, isSemanticResults } = useDocuments(
     Object.keys(filter).length > 0 ? filter : undefined,
     { semanticSearch: useSemanticSearch, pageSize },
   );
@@ -486,6 +487,20 @@ export function DocumentsPage() {
       setDeleteTarget(null);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Failed to delete document");
+    }
+  }
+
+  async function handleDeleteFolder() {
+    if (!deleteFolderTarget) return;
+    try {
+      await removeByFolder(deleteFolderTarget.path);
+      setDeleteFolderTarget(null);
+      // If we were viewing inside the deleted folder, navigate back to root
+      if (directoryPath === deleteFolderTarget.path || directoryPath.startsWith(deleteFolderTarget.path + "/")) {
+        setDirectoryPath("");
+      }
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to delete folder");
     }
   }
 
@@ -635,6 +650,7 @@ export function DocumentsPage() {
               onSelectUnfiled={() => { setDirectoryPath(""); setFolderFilter("__unfiled__"); }}
               onSelectDocument={(id) => setSelectedDocumentId(id)}
               onDeleteDocument={(doc) => setDeleteTarget(doc)}
+              onDeleteFolder={(path, docCount) => setDeleteFolderTarget({ path, docCount })}
               onToggleFavorite={(doc) => update(doc.id, { favorite: !doc.favorite })}
             />
           ) : (
@@ -679,6 +695,15 @@ export function DocumentsPage() {
           message={`Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {deleteFolderTarget && (
+        <ConfirmDialog
+          title="Delete Folder"
+          message={`Delete all ${deleteFolderTarget.docCount} document${deleteFolderTarget.docCount !== 1 ? "s" : ""} in "${deleteFolderTarget.path}"? This action cannot be undone.`}
+          onConfirm={handleDeleteFolder}
+          onCancel={() => setDeleteFolderTarget(null)}
         />
       )}
 
@@ -791,7 +816,7 @@ function BreadcrumbLink({ label, icon, onClick, theme }: { label: string; icon?:
 
 function DirectoryView({
   documents, currentPath, selectedDocumentId,
-  onNavigate, onSelectUnfiled, onSelectDocument, onDeleteDocument, onToggleFavorite,
+  onNavigate, onSelectUnfiled, onSelectDocument, onDeleteDocument, onDeleteFolder, onToggleFavorite,
 }: {
   documents: DocumentSummary[];
   currentPath: string;
@@ -800,6 +825,7 @@ function DirectoryView({
   onSelectUnfiled: () => void;
   onSelectDocument: (id: string) => void;
   onDeleteDocument: (doc: DocumentSummary) => void;
+  onDeleteFolder: (path: string, docCount: number) => void;
   onToggleFavorite: (doc: DocumentSummary) => void;
 }) {
   const { theme } = useTheme();
@@ -831,6 +857,7 @@ function DirectoryView({
         currentPath={currentPath}
         onNavigate={onNavigate}
         onSelectUnfiled={onSelectUnfiled}
+        onDeleteFolder={onDeleteFolder}
       />
 
       {/* Documents at this level */}

@@ -224,6 +224,10 @@ export async function deleteDocuments(ids: string[]): Promise<void> {
   await apiFetch("/api/documents", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
+export async function deleteDocumentsByFolder(folder: string): Promise<void> {
+  await apiFetch("/api/documents", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder }) });
+}
+
 export async function searchDocuments(params: { q: string; tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]> {
   const res = await apiFetch(`/api/documents/search${qs(params)}`);
   return res.json();

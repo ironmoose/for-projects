@@ -12,6 +12,8 @@ interface FolderTileGridProps {
   onNavigate: (path: string) => void;
   /** Called when "Unfiled" is selected */
   onSelectUnfiled: () => void;
+  /** Called when user requests to delete a folder */
+  onDeleteFolder?: (folderPath: string, docCount: number) => void;
 }
 
 interface FolderEntry {
@@ -100,7 +102,7 @@ function computeLevel(documents: DocumentSummary[], currentPath: string) {
   return { folders, directDocs, unfiledDocs };
 }
 
-export function FolderTileGrid({ documents, currentPath, onNavigate, onSelectUnfiled }: FolderTileGridProps) {
+export function FolderTileGrid({ documents, currentPath, onNavigate, onSelectUnfiled, onDeleteFolder }: FolderTileGridProps) {
   const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const columns = windowWidth >= SMALL_BREAKPOINT ? 3 : 2;
@@ -127,6 +129,7 @@ export function FolderTileGrid({ documents, currentPath, onNavigate, onSelectUnf
           key={f.fullPath}
           folder={f}
           onClick={() => onNavigate(f.fullPath)}
+          onDelete={onDeleteFolder ? () => onDeleteFolder(f.fullPath, f.totalDocs) : undefined}
         />
       ))}
       {!currentPath && unfiledDocs.length > 0 && (
@@ -140,7 +143,7 @@ export function FolderTileGrid({ documents, currentPath, onNavigate, onSelectUnf
 // Folder tile
 // ---------------------------------------------------------------------------
 
-function FolderTile({ folder, onClick }: { folder: FolderEntry; onClick: () => void }) {
+function FolderTile({ folder, onClick, onDelete }: { folder: FolderEntry; onClick: () => void; onDelete?: () => void }) {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
 
@@ -184,6 +187,24 @@ function FolderTile({ folder, onClick }: { folder: FolderEntry; onClick: () => v
         >
           {folder.name}
         </span>
+        {onDelete && hovered && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            title="Delete folder"
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 24, height: 24, padding: 0,
+              border: "none", borderRadius: theme.radius.sm,
+              background: "transparent", cursor: "pointer",
+              color: theme.color.textFaint,
+              transition: "color 0.12s",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = theme.color.error; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = theme.color.textFaint; }}
+          >
+            <Icon name="delete" size={16} />
+          </button>
+        )}
       </div>
 
       {/* Meta row */}

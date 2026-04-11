@@ -100,6 +100,12 @@ export class PgDocumentRepository {
     await this.sql`DELETE FROM documents WHERE id IN ${this.sql(ids)}`;
   }
 
+  async findIdsByFolder(folder: string): Promise<string[]> {
+    const escaped = folder.replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const rows = await this.sql<{ id: string }[]>`SELECT id FROM documents WHERE folder = ${folder} OR folder LIKE ${escaped + "/%"} ESCAPE '\\'`;
+    return rows.map((r) => r.id);
+  }
+
   async semanticSearch(queryEmbedding: number[], filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number; queryText?: string }): Promise<SemanticSearchResult[]> {
     const limit = filter?.limit ?? 20;
     const MIN_SIMILARITY = 0.4;

@@ -68,6 +68,7 @@ export interface IDocumentService {
   create(inputs: CreateDocumentInput[]): Promise<(Document & { tags: string[] })[]>;
   update(inputs: UpdateDocumentInput[]): Promise<(Document & { tags: string[] })[]>;
   remove(ids: string[]): Promise<void>;
+  removeByFolder(folder: string): Promise<void>;
   /** Semantic search — returns documents ranked by vector similarity with their reference context. Returns empty array on SQLite. */
   semanticSearch(query: string, filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]>;
 }

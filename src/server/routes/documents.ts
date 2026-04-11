@@ -101,9 +101,16 @@ export function documentRoutes(service: IDocumentService, sourceService?: ISourc
 
   // DELETE /api/documents
   app.delete("/", async (c) => {
-    const body = await c.req.json<{ ids: string[] }>();
-    if (!Array.isArray(body.ids)) return c.json({ error: "ids array is required" }, 400);
-    await service.remove(body.ids);
+    const body = await c.req.json<{ ids?: string[]; folder?: string }>();
+    const hasIds = Array.isArray(body.ids);
+    const hasFolder = typeof body.folder === "string" && body.folder.trim() !== "";
+    if (hasIds && hasFolder) return c.json({ error: "provide either ids or folder, not both" }, 400);
+    if (!hasIds && !hasFolder) return c.json({ error: "ids array or folder string is required" }, 400);
+    if (hasFolder) {
+      await service.removeByFolder(body.folder!);
+    } else {
+      await service.remove(body.ids!);
+    }
     return c.body(null, 204);
   });
 
