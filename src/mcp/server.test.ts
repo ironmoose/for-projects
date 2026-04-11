@@ -1182,3 +1182,95 @@ describe("import_document", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// get_project_context
+// ---------------------------------------------------------------------------
+
+describe("get_project_context", () => {
+  it("returns context with project info and health snapshot", async () => {
+    const [project] = parseResult(
+      await callTool("create_project", { items: [{ title: "Context Test", summary: "Testing context tool" }] })
+    );
+
+    await callTool("create_task", { items: [
+      { project_id: project.id, title: "Task A", status: "todo" },
+      { project_id: project.id, title: "Task B", status: "in_progress" },
+      { project_id: project.id, title: "Task C", status: "done" },
+    ] });
+
+    const result = parseResult(await callTool("get_project_context", { project_id: project.id }));
+
+    expect(result.project.title).toBe("Context Test");
+    expect(result.project.summary).toBe("Testing context tool");
+    expect(result.health.total_tasks).toBe(3);
+    expect(result.health.by_status.todo).toBe(1);
+    expect(result.health.by_status.in_progress).toBe(1);
+    expect(result.health.by_status.done).toBe(1);
+    expect(result._meta).toBeDefined();
+    expect(result._meta.focus).toBe("full");
+    expect(typeof result._meta.estimated_tokens).toBe("number");
+  });
+
+  it("respects max_tokens parameter", async () => {
+    const [project] = parseResult(
+      await callTool("create_project", { items: [{ title: "Budget Context" }] })
+    );
+    for (let i = 0; i < 10; i++) {
+      await callTool("create_task", { items: [{ project_id: project.id, title: `Task ${i}` }] });
+    }
+
+    const small = parseResult(await callTool("get_project_context", {
+      project_id: project.id,
+      max_tokens: 300,
+    }));
+    const large = parseResult(await callTool("get_project_context", {
+      project_id: project.id,
+      max_tokens: 10000,
+    }));
+
+    expect(small._meta.estimated_tokens).toBeLessThan(large._meta.estimated_tokens);
+  });
+
+  it("supports focus parameter", async () => {
+    const [project] = parseResult(
+      await callTool("create_project", { items: [{ title: "Focus Test" }] })
+    );
+
+    const blockers = parseResult(await callTool("get_project_context", {
+      project_id: project.id,
+      focus: "blockers",
+    }));
+    expect(blockers._meta.focus).toBe("blockers");
+
+    const active = parseResult(await callTool("get_project_context", {
+      project_id: project.id,
+      focus: "active_work",
+    }));
+    expect(active._meta.focus).toBe("active_work");
+  });
+
+  it("returns error for nonexistent project", async () => {
+    const result = await callTool("get_project_context", { project_id: "00000000000000000000000000" });
+    expect(result.isError).toBe(true);
+  });
+
+  it("includes changes_since when since parameter provided", async () => {
+    const [project] = parseResult(
+      await callTool("create_project", { items: [{ title: "Since Context" }] })
+    );
+
+    const before = new Date().toISOString();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await callTool("create_task", { items: [{ project_id: project.id, title: "New After Since" }] });
+
+    const result = parseResult(await callTool("get_project_context", {
+      project_id: project.id,
+      since: before,
+    }));
+
+    expect(result.changes_since).toBeDefined();
+    expect(result.changes_since.tasks_created.length).toBeGreaterThanOrEqual(1);
+  });
+});
+

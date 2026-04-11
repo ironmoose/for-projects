@@ -19,5 +19,6 @@ export { TaskDependencyRepository } from "./repositories/sqlite/task-dependencie
 export { TaskDependencyService } from "./services/task-dependencies";
 export { ActivityLogService } from "./services/activity-log";
 export { SourceService } from "./services/sources";
+export { ProjectContextService } from "./services/project-context";
 export { ConnectorRegistry, GitHubConnector } from "./connectors";
 export type { SourceConnector, FetchResult, TreeEntry } from "./connectors";

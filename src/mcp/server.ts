@@ -16,6 +16,7 @@ import {
   type ITaskDependencyService,
   type IDocumentService,
   type ISourceService,
+  type IProjectContextService,
 } from "../domain";
 
 export interface McpServiceContext {
@@ -24,6 +25,7 @@ export interface McpServiceContext {
   taskDependencyService: ITaskDependencyService;
   documentService: IDocumentService;
   sourceService: ISourceService;
+  projectContextService: IProjectContextService;
 }
 
 async function handle<T>(fn: () => T | Promise<T>) {
@@ -62,7 +64,7 @@ const documentsMergePatchSchema = z.record(
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, taskDependencyService, documentService, sourceService } = ctx;
+  const { projectService, taskService, taskDependencyService, documentService, sourceService, projectContextService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -343,6 +345,24 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ items }) => handle(() => sourceService.importBatch(items))
+  );
+
+  // -- Project context (agent-optimized) ------------------------------------
+
+  server.registerTool(
+    "get_project_context",
+    {
+      description: "Get a token-budgeted project snapshot optimized for agent context injection. Returns a tiered summary: project health, active blockers, in-progress tasks, todo tasks, recent activity, and linked documents — packed within the token budget. Use `since` to highlight changes since a timestamp (ideal for returning to a project). Use `focus` to prioritize different information: 'blockers' emphasizes blocked tasks and dependencies, 'active_work' emphasizes in-progress and next-up tasks, 'full' (default) provides a balanced overview. Response includes `_meta` with tiers_included, truncated, estimated_tokens, and focus.",
+      inputSchema: {
+        project_id: z.string().max(26),
+        max_tokens: z.number().int().min(200).max(50000).optional().describe("Target token budget for the response. Default 4000. Tier 1 (health + blockers) is always included regardless of budget."),
+        focus: z.enum(["full", "blockers", "active_work"]).optional().describe("Controls which information is prioritized. Default 'full'."),
+        since: z.string().max(30).optional().describe("ISO 8601 timestamp. When provided, a 'changes_since' section is added at highest priority showing tasks and documents created/updated/completed since this time."),
+      },
+    },
+    ({ project_id, max_tokens, focus, since }) => handle(() =>
+      projectContextService.getProjectContext({ project_id, max_tokens, focus, since })
+    )
   );
 
   return server;

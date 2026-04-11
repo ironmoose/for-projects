@@ -62,6 +62,27 @@ export interface ISourceService {
   browseRepo(repoUrl: string, query?: string): Promise<TreeEntry[]>;
 }
 
+export interface ProjectContextMeta {
+  tiers_included: number;
+  truncated: boolean;
+  estimated_tokens: number;
+  focus: string;
+}
+
+export interface ProjectContextResult {
+  _meta: ProjectContextMeta;
+  [key: string]: unknown;
+}
+
+export interface IProjectContextService {
+  getProjectContext(options: {
+    project_id: string;
+    max_tokens?: number;
+    focus?: string;
+    since?: string;
+  }): Promise<ProjectContextResult>;
+}
+
 export interface IDocumentService {
   list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; project_id?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Promise<Paginated<DocumentSummary>>;
   get(id: string): Promise<Document & { tags: string[]; referenced_by: { entity_type: string; entity_id: string; entity_title: string; type: string }[] }>;
