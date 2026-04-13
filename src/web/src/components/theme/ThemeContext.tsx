@@ -1,71 +1,112 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { type Theme, defaultThemeName, themes } from "../theme/theme";
+/**
+ * Compatibility ThemeProvider and useTheme hook.
+ *
+ * Wraps @4lt7ab/ui/core's ThemeProvider and exposes the OLD API
+ * (theme object with nested tokens, themeName string, setTheme function)
+ * so existing components continue to work during incremental migration.
+ *
+ * New components should import directly from @4lt7ab/ui/core:
+ *   import { semantic as t, useTheme } from "@4lt7ab/ui/core";
+ */
 
-const STORAGE_KEY = "pm-theme";
+import { createContext, useContext, useEffect, useMemo } from "react";
+import {
+  ThemeProvider as LibThemeProvider,
+  useTheme as useLibTheme,
+} from "@4lt7ab/ui/core";
+import type { Theme } from "./theme";
+import { themes as legacyThemes } from "./theme";
+import { appThemes, APP_DEFAULT_THEME, APP_STORAGE_KEY } from "./lib-themes";
+import { buildCompatTheme } from "./compat";
 
-interface ThemeContextValue {
+// ---------------------------------------------------------------------------
+// Compat context — carries the legacy Theme object
+// ---------------------------------------------------------------------------
+
+interface CompatThemeContextValue {
   theme: Theme;
   themeName: string;
   setTheme: (name: string) => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue | null>(null);
+const CompatThemeContext = createContext<CompatThemeContextValue | null>(null);
 
-function loadSavedTheme(): string {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && saved in themes) return saved;
-  } catch {}
-  return defaultThemeName;
+// ---------------------------------------------------------------------------
+// Inner bridge: reads from library context, provides compat context
+// ---------------------------------------------------------------------------
+
+function CompatBridge({ children }: { children: React.ReactNode }) {
+  const lib = useLibTheme();
+
+  const value = useMemo<CompatThemeContextValue>(() => {
+    const themeName = lib.theme;
+    // Look up the legacy theme for unmapped tokens (glow, motion, etc.)
+    const legacy = legacyThemes[themeName];
+    // Build compat theme: library CSS vars for mapped tokens, legacy values otherwise
+    const theme = legacy
+      ? buildCompatTheme(legacy)
+      : buildCompatTheme(legacyThemes[APP_DEFAULT_THEME]!);
+
+    return {
+      theme,
+      themeName,
+      setTheme: lib.setTheme,
+    };
+  }, [lib.theme, lib.setTheme]);
+
+  // Sync legacy side-effects: body font, data-synth attribute
+  useEffect(() => {
+    document.body.style.fontFamily = value.theme.font.body;
+    document.body.style.margin = "0";
+
+    const root = document.documentElement;
+    if (value.theme.glow.animated) {
+      root.setAttribute("data-synth", "");
+    } else {
+      root.removeAttribute("data-synth");
+    }
+  }, [value.theme]);
+
+  return (
+    <CompatThemeContext.Provider value={value}>
+      {children}
+    </CompatThemeContext.Provider>
+  );
 }
+
+// ---------------------------------------------------------------------------
+// ThemeProvider — wraps library provider + compat bridge
+// ---------------------------------------------------------------------------
 
 interface ThemeProviderProps {
   children: React.ReactNode;
   /** Override theme selection with a specific theme name. */
   forcedTheme?: string;
-  /** Skip body style effects (useful for nested/isolated providers). */
+  /** Skip body style effects (unused — library handles this via applyPageStyles). */
   isolated?: boolean;
 }
 
-export function ThemeProvider({ children, forcedTheme, isolated }: ThemeProviderProps) {
-  const [themeName, setThemeName] = useState(loadSavedTheme);
-
-  const setTheme = useCallback((name: string) => {
-    if (name in themes) {
-      setThemeName(name);
-      localStorage.setItem(STORAGE_KEY, name);
-    }
-  }, []);
-
-  const effectiveName = forcedTheme && forcedTheme in themes ? forcedTheme : themeName;
-  const t = themes[effectiveName]!;
-
-  useEffect(() => {
-    if (isolated) return;
-    const s = document.body.style;
-    s.backgroundColor = t.color.surface;
-    s.color = t.color.text;
-    s.fontFamily = t.font.body;
-    s.margin = "0";
-
-    // Toggle data-synth on <html> for CSS glow cycling
-    const root = document.documentElement;
-    if (t.glow.animated) {
-      root.setAttribute("data-synth", "");
-    } else {
-      root.removeAttribute("data-synth");
-    }
-  }, [t, isolated]);
-
+export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
   return (
-    <ThemeContext.Provider value={{ theme: t, themeName: effectiveName, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <LibThemeProvider
+      defaultTheme={forcedTheme ?? APP_DEFAULT_THEME}
+      themes={appThemes}
+      storageKey={APP_STORAGE_KEY}
+      applyPageStyles={true}
+    >
+      <CompatBridge>{children}</CompatBridge>
+    </LibThemeProvider>
   );
 }
 
-export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
+// ---------------------------------------------------------------------------
+// useTheme — returns the compat context (old API)
+//
+// For the library's native useTheme, import from "@4lt7ab/ui/core" directly.
+// ---------------------------------------------------------------------------
+
+export function useTheme(): CompatThemeContextValue {
+  const ctx = useContext(CompatThemeContext);
   if (!ctx) throw new Error("useTheme must be used within a ThemeProvider");
   return ctx;
 }

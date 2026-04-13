@@ -1,5 +1,5 @@
 import { type ButtonHTMLAttributes, useState } from "react";
-import { type Theme } from "../theme/theme";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 
 type ButtonVariant = "primary" | "ghost" | "danger" | "icon";
@@ -11,39 +11,43 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
-function getVariantStyles(theme: Theme): Record<ButtonVariant, React.CSSProperties> {
+function getVariantStyles(
+  glow: { animated: boolean; borderMedium: string; borderSubtle: string; borderStrong: string },
+  borderColor: string,
+): Record<ButtonVariant, React.CSSProperties> {
   return {
     primary: {
-      background: theme.color.primaryContainer,
-      color: theme.color.onPrimaryContainer,
+      background: t.colorActionPrimary,
+      color: t.colorTextInverse,
       borderWidth: 1,
       borderStyle: "solid",
-      borderColor: theme.glow.borderStrong !== theme.color.border ? theme.glow.borderMedium : theme.color.primaryContainer,
-      boxShadow: theme.glow.animated
-        ? `0 0 12px ${theme.glow.borderMedium}, inset 0 0 12px ${theme.glow.borderSubtle}`
+      borderColor: glow.animated ? glow.borderMedium : t.colorActionPrimary,
+      boxShadow: glow.animated
+        ? `0 0 12px ${glow.borderMedium}, inset 0 0 12px ${glow.borderSubtle}`
         : "none",
     },
     ghost: {
       background: "transparent",
-      color: theme.color.textMuted,
+      color: t.colorTextMuted,
       borderWidth: 1,
       borderStyle: "solid",
-      borderColor: theme.glow.borderMedium !== theme.color.border ? theme.glow.borderMedium : theme.color.borderSubtle,
+      borderColor: glow.animated ? glow.borderMedium : borderColor,
     },
     danger: {
       background: "transparent",
-      color: theme.color.danger,
+      color: t.colorActionDestructive,
       borderWidth: 1,
       borderStyle: "solid",
-      borderColor: `${theme.color.danger}44`,
-      boxShadow: theme.glow.animated ? `0 0 8px ${theme.color.danger}22` : "none",
+      borderColor: `${t.colorActionDestructive}`,
+      opacity: 0.7,
+      boxShadow: glow.animated ? `0 0 8px ${t.colorActionDestructive}` : "none",
     },
     icon: {
       background: "transparent",
-      color: theme.color.textMuted,
+      color: t.colorTextMuted,
       border: "none",
       padding: "6px",
-      borderRadius: theme.radius.full,
+      borderRadius: t.radiusFull,
     },
   };
 }
@@ -61,12 +65,13 @@ export function Button({
   const [hovered, setHovered] = useState(false);
 
   const sizeStyles: Record<ButtonSize, React.CSSProperties> = {
-    sm: { padding: "0.25rem 0.625rem", fontSize: theme.font.size.sm },
-    md: { padding: "0.5rem 1rem", fontSize: theme.font.size.sm },
+    sm: { padding: `0.25rem 0.625rem`, fontSize: t.fontSizeSm },
+    md: { padding: `0.5rem 1rem`, fontSize: t.fontSizeSm },
   };
 
   const isDisabled = disabled || loading;
 
+  // Glow hover effects are synth-theme-specific; use legacy glow tokens
   const hoverGlow: React.CSSProperties =
     hovered && !isDisabled && variant === "primary" && theme.glow.animated
       ? { boxShadow: `0 0 20px ${theme.glow.borderMedium}, 0 0 40px ${theme.glow.borderLight}, inset 0 0 15px ${theme.glow.borderSubtle}`, borderColor: theme.glow.borderStrong }
@@ -81,14 +86,14 @@ export function Button({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderRadius: theme.radius.lg,
+        borderRadius: t.radiusLg,
         cursor: isDisabled ? "not-allowed" : "pointer",
-        fontFamily: theme.font.body,
+        fontFamily: t.fontSans,
         fontWeight: 600,
         letterSpacing: "0.01em",
         transition: "background 0.15s, opacity 0.15s, border-color 0.15s, filter 0.15s, box-shadow 0.2s",
         opacity: isDisabled ? 0.6 : 1,
-        ...getVariantStyles(theme)[variant],
+        ...getVariantStyles(theme.glow, theme.color.borderSubtle)[variant],
         ...(variant !== "icon" ? sizeStyles[size] : {}),
         ...hoverGlow,
         ...style,
@@ -104,7 +109,7 @@ export function Button({
             height: 14,
             border: `2px solid currentColor`,
             borderTopColor: "transparent",
-            borderRadius: theme.radius.full,
+            borderRadius: t.radiusFull,
             animation: "spin 0.6s linear infinite",
           }}
         />

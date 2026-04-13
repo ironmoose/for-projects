@@ -1,8 +1,18 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
 ## [Unreleased]
+
+### Added
+- `src/web/src/components/theme/lib-themes.ts` — 4 custom ThemeDefinition objects (deepTeal, ember, nord, synth) mapping app colors to @4lt7ab/ui/core token structure
+- `src/web/src/components/theme/compat.ts` — compatibility layer bridging old nested token structure to library CSS var references for incremental migration
+- `src/web/src/components/theme/theme-integration.test.ts` — 43 tests covering ThemeDefinition completeness, color preservation, compat token mapping, and backwards compatibility
+
+### Changed
+- `ThemeContext.tsx` — replaced hand-rolled ThemeProvider/useTheme with @4lt7ab/ui/core ThemeProvider wrapper + compat bridge; old API preserved for existing components
+- `Button.tsx` — migrated to use `semantic` tokens from @4lt7ab/ui/core directly (proof-of-concept for migration pattern); glow effects still use compat theme
+- Theme system now uses @4lt7ab/ui/core as the underlying provider (CSS custom properties on document root, automatic localStorage persistence)
+
+## [0.1.9] - 2026-04-13
 
 ### Changed
 - docker-compose: remove all volumes — containers are now fully ephemeral

@@ -96,7 +96,7 @@ src/
         │   ├── molecules/       # Card, Stack, TagChip, Markdown, SearchToggle, etc.
         │   ├── organisms/       # TopBar, ModalShell, TaskTable, DocumentTable, etc.
         │   ├── templates/       # DetailPageLayout, ListPageLayout
-        │   └── theme/           # theme definitions, ThemeContext, token system
+        │   └── theme/           # ThemeContext (compat wrapper), lib-themes (ThemeDefinitions), compat (migration layer), theme (legacy tokens)
         ├── pages/               # DashboardPage, ProjectPage, DocumentsPage, etc.
         ├── hooks/               # useProject, useDocuments, useEventSubscription, etc.
         ├── gallery/             # component gallery showcase
@@ -240,9 +240,13 @@ templates/   → DetailPageLayout, ListPageLayout
 pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage, GalleryPage
 ```
 
-**Styling:** 100% inline styles via React `style` prop. No CSS files, no CSS modules, no Tailwind. Components read semantic tokens from a custom theme system via `useTheme()` hook. The `@4lt7ab/ui` component library is the target design system — integration is in progress.
+**Styling:** 100% inline styles via React `style` prop. No CSS files, no CSS modules, no Tailwind. Components read semantic tokens from the theme system via `useTheme()` hook. The `@4lt7ab/ui` component library is the underlying design system — migration is in progress.
 
-**Theme system:** 4 themes (deepTeal, ember, nord, synth). Defined in `theme/theme.ts`, provided via `theme/ThemeContext.tsx`. Tokens cover colors, spacing, typography, radius, shadows, motion, and layout constants. The synth theme adds animated canvas backgrounds and cycling CSS glow effects with per-component branches (`themeName === 'synth'`).
+**Theme system:** Powered by `@4lt7ab/ui/core` ThemeProvider. 4 custom themes (deepTeal, ember, nord, synth) defined as `ThemeDefinition` objects in `theme/lib-themes.ts`. The library injects CSS custom properties (`var(--color-text)`, etc.) on the document root. Two import paths coexist during migration:
+- **Old (compat):** `import { useTheme } from "../theme/ThemeContext"` — returns nested token structure (`theme.color.text`, `theme.spacing.md`). Mapped tokens resolve to library CSS vars; unmapped tokens (glow, motion, layout) preserve original values.
+- **New (library):** `import { semantic as t } from "@4lt7ab/ui/core"` — flat token references (`t.colorText`, `t.spaceMd`). Preferred for new/migrated components.
+- Compat layer in `theme/compat.ts`. Legacy theme definitions preserved in `theme/theme.ts` for unmapped tokens.
+- The synth theme adds animated canvas backgrounds and cycling CSS glow effects with per-component branches (`themeName === 'synth'`).
 
 **State management:** React hooks + Context API. No external state libraries. Custom hooks for data fetching (`useProject`, `useDocuments`, etc.), real-time events (`useEventSubscription`), keyboard shortcuts (`useKeyboardShortcuts`), and D3 force simulation (`useForceGraph`).
 
