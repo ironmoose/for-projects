@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Input } from "../atoms/Input";
+import { Input, Field } from "@4lt7ab/ui/ui";
 
 interface FolderInputProps {
   value: string;
@@ -47,14 +47,15 @@ export function FolderInput({ value, folders, onChange, label = "Folder", placeh
 
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
-      <Input
-        label={label}
-        id="document-folder"
-        value={localValue}
-        onChange={(e) => handleInput(e.target.value)}
-        onFocus={() => setOpen(true)}
-        placeholder={placeholder}
-      />
+      <Field label={label} htmlFor="document-folder">
+        <Input
+          id="document-folder"
+          value={localValue}
+          onChange={(e) => handleInput(e.target.value)}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+        />
+      </Field>
       {open && filtered.length > 0 && (
         <div
           style={{

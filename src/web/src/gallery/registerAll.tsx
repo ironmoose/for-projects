@@ -5,7 +5,6 @@ import {
   Badge,
   Icon,
   IconButton,
-  Input,
   SectionLabel,
   MetaValue,
   Card,
@@ -252,19 +251,6 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <IconButton icon={String(props.icon)} size={Number(props.size)} badge={props.badge as boolean} />,
     codeTemplate: `<IconButton icon="settings" size={24} />`,
-    migrated: true,
-  });
-
-  registerComponent({
-    name: "Input",
-    description: "Text input field with optional label.",
-    category: "atom",
-    propDefs: [
-      { name: "label", type: "string", defaultValue: "Label" },
-      { name: "placeholder", type: "string", defaultValue: "Enter text..." },
-    ],
-    render: (props) => <Input label={String(props.label)} placeholder={String(props.placeholder)} />,
-    codeTemplate: `<Input label="Label" placeholder="Enter text..." />`,
     migrated: true,
   });
 
@@ -663,7 +649,9 @@ export function registerAllComponents(): void {
     },
     codeTemplate: [
       '<CreateEntityOverlay title="Create Item" onSubmit={handleSubmit} onClose={handleClose} loading={saving}>',
-      '  <Input label="Title" value={title} onChange={e => setTitle(e.target.value)} />',
+      '  <Field label="Title" htmlFor="item-title">',
+      '    <Input id="item-title" value={title} onChange={e => setTitle(e.target.value)} />',
+      '  </Field>',
       '</CreateEntityOverlay>',
     ].join("\n"),
     migrated: true,

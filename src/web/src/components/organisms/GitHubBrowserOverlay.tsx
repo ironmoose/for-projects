@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Button } from "../atoms/Button";
-import { Input } from "../atoms/Input";
+import { Input, Field } from "@4lt7ab/ui/ui";
 import { Icon } from "../atoms/Icon";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TagPicker } from "../molecules/TagPicker";
@@ -137,14 +137,15 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
       {/* Repo input */}
       <div style={{ display: "flex", gap: t.spaceSm, alignItems: "flex-end" }}>
         <div style={{ flex: 1 }}>
-          <Input
-            label="Repository"
-            id="repo-url"
-            value={repoInput}
-            onChange={(e) => setRepoInput(e.target.value)}
-            placeholder="owner/repo or https://github.com/owner/repo"
-            onKeyDown={(e) => { if (e.key === "Enter") handleBrowse(); }}
-          />
+          <Field label="Repository" htmlFor="repo-url">
+            <Input
+              id="repo-url"
+              value={repoInput}
+              onChange={(e) => setRepoInput(e.target.value)}
+              placeholder="owner/repo or https://github.com/owner/repo"
+              onKeyDown={(e) => { if (e.key === "Enter") handleBrowse(); }}
+            />
+          </Field>
         </div>
         <Button
           size="sm"

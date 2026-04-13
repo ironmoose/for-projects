@@ -1,6 +1,6 @@
 // Atoms
 export { Button } from "./atoms/Button";
-export { Input } from "./atoms/Input";
+export { Input } from "@4lt7ab/ui/ui";
 export { Select } from "@4lt7ab/ui/ui";
 export { Textarea } from "@4lt7ab/ui/ui";
 export { Icon } from "./atoms/Icon";

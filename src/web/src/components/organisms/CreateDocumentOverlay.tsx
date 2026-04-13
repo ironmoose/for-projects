@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Input } from "../atoms/Input";
-import { Textarea, Field } from "@4lt7ab/ui/ui";
+import { Input, Textarea, Field } from "@4lt7ab/ui/ui";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TagPicker } from "../molecules/TagPicker";
 import { FolderInput } from "../molecules/FolderInput";
@@ -62,21 +61,23 @@ export function CreateDocumentOverlay({ folders = [], onCreated, onClose }: Crea
           paddingRight: t.spaceXs,
         }}
       >
-        <Input
-          label="Title"
-          id="document-title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Document title..."
-        />
+        <Field label="Title" htmlFor="document-title">
+          <Input
+            id="document-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Document title..."
+          />
+        </Field>
 
-        <Input
-          label="Summary"
-          id="document-summary"
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          placeholder="Brief description (optional)"
-        />
+        <Field label="Summary" htmlFor="document-summary">
+          <Input
+            id="document-summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="Brief description (optional)"
+          />
+        </Field>
 
         <Field label="Content" htmlFor="document-content">
           <Textarea

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Input } from "../atoms/Input";
+import { Input } from "@4lt7ab/ui/ui";
 import { Select } from "@4lt7ab/ui/ui";
 import { IconButton } from "../atoms/IconButton";
 import { TAG_NAMES } from "../../types";

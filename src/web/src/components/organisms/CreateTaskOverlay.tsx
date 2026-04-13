@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Input } from "../atoms/Input";
-import { Textarea, Field } from "@4lt7ab/ui/ui";
-import { Select } from "@4lt7ab/ui/ui";
+import { Input, Textarea, Field, Select } from "@4lt7ab/ui/ui";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import {
   TASK_STATUSES,
@@ -106,22 +104,24 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
     >
       <div style={{ maxHeight: "60vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: t.spaceLg, paddingRight: t.spaceXs }}>
         {/* Title (required) */}
-        <Input
-          label="Title"
-          id="task-title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Task title..."
-        />
+        <Field label="Title" htmlFor="task-title">
+          <Input
+            id="task-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Task title..."
+          />
+        </Field>
 
         {/* Summary */}
-        <Input
-          label="Summary"
-          id="task-summary"
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          placeholder="Brief task summary (optional)"
-        />
+        <Field label="Summary" htmlFor="task-summary">
+          <Input
+            id="task-summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="Brief task summary (optional)"
+          />
+        </Field>
 
         {/* Context */}
         <Field label="Context" htmlFor="task-context">
@@ -146,13 +146,14 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
         </Field>
 
         {/* Group Key */}
-        <Input
-          label="Group Key"
-          id="task-group-key"
-          value={groupKey}
-          onChange={(e) => setGroupKey(e.target.value)}
-          placeholder="Group key (optional)"
-        />
+        <Field label="Group Key" htmlFor="task-group-key">
+          <Input
+            id="task-group-key"
+            value={groupKey}
+            onChange={(e) => setGroupKey(e.target.value)}
+            placeholder="Group key (optional)"
+          />
+        </Field>
 
         {/* Row of selects */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: t.spaceMd }}>

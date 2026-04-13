@@ -30,7 +30,6 @@ function readComponent(dir: string, name: string): string {
 describe("Library semantic token imports", () => {
   const atomsWithSemanticImport = [
     "fieldUtils.tsx",
-    "Input.tsx",
     "Button.tsx",
     "Badge.tsx",
     "IconButton.tsx",
@@ -308,7 +307,7 @@ describe("baseFieldStyle uses library tokens", () => {
 // ---------------------------------------------------------------------------
 
 describe("Form atoms fully off theme.color.*", () => {
-  const formAtoms = ["Button.tsx", "Input.tsx", "fieldUtils.tsx"];
+  const formAtoms = ["Button.tsx", "fieldUtils.tsx"];
 
   for (const file of formAtoms) {
     test(`${file} has no theme.color.* references`, () => {
@@ -451,7 +450,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
 
 describe("Synth theme decoupled from component logic (Phase 4a)", () => {
   const decoupledComponents = [
-    { dir: ATOMS_DIR, file: "Input.tsx" },
     { dir: ORGANISMS_DIR, file: "TaskTable.tsx" },
     { dir: ORGANISMS_DIR, file: "ModalShell.tsx" },
     { dir: MOLECULES_DIR, file: "SearchToggle.tsx" },
@@ -479,12 +477,6 @@ describe("Synth theme decoupled from component logic (Phase 4a)", () => {
     expect(src).toContain("function tableWrapperStyle(theme: Theme)");
     expect(src).toContain("function tableHeaderStyle(theme: Theme)");
     expect(src).not.toContain("isSynth: boolean");
-  });
-
-  test("Input.tsx uses theme.glow tokens for focus styles", () => {
-    const src = readComponent(ATOMS_DIR, "Input.tsx");
-    expect(src).toContain("theme.glow.borderStrong");
-    expect(src).toContain("theme.glow.focusRing");
   });
 
   test("ModalShell.tsx uses theme.glow tokens for shadow/border", () => {

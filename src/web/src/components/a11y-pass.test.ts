@@ -101,9 +101,7 @@ describe("Form field focus rings", () => {
     expect(fieldUtilsSrc).toContain("--focus-ring-color");
   });
 
-  const fieldComponents = [
-    { path: join(ATOMS_DIR, "Input.tsx"), name: "Input" },
-  ];
+  const fieldComponents: { path: string; name: string }[] = [];
 
   for (const { path, name } of fieldComponents) {
     test(`${name} imports useFieldFocusStyles`, () => {

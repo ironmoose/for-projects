@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local Input with @4lt7ab/ui re-export (label sites wrapped with Field, 10 imports updated)
 - Replace local Select with @4lt7ab/ui re-export (delete local, update 4 direct imports)
 - Replace local Textarea with @4lt7ab/ui re-export (label sites wrapped with Field)
 - Replace local TagChip with @4lt7ab/ui re-export (delete local, update 4 direct imports)

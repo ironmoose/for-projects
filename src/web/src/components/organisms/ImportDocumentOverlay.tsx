@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Input } from "../atoms/Input";
+import { Input, Field } from "@4lt7ab/ui/ui";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TagPicker } from "../molecules/TagPicker";
 import { FolderInput } from "../molecules/FolderInput";
@@ -58,13 +58,14 @@ export function ImportDocumentOverlay({ folders = [], onImport, onClose }: Impor
           paddingRight: t.spaceXs,
         }}
       >
-        <Input
-          label="URL"
-          id="import-url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://github.com/owner/repo/blob/main/README.md"
-        />
+        <Field label="URL" htmlFor="import-url">
+          <Input
+            id="import-url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://github.com/owner/repo/blob/main/README.md"
+          />
+        </Field>
 
         <FolderInput
           value={folder}

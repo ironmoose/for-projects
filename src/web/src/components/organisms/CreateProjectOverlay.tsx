@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Input } from "../atoms/Input";
+import { Input, Field } from "@4lt7ab/ui/ui";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 
 interface CreateProjectOverlayProps {
@@ -40,21 +40,23 @@ export function CreateProjectOverlay({ onCreated, onClose }: CreateProjectOverla
       loading={loading}
       submitDisabled={!title.trim()}
     >
-      <Input
-        label="Title"
-        id="project-title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Project title..."
-      />
+      <Field label="Title" htmlFor="project-title">
+        <Input
+          id="project-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Project title..."
+        />
+      </Field>
 
-      <Input
-        label="Summary"
-        id="project-summary"
-        value={summary}
-        onChange={(e) => setSummary(e.target.value)}
-        placeholder="Brief project summary (optional)"
-      />
+      <Field label="Summary" htmlFor="project-summary">
+        <Input
+          id="project-summary"
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="Brief project summary (optional)"
+        />
+      </Field>
 
       {error && (
         <p
