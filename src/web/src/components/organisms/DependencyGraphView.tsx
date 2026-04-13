@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { StatusDot } from "../atoms/StatusDot";
+import { StatusDot } from "@4lt7ab/ui/ui";
 import { Badge } from "../atoms/Badge";
 import { EmptyState } from "../molecules/EmptyState";
 import { Icon } from "../atoms/Icon";

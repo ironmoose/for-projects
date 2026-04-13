@@ -1,6 +1,6 @@
 import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
-import { StatusDot } from "../atoms/StatusDot";
+import { StatusDot } from "@4lt7ab/ui/ui";
 import { IconButton } from "../atoms/IconButton";
 import type { TaskStatus } from "../../types";
 

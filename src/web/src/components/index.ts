@@ -7,7 +7,7 @@ export { Icon } from "./atoms/Icon";
 export { IconButton } from "./atoms/IconButton";
 export { Badge } from "./atoms/Badge";
 export { SectionLabel } from "./atoms/SectionLabel";
-export { StatusDot } from "./atoms/StatusDot";
+export { StatusDot } from "@4lt7ab/ui/ui";
 export { MetaValue } from "./atoms/MetaValue";
 export { Overlay } from "./atoms/Overlay";
 export { AnimationStyles } from "./atoms/AnimationStyles";

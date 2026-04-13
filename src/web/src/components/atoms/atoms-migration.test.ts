@@ -36,7 +36,6 @@ describe("Library semantic token imports", () => {
     "IconButton.tsx",
     "MetaValue.tsx",
     "SectionLabel.tsx",
-    "StatusDot.tsx",
     "ActivityIndicator.tsx",
     "ReferenceTypeBadge.tsx",
   ];
@@ -103,7 +102,6 @@ describe("Components fully migrated off useTheme", () => {
     "Skeleton.tsx",
     "SectionLabel.tsx",
     "ReferenceTypeBadge.tsx",
-    "StatusDot.tsx",
     "ActivityIndicator.tsx",
   ];
 
@@ -362,12 +360,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).not.toContain("theme.spacing.");
     expect(src).not.toContain("theme.radius.");
     expect(src).toContain("theme.glow.");
-  });
-
-  test("StatusDot.tsx no longer uses theme.motion or theme.animation", () => {
-    const src = readComponent(ATOMS_DIR, "StatusDot.tsx");
-    expect(src).not.toContain("theme.motion.");
-    expect(src).not.toContain("theme.animation.");
   });
 
   test("Card.tsx uses theme.glow for border/shadow effects (unmapped)", () => {

@@ -8,7 +8,6 @@ import {
   Input,
   Select,
   SectionLabel,
-  StatusDot,
   MetaValue,
   Card,
   Stack,
@@ -334,19 +333,6 @@ export function registerAllComponents(): void {
     libraryCandidate: true,
   });
 
-  registerComponent({
-    name: "StatusDot",
-    description: "Small colored circle indicator.",
-    category: "atom",
-    propDefs: [
-      { name: "color", type: "string", defaultValue: "#6dd58c" },
-      { name: "size", type: "number", defaultValue: 8 },
-    ],
-    render: (props) => <StatusDot color={String(props.color)} size={Number(props.size)} />,
-    codeTemplate: `<StatusDot color={theme.color.success} />`,
-    migrated: true,
-    libraryCandidate: true,
-  });
 
   registerComponent({
     name: "MetaValue",
