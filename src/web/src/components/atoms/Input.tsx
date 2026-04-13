@@ -1,4 +1,5 @@
 import { type InputHTMLAttributes, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { sg } from "../theme/synthGlow";
 import { FieldWrapper, baseFieldStyle } from "./fieldUtils";

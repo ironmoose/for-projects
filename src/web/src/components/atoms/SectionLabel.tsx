@@ -1,3 +1,4 @@
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 
 interface SectionLabelProps {
@@ -16,7 +17,7 @@ export function SectionLabel({ children, style }: SectionLabelProps) {
         fontWeight: 700,
         letterSpacing: theme.font.letterSpacing.wide,
         textTransform: "uppercase",
-        color: theme.color.textFaint,
+        color: t.colorTextSecondary,
         ...style,
       }}
     >

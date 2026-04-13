@@ -1,6 +1,12 @@
 import { type HTMLAttributes, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { type Theme } from "../theme/theme";
 import { useTheme } from "../theme/ThemeContext";
+
+/** CSS color-mix helper for alpha-blending semantic tokens with transparency. */
+function alpha(token: string, pct: number): string {
+  return `color-mix(in srgb, ${token} ${pct}%, transparent)`;
+}
 
 type CardVariant = "default" | "flat" | "live" | "elevated";
 
@@ -16,35 +22,35 @@ export function Card({ padding = "lg", variant = "default", hover, style, ...pro
 
   const variantStyles: Record<CardVariant, React.CSSProperties> = {
     default: {
-      background: theme.color.surfaceContainer,
+      background: t.colorSurface,
       borderWidth: 1,
       borderStyle: "solid",
       borderColor: theme.glow.borderLight,
       boxShadow: theme.glow.shadowMd,
     },
     flat: {
-      background: theme.color.surfaceContainerLow,
+      background: t.colorSurfacePanel,
       borderWidth: theme.glow.animated ? 1 : 0,
       borderStyle: theme.glow.animated ? "solid" : "none",
       borderColor: theme.glow.borderSubtle,
       boxShadow: "none",
     },
     live: {
-      background: theme.color.surfaceContainer,
+      background: t.colorSurface,
       borderWidth: 1,
       borderStyle: "solid",
       borderColor: theme.glow.borderMedium,
-      ["--border-pulse-color" as string]: `${theme.color.primary}66`,
-      ["--border-pulse-dim" as string]: `${theme.color.primary}1a`,
+      ["--border-pulse-color" as string]: alpha(t.colorActionPrimary, 40),
+      ["--border-pulse-dim" as string]: alpha(t.colorActionPrimary, 10),
       animation: `border-pulse 2s ease-in-out infinite`,
       boxShadow: theme.glow.animated ? `0 0 15px ${theme.glow.borderLight}` : "none",
     },
     elevated: {
-      background: theme.color.surfaceContainer,
+      background: t.colorSurface,
       borderWidth: 1,
       borderStyle: "solid",
       borderColor: theme.glow.borderLight,
-      boxShadow: theme.shadow.md,
+      boxShadow: t.shadowMd,
     },
   };
 
@@ -53,7 +59,7 @@ export function Card({ padding = "lg", variant = "default", hover, style, ...pro
     ? hovered
       ? theme.glow.animated
         ? { boxShadow: theme.glow.hoverShadow, borderColor: theme.glow.borderMedium }
-        : { boxShadow: theme.shadow.md, borderColor: theme.color.border }
+        : { boxShadow: t.shadowMd, borderColor: t.colorBorder }
       : { borderColor: baseBorderColor }
     : {};
 

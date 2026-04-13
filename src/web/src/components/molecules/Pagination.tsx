@@ -1,4 +1,6 @@
-import { Button, useTheme } from "..";
+import { semantic as t } from "@4lt7ab/ui/core";
+import { Button } from "../atoms/Button";
+import { useTheme } from "../theme/ThemeContext";
 
 interface PaginationProps {
   page: number;
@@ -30,9 +32,9 @@ export function Pagination({ page, totalPages, total, onPageChange }: Pagination
       </Button>
       <span
         style={{
-          fontSize: theme.font.size.sm,
-          color: theme.color.textMuted,
-          fontFamily: theme.font.body,
+          fontSize: t.fontSizeSm,
+          color: t.colorTextMuted,
+          fontFamily: t.fontSans,
         }}
       >
         Page {page} of {totalPages} ({total} total)

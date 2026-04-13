@@ -1,5 +1,5 @@
+import { semantic as t } from "@4lt7ab/ui/core";
 import type { Theme } from "../theme/theme";
-import { useTheme } from "../theme/ThemeContext";
 
 interface FieldWrapperProps {
   label?: string;
@@ -8,20 +8,18 @@ interface FieldWrapperProps {
 }
 
 export function FieldWrapper({ label, htmlFor, children }: FieldWrapperProps) {
-  const { theme } = useTheme();
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
       {label && (
         <label
           htmlFor={htmlFor}
           style={{
-            fontSize: theme.font.size.xs,
+            fontSize: t.fontSizeXs,
             fontWeight: 700,
             letterSpacing: "0.06em",
             textTransform: "uppercase" as const,
-            color: theme.color.textFaint,
-            fontFamily: theme.font.body,
+            color: t.colorTextSecondary,
+            fontFamily: t.fontSans,
           }}
         >
           {label}
@@ -34,14 +32,14 @@ export function FieldWrapper({ label, htmlFor, children }: FieldWrapperProps) {
 
 export function baseFieldStyle(theme: Theme): React.CSSProperties {
   return {
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    padding: "0.5rem 0.75rem",
     border: `1px solid ${theme.color.borderSubtle}`,
-    borderRadius: theme.radius.lg,
-    fontFamily: theme.font.body,
-    fontSize: theme.font.size.sm,
+    borderRadius: t.radiusLg,
+    fontFamily: t.fontSans,
+    fontSize: t.fontSizeSm,
     outline: "none",
-    background: theme.color.surfaceContainerHigh,
-    color: theme.color.text,
+    background: t.colorSurfaceRaised,
+    color: t.colorText,
     transition: "border-color 0.15s, box-shadow 0.2s",
   };
 }

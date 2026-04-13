@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { Card } from "./Card";
 import { Icon } from "../atoms/Icon";
@@ -71,7 +72,7 @@ export function ExpandableCard({
         onMouseEnter={() => setHeaderHovered(true)}
         onMouseLeave={() => setHeaderHovered(false)}
         style={{
-          borderRadius: theme.radius.lg,
+          borderRadius: t.radiusLg,
           padding: title
             ? `${theme.spacing.md} ${theme.spacing.md}`
             : `${theme.spacing.xs} ${theme.spacing.md}`,
@@ -82,18 +83,18 @@ export function ExpandableCard({
           minHeight: title ? 44 : 28,
           boxSizing: "border-box",
           cursor: "pointer",
-          background: headerHovered ? theme.color.surfaceContainerHigh : "transparent",
+          background: headerHovered ? t.colorSurfaceRaised : "transparent",
           transition: `background ${theme.motion.fast} ${theme.motion.easing}`,
         }}
       >
         {title && (
           <span
             style={{
-              fontSize: theme.font.size.sm,
+              fontSize: t.fontSizeSm,
               fontWeight: 700,
               fontFamily: theme.font.headline,
               letterSpacing: theme.font.letterSpacing.tight,
-              color: theme.color.text,
+              color: t.colorText,
             }}
           >
             {title}
@@ -109,7 +110,7 @@ export function ExpandableCard({
             name="chevron_right"
             size={18}
             style={{
-              color: theme.color.textMuted,
+              color: t.colorTextMuted,
               transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
               transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
               flexShrink: 0,

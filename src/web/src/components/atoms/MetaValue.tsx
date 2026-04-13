@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 
 interface MetaValueProps {
   label: string;
@@ -7,8 +7,6 @@ interface MetaValueProps {
 }
 
 export function MetaValue({ label, value, style }: MetaValueProps) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
@@ -18,12 +16,12 @@ export function MetaValue({ label, value, style }: MetaValueProps) {
         ...style,
       }}
     >
-      <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>{label}</span>
+      <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>{label}</span>
       <span
         style={{
-          fontSize: theme.font.size.xs,
-          color: theme.color.textMuted,
-          fontFamily: theme.font.mono,
+          fontSize: t.fontSizeXs,
+          color: t.colorTextMuted,
+          fontFamily: t.fontMono,
           textAlign: "right",
         }}
       >

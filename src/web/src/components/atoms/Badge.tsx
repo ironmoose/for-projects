@@ -1,3 +1,4 @@
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 
 type BadgeVariant =
@@ -11,23 +12,28 @@ interface BadgeProps {
   style?: React.CSSProperties;
 }
 
+/** CSS color-mix helper for alpha-blending semantic tokens with transparency. */
+function alpha(token: string, pct: number): string {
+  return `color-mix(in srgb, ${token} ${pct}%, transparent)`;
+}
+
 function glowForVariant(variant: BadgeVariant, theme: ReturnType<typeof useTheme>["theme"]): React.CSSProperties {
   if (!theme.glow.animated) return {};
   const glowMap: Partial<Record<BadgeVariant, string>> = {
-    active: theme.color.primary,
-    running: theme.color.primary,
-    complete: theme.color.success,
-    failed: theme.color.danger,
+    active: t.colorActionPrimary,
+    running: t.colorActionPrimary,
+    complete: t.colorSuccess,
+    failed: t.colorActionDestructive,
     in_progress: theme.color.tertiary,
-    done: theme.color.success,
+    done: t.colorSuccess,
   };
   const color = glowMap[variant];
   if (!color) return {};
   return {
-    boxShadow: `0 0 8px ${color}33, inset 0 0 6px ${color}11`,
+    boxShadow: `0 0 8px ${alpha(color, 20)}, inset 0 0 6px ${alpha(color, 7)}`,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: `${color}44`,
+    borderColor: alpha(color, 27),
   };
 }
 
@@ -36,55 +42,55 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
 
   const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
     active: {
-      background: `${theme.color.primary}22`,
-      color: theme.color.primary,
+      background: alpha(t.colorActionPrimary, 13),
+      color: t.colorActionPrimary,
     },
     archived: {
-      background: theme.color.surfaceContainerHigh,
-      color: theme.color.textFaint,
+      background: t.colorSurfaceRaised,
+      color: t.colorTextSecondary,
     },
     default: {
-      background: theme.color.surfaceContainerHigh,
-      color: theme.color.textMuted,
+      background: t.colorSurfaceRaised,
+      color: t.colorTextMuted,
     },
     pending: {
-      background: theme.color.surfaceContainerHigh,
-      color: theme.color.textFaint,
+      background: t.colorSurfaceRaised,
+      color: t.colorTextSecondary,
     },
     running: {
-      background: `${theme.color.primary}26`,
-      color: theme.color.primary,
-      ["--glow-color" as string]: `${theme.color.primary}33`,
+      background: alpha(t.colorActionPrimary, 15),
+      color: t.colorActionPrimary,
+      ["--glow-color" as string]: alpha(t.colorActionPrimary, 20),
       animation: `glow-pulse 2s ease-in-out infinite`,
     },
     complete: {
-      background: `${theme.color.success}26`,
-      color: theme.color.success,
+      background: alpha(t.colorSuccess, 15),
+      color: t.colorSuccess,
     },
     failed: {
-      background: `${theme.color.danger}26`,
-      color: theme.color.danger,
+      background: alpha(t.colorActionDestructive, 15),
+      color: t.colorActionDestructive,
     },
     skipped: {
-      background: theme.color.surfaceContainerHigh,
-      color: theme.color.textFaint,
+      background: t.colorSurfaceRaised,
+      color: t.colorTextSecondary,
       opacity: 0.6,
     },
     todo: {
-      background: theme.color.surfaceContainerHigh,
-      color: theme.color.textMuted,
+      background: t.colorSurfaceRaised,
+      color: t.colorTextMuted,
     },
     in_progress: {
-      background: `${theme.color.tertiary}26`,
+      background: alpha(theme.color.tertiary, 15),
       color: theme.color.tertiary,
     },
     done: {
-      background: `${theme.color.success}26`,
-      color: theme.color.success,
+      background: alpha(t.colorSuccess, 15),
+      color: t.colorSuccess,
     },
     warning: {
-      background: `${theme.color.warning}26`,
-      color: theme.color.warning,
+      background: alpha(t.colorWarning, 15),
+      color: t.colorWarning,
     },
   };
 
@@ -93,10 +99,10 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
       style={{
         display: "inline-block",
         padding: "0.2rem 0.5rem",
-        borderRadius: theme.radius.md,
+        borderRadius: t.radiusMd,
         fontSize: theme.font.size.xxs,
         fontWeight: 700,
-        fontFamily: theme.font.body,
+        fontFamily: t.fontSans,
         letterSpacing: theme.font.letterSpacing.wide,
         textTransform: "uppercase",
         lineHeight: 1.4,

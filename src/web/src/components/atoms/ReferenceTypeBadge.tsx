@@ -1,3 +1,4 @@
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 
 const REFERENCE_TYPE_LABELS: Record<string, string> = {
@@ -22,15 +23,15 @@ export function ReferenceTypeBadge({ type, style }: ReferenceTypeBadgeProps) {
       style={{
         display: "inline-block",
         padding: "1px 6px",
-        borderRadius: theme.radius.sm,
+        borderRadius: t.radiusSm,
         fontSize: theme.font.size.xxs,
         fontWeight: 600,
-        fontFamily: theme.font.body,
+        fontFamily: t.fontSans,
         letterSpacing: theme.font.letterSpacing.wide,
         textTransform: "uppercase",
         lineHeight: 1.4,
-        background: theme.color.surfaceContainerHigh,
-        color: theme.color.textMuted,
+        background: t.colorSurfaceRaised,
+        color: t.colorTextMuted,
         ...style,
       }}
     >

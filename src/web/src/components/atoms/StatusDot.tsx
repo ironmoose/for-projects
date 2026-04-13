@@ -1,3 +1,4 @@
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
@@ -33,7 +34,7 @@ export function StatusDot({ color, size = 8, animate = "none", glowColor, style 
         display: "inline-block",
         width: size,
         height: size,
-        borderRadius: theme.radius.full,
+        borderRadius: t.radiusFull,
         background: color,
         flexShrink: 0,
         transition: `background ${theme.motion.normal} ${theme.motion.easing}`,

@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+
+/** CSS color-mix helper for alpha-blending semantic tokens with transparency. */
+function alpha(token: string, pct: number): string {
+  return `color-mix(in srgb, ${token} ${pct}%, transparent)`;
+}
 
 interface ActivityIndicatorProps {
   count: number;
@@ -16,9 +22,9 @@ export function ActivityIndicator({ count, style }: ActivityIndicatorProps) {
   useEffect(() => {
     if (prevCount.current !== count && count > 0 && !reduced) {
       setBumping(true);
-      const t = setTimeout(() => setBumping(false), 300);
+      const timer = setTimeout(() => setBumping(false), 300);
       prevCount.current = count;
-      return () => clearTimeout(t);
+      return () => clearTimeout(timer);
     }
     prevCount.current = count;
   }, [count, reduced]);
@@ -34,10 +40,10 @@ export function ActivityIndicator({ count, style }: ActivityIndicatorProps) {
         justifyContent: "center",
         width: 20,
         height: 20,
-        borderRadius: theme.radius.full,
-        background: isActive ? `${theme.color.primary}26` : theme.color.surfaceContainerHigh,
-        color: isActive ? theme.color.primary : theme.color.textFaint,
-        fontFamily: theme.font.mono,
+        borderRadius: t.radiusFull,
+        background: isActive ? alpha(t.colorActionPrimary, 15) : t.colorSurfaceRaised,
+        color: isActive ? t.colorActionPrimary : t.colorTextSecondary,
+        fontFamily: t.fontMono,
         fontSize: theme.font.size.xxs,
         fontWeight: 700,
         lineHeight: 1,
