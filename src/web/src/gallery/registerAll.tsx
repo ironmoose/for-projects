@@ -599,6 +599,7 @@ export function registerAllComponents(): void {
       { name: "Long Title", props: { taskTitle: "This is a very long task title that should be truncated with ellipsis" } },
     ],
     codeTemplate: `<DependencyChip taskId="..." taskTitle="Task name" taskStatus="todo" dependencyType="blocks" onClick={handleClick} onRemove={handleRemove} />`,
+    migrated: true,
   });
 
   registerComponent({

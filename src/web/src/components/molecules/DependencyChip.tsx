@@ -1,4 +1,4 @@
-import { useInjectStyles } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { StatusDot } from "../atoms/StatusDot";
 import { IconButton } from "../atoms/IconButton";
@@ -13,11 +13,11 @@ export interface DependencyChipProps {
   onClick: () => void;
 }
 
-const STATUS_COLORS: Record<TaskStatus, (theme: ReturnType<typeof useTheme>["theme"]) => string> = {
-  todo: (t) => t.color.textMuted,
-  in_progress: (t) => t.color.tertiary,
-  done: (t) => t.color.success,
-  archived: (t) => t.color.textFaint,
+const STATUS_COLORS: Record<TaskStatus, string> = {
+  todo: t.colorTextMuted,
+  in_progress: t.colorWarning,
+  done: t.colorSuccess,
+  archived: t.colorTextSecondary,
 };
 
 export function DependencyChip({ taskTitle, taskStatus, onRemove, onClick }: DependencyChipProps) {
@@ -33,7 +33,7 @@ export function DependencyChip({ taskTitle, taskStatus, onRemove, onClick }: Dep
     }
   `);
 
-  const statusColor = STATUS_COLORS[taskStatus]?.(theme) ?? theme.color.textMuted;
+  const statusColor = STATUS_COLORS[taskStatus] ?? t.colorTextMuted;
 
   return (
     <span
@@ -47,15 +47,15 @@ export function DependencyChip({ taskTitle, taskStatus, onRemove, onClick }: Dep
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        fontSize: theme.font.size.xs,
-        color: theme.color.text,
-        background: theme.color.surfaceContainerHigh,
-        borderRadius: theme.radius.full,
+        fontSize: t.fontSizeXs,
+        color: t.colorText,
+        background: t.colorSurfaceRaised,
+        borderRadius: t.radiusFull,
         padding: "3px 8px",
         cursor: "pointer",
-        transition: `background ${theme.motion.fast} ${theme.motion.easing}`,
+        transition: "background 0.15s ease",
         maxWidth: 220,
-        border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
+        border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
         boxShadow: theme.glow.shadowSm,
       }}
     >

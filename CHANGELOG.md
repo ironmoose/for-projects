@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate DependencyChip molecule off compat useTheme to library tokens
 - Migrate TagChip molecule off compat useTheme to library tokens
 - Migrate FolderInput molecule off compat useTheme to library tokens
 - Migrate Stack molecule off compat useTheme to library spacing tokens
