@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Migrate CreateDocumentOverlay organism off compat useTheme to library tokens
+- Migrate ImportDocumentOverlay organism off compat useTheme to library tokens
 - Migrate DocumentReferenceSection organism off compat useTheme to library tokens
 - Migrate DetailPageLayout template off compat useTheme to library tokens
 - Migrate Markdown molecule fully off compat useTheme to library tokens

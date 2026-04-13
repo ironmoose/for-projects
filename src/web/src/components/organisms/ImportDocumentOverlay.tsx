@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TagPicker } from "../molecules/TagPicker";
@@ -14,7 +14,6 @@ interface ImportDocumentOverlayProps {
 }
 
 export function ImportDocumentOverlay({ folders = [], onImport, onClose }: ImportDocumentOverlayProps) {
-  const { theme } = useTheme();
   const [url, setUrl] = useState("");
   const [folder, setFolder] = useState("");
   const [selectedTags, setSelectedTags] = useState<TagName[]>([]);
@@ -55,8 +54,8 @@ export function ImportDocumentOverlay({ folders = [], onImport, onClose }: Impor
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
-          gap: theme.spacing.lg,
-          paddingRight: theme.spacing.xs,
+          gap: t.spaceLg,
+          paddingRight: t.spaceXs,
         }}
       >
         <Input
@@ -73,7 +72,7 @@ export function ImportDocumentOverlay({ folders = [], onImport, onClose }: Impor
           onChange={setFolder}
         />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
           <SectionLabel>Tags</SectionLabel>
           <TagPicker selected={selectedTags} onChange={setSelectedTags} />
         </div>
@@ -83,9 +82,9 @@ export function ImportDocumentOverlay({ folders = [], onImport, onClose }: Impor
         <p
           style={{
             margin: 0,
-            fontSize: theme.font.size.sm,
-            color: theme.color.danger,
-            fontFamily: theme.font.body,
+            fontSize: t.fontSizeSm,
+            color: t.colorActionDestructive,
+            fontFamily: t.fontSans,
           }}
         >
           {error}
