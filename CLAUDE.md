@@ -260,6 +260,8 @@ Three things are **always** touched alongside code changes:
 2. **CHANGELOG.md** — every commit adds a bullet to the changelog under the current `## [Unreleased]` section. **No category headers** (no `### Added`, `### Fixed`, etc.) — just flat bullets under the version. **Keep entries terse** — one short line per change, no implementation details. The changelog says *what* changed, not *how* or *why*. Example: `- Migrate Overlay atom to @4lt7ab/ui re-export`.
 3. **CLAUDE.md** — if the change adds modules, changes conventions, alters architecture, or introduces new workflows, update this file. Keep it current — a stale CLAUDE.md teaches wrong patterns.
 
+4. **Gallery** — the component gallery (`src/web/src/gallery/`) documents **only custom components and layouts that are NOT re-exported from `@4lt7ab/ui`**. Components re-exported from the library are already documented there. When adding or modifying a custom atom/molecule, update its gallery entry. When migrating a component to a library re-export, remove its gallery entry.
+
 These are not optional. A commit without updated tests and changelog is incomplete.
 
 ## Testing
