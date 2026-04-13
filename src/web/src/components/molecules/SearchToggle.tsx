@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../atoms/Icon";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 
 interface SearchToggleProps {
   value: string;
@@ -32,8 +31,7 @@ export function SearchToggle({
   semanticPlaceholder = "Semantic search...",
   debounceMs = 350,
 }: SearchToggleProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [localValue, setLocalValue] = useState(value);
   const [focused, setFocused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,13 +46,13 @@ export function SearchToggle({
 
   const showToggle = toggleVisible;
 
-  // Colors
+  // Colors — glow tokens resolve to animated synth values or static fallbacks
   const borderColor = focused
-    ? isSynth ? sg(53) : theme.color.primary
-    : isSynth ? sg(14) : theme.color.borderSubtle;
+    ? (theme.glow.animated ? theme.glow.borderStrong : theme.color.primary)
+    : (theme.glow.animated ? theme.glow.borderSubtle : theme.color.borderSubtle);
   const focusShadow = focused
-    ? isSynth ? `0 0 12px ${sg(19)}, inset 0 0 6px ${sg(5)}` : `0 0 0 2px ${theme.color.primary}30`
-    : isSynth ? `0 0 4px ${sg(6)}` : "none";
+    ? (theme.glow.animated ? theme.glow.focusRing : `0 0 0 2px ${theme.color.primary}30`)
+    : (theme.glow.animated ? theme.glow.focusRingSubtle : "none");
 
   return (
     <div
@@ -121,8 +119,8 @@ export function SearchToggle({
               width: PILL_W,
               height: PILL_H,
               borderRadius: theme.radius.md - 1,
-              background: isSynth ? sg(12) : `${theme.color.primary}18`,
-              border: `1px solid ${isSynth ? sg(25) : `${theme.color.primary}30`}`,
+              background: theme.glow.animated ? theme.glow.borderSubtle : `${theme.color.primary}18`,
+              border: `1px solid ${theme.glow.animated ? theme.glow.borderLight : `${theme.color.primary}30`}`,
               transition: "left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               zIndex: 0,
             }}
@@ -134,6 +132,7 @@ export function SearchToggle({
             onClick={() => onSemanticChange(false)}
             title="Keyword search"
             aria-label="Keyword search"
+            aria-pressed={!semantic}
             style={{
               position: "relative",
               zIndex: 1,
@@ -160,6 +159,7 @@ export function SearchToggle({
             onClick={() => onSemanticChange(true)}
             title="Semantic search"
             aria-label="Semantic search"
+            aria-pressed={semantic}
             style={{
               position: "relative",
               zIndex: 1,

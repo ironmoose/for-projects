@@ -1,7 +1,6 @@
 import { type SelectHTMLAttributes, useState } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
-import { FieldWrapper, baseFieldStyle } from "./fieldUtils";
+import { FieldWrapper, baseFieldStyle, useFieldFocusStyles } from "./fieldUtils";
 
 interface SelectOption {
   value: string;
@@ -13,26 +12,26 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export function Select({ options, style, onFocus, onBlur, ...props }: SelectProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
+  useFieldFocusStyles();
   const [focused, setFocused] = useState(false);
 
-  const synthStyles: React.CSSProperties =
-    isSynth && focused
-      ? { borderColor: sg(53), boxShadow: `0 0 12px ${sg(19)}` }
-      : isSynth
-        ? { borderColor: sg(14), boxShadow: `0 0 4px ${sg(6)}` }
-        : {};
+  const glowFocusStyles: React.CSSProperties = focused
+    ? { borderColor: theme.glow.borderStrong, boxShadow: theme.glow.focusRing }
+    : theme.glow.animated
+      ? { borderColor: theme.glow.borderSubtle, boxShadow: theme.glow.focusRingSubtle }
+      : {};
 
   return (
     <FieldWrapper>
       <select
+        className="tfp-field"
         onFocus={(e) => { setFocused(true); onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         style={{
           ...baseFieldStyle(theme),
           cursor: "pointer",
-          ...synthStyles,
+          ...glowFocusStyles,
           ...style,
         }}
         {...props}

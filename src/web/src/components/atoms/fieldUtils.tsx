@@ -1,5 +1,15 @@
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import type { Theme } from "../theme/theme";
+
+/** Inject shared focus ring styles for form fields. Call once per component that uses baseFieldStyle. */
+export function useFieldFocusStyles(): void {
+  useInjectStyles("tfp-field-focus", `
+    .tfp-field:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+  `);
+}
 
 interface FieldWrapperProps {
   label?: string;

@@ -72,6 +72,7 @@ export function DocumentSearchBar({ title, tag, folder, folders, favorite, onTit
         size={20}
         onClick={() => onFavoriteChange(!favorite)}
         aria-label={favorite ? "Show all documents" : "Show favorites only"}
+        aria-pressed={favorite}
         style={{
           color: favorite ? theme.color.warning : theme.color.textMuted,
           flexShrink: 0,

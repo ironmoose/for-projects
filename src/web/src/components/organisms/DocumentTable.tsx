@@ -147,6 +147,7 @@ function FolderGroup({ folder, documents, ...cardGridProps }: FolderGroupProps) 
     <div>
       <button
         onClick={() => setCollapsed(!collapsed)}
+        aria-expanded={!collapsed}
         style={{
           display: "flex",
           alignItems: "center",
@@ -291,7 +292,15 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
   return (
     <div
       className={cardClass}
+      tabIndex={0}
+      role="article"
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
       style={{
         borderRadius: compact ? theme.radius.md : theme.radius.lg,
         border: `1px solid ${borderColor}`,

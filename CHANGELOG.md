@@ -5,6 +5,12 @@
 ### Added
 - `src/web/src/hooks/useFocusTrap.ts` — focus trap hook: saves trigger element, auto-focuses first focusable child, traps Tab/Shift+Tab cycling, restores focus on unmount
 - `src/web/src/components/organisms/modal-a11y.test.ts` — 28 tests verifying ModalShell ARIA attributes, focus trap integration, escape key handling, and consumer a11y wiring
+- `src/web/src/components/a11y-pass.test.ts` — tests verifying accessibility pass: aria-labels, aria-expanded, landmarks, focus rings, keyboard nav, aria-pressed, toast a11y, skip link
+- Skip-to-main-content link in App.tsx — hidden link revealed on focus, targets `#main-content`
+- `useFieldFocusStyles()` in fieldUtils — shared `:focus-visible` ring injection for form fields
+
+### Fixed
+- **Accessibility pass (Phase 4b):** ExpandableCard now has `aria-expanded`; Input/Select/Textarea have `:focus-visible` rings via `tfp-field` class; TaskTable rows and DocumentTable cards are keyboard-navigable (tabIndex, Enter key); SearchToggle and favorite buttons have `aria-pressed`; ToastContainer has `aria-live="polite"` and `role="status"`; FolderGroup collapse button has `aria-expanded`; `<main>` has `id="main-content"` (removed redundant `role="main"`)
 
 ### Fixed
 - **ModalShell accessibility:** added `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, focus trap via `useFocusTrap` hook, and focus restoration on close

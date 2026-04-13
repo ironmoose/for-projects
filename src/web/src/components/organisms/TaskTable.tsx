@@ -5,7 +5,6 @@ import { IconButton } from "../atoms/IconButton";
 
 import { tableWrapperStyle, tableHeaderStyle, cellStyle } from "../molecules/tableUtils";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import type { TaskSummary } from "../../types";
 import { TASK_STATUSES } from "../../types";
 import type { TaskStatus } from "../../types";
@@ -33,8 +32,7 @@ interface TaskTableProps {
 }
 
 export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, onUpdateTaskStatus }: TaskTableProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const [statusDropdownTaskId, setStatusDropdownTaskId] = useState<string | null>(null);
 
   useInjectStyles("tfp-task-row", `
@@ -74,7 +72,15 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
       <tr
         key={task.id}
         className="tfp-task-row"
+        tabIndex={0}
+        role="row"
         onClick={() => onSelectTask(task.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onSelectTask(task.id);
+          }
+        }}
         style={{
           cursor: "pointer",
           background: selectedTaskId === task.id ? theme.color.surfaceContainerHigh : undefined,
@@ -136,11 +142,9 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
                 gap: 4,
                 padding: theme.spacing.sm,
                 background: theme.color.surfaceContainer,
-                border: `1px solid ${isSynth ? sg(27) : theme.color.border}`,
+                border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
                 borderRadius: theme.radius.md,
-                boxShadow: isSynth
-                  ? `0 0 12px ${sg(9)}`
-                  : theme.shadow.md,
+                boxShadow: theme.glow.animated ? theme.glow.shadowLg : theme.shadow.md,
                 minWidth: 120,
               }}
             >
@@ -242,12 +246,12 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             fontWeight: 700,
             letterSpacing: theme.font.letterSpacing.wide,
             textTransform: "uppercase",
-            color: isSynth ? "var(--synth-glow)" : theme.color.textFaint,
+            color: theme.glow.animated ? theme.glow.accentColor : theme.color.textFaint,
             maxWidth: 300,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            ...(isSynth ? { textShadow: `0 0 6px ${sg(20)}` } : {}),
+            ...(theme.glow.animated ? { textShadow: theme.glow.textShadow } : {}),
           }}
         >
           {groupKey}
@@ -298,7 +302,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
 
   return (
     <div
-      style={tableWrapperStyle(theme, isSynth)}
+      style={tableWrapperStyle(theme)}
     >
       <table
         style={{
@@ -313,7 +317,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             {["Title", "Status", "Category", "Effort", "Impact", ""].map((h) => (
               <th
                 key={h || "_actions"}
-                style={tableHeaderStyle(theme, isSynth)}
+                style={tableHeaderStyle(theme)}
               >
                 {h}
               </th>

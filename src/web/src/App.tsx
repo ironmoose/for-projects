@@ -107,6 +107,44 @@ export function App() {
       <EventSubscriptionContext.Provider value={eventCtx}>
         <AnimationStyles />
         <SynthBackground />
+        <a
+          href="#main-content"
+          style={{
+            position: "absolute",
+            left: -9999,
+            top: "auto",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            zIndex: 100,
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.position = "fixed";
+            e.currentTarget.style.left = "8px";
+            e.currentTarget.style.top = "8px";
+            e.currentTarget.style.width = "auto";
+            e.currentTarget.style.height = "auto";
+            e.currentTarget.style.overflow = "visible";
+            e.currentTarget.style.padding = "8px 16px";
+            e.currentTarget.style.background = theme.color.surfaceContainer;
+            e.currentTarget.style.color = theme.color.text;
+            e.currentTarget.style.borderRadius = theme.radius.md;
+            e.currentTarget.style.border = `2px solid ${theme.color.primary}`;
+            e.currentTarget.style.fontFamily = theme.font.body;
+            e.currentTarget.style.fontSize = theme.font.size.sm;
+            e.currentTarget.style.textDecoration = "none";
+            e.currentTarget.style.fontWeight = "600";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.position = "absolute";
+            e.currentTarget.style.left = "-9999px";
+            e.currentTarget.style.width = "1px";
+            e.currentTarget.style.height = "1px";
+            e.currentTarget.style.overflow = "hidden";
+          }}
+        >
+          Skip to main content
+        </a>
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: theme.font.body }}>
           <TopBar
             trailing={<TrailingIndicators connected={connected} />}
@@ -116,7 +154,7 @@ export function App() {
           />
           <DisconnectionBanner connected={connected} />
           <main
-            role="main"
+            id="main-content"
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, minHeight: 0 }}
           >
             <ErrorBoundary>
