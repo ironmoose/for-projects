@@ -145,6 +145,11 @@ describe("Components fully migrated off useTheme", () => {
     const src = readComponent(TEMPLATES_DIR, "DetailPageLayout.tsx");
     expect(src).not.toContain("useTheme");
   });
+
+  test("organisms/DocumentReferenceSection.tsx does not import useTheme", () => {
+    const src = readComponent(ORGANISMS_DIR, "DocumentReferenceSection.tsx");
+    expect(src).not.toContain("useTheme");
+  });
 });
 
 // ---------------------------------------------------------------------------

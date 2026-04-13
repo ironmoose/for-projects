@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate DocumentReferenceSection organism off compat useTheme to library tokens
 - Migrate DetailPageLayout template off compat useTheme to library tokens
 - Migrate Markdown molecule fully off compat useTheme to library tokens
 - Migrate TagPicker molecule off compat useTheme to library tokens (glow retained)

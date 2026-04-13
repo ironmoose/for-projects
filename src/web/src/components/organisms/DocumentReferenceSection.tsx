@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { ExpandableCard } from "../molecules/ExpandableCard";
 import { DocumentReferenceCard } from "../molecules/DocumentReferenceCard";
 import { Badge } from "../atoms/Badge";
@@ -31,13 +31,11 @@ export function DocumentReferenceSection({
   onAddDocument,
   defaultOpen = false,
 }: DocumentReferenceSectionProps) {
-  const { theme } = useTheme();
-
   const label = TYPE_LABELS[type];
   const count = references.length;
 
   const titleNode = (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: theme.spacing.sm }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceSm }}>
       {label}
       {count > 0 && (
         <Badge variant="default">
@@ -68,7 +66,7 @@ export function DocumentReferenceSection({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: theme.spacing.sm,
+            gap: t.spaceSm,
           }}
         >
           {references.map((ref) => (
@@ -90,10 +88,10 @@ export function DocumentReferenceSection({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: `${theme.spacing.lg} ${theme.spacing.md}`,
-            color: theme.color.textFaint,
-            fontSize: theme.font.size.sm,
-            fontFamily: theme.font.body,
+            padding: `${t.spaceLg} ${t.spaceMd}`,
+            color: t.colorTextSecondary,
+            fontSize: t.fontSizeSm,
+            fontFamily: t.fontSans,
             cursor: "pointer",
           }}
           onClick={onAddDocument}
@@ -103,10 +101,10 @@ export function DocumentReferenceSection({
       ) : (
         <div
           style={{
-            padding: `${theme.spacing.md} ${theme.spacing.sm}`,
-            color: theme.color.textFaint,
-            fontSize: theme.font.size.sm,
-            fontFamily: theme.font.body,
+            padding: `${t.spaceMd} ${t.spaceSm}`,
+            color: t.colorTextSecondary,
+            fontSize: t.fontSizeSm,
+            fontFamily: t.fontSans,
             textAlign: "center",
           }}
         >
