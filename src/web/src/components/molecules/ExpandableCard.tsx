@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { Card } from "./Card";
 import { Icon } from "../atoms/Icon";
@@ -30,8 +30,17 @@ export function ExpandableCard({
   headerAction,
 }: ExpandableCardProps) {
   const { theme } = useTheme();
-  const [headerHovered, setHeaderHovered] = useState(false);
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
+
+  useInjectStyles("tfp-expandable-header", `
+    .tfp-expandable-header:hover {
+      background: var(--color-surface-raised) !important;
+    }
+    .tfp-expandable-header:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+  `);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -60,6 +69,7 @@ export function ExpandableCard({
       style={style}
     >
       <div
+        className="tfp-expandable-header"
         role="button"
         tabIndex={0}
         onClick={handleClick}
@@ -69,8 +79,6 @@ export function ExpandableCard({
             handleClick();
           }
         }}
-        onMouseEnter={() => setHeaderHovered(true)}
-        onMouseLeave={() => setHeaderHovered(false)}
         style={{
           borderRadius: t.radiusLg,
           padding: title
@@ -83,7 +91,7 @@ export function ExpandableCard({
           minHeight: title ? 44 : 28,
           boxSizing: "border-box",
           cursor: "pointer",
-          background: headerHovered ? t.colorSurfaceRaised : "transparent",
+          background: "transparent",
           transition: `background ${theme.motion.fast} ${theme.motion.easing}`,
         }}
       >

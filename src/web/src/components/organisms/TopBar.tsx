@@ -1,3 +1,4 @@
+import { useInjectStyles } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 
 export interface NavItem {
@@ -14,14 +15,17 @@ interface TopBarProps {
   breadcrumb?: string[];
 }
 
-let topBarStylesInjected = false;
+export function TopBar({
+  trailing,
+  navItems,
+  activePath,
+  onNavigate,
+  breadcrumb,
+}: TopBarProps) {
+  const { theme } = useTheme();
 
-function injectTopBarStyles() {
-  if (topBarStylesInjected || typeof document === "undefined") return;
-  topBarStylesInjected = true;
-  const style = document.createElement("style");
-  style.textContent = `
-    .topbar-nav-btn {
+  useInjectStyles("tfp-topbar", `
+    .tfp-topbar-nav-btn {
       border: none;
       cursor: pointer;
       display: flex;
@@ -32,7 +36,7 @@ function injectTopBarStyles() {
       padding-bottom: 0.375rem;
       transition: color 0.15s;
     }
-    .topbar-nav-btn::after {
+    .tfp-topbar-nav-btn::after {
       content: "";
       position: absolute;
       left: 0;
@@ -42,27 +46,18 @@ function injectTopBarStyles() {
       background: transparent;
       transition: background 0.15s;
     }
-    .topbar-nav-btn:hover {
+    .tfp-topbar-nav-btn:hover {
       color: var(--topbar-text) !important;
     }
-    .topbar-nav-btn[data-active="true"]::after {
+    .tfp-topbar-nav-btn:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+    .tfp-topbar-nav-btn[data-active="true"]::after {
       background: var(--topbar-primary);
       box-shadow: 0 0 8px var(--topbar-primary);
     }
-  `;
-  document.head.appendChild(style);
-}
-
-export function TopBar({
-  trailing,
-  navItems,
-  activePath,
-  onNavigate,
-  breadcrumb,
-}: TopBarProps) {
-  const { theme } = useTheme();
-
-  injectTopBarStyles();
+  `);
 
   const cssVars = {
     "--topbar-text": theme.color.text,
@@ -101,7 +96,7 @@ export function TopBar({
           return (
             <button
               key={item.path}
-              className="topbar-nav-btn"
+              className="tfp-topbar-nav-btn"
               data-active={isActive ? "true" : undefined}
               onClick={() => onNavigate?.(item.path)}
               style={{

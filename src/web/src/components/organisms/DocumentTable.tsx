@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useInjectStyles } from "@4lt7ab/ui/core";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
@@ -248,28 +249,49 @@ interface DocumentCardProps {
 
 function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavorite }: DocumentCardProps) {
   const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
   const maxTags = compact ? 2 : 4;
   const overflowCount = doc.tags.length - maxTags;
   const summaryLines = compact ? 2 : 3;
 
+  useInjectStyles("tfp-doc-card", `
+    .tfp-doc-card:hover {
+      border-color: var(--color-border) !important;
+      box-shadow: var(--shadow-md) !important;
+    }
+    .tfp-doc-card:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+    .tfp-doc-card .tfp-doc-card-actions {
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+    .tfp-doc-card:hover .tfp-doc-card-actions {
+      opacity: 1;
+    }
+    .tfp-doc-card-compact .tfp-doc-card-actions {
+      opacity: 1 !important;
+    }
+    :root[data-synth] .tfp-doc-card:hover {
+      border-color: color-mix(in srgb, var(--synth-glow) 27%, transparent) !important;
+      box-shadow: 0 0 8px color-mix(in srgb, var(--synth-glow) 8%, transparent) !important;
+    }
+  `);
+
   const borderColor = selected
     ? theme.glow.animated ? theme.glow.borderStrong : theme.color.primary
-    : hovered
-      ? theme.glow.animated ? theme.glow.borderMedium : theme.color.border
-      : theme.glow.borderSubtle;
+    : theme.glow.borderSubtle;
 
   const shadow = selected
     ? theme.glow.animated ? theme.glow.shadowSm : theme.shadow.sm
-    : hovered
-      ? theme.glow.animated ? theme.glow.shadowMd : theme.shadow.md
-      : "none";
+    : "none";
+
+  const cardClass = compact ? "tfp-doc-card tfp-doc-card-compact" : "tfp-doc-card";
 
   return (
     <div
+      className={cardClass}
       onClick={onSelect}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         borderRadius: compact ? theme.radius.md : theme.radius.lg,
         border: `1px solid ${borderColor}`,
@@ -404,13 +426,12 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
 
         {/* Actions — always visible on mobile (no hover), hover-reveal on desktop */}
         <div
+          className="tfp-doc-card-actions"
           style={{
             display: "flex",
             alignItems: "center",
             gap: 0,
             flexShrink: 0,
-            opacity: compact ? 1 : hovered ? 1 : 0,
-            transition: `opacity ${theme.motion.fast}`,
           }}
         >
           <IconButton

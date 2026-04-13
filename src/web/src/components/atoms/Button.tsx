@@ -1,5 +1,5 @@
-import { type ButtonHTMLAttributes, useState } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { type ButtonHTMLAttributes } from "react";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 
 type ButtonVariant = "primary" | "ghost" | "danger" | "icon";
@@ -52,6 +52,13 @@ function getVariantStyles(
   };
 }
 
+const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary: "tfp-btn tfp-btn-primary",
+  ghost: "tfp-btn tfp-btn-ghost",
+  danger: "tfp-btn tfp-btn-danger",
+  icon: "tfp-btn tfp-btn-icon",
+};
+
 export function Button({
   variant = "primary",
   size = "md",
@@ -62,7 +69,41 @@ export function Button({
   ...props
 }: ButtonProps) {
   const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
+
+  useInjectStyles("tfp-btn", `
+    .tfp-btn:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+    .tfp-btn-primary:hover:not(:disabled) {
+      filter: brightness(1.12);
+    }
+    .tfp-btn-ghost:hover:not(:disabled) {
+      background: var(--color-surface-raised) !important;
+    }
+    .tfp-btn-danger:hover:not(:disabled) {
+      opacity: 1 !important;
+    }
+    .tfp-btn-icon:hover:not(:disabled) {
+      background: var(--color-surface-raised) !important;
+    }
+    :root[data-synth] .tfp-btn-primary:hover:not(:disabled) {
+      filter: none;
+      box-shadow: 0 0 20px color-mix(in srgb, var(--synth-glow) 27%, transparent),
+                  0 0 40px color-mix(in srgb, var(--synth-glow) 16%, transparent),
+                  inset 0 0 15px color-mix(in srgb, var(--synth-glow) 10%, transparent) !important;
+      border-color: color-mix(in srgb, var(--synth-glow) 53%, transparent) !important;
+    }
+    :root[data-synth] .tfp-btn-ghost:hover:not(:disabled) {
+      background: transparent !important;
+      border-color: color-mix(in srgb, var(--synth-glow) 27%, transparent) !important;
+      box-shadow: 0 0 10px color-mix(in srgb, var(--synth-glow) 16%, transparent) !important;
+    }
+    :root[data-synth] .tfp-btn-danger:hover:not(:disabled) {
+      box-shadow: 0 0 16px color-mix(in srgb, var(--color-action-destructive) 20%, transparent) !important;
+      border-color: color-mix(in srgb, var(--color-action-destructive) 40%, transparent) !important;
+    }
+  `);
 
   const sizeStyles: Record<ButtonSize, React.CSSProperties> = {
     sm: { padding: `0.25rem 0.625rem`, fontSize: t.fontSizeSm },
@@ -71,20 +112,9 @@ export function Button({
 
   const isDisabled = disabled || loading;
 
-  // Glow hover effects are synth-theme-specific; use legacy glow tokens
-  const hoverGlow: React.CSSProperties =
-    hovered && !isDisabled && variant === "primary" && theme.glow.animated
-      ? { boxShadow: `0 0 20px ${theme.glow.borderMedium}, 0 0 40px ${theme.glow.borderLight}, inset 0 0 15px ${theme.glow.borderSubtle}`, borderColor: theme.glow.borderStrong }
-      : hovered && !isDisabled && variant === "ghost" && theme.glow.animated
-        ? { borderColor: theme.glow.borderMedium, boxShadow: `0 0 10px ${theme.glow.borderLight}` }
-        : hovered && !isDisabled && variant === "danger" && theme.glow.animated
-          ? { boxShadow: `0 0 16px ${theme.color.danger}33`, borderColor: `${theme.color.danger}66` }
-          : {};
-
   return (
     <button
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className={BUTTON_VARIANT_CLASSES[variant]}
       style={{
         borderRadius: t.radiusLg,
         cursor: isDisabled ? "not-allowed" : "pointer",
@@ -95,7 +125,6 @@ export function Button({
         opacity: isDisabled ? 0.6 : 1,
         ...getVariantStyles(theme.glow, theme.color.borderSubtle)[variant],
         ...(variant !== "icon" ? sizeStyles[size] : {}),
-        ...hoverGlow,
         ...style,
       }}
       disabled={isDisabled}

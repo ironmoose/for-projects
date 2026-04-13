@@ -43,7 +43,7 @@ describe("Library semantic token imports", () => {
   for (const file of atomsWithSemanticImport) {
     test(`${file} imports semantic tokens from @4lt7ab/ui/core`, () => {
       const src = readComponent(ATOMS_DIR, file);
-      expect(src).toContain('import { semantic as t } from "@4lt7ab/ui/core"');
+      expect(src).toMatch(/import \{[^}]*semantic as t[^}]*\} from "@4lt7ab\/ui\/core"/);
     });
   }
 
@@ -57,7 +57,7 @@ describe("Library semantic token imports", () => {
   for (const file of moleculesWithSemanticImport) {
     test(`molecules/${file} imports semantic tokens from @4lt7ab/ui/core`, () => {
       const src = readComponent(MOLECULES_DIR, file);
-      expect(src).toContain('import { semantic as t } from "@4lt7ab/ui/core"');
+      expect(src).toMatch(/import \{[^}]*semantic as t[^}]*\} from "@4lt7ab\/ui\/core"/);
     });
   }
 });

@@ -3,12 +3,23 @@
 ## [Unreleased]
 
 ### Added
+- `src/web/src/components/atoms/hover-migration.test.ts` — 57 tests verifying hover state migration from useState to useInjectStyles CSS pseudo-classes
 - `src/web/src/components/theme/lib-themes.ts` — 4 custom ThemeDefinition objects (deepTeal, ember, nord, synth) mapping app colors to @4lt7ab/ui/core token structure
 - `src/web/src/components/theme/compat.ts` — compatibility layer bridging old nested token structure to library CSS var references for incremental migration
 - `src/web/src/components/theme/theme-integration.test.ts` — 43 tests covering ThemeDefinition completeness, color preservation, compat token mapping, and backwards compatibility
 - `src/web/src/components/atoms/atoms-migration.test.ts` — 53 tests verifying atom/molecule migration to library semantic tokens
 
 ### Changed
+- **Phase 3a: Migrate hover states to useInjectStyles** — replaced useState-based hover tracking with CSS :hover/:focus-visible pseudo-classes via `useInjectStyles` from @4lt7ab/ui/core:
+  - `Button.tsx` — removed useState hover, added CSS hover for all variants; synth glow hover via `[data-synth]` CSS selectors using `var(--synth-glow)`
+  - `IconButton.tsx` — added :hover and :focus-visible styles via useInjectStyles
+  - `Card.tsx` — removed useState hover, conditional hover via `tfp-card-hoverable` className; synth hover glow via `[data-synth]` CSS
+  - `ExpandableCard.tsx` — removed headerHovered state, header hover via CSS `.tfp-expandable-header:hover`
+  - `DependencyChip.tsx` — removed useState hover, background hover via CSS
+  - `DocumentReferenceCard.tsx` — removed useState hover, detach button show/hide via CSS `.tfp-doc-ref:hover .tfp-doc-ref-detach`
+  - `TopBar.tsx` — replaced manual DOM style injection with useInjectStyles; renamed classes to `tfp-topbar-nav-btn`
+  - `TaskTable.tsx` — added row hover via CSS `.tfp-task-row:hover`
+  - `DocumentTable.tsx` — removed useState hover from DocumentCard; border/shadow/actions-reveal all via CSS; synth hover via `[data-synth]`
 - `ThemeSwitcher.tsx` — replaced custom swatch-button implementation with re-export of `ThemePicker` from `@4lt7ab/ui/ui`; barrel export preserved as `ThemeSwitcher` alias
 - `ThemesPage.tsx` — replaced custom `ThemeCard` grid with library `<ThemePicker />` grid variant with theme descriptions
 - `App.tsx` — added `<ThemePicker variant="compact" />` to TopBar trailing area for quick theme switching

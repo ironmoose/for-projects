@@ -1,5 +1,5 @@
 import { type ButtonHTMLAttributes } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { Icon } from "./Icon";
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -9,8 +9,20 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function IconButton({ icon, size = 24, badge, style, ...props }: IconButtonProps) {
+  useInjectStyles("tfp-icon-btn", `
+    .tfp-icon-btn:hover:not(:disabled) {
+      background: var(--color-surface-raised) !important;
+      color: var(--color-text) !important;
+    }
+    .tfp-icon-btn:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+  `);
+
   return (
     <button
+      className="tfp-icon-btn"
       style={{
         position: "relative",
         display: "flex",

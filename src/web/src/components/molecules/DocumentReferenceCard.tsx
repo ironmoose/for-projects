@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useInjectStyles } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { Card } from "./Card";
 import { TagChip } from "./TagChip";
@@ -45,7 +45,20 @@ export function DocumentReferenceCard({
   onDetach,
 }: DocumentReferenceCardProps) {
   const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
+
+  useInjectStyles("tfp-doc-ref", `
+    .tfp-doc-ref .tfp-doc-ref-detach {
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .tfp-doc-ref:hover .tfp-doc-ref-detach {
+      opacity: 1;
+    }
+    .tfp-doc-ref:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+  `);
 
   const tags = reference.tags ?? [];
   const maxTags = 3;
@@ -56,10 +69,9 @@ export function DocumentReferenceCard({
       variant="flat"
       padding="sm"
       hover
+      className="tfp-doc-ref"
       style={{ cursor: "pointer", position: "relative" }}
       onClick={onOpen}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {/* Top row: badge + title + detach */}
       <div
@@ -98,23 +110,25 @@ export function DocumentReferenceCard({
           {reference.title}
         </span>
 
-        {onDetach && hovered && (
-          <IconButton
-            icon="close"
-            size={14}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDetach();
-            }}
-            aria-label="Detach document"
-            style={{
-              width: 24,
-              height: 24,
-              minWidth: 24,
-              flexShrink: 0,
-              color: theme.color.textFaint,
-            }}
-          />
+        {onDetach && (
+          <span className="tfp-doc-ref-detach">
+            <IconButton
+              icon="close"
+              size={14}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDetach();
+              }}
+              aria-label="Detach document"
+              style={{
+                width: 24,
+                height: 24,
+                minWidth: 24,
+                flexShrink: 0,
+                color: theme.color.textFaint,
+              }}
+            />
+          </span>
         )}
       </div>
 

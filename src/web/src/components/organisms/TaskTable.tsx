@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useInjectStyles } from "@4lt7ab/ui/core";
 import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 
@@ -35,6 +36,16 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
   const { theme, themeName } = useTheme();
   const isSynth = themeName === "synth";
   const [statusDropdownTaskId, setStatusDropdownTaskId] = useState<string | null>(null);
+
+  useInjectStyles("tfp-task-row", `
+    .tfp-task-row:hover {
+      background: var(--color-surface-raised) !important;
+    }
+    .tfp-task-row:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: -2px;
+    }
+  `);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   // Close dropdown on click outside
@@ -62,6 +73,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
     return (
       <tr
         key={task.id}
+        className="tfp-task-row"
         onClick={() => onSelectTask(task.id)}
         style={{
           cursor: "pointer",

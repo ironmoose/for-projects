@@ -1,5 +1,5 @@
-import { type HTMLAttributes, useState } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { type HTMLAttributes } from "react";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { type Theme } from "../theme/theme";
 import { useTheme } from "../theme/ThemeContext";
 
@@ -16,9 +16,25 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
 }
 
-export function Card({ padding = "lg", variant = "default", hover, style, ...props }: CardProps) {
+export function Card({ padding = "lg", variant = "default", hover, style, className, ...props }: CardProps) {
   const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
+
+  useInjectStyles("tfp-card", `
+    .tfp-card-hoverable:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-border) !important;
+    }
+    .tfp-card:focus-visible,
+    .tfp-card-hoverable:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+    :root[data-synth] .tfp-card-hoverable:hover {
+      box-shadow: 0 0 15px color-mix(in srgb, var(--synth-glow) 15%, transparent),
+                  0 0 30px color-mix(in srgb, var(--synth-glow) 6%, transparent) !important;
+      border-color: color-mix(in srgb, var(--synth-glow) 27%, transparent) !important;
+    }
+  `);
 
   const variantStyles: Record<CardVariant, React.CSSProperties> = {
     default: {
@@ -54,27 +70,18 @@ export function Card({ padding = "lg", variant = "default", hover, style, ...pro
     },
   };
 
-  const baseBorderColor = variantStyles[variant].borderColor as string;
-  const hoverStyles: React.CSSProperties = hover
-    ? hovered
-      ? theme.glow.animated
-        ? { boxShadow: theme.glow.hoverShadow, borderColor: theme.glow.borderMedium }
-        : { boxShadow: t.shadowMd, borderColor: t.colorBorder }
-      : { borderColor: baseBorderColor }
-    : {};
+  const cardClassName = hover ? "tfp-card-hoverable" : "tfp-card";
 
   return (
     <div
+      className={className ? `${cardClassName} ${className}` : cardClassName}
       style={{
         borderRadius: theme.radius.xl,
         padding: theme.spacing[padding],
         transition: "background 0.15s, box-shadow 0.25s, border-color 0.2s",
         ...variantStyles[variant],
-        ...hoverStyles,
         ...style,
       }}
-      onMouseEnter={hover ? () => setHovered(true) : undefined}
-      onMouseLeave={hover ? () => setHovered(false) : undefined}
       {...props}
     />
   );

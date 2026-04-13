@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useInjectStyles } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { StatusDot } from "../atoms/StatusDot";
 import { IconButton } from "../atoms/IconButton";
@@ -22,18 +22,26 @@ const STATUS_COLORS: Record<TaskStatus, (theme: ReturnType<typeof useTheme>["the
 
 export function DependencyChip({ taskTitle, taskStatus, onRemove, onClick }: DependencyChipProps) {
   const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
+
+  useInjectStyles("tfp-dep-chip", `
+    .tfp-dep-chip:hover {
+      background: var(--color-surface-raised) !important;
+    }
+    .tfp-dep-chip:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+    }
+  `);
 
   const statusColor = STATUS_COLORS[taskStatus]?.(theme) ?? theme.color.textMuted;
 
   return (
     <span
+      className="tfp-dep-chip"
       role="button"
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       title={taskTitle}
       style={{
         display: "inline-flex",
@@ -41,7 +49,7 @@ export function DependencyChip({ taskTitle, taskStatus, onRemove, onClick }: Dep
         gap: 6,
         fontSize: theme.font.size.xs,
         color: theme.color.text,
-        background: hovered ? theme.color.surfaceContainerHighest : theme.color.surfaceContainerHigh,
+        background: theme.color.surfaceContainerHigh,
         borderRadius: theme.radius.full,
         padding: "3px 8px",
         cursor: "pointer",
