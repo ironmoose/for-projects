@@ -558,7 +558,7 @@ function TaskDetailPanel({
           flexShrink: 0,
         }}
       >
-        <Stack direction="row" justify="space-between" align="flex-start" gap="sm">
+        <Stack direction="horizontal" justify="space-between" align="flex-start" gap="sm">
           <div style={{ flex: 1, minWidth: 0 }}>
             {editingTitle ? (
               <Input
@@ -1129,7 +1129,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         {/* Full-width header */}
         <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: theme.spacing.lg }} />
 
-        <Stack direction="row" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.md }}>
+        <Stack direction="horizontal" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.md }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             {editingTitle ? (
               <Input
@@ -1167,7 +1167,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 }}
               />
             ) : (
-              <Stack direction="row" align="center" gap="sm">
+              <Stack direction="horizontal" align="center" gap="sm">
                 <h2
                   role="button"
                   tabIndex={0}
@@ -1399,7 +1399,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           flex: 1,
           minWidth: 0,
         }}>
-          <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
+          <Stack direction="horizontal" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
             <h3
               style={{
                 margin: 0,

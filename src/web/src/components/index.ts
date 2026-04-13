@@ -20,7 +20,7 @@ export { ReferenceTypeBadge } from "./atoms/ReferenceTypeBadge";
 // Molecules
 export { Card } from "./molecules/Card";
 export { ExpandableCard } from "@4lt7ab/ui/ui";
-export { Stack } from "./molecules/Stack";
+export { Stack } from "@4lt7ab/ui/ui";
 export { Markdown } from "./molecules/Markdown";
 export { PageHeader } from "@4lt7ab/ui/ui";
 export { TagChip } from "@4lt7ab/ui/ui";

@@ -1,7 +1,7 @@
 import { semantic as t } from "@4lt7ab/ui/core";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { MetaValue } from "../atoms/MetaValue";
-import { Stack } from "./Stack";
+import { Stack } from "@4lt7ab/ui/ui";
 
 interface MetadataRow {
   label: string;

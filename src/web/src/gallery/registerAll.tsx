@@ -8,7 +8,6 @@ import {
   SectionLabel,
   MetaValue,
   Card,
-  Stack,
   BackButton,
   EmptyState,
   TagPicker,
@@ -343,26 +342,6 @@ export function registerAllComponents(): void {
       { name: "Elevated", props: { variant: "elevated" } },
     ],
     codeTemplate: `<Card variant="default" padding="lg">Content</Card>`,
-    libraryCandidate: true,
-    migrated: true,
-  });
-
-  registerComponent({
-    name: "Stack",
-    description: "Flexbox stack layout.",
-    category: "molecule",
-    propDefs: [
-      { name: "direction", type: "enum", defaultValue: "column", options: ["row", "column"] },
-      { name: "gap", type: "enum", defaultValue: "md", options: ["xs", "sm", "md", "lg", "xl"] },
-    ],
-    render: (props) => (
-      <Stack direction={props.direction as "row" | "column"} gap={props.gap as "md"}>
-        <Badge>Item 1</Badge>
-        <Badge>Item 2</Badge>
-        <Badge>Item 3</Badge>
-      </Stack>
-    ),
-    codeTemplate: `<Stack direction="row" gap="md">...</Stack>`,
     libraryCandidate: true,
     migrated: true,
   });
