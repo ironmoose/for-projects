@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate ModalShell organism off compat useTheme to library tokens (glow retained)
 - Migrate ErrorBoundary organism off compat useTheme to library tokens
 - Migrate ShortcutHelpOverlay organism off compat useTheme to library tokens
 - Migrate ConnectionStatus organism off compat useTheme to library tokens

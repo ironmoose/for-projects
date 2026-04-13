@@ -791,6 +791,7 @@ export function registerAllComponents(): void {
       '</ModalShell>',
     ].join("\n"),
     libraryCandidate: true,
+    migrated: true,
   });
 
   registerComponent({

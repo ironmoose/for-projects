@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { Overlay } from "../atoms/Overlay";
 import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
@@ -59,13 +60,13 @@ export function ModalShell({
     ? isDanger
       ? theme.glow.dangerShadow
       : theme.glow.shadowXl
-    : theme.shadow.lg;
+    : t.shadowLg;
 
   const borderColor = theme.glow.animated
     ? isDanger
       ? theme.glow.dangerBorder
       : theme.glow.borderMedium
-    : theme.color.borderSubtle;
+    : `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`;
 
   // Resolve aria-labelledby: explicit prop takes priority, then auto-generated title ID
   const resolvedLabelledBy = ariaLabelledBy ?? (title ? titleId : undefined);
@@ -92,8 +93,8 @@ export function ModalShell({
           onClick={(e) => e.stopPropagation()}
           style={{
             pointerEvents: "auto",
-            background: theme.color.surfaceContainer,
-            borderRadius: theme.radius.lg,
+            background: t.colorSurface,
+            borderRadius: t.radiusLg,
             boxShadow,
             border: `1px solid ${borderColor}`,
             width: "100%",
@@ -101,8 +102,8 @@ export function ModalShell({
             ...(maxHeight ? { maxHeight } : {}),
             display: "flex",
             flexDirection: "column",
-            gap: theme.spacing.lg,
-            padding: theme.spacing.xl,
+            gap: t.spaceLg,
+            padding: t.spaceXl,
             ...style,
           }}
         >
@@ -111,10 +112,10 @@ export function ModalShell({
               id={titleId}
               style={{
                 margin: 0,
-                fontFamily: theme.font.body,
-                fontSize: theme.font.size.lg,
+                fontFamily: t.fontSans,
+                fontSize: t.fontSizeLg,
                 fontWeight: 600,
-                color: theme.color.text,
+                color: t.colorText,
               }}
             >
               {title}
