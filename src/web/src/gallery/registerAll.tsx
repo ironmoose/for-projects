@@ -614,7 +614,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Markdown>{String(props.children)}</Markdown>,
     codeTemplate: `<Markdown>{"## Title\\n\\nParagraph with **bold** text."}</Markdown>`,
-    libraryCandidate: true,
+    migrated: true,
   });
 
   registerComponent({

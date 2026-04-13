@@ -62,6 +62,7 @@ describe("Library semantic token imports", () => {
     "SearchToggle.tsx",
     "DocumentReferenceCard.tsx",
     "TagPicker.tsx",
+    "Markdown.tsx",
   ];
 
   for (const file of moleculesWithSemanticImport) {
@@ -131,6 +132,11 @@ describe("Components fully migrated off useTheme", () => {
 
   test("molecules/DocumentReferenceCard.tsx does not import useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "DocumentReferenceCard.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("molecules/Markdown.tsx does not import useTheme", () => {
+    const src = readComponent(MOLECULES_DIR, "Markdown.tsx");
     expect(src).not.toContain("useTheme");
   });
 });

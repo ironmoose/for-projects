@@ -1,15 +1,16 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMemo } from "react";
-import { useTheme } from "../theme/ThemeContext";
-import type { Theme } from "../theme/theme";
+import { semantic as t } from "@4lt7ab/ui/core";
 
-function buildComponents(theme: Theme): Components {
-  const { color, font, spacing, radius } = theme;
+function alpha(token: string, pct: number): string {
+  return `color-mix(in srgb, ${token} ${pct}%, transparent)`;
+}
 
+function buildComponents(): Components {
   return {
     p: ({ children }) => (
-      <p style={{ margin: 0, marginBottom: spacing.sm, lineHeight: 1.75, color: color.text, fontSize: font.size.md }}>
+      <p style={{ margin: 0, marginBottom: t.spaceSm, lineHeight: 1.75, color: t.colorText, fontSize: t.fontSizeBase }}>
         {children}
       </p>
     ),
@@ -17,11 +18,11 @@ function buildComponents(theme: Theme): Components {
       <h1
         style={{
           margin: 0,
-          marginBottom: spacing.md,
-          fontFamily: font.headline,
-          fontSize: font.size.xl,
+          marginBottom: t.spaceMd,
+          fontFamily: t.fontSerif,
+          fontSize: t.fontSizeXl,
           fontWeight: 700,
-          color: color.text,
+          color: t.colorText,
         }}
       >
         {children}
@@ -31,11 +32,11 @@ function buildComponents(theme: Theme): Components {
       <h2
         style={{
           margin: 0,
-          marginBottom: spacing.sm,
-          fontFamily: font.headline,
-          fontSize: font.size.lg,
+          marginBottom: t.spaceSm,
+          fontFamily: t.fontSerif,
+          fontSize: t.fontSizeLg,
           fontWeight: 600,
-          color: color.text,
+          color: t.colorText,
         }}
       >
         {children}
@@ -45,11 +46,11 @@ function buildComponents(theme: Theme): Components {
       <h3
         style={{
           margin: 0,
-          marginBottom: spacing.xs,
-          fontFamily: font.headline,
-          fontSize: font.size.md,
+          marginBottom: t.spaceXs,
+          fontFamily: t.fontSerif,
+          fontSize: t.fontSizeBase,
           fontWeight: 600,
-          color: color.text,
+          color: t.colorText,
         }}
       >
         {children}
@@ -60,26 +61,26 @@ function buildComponents(theme: Theme): Components {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ color: color.primary, textDecoration: "underline" }}
+        style={{ color: t.colorActionPrimary, textDecoration: "underline" }}
       >
         {children}
       </a>
     ),
     ul: ({ children }) => (
-      <ul style={{ margin: 0, marginBottom: spacing.sm, paddingLeft: spacing.xl, color: color.text }}>{children}</ul>
+      <ul style={{ margin: 0, marginBottom: t.spaceSm, paddingLeft: t.spaceXl, color: t.colorText }}>{children}</ul>
     ),
     ol: ({ children }) => (
-      <ol style={{ margin: 0, marginBottom: spacing.sm, paddingLeft: spacing.xl, color: color.text }}>{children}</ol>
+      <ol style={{ margin: 0, marginBottom: t.spaceSm, paddingLeft: t.spaceXl, color: t.colorText }}>{children}</ol>
     ),
-    li: ({ children }) => <li style={{ lineHeight: 1.75, fontSize: font.size.md }}>{children}</li>,
+    li: ({ children }) => <li style={{ lineHeight: 1.75, fontSize: t.fontSizeBase }}>{children}</li>,
     blockquote: ({ children }) => (
       <blockquote
         style={{
           margin: 0,
-          marginBottom: spacing.sm,
-          paddingLeft: spacing.md,
-          borderLeft: `3px solid ${color.primary}`,
-          color: color.textMuted,
+          marginBottom: t.spaceSm,
+          paddingLeft: t.spaceMd,
+          borderLeft: `3px solid ${t.colorActionPrimary}`,
+          color: t.colorTextMuted,
         }}
       >
         {children}
@@ -92,10 +93,10 @@ function buildComponents(theme: Theme): Components {
           <code
             style={{
               display: "block",
-              fontFamily: font.mono,
-              fontSize: font.size.sm,
-              lineHeight: font.lineHeight.mono,
-              color: color.primary,
+              fontFamily: t.fontMono,
+              fontSize: t.fontSizeSm,
+              lineHeight: 1.5,
+              color: t.colorActionPrimary,
             }}
           >
             {children}
@@ -105,14 +106,14 @@ function buildComponents(theme: Theme): Components {
       return (
         <code
           style={{
-            fontFamily: font.mono,
+            fontFamily: t.fontMono,
             fontSize: "0.9em",
-            background: color.surfaceContainerHigh,
-            border: `1px solid ${color.borderSubtle}`,
-            borderRadius: radius.sm,
+            background: t.colorSurfaceRaised,
+            border: `1px solid ${alpha(t.colorBorder, 50)}`,
+            borderRadius: t.radiusSm,
             padding: "1px 5px",
-            color: color.tertiary,
-            textShadow: `0 0 8px ${color.glowPrimary}`,
+            color: t.colorWarning,
+            textShadow: `0 0 8px ${alpha(t.colorActionPrimary, 30)}`,
           }}
         >
           {children}
@@ -123,26 +124,26 @@ function buildComponents(theme: Theme): Components {
       <pre
         style={{
           margin: 0,
-          marginBottom: spacing.sm,
-          padding: spacing.md,
-          background: color.surfaceContainerHigh,
-          borderLeft: `2px solid ${color.tertiary}`,
-          borderRadius: radius.lg,
+          marginBottom: t.spaceSm,
+          padding: t.spaceMd,
+          background: t.colorSurfaceRaised,
+          borderLeft: `2px solid ${t.colorWarning}`,
+          borderRadius: t.radiusLg,
           overflowX: "auto",
-          boxShadow: `inset 2px 0 12px -4px ${color.glowPrimary}, ${theme.shadow.sm}`,
+          boxShadow: `inset 2px 0 12px -4px ${alpha(t.colorActionPrimary, 30)}, ${t.shadowSm}`,
         }}
       >
         {children}
       </pre>
     ),
     table: ({ children }) => (
-      <div style={{ overflowX: "auto", marginBottom: spacing.sm }}>
+      <div style={{ overflowX: "auto", marginBottom: t.spaceSm }}>
         <table
           style={{
             width: "100%",
             borderCollapse: "collapse",
-            fontSize: font.size.sm,
-            color: color.text,
+            fontSize: t.fontSizeSm,
+            color: t.colorText,
           }}
         >
           {children}
@@ -153,10 +154,10 @@ function buildComponents(theme: Theme): Components {
       <th
         style={{
           textAlign: "left",
-          padding: `${spacing.xs} ${spacing.sm}`,
-          borderBottom: `2px solid ${color.border}`,
+          padding: `${t.spaceXs} ${t.spaceSm}`,
+          borderBottom: `2px solid ${t.colorBorder}`,
           fontWeight: 600,
-          color: color.textMuted,
+          color: t.colorTextMuted,
         }}
       >
         {children}
@@ -165,8 +166,8 @@ function buildComponents(theme: Theme): Components {
     td: ({ children }) => (
       <td
         style={{
-          padding: `${spacing.xs} ${spacing.sm}`,
-          borderBottom: `1px solid ${color.borderSubtle}`,
+          padding: `${t.spaceXs} ${t.spaceSm}`,
+          borderBottom: `1px solid ${alpha(t.colorBorder, 50)}`,
         }}
       >
         {children}
@@ -176,14 +177,14 @@ function buildComponents(theme: Theme): Components {
       <hr
         style={{
           border: "none",
-          borderTop: `1px solid ${color.border}`,
-          margin: `${spacing.md} 0`,
+          borderTop: `1px solid ${t.colorBorder}`,
+          margin: `${t.spaceMd} 0`,
         }}
       />
     ),
-    strong: ({ children }) => <strong style={{ fontWeight: 600, color: color.text }}>{children}</strong>,
-    em: ({ children }) => <em style={{ color: color.textMuted }}>{children}</em>,
-    del: ({ children }) => <del style={{ color: color.textFaint }}>{children}</del>,
+    strong: ({ children }) => <strong style={{ fontWeight: 600, color: t.colorText }}>{children}</strong>,
+    em: ({ children }) => <em style={{ color: t.colorTextMuted }}>{children}</em>,
+    del: ({ children }) => <del style={{ color: t.colorTextSecondary }}>{children}</del>,
   };
 }
 
@@ -192,11 +193,10 @@ export interface MarkdownProps {
 }
 
 export function Markdown({ children }: MarkdownProps) {
-  const { theme } = useTheme();
-  const components = useMemo(() => buildComponents(theme), [theme]);
+  const components = useMemo(() => buildComponents(), []);
 
   return (
-    <div style={{ fontFamily: theme.font.body, fontSize: theme.font.size.md, color: theme.color.text }}>
+    <div style={{ fontFamily: t.fontSans, fontSize: t.fontSizeBase, color: t.colorText }}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {children}
       </ReactMarkdown>
