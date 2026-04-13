@@ -1,13 +1,48 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useInjectStyles } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";
 
-import { tableWrapperStyle, tableHeaderStyle, cellStyle } from "../molecules/tableUtils";
 import { useTheme } from "../theme/ThemeContext";
 import type { TaskSummary } from "../../types";
 import { TASK_STATUSES } from "../../types";
 import type { TaskStatus } from "../../types";
+
+// Local table style helpers using library tokens + glow passthrough
+function localTableWrapperStyle(glow: { animated: boolean; borderLight: string; shadowMd: string }): React.CSSProperties {
+  return {
+    overflowX: "auto",
+    borderRadius: t.radiusLg,
+    border: `1px solid ${glow.animated ? glow.borderLight : t.colorBorder}`,
+    background: t.colorSurface,
+    ...(glow.animated ? { boxShadow: glow.shadowMd } : {}),
+  };
+}
+
+function localTableHeaderStyle(glow: { animated: boolean; accentColor: string; borderMedium: string; textShadow: string }): React.CSSProperties {
+  return {
+    padding: `${t.spaceSm} ${t.spaceMd}`,
+    textAlign: "left",
+    fontWeight: 600,
+    fontSize: "0.625rem",
+    color: glow.animated ? glow.accentColor : t.colorTextMuted,
+    textTransform: "uppercase",
+    letterSpacing: t.letterSpacingWide,
+    borderBottom: glow.animated
+      ? `2px solid ${glow.borderMedium}`
+      : `2px solid ${t.colorBorder}`,
+    whiteSpace: "nowrap",
+    ...(glow.animated ? { textShadow: glow.textShadow } : {}),
+  };
+}
+
+function localCellStyle(): React.CSSProperties {
+  return {
+    padding: `${t.spaceSm} ${t.spaceMd}`,
+    borderBottom: `1px solid ${t.colorBorder}`,
+    verticalAlign: "middle",
+  };
+}
 
 const STATUS_LABELS: Record<string, string> = {
   todo: "todo",
@@ -83,11 +118,11 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
         }}
         style={{
           cursor: "pointer",
-          background: selectedTaskId === task.id ? theme.color.surfaceContainerHigh : undefined,
+          background: selectedTaskId === task.id ? t.colorSurfaceRaised : undefined,
           transition: "background 0.1s",
         }}
       >
-        <td style={{ ...cellStyle(theme), fontWeight: 500, maxWidth: 320 }}>
+        <td style={{ ...localCellStyle(), fontWeight: 500, maxWidth: 320 }}>
           <span
             style={{
               display: "block",
@@ -99,7 +134,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             {task.title}
           </span>
         </td>
-        <td style={{ ...cellStyle(theme), position: "relative" }}>
+        <td style={{ ...localCellStyle(), position: "relative" }}>
           <div
             role="button"
             tabIndex={0}
@@ -140,11 +175,11 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
                 display: "flex",
                 flexDirection: "column",
                 gap: 4,
-                padding: theme.spacing.sm,
-                background: theme.color.surfaceContainer,
-                border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.border}`,
-                borderRadius: theme.radius.md,
-                boxShadow: theme.glow.animated ? theme.glow.shadowLg : theme.shadow.md,
+                padding: t.spaceSm,
+                background: t.colorSurface,
+                border: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : t.colorBorder}`,
+                borderRadius: t.radiusMd,
+                boxShadow: theme.glow.animated ? theme.glow.shadowLg : t.shadowMd,
                 minWidth: 120,
               }}
             >
@@ -168,10 +203,10 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
                   style={{
                     cursor: "pointer",
                     padding: "2px 4px",
-                    borderRadius: theme.radius.sm,
+                    borderRadius: t.radiusSm,
                     background:
                       s === task.status
-                        ? `${theme.color.primary}18`
+                        ? `color-mix(in srgb, ${t.colorActionPrimary} 9%, transparent)`
                         : "transparent",
                     transition: "background 100ms",
                   }}
@@ -182,7 +217,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
                       opacity: s === task.status ? 1 : 0.7,
                       outline:
                         s === task.status
-                          ? `2px solid ${theme.color.primary}`
+                          ? `2px solid ${t.colorActionPrimary}`
                           : "none",
                       outlineOffset: 1,
                     }}
@@ -196,32 +231,32 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
         </td>
         <td
           style={{
-            ...cellStyle(theme),
-            fontSize: theme.font.size.xs,
-            color: theme.color.textMuted,
+            ...localCellStyle(),
+            fontSize: t.fontSizeXs,
+            color: t.colorTextMuted,
           }}
         >
-          {task.category ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+          {task.category ?? <span style={{ color: t.colorTextSecondary }}>--</span>}
         </td>
         <td
           style={{
-            ...cellStyle(theme),
-            fontSize: theme.font.size.xs,
-            color: theme.color.textMuted,
+            ...localCellStyle(),
+            fontSize: t.fontSizeXs,
+            color: t.colorTextMuted,
           }}
         >
-          {task.effort ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+          {task.effort ?? <span style={{ color: t.colorTextSecondary }}>--</span>}
         </td>
         <td
           style={{
-            ...cellStyle(theme),
-            fontSize: theme.font.size.xs,
-            color: theme.color.textMuted,
+            ...localCellStyle(),
+            fontSize: t.fontSizeXs,
+            color: t.colorTextMuted,
           }}
         >
-          {task.impact ?? <span style={{ color: theme.color.textFaint }}>--</span>}
+          {task.impact ?? <span style={{ color: t.colorTextSecondary }}>--</span>}
         </td>
-        <td style={{ ...cellStyle(theme), width: 32 }}>
+        <td style={{ ...localCellStyle(), width: 32 }}>
           <IconButton
             icon="delete"
             size={14}
@@ -239,14 +274,14 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
         <td
           colSpan={colSpan}
           style={{
-            padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-            background: theme.color.surfaceContainer,
-            borderBottom: `1px solid ${theme.color.border}`,
-            fontSize: theme.font.size.xxs,
+            padding: `${t.spaceXs} ${t.spaceMd}`,
+            background: t.colorSurface,
+            borderBottom: `1px solid ${t.colorBorder}`,
+            fontSize: "0.625rem",
             fontWeight: 700,
-            letterSpacing: theme.font.letterSpacing.wide,
+            letterSpacing: t.letterSpacingWide,
             textTransform: "uppercase",
-            color: theme.glow.animated ? theme.glow.accentColor : theme.color.textFaint,
+            color: theme.glow.animated ? theme.glow.accentColor : t.colorTextSecondary,
             maxWidth: 300,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -262,7 +297,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
 
   function renderGroupedRows(): React.ReactNode[] {
     // Determine if we need group headers at all
-    const hasAnyGroup = tasks.some((t) => t.group_key !== null);
+    const hasAnyGroup = tasks.some((tk) => tk.group_key !== null);
     if (!hasAnyGroup) {
       // No grouping — render flat list, identical to previous behavior
       return tasks.map((task) => renderTaskRow(task));
@@ -302,14 +337,14 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
 
   return (
     <div
-      style={tableWrapperStyle(theme)}
+      style={localTableWrapperStyle(theme.glow)}
     >
       <table
         style={{
           width: "100%",
           borderCollapse: "collapse",
-          fontSize: theme.font.size.sm,
-          color: theme.color.text,
+          fontSize: t.fontSizeSm,
+          color: t.colorText,
         }}
       >
         <thead>
@@ -317,7 +352,7 @@ export function TaskTable({ tasks, selectedTaskId, onSelectTask, onDeleteTask, o
             {["Title", "Status", "Category", "Effort", "Impact", ""].map((h) => (
               <th
                 key={h || "_actions"}
-                style={tableHeaderStyle(theme)}
+                style={localTableHeaderStyle(theme.glow)}
               >
                 {h}
               </th>

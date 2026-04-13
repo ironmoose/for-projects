@@ -926,6 +926,7 @@ export function registerAllComponents(): void {
       />
     ),
     codeTemplate: `<TaskTable tasks={tasks} selectedTaskId={selectedId} onSelectTask={setSelected} onDeleteTask={handleDelete} onUpdateTaskStatus={handleStatusChange} />`,
+    migrated: true,
   });
 
   registerComponent({

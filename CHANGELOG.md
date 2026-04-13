@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate TaskTable organism off compat useTheme to library tokens (glow retained)
 - Migrate DocumentReaderModal organism fully off compat useTheme to library tokens
 - Migrate FolderTileGrid organism off compat useTheme to library tokens (glow retained)
 - Replace local ExpandableCard with @4lt7ab/ui ExpandableCard re-export
