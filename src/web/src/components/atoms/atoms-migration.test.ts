@@ -61,6 +61,7 @@ describe("Library semantic token imports", () => {
     "DependencyChip.tsx",
     "SearchToggle.tsx",
     "DocumentReferenceCard.tsx",
+    "TagPicker.tsx",
   ];
 
   for (const file of moleculesWithSemanticImport) {
@@ -326,6 +327,15 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).not.toMatch(/theme\.color\./);
     expect(src).not.toMatch(/theme\.font\./);
     expect(src).not.toMatch(/theme\.radius\./);
+    expect(src).toContain("theme.glow.");
+  });
+
+  test("TagPicker.tsx only uses theme.glow from compat (no theme.color/font/radius/spacing)", () => {
+    const src = readComponent(MOLECULES_DIR, "TagPicker.tsx");
+    expect(src).not.toMatch(/theme\.color\./);
+    expect(src).not.toMatch(/theme\.font\./);
+    expect(src).not.toMatch(/theme\.radius\./);
+    expect(src).not.toMatch(/theme\.spacing\./);
     expect(src).toContain("theme.glow.");
   });
 

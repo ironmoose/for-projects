@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate TagPicker molecule off compat useTheme to library tokens (glow retained)
 - Migrate DocumentReferenceCard molecule fully off compat useTheme to library tokens
 - Migrate SearchToggle molecule off compat useTheme to library tokens (glow retained)
 - Migrate DependencyChip molecule off compat useTheme to library tokens

@@ -570,6 +570,7 @@ export function registerAllComponents(): void {
     name: "TagPicker",
     description: "Multi-select tag picker grouped by category.",
     category: "molecule",
+    migrated: true,
     propDefs: [],
     render: () => <TagPickerDemo />,
     codeTemplate: `<TagPicker selected={selectedTags} onChange={setSelectedTags} />`,
