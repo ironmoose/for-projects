@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local ProgressBar with @4lt7ab/ui re-export (delete local, remove gallery entry)
 - Migrate Toast to library tokens and add gallery entry (libraryCandidate)
 - Migrate AppThemePicker inline styles to library tokens
 - Migrate TaskTableFilters gap to library spacing token
