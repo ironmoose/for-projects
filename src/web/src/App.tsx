@@ -7,6 +7,7 @@ import {
   ErrorBoundary,
 } from "./components";
 import { ThemeBackground } from "@4lt7ab/ui/animations";
+import { ThemeSurface } from "@4lt7ab/ui/ui";
 import { semantic as t } from "@4lt7ab/ui/core";
 import { AppThemePicker } from "./components/molecules/AppThemePicker";
 import type { NavItem } from "./components";
@@ -105,6 +106,7 @@ export function App() {
     <KeyboardShortcutContext.Provider value={shortcutCtx}>
       <EventSubscriptionContext.Provider value={eventCtx}>
         <AnimationStyles />
+        <ThemeSurface global />
         <ThemeBackground />
         <a
           href="#main-content"
