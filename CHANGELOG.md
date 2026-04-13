@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Mark 20 migrated components with `migrated: true` in gallery entries
 - Remove last compat token (theme.color.borderSubtle) from form atoms and fieldUtils
 - Update Badge gallery entry with all 12 actual variants; add gallery sync test
 - Migrate Badge atom off compat useTheme to library tokens (keep glow-only useTheme)

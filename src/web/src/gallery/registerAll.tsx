@@ -221,6 +221,7 @@ export function registerAllComponents(): void {
       { name: "Disabled", props: { disabled: true } },
     ],
     codeTemplate: `<Button variant="primary" size="md">Click Me</Button>`,
+    migrated: true,
   });
 
   registerComponent({
@@ -247,6 +248,7 @@ export function registerAllComponents(): void {
       { name: "Default", props: { variant: "default", children: "default" } },
     ],
     codeTemplate: `<Badge variant="active">active</Badge>`,
+    migrated: true,
   });
 
   registerComponent({
@@ -259,6 +261,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Icon name={String(props.name)} size={Number(props.size)} />,
     codeTemplate: `<Icon name="check_circle" size={24} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -272,6 +275,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <IconButton icon={String(props.icon)} size={Number(props.size)} badge={props.badge as boolean} />,
     codeTemplate: `<IconButton icon="settings" size={24} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -284,6 +288,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Input label={String(props.label)} placeholder={String(props.placeholder)} />,
     codeTemplate: `<Input label="Label" placeholder="Enter text..." />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -296,6 +301,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Textarea label={String(props.label)} placeholder={String(props.placeholder)} />,
     codeTemplate: `<Textarea label="Description" placeholder="Enter details..." />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -330,6 +336,7 @@ export function registerAllComponents(): void {
       />
     ),
     codeTemplate: `<Select value="a" options={[...]} onChange={handleChange} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -341,6 +348,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <SectionLabel>{String(props.children)}</SectionLabel>,
     codeTemplate: `<SectionLabel>Section Title</SectionLabel>`,
+    migrated: true,
   });
 
   registerComponent({
@@ -365,6 +373,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <MetaValue label={String(props.label)} value={String(props.value)} />,
     codeTemplate: `<MetaValue label="ID" value={item.id} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -410,6 +419,7 @@ export function registerAllComponents(): void {
       { name: "Note", props: { type: "note" } },
     ],
     codeTemplate: `<ReferenceTypeBadge type="goal" />`,
+    migrated: true,
   });
 
   // =========================================================================
@@ -504,6 +514,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <BackButton onClick={() => {}} label={String(props.label)} />,
     codeTemplate: `<BackButton onClick={handleBack} label="All Projects" />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -517,6 +528,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <EmptyState icon={String(props.icon)} message={String(props.message)} variant={props.variant as "plain"} />,
     codeTemplate: `<EmptyState icon="folder_open" message="No items yet." />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -630,6 +642,7 @@ export function registerAllComponents(): void {
       { name: "Last page", props: { page: 5, totalPages: 5, total: 47 } },
     ],
     codeTemplate: `<Pagination page={currentPage} totalPages={totalPages} total={total} onPageChange={setPage} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -651,6 +664,7 @@ export function registerAllComponents(): void {
       />
     ),
     codeTemplate: `<MetadataTable title="Details" rows={[{ label: "ID", value: task.id }]} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -730,6 +744,7 @@ export function registerAllComponents(): void {
     propDefs: [],
     render: () => <ConfirmDialogDemo />,
     codeTemplate: `<ConfirmDialog title="Delete item?" message="This cannot be undone." onConfirm={handleDelete} onCancel={handleCancel} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -788,6 +803,7 @@ export function registerAllComponents(): void {
       { name: "Disconnected", props: { connected: false } },
     ],
     codeTemplate: `<DisconnectionBanner connected={isConnected} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -809,6 +825,7 @@ export function registerAllComponents(): void {
       '  <Input label="Title" value={title} onChange={e => setTitle(e.target.value)} />',
       '</CreateEntityOverlay>',
     ].join("\n"),
+    migrated: true,
   });
 
   registerComponent({
@@ -824,6 +841,7 @@ export function registerAllComponents(): void {
       </div>
     ),
     codeTemplate: `<CreateProjectOverlay onCreated={handleCreated} onClose={handleClose} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -839,6 +857,7 @@ export function registerAllComponents(): void {
       </div>
     ),
     codeTemplate: `<CreateTaskOverlay onCreated={handleCreated} onClose={handleClose} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -996,6 +1015,7 @@ export function registerAllComponents(): void {
       '  {/* list content */}',
       '</ListPageLayout>',
     ].join("\n"),
+    migrated: true,
   });
 
   registerComponent({

@@ -260,7 +260,7 @@ Three things are **always** touched alongside code changes:
 2. **CHANGELOG.md** — every commit adds a bullet to the changelog under the current `## [Unreleased]` section. **No category headers** (no `### Added`, `### Fixed`, etc.) — just flat bullets under the version. **Keep entries terse** — one short line per change, no implementation details. The changelog says *what* changed, not *how* or *why*. Example: `- Migrate Overlay atom to @4lt7ab/ui re-export`.
 3. **CLAUDE.md** — if the change adds modules, changes conventions, alters architecture, or introduces new workflows, update this file. Keep it current — a stale CLAUDE.md teaches wrong patterns.
 
-4. **Gallery** — the component gallery (`src/web/src/gallery/`) documents **only custom components and layouts that are NOT re-exported from `@4lt7ab/ui`**. Components re-exported from the library are already documented there. When adding or modifying a custom atom/molecule, update its gallery entry. When migrating a component to a library re-export, remove its gallery entry.
+4. **Gallery** — the component gallery (`src/web/src/gallery/`) documents **only custom components and layouts that are NOT re-exported from `@4lt7ab/ui`**. Components re-exported from the library are already documented there. When adding or modifying a custom atom/molecule, update its gallery entry. When migrating a component to a library re-export, remove its gallery entry. When migrating a component to library tokens, set `migrated: true` in its gallery entry so the gallery index shows a checkmark indicator. This is required for every theme migration commit.
 
 These are not optional. A commit without updated tests and changelog is incomplete.
 
@@ -299,7 +299,7 @@ These are not optional. A commit without updated tests and changelog is incomple
 1. Create component file in the appropriate tier: `src/web/src/components/{atoms|molecules|organisms}/{Name}.tsx`
 2. Use theme tokens via `useTheme()` — no hardcoded colors or pixel values
 3. Export from `src/web/src/components/index.ts` barrel
-4. Add to component gallery in `src/web/src/gallery/` if it's a reusable atom or molecule
+4. Add to component gallery in `src/web/src/gallery/` if it's a reusable atom or molecule. Set `migrated: true` in the gallery entry if the component uses library tokens (no compat `useTheme` for non-glow tokens)
 5. Update CHANGELOG.md
 6. `bun run build` (vite build must succeed)
 
