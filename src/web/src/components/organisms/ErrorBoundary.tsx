@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -19,21 +19,19 @@ function ErrorFallback({
   error: Error | null;
   onReset: () => void;
 }) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
         padding: "2rem",
         textAlign: "center",
-        color: theme.color.danger,
+        color: t.colorActionDestructive,
       }}
     >
       <h3
         style={{
           margin: "0 0 0.5rem",
-          fontFamily: theme.font.headline,
-          color: theme.color.danger,
+          fontFamily: t.fontSerif,
+          color: t.colorActionDestructive,
         }}
       >
         Something went wrong
@@ -41,8 +39,8 @@ function ErrorFallback({
       <p
         style={{
           margin: 0,
-          fontSize: theme.font.size.sm,
-          color: theme.color.textMuted,
+          fontSize: t.fontSizeSm,
+          color: t.colorTextMuted,
           opacity: 0.7,
         }}
       >
@@ -53,14 +51,14 @@ function ErrorFallback({
         style={{
           marginTop: "1rem",
           padding: "0.5rem 1rem",
-          border: `1px solid ${theme.color.danger}`,
-          borderRadius: theme.radius.md,
-          background: `${theme.color.danger}1a`,
-          color: theme.color.danger,
+          border: `1px solid ${t.colorActionDestructive}`,
+          borderRadius: t.radiusMd,
+          background: `color-mix(in srgb, ${t.colorActionDestructive} 10%, transparent)`,
+          color: t.colorActionDestructive,
           cursor: "pointer",
-          fontFamily: theme.font.body,
-          fontSize: theme.font.size.sm,
-          transition: `background ${theme.motion.fast}`,
+          fontFamily: t.fontSans,
+          fontSize: t.fontSizeSm,
+          transition: `background 0.15s`,
         }}
       >
         Try again

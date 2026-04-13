@@ -170,6 +170,11 @@ describe("Components fully migrated off useTheme", () => {
     const src = readComponent(ORGANISMS_DIR, "ShortcutHelpOverlay.tsx");
     expect(src).not.toContain("useTheme");
   });
+
+  test("organisms/ErrorBoundary.tsx does not import useTheme", () => {
+    const src = readComponent(ORGANISMS_DIR, "ErrorBoundary.tsx");
+    expect(src).not.toContain("useTheme");
+  });
 });
 
 // ---------------------------------------------------------------------------
