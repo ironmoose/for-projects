@@ -52,6 +52,7 @@ describe("Library semantic token imports", () => {
     "ExpandableCard.tsx",
     "EmptyState.tsx",
     "Pagination.tsx",
+    "PresenceCharm.tsx",
   ];
 
   for (const file of moleculesWithSemanticImport) {
@@ -86,6 +87,11 @@ describe("Components fully migrated off useTheme", () => {
 
   test("molecules/EmptyState.tsx does not import useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "EmptyState.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("molecules/PresenceCharm.tsx does not import useTheme", () => {
+    const src = readComponent(MOLECULES_DIR, "PresenceCharm.tsx");
     expect(src).not.toContain("useTheme");
   });
 });

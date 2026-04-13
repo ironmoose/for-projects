@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate PresenceCharm molecule off compat useTheme to library tokens
 - Migrate ActivityIndicator off compat useTheme, use library font token and hardcode spring easing
 - Migrate StatusDot off compat useTheme, hardcode animation/transition values
 - Mark 20 migrated components with `migrated: true` in gallery entries

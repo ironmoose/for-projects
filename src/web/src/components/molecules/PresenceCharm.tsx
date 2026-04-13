@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 
 export interface PresenceCharmProps {
   active: boolean;
@@ -7,8 +7,7 @@ export interface PresenceCharmProps {
 }
 
 export function PresenceCharm({ active, label, color }: PresenceCharmProps) {
-  const { theme } = useTheme();
-  const fill = active ? (color ?? theme.color.primary) : theme.color.borderSubtle;
+  const fill = active ? (color ?? t.colorActionPrimary) : `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`;
 
   return (
     <span
@@ -21,7 +20,7 @@ export function PresenceCharm({ active, label, color }: PresenceCharmProps) {
         borderRadius: "50%",
         background: fill,
         opacity: active ? 1 : 0.3,
-        transition: `background ${theme.animation.duration.fast} ${theme.animation.easing.default}, opacity ${theme.animation.duration.fast} ${theme.animation.easing.default}`,
+        transition: "background 150ms ease, opacity 150ms ease",
       }}
     />
   );
