@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local Pagination with @4lt7ab/ui Pagination re-export
 - Migrate TopBar organism off compat useTheme to library tokens (glow retained)
 - Migrate ModalShell organism off compat useTheme to library tokens (glow retained)
 - Migrate ErrorBoundary organism off compat useTheme to library tokens

@@ -24,7 +24,6 @@ import {
   ActivityIndicator,
   Markdown,
   PageHeader,
-  Pagination,
   MetadataTable,
   DocumentSearchBar,
   TaskTableFilters,
@@ -224,6 +223,7 @@ export function registerAllComponents(): void {
     ],
     codeTemplate: `<Button variant="primary" size="md">Click Me</Button>`,
     migrated: true,
+    deprecated: "Wrap @4lt7ab/ui Button. Local adds: loading prop, icon variant, glow effects.",
   });
 
   registerComponent({
@@ -638,33 +638,6 @@ export function registerAllComponents(): void {
     ],
     codeTemplate: `<PageHeader title="Projects" subtitle="Overview" trailing={<Button>Create</Button>} />`,
     migrated: true,
-  });
-
-  registerComponent({
-    name: "Pagination",
-    description: "Page navigation controls with previous/next buttons and page info.",
-    category: "molecule",
-    propDefs: [
-      { name: "page", type: "number", defaultValue: 2 },
-      { name: "totalPages", type: "number", defaultValue: 5 },
-      { name: "total", type: "number", defaultValue: 47 },
-    ],
-    render: (props) => (
-      <Pagination
-        page={Number(props.page)}
-        totalPages={Number(props.totalPages)}
-        total={Number(props.total)}
-        onPageChange={() => {}}
-      />
-    ),
-    variants: [
-      { name: "First page", props: { page: 1, totalPages: 5, total: 47 } },
-      { name: "Middle page", props: { page: 3, totalPages: 5, total: 47 } },
-      { name: "Last page", props: { page: 5, totalPages: 5, total: 47 } },
-    ],
-    codeTemplate: `<Pagination page={currentPage} totalPages={totalPages} total={total} onPageChange={setPage} />`,
-    migrated: true,
-    libraryCandidate: true,
   });
 
   registerComponent({

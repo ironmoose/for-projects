@@ -51,6 +51,7 @@ describe("Library semantic token imports", () => {
   const organismsWithSemanticImport = [
     "ModalShell.tsx",
     "TopBar.tsx",
+    "DocumentReferencePicker.tsx",
   ];
 
   for (const file of organismsWithSemanticImport) {
@@ -64,7 +65,6 @@ describe("Library semantic token imports", () => {
     "Card.tsx",
     "ExpandableCard.tsx",
     "EmptyState.tsx",
-    "Pagination.tsx",
     "PageHeader.tsx",
     "PresenceCharm.tsx",
     "DocumentSearchBar.tsx",
@@ -185,6 +185,11 @@ describe("Components fully migrated off useTheme", () => {
 
   test("organisms/ErrorBoundary.tsx does not import useTheme", () => {
     const src = readComponent(ORGANISMS_DIR, "ErrorBoundary.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("organisms/DocumentReferencePicker.tsx does not import useTheme", () => {
+    const src = readComponent(ORGANISMS_DIR, "DocumentReferencePicker.tsx");
     expect(src).not.toContain("useTheme");
   });
 });

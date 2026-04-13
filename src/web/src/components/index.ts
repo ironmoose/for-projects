@@ -27,7 +27,7 @@ export { TagChip } from "./molecules/TagChip";
 export { MetadataTable } from "./molecules/MetadataTable";
 export { EmptyState } from "./molecules/EmptyState";
 export { BackButton } from "./molecules/BackButton";
-export { Pagination } from "./molecules/Pagination";
+export { Pagination } from "@4lt7ab/ui/ui";
 export { PresenceCharm } from "./molecules/PresenceCharm";
 export { TaskTableFilters } from "./molecules/TaskTableFilters";
 export { DocumentSearchBar } from "./molecules/DocumentSearchBar";
