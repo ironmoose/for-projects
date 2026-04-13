@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
-import { useTheme } from "../theme/ThemeContext";
 import { Card } from "./Card";
 import { Icon } from "../atoms/Icon";
 
@@ -29,7 +28,6 @@ export function ExpandableCard({
   style,
   headerAction,
 }: ExpandableCardProps) {
-  const { theme } = useTheme();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
 
   useInjectStyles("tfp-expandable-header", `
@@ -83,8 +81,8 @@ export function ExpandableCard({
         style={{
           borderRadius: t.radiusLg,
           padding: title
-            ? `${theme.spacing.md} ${theme.spacing.md}`
-            : `${theme.spacing.xs} ${theme.spacing.md}`,
+            ? `${t.spaceMd} ${t.spaceMd}`
+            : `${t.spaceXs} ${t.spaceMd}`,
           width: "100%",
           display: "flex",
           alignItems: "center",
@@ -93,7 +91,7 @@ export function ExpandableCard({
           boxSizing: "border-box",
           cursor: "pointer",
           background: "transparent",
-          transition: `background ${theme.motion.fast} ${theme.motion.easing}`,
+          transition: "background 0.15s ease",
         }}
       >
         {title && (
@@ -101,15 +99,15 @@ export function ExpandableCard({
             style={{
               fontSize: t.fontSizeSm,
               fontWeight: 700,
-              fontFamily: theme.font.headline,
-              letterSpacing: theme.font.letterSpacing.tight,
+              fontFamily: t.fontSerif,
+              letterSpacing: t.letterSpacingTight,
               color: t.colorText,
             }}
           >
             {title}
           </span>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginLeft: "auto", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, marginLeft: "auto", flexShrink: 0 }}>
           {isOpen && headerAction && (
             <span onClick={(e) => e.stopPropagation()}>
               {headerAction}
@@ -121,7 +119,7 @@ export function ExpandableCard({
             style={{
               color: t.colorTextMuted,
               transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
-              transition: `transform ${theme.motion.fast} ${theme.motion.easing}`,
+              transition: "transform 0.15s ease",
               flexShrink: 0,
             }}
           />
@@ -131,13 +129,13 @@ export function ExpandableCard({
         style={{
           display: "grid",
           gridTemplateRows: isOpen ? "1fr" : "0fr",
-          transition: `grid-template-rows ${theme.motion.normal} ${theme.motion.easing}`,
+          transition: "grid-template-rows 0.2s ease",
         }}
       >
         <div style={{ overflow: "hidden", minHeight: 0 }}>
           <div
             style={{
-              padding: `${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.md}`,
+              padding: `${t.spaceSm} ${t.spaceMd} ${t.spaceMd}`,
             }}
           >
             {children}

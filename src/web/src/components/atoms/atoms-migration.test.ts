@@ -106,6 +106,11 @@ describe("Components fully migrated off useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "DocumentSearchBar.tsx");
     expect(src).not.toContain("useTheme");
   });
+
+  test("molecules/ExpandableCard.tsx does not import useTheme", () => {
+    const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
+    expect(src).not.toContain("useTheme");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -278,9 +283,9 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).toContain("theme.glow.");
   });
 
-  test("ExpandableCard.tsx uses theme.motion for transitions (unmapped)", () => {
+  test("ExpandableCard.tsx no longer uses theme.motion (hardcoded transitions)", () => {
     const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
-    expect(src).toContain("theme.motion.");
+    expect(src).not.toContain("theme.motion.");
   });
 });
 

@@ -493,6 +493,7 @@ export function registerAllComponents(): void {
       "</ExpandableCard>",
     ].join("\n"),
     libraryCandidate: true,
+    migrated: true,
   });
 
   registerComponent({
