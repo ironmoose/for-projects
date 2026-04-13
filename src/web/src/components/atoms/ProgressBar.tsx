@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 
 export interface ProgressBarSegment {
   value: number;
@@ -52,12 +53,12 @@ export function ProgressBar({ segments, height = 6, style }: ProgressBarProps) {
                   left: "50%",
                   transform: "translateX(-50%)",
                   whiteSpace: "nowrap",
-                  fontSize: 11,
+                  fontSize: t.fontSizeXs,
                   lineHeight: "16px",
                   padding: "2px 6px",
-                  borderRadius: 4,
+                  borderRadius: t.radiusSm,
                   backgroundColor: "rgba(0,0,0,0.85)",
-                  color: "#fff",
+                  color: t.colorTextInverse,
                   pointerEvents: "none",
                   zIndex: 10,
                 }}

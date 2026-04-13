@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate ProgressBar tooltip to library tokens (fontSize, borderRadius, color)
 - Delete unused DocumentReferenceSection organism (dead code, no consumers)
 - Migrate fieldUtils to library spacing tokens (propagates to Input, Select, Textarea)
 - Replace local ConfirmDialog with @4lt7ab/ui ConfirmDialog re-export
