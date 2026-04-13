@@ -257,7 +257,7 @@ pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage, Gal
 Three things are **always** touched alongside code changes:
 
 1. **Tests** — tests ship with the code, not after it. Add or update tests for every functional change. Run `bun test` and confirm green before committing.
-2. **CHANGELOG.md** — every commit adds a line to the changelog under the appropriate section (Added, Changed, Fixed, Removed). **Keep entries terse** — one short bullet per change, no implementation details. The changelog says *what* changed, not *how* or *why*. Example: `- Migrate Overlay atom to @4lt7ab/ui re-export` (not a paragraph explaining the migration).
+2. **CHANGELOG.md** — every commit adds a bullet to the changelog under the current `## [Unreleased]` section. **No category headers** (no `### Added`, `### Fixed`, etc.) — just flat bullets under the version. **Keep entries terse** — one short line per change, no implementation details. The changelog says *what* changed, not *how* or *why*. Example: `- Migrate Overlay atom to @4lt7ab/ui re-export`.
 3. **CLAUDE.md** — if the change adds modules, changes conventions, alters architecture, or introduces new workflows, update this file. Keep it current — a stale CLAUDE.md teaches wrong patterns.
 
 These are not optional. A commit without updated tests and changelog is incomplete.
