@@ -45,6 +45,10 @@ import type { TaskSummary, DocumentSummary } from "../types";
 import type { GraphNode } from "../api";
 import { FolderInput } from "../components/molecules/FolderInput";
 import { AppThemePicker } from "../components/molecules/AppThemePicker";
+import { SynthBackground } from "../components/atoms/SynthBackground";
+import { PresenceCharm } from "../components/molecules/PresenceCharm";
+import { ErrorBoundary } from "../components/organisms/ErrorBoundary";
+import { FolderTileGrid } from "../components/organisms/FolderTileGrid";
 
 // ---------------------------------------------------------------------------
 // Demo wrapper components (stateful)
@@ -270,6 +274,23 @@ export function registerAllComponents(): void {
     migrated: true,
   });
 
+  registerComponent({
+    name: "SynthBackground",
+    description: "Animated canvas background for the synth theme. Renders gradient orbs, perspective grid, starfield, and glow effects. Only visible when the synth theme is active.",
+    category: "atom",
+    propDefs: [],
+    render: () => (
+      <div style={{ position: "relative", width: "100%", height: 200, borderRadius: 8, overflow: "hidden" }}>
+        <SynthBackground />
+        <div style={{ position: "relative", zIndex: 1, padding: 16, fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
+          SynthBackground fills its container. Switch to the synth theme to see the animation.
+        </div>
+      </div>
+    ),
+    codeTemplate: `<SynthBackground />`,
+    migrated: true,
+  });
+
   // =========================================================================
   // Molecules
   // =========================================================================
@@ -457,6 +478,29 @@ export function registerAllComponents(): void {
     ),
     codeTemplate: `<DocumentReferenceCard reference={ref} onOpen={handleOpen} onDetach={handleDetach} />`,
     migrated: true,
+  });
+
+  registerComponent({
+    name: "PresenceCharm",
+    description: "Tiny colored dot indicating presence or occupancy. Renders as a filled circle when active, faded when inactive.",
+    category: "molecule",
+    migrated: true,
+    libraryCandidate: true,
+    propDefs: [
+      { name: "active", type: "boolean", defaultValue: true },
+      { name: "label", type: "string", defaultValue: "User online" },
+    ],
+    render: (props) => (
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <PresenceCharm active={props.active as boolean} label={String(props.label)} />
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{String(props.label)}</span>
+      </div>
+    ),
+    variants: [
+      { name: "Active", props: { active: true, label: "User online" } },
+      { name: "Inactive", props: { active: false, label: "User offline" } },
+    ],
+    codeTemplate: `<PresenceCharm active={isOnline} label="User status" />`,
   });
 
   // =========================================================================
@@ -712,6 +756,85 @@ export function registerAllComponents(): void {
       </div>
     ),
     codeTemplate: `<DependencyGraphView tasks={graphTasks} edges={graphEdges} blockedTaskIds={blockedIds} onTaskClick={handleClick} />`,
+  });
+
+  registerComponent({
+    name: "ErrorBoundary",
+    description: "React class component that catches render errors and displays a themed fallback with error message and retry button. Accepts optional custom fallback ReactNode.",
+    category: "organism",
+    migrated: true,
+    libraryCandidate: true,
+    propDefs: [],
+    render: () => {
+      // Show the ErrorFallback UI directly since we cannot trigger an error inline
+      return (
+        <ErrorBoundary>
+          <div style={{ padding: 16, background: "var(--color-surface-panel)", borderRadius: 8 }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>
+              ErrorBoundary wraps children and catches render errors. The fallback UI shows an error message and a retry button. Trigger an error to see it in action.
+            </p>
+          </div>
+        </ErrorBoundary>
+      );
+    },
+    codeTemplate: [
+      '<ErrorBoundary>',
+      '  <MyComponent />',
+      '</ErrorBoundary>',
+    ].join("\n"),
+  });
+
+  registerComponent({
+    name: "FolderTileGrid",
+    description: "Responsive grid of folder tiles for navigating the document folder hierarchy. Shows folder name, document count, subfolder count, and latest update. Includes an unfiled tile at root level.",
+    category: "organism",
+    migrated: true,
+    propDefs: [],
+    render: () => {
+      const docs: DocumentSummary[] = [
+        { id: "d1", title: "API Guide", summary: null, folder: "architecture", favorite: false, has_content: true, tags: [], linked_projects: [], created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-15T10:00:00Z" },
+        { id: "d2", title: "Schema Doc", summary: null, folder: "architecture", favorite: false, has_content: true, tags: [], linked_projects: [], created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-10T10:00:00Z" },
+        { id: "d3", title: "Style Guide", summary: null, folder: "conventions", favorite: false, has_content: true, tags: [], linked_projects: [], created_at: "2026-02-01T10:00:00Z", updated_at: "2026-02-20T10:00:00Z" },
+        { id: "d4", title: "Unfiled Note", summary: null, folder: null, favorite: false, has_content: true, tags: [], linked_projects: [], created_at: "2026-01-01T10:00:00Z", updated_at: "2026-01-15T10:00:00Z" },
+      ];
+      return (
+        <FolderTileGrid
+          documents={docs}
+          currentPath=""
+          onNavigate={() => {}}
+          onSelectUnfiled={() => {}}
+        />
+      );
+    },
+    codeTemplate: `<FolderTileGrid documents={docs} currentPath={path} onNavigate={setPath} onSelectUnfiled={handleUnfiled} />`,
+  });
+
+  registerComponent({
+    name: "ImportDocumentOverlay",
+    description: "Modal overlay for importing a document from an external URL. Provides URL input, folder selection, and tag picker. Built on CreateEntityOverlay.",
+    category: "organism",
+    migrated: true,
+    propDefs: [],
+    render: () => (
+      <div style={{ padding: 16, background: "var(--color-surface-panel)", borderRadius: 8, fontSize: 13, color: "var(--color-text-secondary)" }}>
+        <p style={{ margin: 0 }}>ImportDocumentOverlay renders as a modal overlay. Open it from the Documents page via the import action.</p>
+      </div>
+    ),
+    codeTemplate: `<ImportDocumentOverlay folders={folders} onImport={handleImport} onClose={handleClose} />`,
+  });
+
+  registerComponent({
+    name: "GitHubBrowserOverlay",
+    description: "Modal overlay for browsing a GitHub repository tree, selecting files, and batch-importing them as documents. Includes repo input, file filter, multi-select, folder and tag options.",
+    category: "organism",
+    migrated: true,
+    propDefs: [],
+    render: () => (
+      <div style={{ padding: 16, background: "var(--color-surface-panel)", borderRadius: 8, fontSize: 13, color: "var(--color-text-secondary)" }}>
+        <p style={{ margin: 0 }}>GitHubBrowserOverlay renders as a modal overlay. Open it from the Documents page via the GitHub browse action.</p>
+      </div>
+    ),
+    codeTemplate: `<GitHubBrowserOverlay folders={folders} onDone={handleDone} onClose={handleClose} />`,
   });
 
   // =========================================================================
