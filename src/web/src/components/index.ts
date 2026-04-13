@@ -19,7 +19,7 @@ export type { ProgressBarSegment, ProgressBarProps } from "./atoms/ProgressBar";
 export { ReferenceTypeBadge } from "./atoms/ReferenceTypeBadge";
 // Molecules
 export { Card } from "./molecules/Card";
-export { ExpandableCard } from "./molecules/ExpandableCard";
+export { ExpandableCard } from "@4lt7ab/ui/ui";
 export { Stack } from "./molecules/Stack";
 export { Markdown } from "./molecules/Markdown";
 export { PageHeader } from "./molecules/PageHeader";

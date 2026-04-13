@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local ExpandableCard with @4lt7ab/ui ExpandableCard re-export
 - Migrate DocumentReferencePicker organism fully off compat useTheme to library tokens
 - Migrate GitHubBrowserOverlay organism fully off compat useTheme to library tokens
 - Replace local Pagination with @4lt7ab/ui Pagination re-export

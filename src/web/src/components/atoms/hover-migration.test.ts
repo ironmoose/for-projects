@@ -33,7 +33,6 @@ describe("useInjectStyles imports", () => {
 
   const moleculeFiles = [
     { dir: MOLECULES_DIR, file: "Card.tsx" },
-    { dir: MOLECULES_DIR, file: "ExpandableCard.tsx" },
     { dir: MOLECULES_DIR, file: "DependencyChip.tsx" },
     { dir: MOLECULES_DIR, file: "DocumentReferenceCard.tsx" },
   ];
@@ -63,7 +62,6 @@ describe("useState hover tracking removed", () => {
   const migratedComponents = [
     { dir: ATOMS_DIR, file: "Button.tsx", statePattern: "useState(false)" },
     { dir: MOLECULES_DIR, file: "Card.tsx", statePattern: "useState(false)" },
-    { dir: MOLECULES_DIR, file: "ExpandableCard.tsx", statePattern: "headerHovered" },
     { dir: MOLECULES_DIR, file: "DependencyChip.tsx", statePattern: "useState(false)" },
     { dir: MOLECULES_DIR, file: "DocumentReferenceCard.tsx", statePattern: "useState(false)" },
   ];
@@ -78,12 +76,6 @@ describe("useState hover tracking removed", () => {
       expect(src).not.toContain("setHovered");
     });
   }
-
-  test("ExpandableCard.tsx does not use headerHovered state", () => {
-    const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
-    expect(src).not.toContain("headerHovered");
-    expect(src).not.toContain("setHeaderHovered");
-  });
 
   test("DocumentTable.tsx DocumentCard does not use hovered state", () => {
     const src = readComponent(ORGANISMS_DIR, "DocumentTable.tsx");
@@ -116,11 +108,6 @@ describe("CSS class names applied", () => {
     const src = readComponent(MOLECULES_DIR, "Card.tsx");
     expect(src).toContain("tfp-card-hoverable");
     expect(src).toContain("tfp-card");
-  });
-
-  test("ExpandableCard.tsx applies tfp-expandable-header class", () => {
-    const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
-    expect(src).toContain('className="tfp-expandable-header"');
   });
 
   test("DependencyChip.tsx applies tfp-dep-chip class", () => {
@@ -170,12 +157,6 @@ describe("onMouseEnter/onMouseLeave handlers removed", () => {
     expect(src).not.toContain("onMouseLeave");
   });
 
-  test("ExpandableCard.tsx has no onMouseEnter/onMouseLeave", () => {
-    const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
-    expect(src).not.toContain("onMouseEnter");
-    expect(src).not.toContain("onMouseLeave");
-  });
-
   test("DependencyChip.tsx has no onMouseEnter/onMouseLeave", () => {
     const src = readComponent(MOLECULES_DIR, "DependencyChip.tsx");
     expect(src).not.toContain("onMouseEnter");
@@ -215,11 +196,6 @@ describe("useInjectStyles called with correct IDs", () => {
     expect(src).toContain('useInjectStyles("tfp-card"');
   });
 
-  test("ExpandableCard.tsx injects styles with 'tfp-expandable-header' ID", () => {
-    const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
-    expect(src).toContain('useInjectStyles("tfp-expandable-header"');
-  });
-
   test("DependencyChip.tsx injects styles with 'tfp-dep-chip' ID", () => {
     const src = readComponent(MOLECULES_DIR, "DependencyChip.tsx");
     expect(src).toContain('useInjectStyles("tfp-dep-chip"');
@@ -255,7 +231,6 @@ describe("focus-visible styles included", () => {
     { dir: ATOMS_DIR, file: "Button.tsx", id: "tfp-btn" },
     { dir: ATOMS_DIR, file: "IconButton.tsx", id: "tfp-icon-btn" },
     { dir: MOLECULES_DIR, file: "Card.tsx", id: "tfp-card" },
-    { dir: MOLECULES_DIR, file: "ExpandableCard.tsx", id: "tfp-expandable-header" },
     { dir: MOLECULES_DIR, file: "DependencyChip.tsx", id: "tfp-dep-chip" },
     { dir: MOLECULES_DIR, file: "DocumentReferenceCard.tsx", id: "tfp-doc-ref" },
     { dir: ORGANISMS_DIR, file: "TopBar.tsx", id: "tfp-topbar" },

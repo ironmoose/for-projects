@@ -17,7 +17,6 @@ import {
   EmptyState,
   TagChip,
   TagPicker,
-  ExpandableCard,
   DependencyChip,
   ReferenceTypeBadge,
   Textarea,
@@ -454,47 +453,6 @@ export function registerAllComponents(): void {
       { name: "Elevated", props: { variant: "elevated" } },
     ],
     codeTemplate: `<Card variant="default" padding="lg">Content</Card>`,
-    libraryCandidate: true,
-    migrated: true,
-  });
-
-  registerComponent({
-    name: "ExpandableCard",
-    description:
-      "Card with clickable header, chevron, and expand/collapse animation. Supports uncontrolled (defaultOpen) and controlled (open/onToggle) modes for accordion patterns.",
-    category: "molecule",
-    propDefs: [
-      { name: "title", type: "string", defaultValue: "Section Title" },
-      { name: "defaultOpen", type: "boolean", defaultValue: false },
-      { name: "variant", type: "enum", defaultValue: "default", options: ["default", "flat", "elevated"] },
-    ],
-    render: (props) => (
-      <ExpandableCard
-        title={String(props.title)}
-        defaultOpen={props.defaultOpen as boolean}
-        variant={props.variant as "default" | "flat" | "elevated"}
-        style={{ width: 300 }}
-      >
-        <span>Expandable content goes here. Click the header to toggle.</span>
-      </ExpandableCard>
-    ),
-    variants: [
-      { name: "Collapsed", props: { defaultOpen: false } },
-      { name: "Open", props: { defaultOpen: true } },
-      { name: "Flat", props: { variant: "flat", defaultOpen: true } },
-      { name: "Elevated", props: { variant: "elevated", defaultOpen: true } },
-    ],
-    codeTemplate: [
-      "// Uncontrolled (manages own state)",
-      '<ExpandableCard title="Section" defaultOpen={false}>',
-      "  Content",
-      "</ExpandableCard>",
-      "",
-      "// Controlled (parent manages state, for accordion patterns)",
-      '<ExpandableCard title="Section" open={isOpen} onToggle={setIsOpen}>',
-      "  Content",
-      "</ExpandableCard>",
-    ].join("\n"),
     libraryCandidate: true,
     migrated: true,
   });

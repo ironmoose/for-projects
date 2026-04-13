@@ -64,7 +64,6 @@ describe("Library semantic token imports", () => {
 
   const moleculesWithSemanticImport = [
     "Card.tsx",
-    "ExpandableCard.tsx",
     "EmptyState.tsx",
     "PageHeader.tsx",
     "PresenceCharm.tsx",
@@ -126,11 +125,6 @@ describe("Components fully migrated off useTheme", () => {
 
   test("molecules/DocumentSearchBar.tsx does not import useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "DocumentSearchBar.tsx");
-    expect(src).not.toContain("useTheme");
-  });
-
-  test("molecules/ExpandableCard.tsx does not import useTheme", () => {
-    const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
     expect(src).not.toContain("useTheme");
   });
 
@@ -430,10 +424,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).not.toMatch(/theme\.spacing\./);
   });
 
-  test("ExpandableCard.tsx no longer uses theme.motion (hardcoded transitions)", () => {
-    const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
-    expect(src).not.toContain("theme.motion.");
-  });
 });
 
 // ---------------------------------------------------------------------------

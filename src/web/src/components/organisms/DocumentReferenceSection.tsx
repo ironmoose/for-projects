@@ -1,5 +1,5 @@
 import { semantic as t } from "@4lt7ab/ui/core";
-import { ExpandableCard } from "../molecules/ExpandableCard";
+import { ExpandableCard } from "@4lt7ab/ui/ui";
 import { DocumentReferenceCard } from "../molecules/DocumentReferenceCard";
 import { Badge } from "../atoms/Badge";
 import { IconButton } from "../atoms/IconButton";

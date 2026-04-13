@@ -59,20 +59,8 @@ describe("IconButton aria-labels", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. aria-expanded on ExpandableCard
+// 2. ExpandableCard — now provided by @4lt7ab/ui (no local file to test)
 // ---------------------------------------------------------------------------
-
-describe("ExpandableCard aria-expanded", () => {
-  const src = readFile(join(MOLECULES_DIR, "ExpandableCard.tsx"));
-
-  test("header element has aria-expanded attribute", () => {
-    expect(src).toContain("aria-expanded={isOpen}");
-  });
-
-  test("header element has role='button'", () => {
-    expect(src).toContain('role="button"');
-  });
-});
 
 // ---------------------------------------------------------------------------
 // 3. Semantic HTML landmarks
