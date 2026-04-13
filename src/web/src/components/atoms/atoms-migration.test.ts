@@ -33,7 +33,6 @@ describe("Library semantic token imports", () => {
     "Button.tsx",
     "Badge.tsx",
     "IconButton.tsx",
-    "Skeleton.tsx",
     "MetaValue.tsx",
     "SectionLabel.tsx",
     "StatusDot.tsx",
@@ -71,6 +70,7 @@ describe("Components fully migrated off useTheme", () => {
   const fullyMigrated = [
     "IconButton.tsx",
     "MetaValue.tsx",
+    "Skeleton.tsx",
   ];
 
   for (const file of fullyMigrated) {
