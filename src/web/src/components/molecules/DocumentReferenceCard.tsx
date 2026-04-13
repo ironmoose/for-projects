@@ -1,5 +1,4 @@
-import { useInjectStyles } from "@4lt7ab/ui/core";
-import { useTheme } from "../theme/ThemeContext";
+import { useInjectStyles, semantic as t } from "@4lt7ab/ui/core";
 import { Card } from "./Card";
 import { TagChip } from "./TagChip";
 import { IconButton } from "../atoms/IconButton";
@@ -23,29 +22,24 @@ const TYPE_LABELS: Record<ReferenceType, string> = {
   note: "Note",
 };
 
-function badgeColorForType(
-  type: ReferenceType,
-  theme: ReturnType<typeof useTheme>["theme"],
-): React.CSSProperties {
-  const map: Record<ReferenceType, { bg: string; fg: string }> = {
-    goal: { bg: `${theme.color.success}22`, fg: theme.color.success },
-    plan: { bg: `${theme.color.primary}22`, fg: theme.color.primary },
-    requirements: { bg: `${theme.color.warning}22`, fg: theme.color.warning },
-    design: { bg: `${theme.color.tertiary}22`, fg: theme.color.tertiary },
-    reference: { bg: theme.color.surfaceContainerHigh, fg: theme.color.textMuted },
-    note: { bg: theme.color.surfaceContainerHigh, fg: theme.color.textFaint },
-  };
-  const c = map[type];
-  return { background: c.bg, color: c.fg };
+function alpha(token: string, pct: number): string {
+  return `color-mix(in srgb, ${token} ${pct}%, transparent)`;
 }
+
+const TYPE_BADGE_STYLES: Record<ReferenceType, React.CSSProperties> = {
+  goal: { background: alpha(t.colorSuccess, 13), color: t.colorSuccess },
+  plan: { background: alpha(t.colorActionPrimary, 13), color: t.colorActionPrimary },
+  requirements: { background: alpha(t.colorWarning, 13), color: t.colorWarning },
+  design: { background: alpha(t.colorWarning, 13), color: t.colorWarning },
+  reference: { background: t.colorSurfaceRaised, color: t.colorTextMuted },
+  note: { background: t.colorSurfaceRaised, color: t.colorTextSecondary },
+};
 
 export function DocumentReferenceCard({
   reference,
   onOpen,
   onDetach,
 }: DocumentReferenceCardProps) {
-  const { theme } = useTheme();
-
   useInjectStyles("tfp-doc-ref", `
     .tfp-doc-ref .tfp-doc-ref-detach {
       opacity: 0;
@@ -78,11 +72,11 @@ export function DocumentReferenceCard({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: theme.spacing.sm,
+          gap: t.spaceSm,
           minHeight: 24,
         }}
       >
-        <Badge style={badgeColorForType(reference.type, theme)}>
+        <Badge style={TYPE_BADGE_STYLES[reference.type]}>
           {TYPE_LABELS[reference.type]}
         </Badge>
 
@@ -90,7 +84,7 @@ export function DocumentReferenceCard({
           <Icon
             name="star"
             size={14}
-            style={{ color: theme.color.warning, flexShrink: 0 }}
+            style={{ color: t.colorWarning, flexShrink: 0 }}
           />
         )}
 
@@ -98,10 +92,10 @@ export function DocumentReferenceCard({
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: theme.font.size.sm,
+            fontSize: t.fontSizeSm,
             fontWeight: 600,
-            fontFamily: theme.font.body,
-            color: theme.color.text,
+            fontFamily: t.fontSans,
+            color: t.colorText,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -125,7 +119,7 @@ export function DocumentReferenceCard({
                 height: 24,
                 minWidth: 24,
                 flexShrink: 0,
-                color: theme.color.textFaint,
+                color: t.colorTextSecondary,
               }}
             />
           </span>
@@ -136,11 +130,11 @@ export function DocumentReferenceCard({
       {reference.summary && (
         <div
           style={{
-            fontSize: theme.font.size.xs,
-            color: theme.color.textMuted,
-            fontFamily: theme.font.body,
-            lineHeight: theme.font.lineHeight.normal,
-            marginTop: theme.spacing.xs,
+            fontSize: t.fontSizeXs,
+            color: t.colorTextMuted,
+            fontFamily: t.fontSans,
+            lineHeight: t.lineHeightBase,
+            marginTop: t.spaceXs,
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
@@ -159,7 +153,7 @@ export function DocumentReferenceCard({
             alignItems: "center",
             gap: 4,
             flexWrap: "wrap",
-            marginTop: theme.spacing.xs,
+            marginTop: t.spaceXs,
           }}
         >
           {tags.slice(0, maxTags).map((tag) => (
@@ -168,8 +162,8 @@ export function DocumentReferenceCard({
           {overflowCount > 0 && (
             <span
               style={{
-                fontSize: theme.font.size.xxs,
-                color: theme.color.textFaint,
+                fontSize: t.fontSizeXs,
+                color: t.colorTextSecondary,
               }}
             >
               +{overflowCount}
