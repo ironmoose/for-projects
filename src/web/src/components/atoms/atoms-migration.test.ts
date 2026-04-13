@@ -53,6 +53,7 @@ describe("Library semantic token imports", () => {
     "TopBar.tsx",
     "DocumentReferencePicker.tsx",
     "GitHubBrowserOverlay.tsx",
+    "FolderTileGrid.tsx",
   ];
 
   for (const file of organismsWithSemanticImport) {
@@ -422,6 +423,16 @@ describe("Unmapped tokens still use compat useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "Card.tsx");
     expect(src).not.toMatch(/theme\.radius\./);
     expect(src).not.toMatch(/theme\.spacing\./);
+  });
+
+  test("FolderTileGrid.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {
+    const src = readComponent(ORGANISMS_DIR, "FolderTileGrid.tsx");
+    expect(src).not.toMatch(/theme\.color\./);
+    expect(src).not.toMatch(/theme\.font\./);
+    expect(src).not.toMatch(/theme\.spacing\./);
+    expect(src).not.toMatch(/theme\.radius\./);
+    expect(src).not.toMatch(/theme\.shadow\./);
+    expect(src).toContain("theme.glow.");
   });
 
 });

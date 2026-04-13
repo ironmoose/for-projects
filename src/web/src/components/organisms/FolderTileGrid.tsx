@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Icon } from "../atoms/Icon";
 import { useTheme } from "../theme/ThemeContext";
 import { useWindowWidth, SMALL_BREAKPOINT } from "../../hooks/useWindowWidth";
@@ -103,7 +104,6 @@ function computeLevel(documents: DocumentSummary[], currentPath: string) {
 }
 
 export function FolderTileGrid({ documents, currentPath, onNavigate, onSelectUnfiled, onDeleteFolder }: FolderTileGridProps) {
-  const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const columns = windowWidth >= SMALL_BREAKPOINT ? 3 : 2;
 
@@ -121,7 +121,7 @@ export function FolderTileGrid({ documents, currentPath, onNavigate, onSelectUnf
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: theme.spacing.md,
+        gap: t.spaceMd,
       }}
     >
       {folders.map((f) => (
@@ -148,11 +148,11 @@ function FolderTile({ folder, onClick, onDelete }: { folder: FolderEntry; onClic
   const [hovered, setHovered] = useState(false);
 
   const borderColor = hovered
-    ? theme.glow.animated ? theme.glow.borderMedium : theme.color.border
+    ? theme.glow.animated ? theme.glow.borderMedium : t.colorBorder
     : theme.glow.borderSubtle;
 
   const shadow = hovered
-    ? theme.glow.animated ? theme.glow.shadowMd : theme.shadow.md
+    ? theme.glow.animated ? theme.glow.shadowMd : t.shadowMd
     : "none";
 
   return (
@@ -161,27 +161,27 @@ function FolderTile({ folder, onClick, onDelete }: { folder: FolderEntry; onClic
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderRadius: theme.radius.lg,
+        borderRadius: t.radiusLg,
         border: `1px solid ${borderColor}`,
-        background: theme.color.surfaceContainer,
+        background: t.colorSurface,
         boxShadow: shadow,
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
-        padding: theme.spacing.md,
-        gap: theme.spacing.sm,
+        padding: t.spaceMd,
+        gap: t.spaceSm,
         transition: "border-color 0.2s, box-shadow 0.25s, background 0.15s",
       }}
     >
       {/* Icon + name */}
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-        <Icon name="folder" size={22} style={{ color: theme.color.primary }} />
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
+        <Icon name="folder" size={22} style={{ color: t.colorActionPrimary }} />
         <span
           style={{
             flex: 1, minWidth: 0,
-            fontSize: theme.font.size.sm, fontWeight: 700,
-            fontFamily: theme.font.body, color: theme.color.text,
-            letterSpacing: theme.font.letterSpacing.tight,
+            fontSize: t.fontSizeSm, fontWeight: 700,
+            fontFamily: t.fontSans, color: t.colorText,
+            letterSpacing: t.letterSpacingTight,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}
         >
@@ -194,13 +194,13 @@ function FolderTile({ folder, onClick, onDelete }: { folder: FolderEntry; onClic
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 24, height: 24, padding: 0,
-              border: "none", borderRadius: theme.radius.sm,
+              border: "none", borderRadius: t.radiusSm,
               background: "transparent", cursor: "pointer",
-              color: theme.color.textFaint,
+              color: t.colorTextSecondary,
               transition: "color 0.12s",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = theme.color.error; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = theme.color.textFaint; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = t.colorError; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = t.colorTextSecondary; }}
           >
             <Icon name="delete" size={16} />
           </button>
@@ -208,20 +208,20 @@ function FolderTile({ folder, onClick, onDelete }: { folder: FolderEntry; onClic
       </div>
 
       {/* Meta row */}
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm, flexWrap: "wrap" }}>
-        <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textMuted }}>
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm, flexWrap: "wrap" }}>
+        <span style={{ fontSize: t.fontSizeXs, color: t.colorTextMuted }}>
           {folder.totalDocs} doc{folder.totalDocs !== 1 ? "s" : ""}
         </span>
         {folder.subfolderCount > 0 && (
-          <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+          <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
             {folder.subfolderCount} subfolder{folder.subfolderCount !== 1 ? "s" : ""}
           </span>
         )}
         {folder.hasSource && (
-          <Icon name="link" size={12} style={{ color: theme.color.textFaint }} title="Contains imported documents" />
+          <Icon name="link" size={12} style={{ color: t.colorTextSecondary }} title="Contains imported documents" />
         )}
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+        <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
           {formatDate(folder.latestUpdate)}
         </span>
       </div>
@@ -243,25 +243,25 @@ function UnfiledTile({ count, onClick }: { count: number; onClick: () => void })
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${hovered ? theme.color.border : theme.glow.borderSubtle}`,
-        background: theme.color.surfaceContainer,
-        boxShadow: hovered ? theme.shadow.md : "none",
+        borderRadius: t.radiusLg,
+        border: `1px solid ${hovered ? t.colorBorder : theme.glow.borderSubtle}`,
+        background: t.colorSurface,
+        boxShadow: hovered ? t.shadowMd : "none",
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
-        padding: theme.spacing.md,
-        gap: theme.spacing.sm,
+        padding: t.spaceMd,
+        gap: t.spaceSm,
         transition: "border-color 0.2s, box-shadow 0.25s",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-        <Icon name="draft" size={22} style={{ color: theme.color.textFaint }} />
-        <span style={{ fontSize: theme.font.size.sm, fontWeight: 700, fontFamily: theme.font.body, color: theme.color.textMuted }}>
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
+        <Icon name="draft" size={22} style={{ color: t.colorTextSecondary }} />
+        <span style={{ fontSize: t.fontSizeSm, fontWeight: 700, fontFamily: t.fontSans, color: t.colorTextMuted }}>
           Unfiled
         </span>
       </div>
-      <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textMuted }}>
+      <span style={{ fontSize: t.fontSizeXs, color: t.colorTextMuted }}>
         {count} doc{count !== 1 ? "s" : ""}
       </span>
     </div>
