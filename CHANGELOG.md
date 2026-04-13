@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate DetailPageLayout template off compat useTheme to library tokens
 - Migrate Markdown molecule fully off compat useTheme to library tokens
 - Migrate TagPicker molecule off compat useTheme to library tokens (glow retained)
 - Migrate DocumentReferenceCard molecule fully off compat useTheme to library tokens

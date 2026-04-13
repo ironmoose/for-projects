@@ -17,6 +17,7 @@ import { join } from "path";
 const ATOMS_DIR = join(import.meta.dir);
 const MOLECULES_DIR = join(import.meta.dir, "..", "molecules");
 const ORGANISMS_DIR = join(import.meta.dir, "..", "organisms");
+const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 
 function readComponent(dir: string, name: string): string {
   return readFileSync(join(dir, name), "utf-8");
@@ -137,6 +138,11 @@ describe("Components fully migrated off useTheme", () => {
 
   test("molecules/Markdown.tsx does not import useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "Markdown.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("templates/DetailPageLayout.tsx does not import useTheme", () => {
+    const src = readComponent(TEMPLATES_DIR, "DetailPageLayout.tsx");
     expect(src).not.toContain("useTheme");
   });
 });

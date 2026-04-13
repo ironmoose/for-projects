@@ -1078,6 +1078,7 @@ export function registerAllComponents(): void {
     name: "DetailPageLayout",
     description: "Horizontally constrained container for detail/edit pages with optional expanded mode for wider content.",
     category: "template",
+    migrated: true,
     propDefs: [
       { name: "expanded", type: "boolean", defaultValue: false },
     ],

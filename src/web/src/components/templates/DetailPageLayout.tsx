@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 
 interface DetailPageLayoutProps {
   children: React.ReactNode;
@@ -7,8 +7,6 @@ interface DetailPageLayoutProps {
 }
 
 export function DetailPageLayout({ children, expanded, style }: DetailPageLayoutProps) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
@@ -19,9 +17,9 @@ export function DetailPageLayout({ children, expanded, style }: DetailPageLayout
         width: "100%",
         maxWidth: expanded ? 1800 : 900,
         display: "flex",
-        gap: theme.spacing.xl,
+        gap: t.spaceXl,
         boxSizing: "border-box",
-        transition: `max-width ${theme.motion.normal} ease`,
+        transition: "max-width 0.2s ease",
         ...style,
       }}
     >
