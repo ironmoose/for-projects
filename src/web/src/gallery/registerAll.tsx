@@ -402,6 +402,7 @@ export function registerAllComponents(): void {
       { name: "Mixed", props: {} },
     ],
     codeTemplate: `<ProgressBar segments={[{ value: 3, color: "green", label: "done" }]} height={6} />`,
+    migrated: true,
   });
 
   registerComponent({
