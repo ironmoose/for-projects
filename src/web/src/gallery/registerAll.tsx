@@ -38,7 +38,9 @@ import {
   CreateTaskOverlay,
   CreateDocumentOverlay,
   DocumentReaderModal,
+  DocumentReferenceCard,
   DocumentReferencePicker,
+  SearchToggle,
   ShortcutHelpOverlay,
   TaskTable,
   DocumentTable,
@@ -739,6 +741,36 @@ export function registerAllComponents(): void {
       { name: "Compact", props: { variant: "compact" } },
     ],
     codeTemplate: `<AppThemePicker variant="grid" descriptions={{ deepTeal: "Cool teals" }} />`,
+  });
+
+  registerComponent({
+    name: "SearchToggle",
+    description: "Search input with keyword/semantic segmented toggle. Uses library tokens (t.*) with useTheme() retained only for glow effects.",
+    category: "molecule",
+    propDefs: [],
+    render: () => {
+      const [val, setVal] = useState("");
+      const [sem, setSem] = useState(false);
+      return <SearchToggle value={val} onChange={setVal} semantic={sem} onSemanticChange={setSem} />;
+    },
+    codeTemplate: `<SearchToggle value={query} onChange={setQuery} semantic={isSemantic} onSemanticChange={setIsSemantic} />`,
+    migrated: true,
+  });
+
+  registerComponent({
+    name: "DocumentReferenceCard",
+    description: "Compact card showing a linked document reference with type badge, title, summary, and tags. Fully migrated to library tokens.",
+    category: "molecule",
+    propDefs: [],
+    render: () => (
+      <DocumentReferenceCard
+        reference={{ document_id: "demo", type: "design", title: "Architecture Doc", summary: "High-level system design overview", favorite: false }}
+        onOpen={() => {}}
+        onDetach={() => {}}
+      />
+    ),
+    codeTemplate: `<DocumentReferenceCard reference={ref} onOpen={handleOpen} onDetach={handleDetach} />`,
+    migrated: true,
   });
 
   // =========================================================================

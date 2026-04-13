@@ -59,6 +59,7 @@ describe("Library semantic token imports", () => {
     "FolderInput.tsx",
     "TagChip.tsx",
     "DependencyChip.tsx",
+    "SearchToggle.tsx",
   ];
 
   for (const file of moleculesWithSemanticImport) {
@@ -311,6 +312,14 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).not.toMatch(/theme\.font\./);
     expect(src).not.toMatch(/theme\.radius\./);
     expect(src).not.toMatch(/theme\.motion\./);
+    expect(src).toContain("theme.glow.");
+  });
+
+  test("SearchToggle.tsx only uses theme.glow from compat (no theme.color/font/radius)", () => {
+    const src = readComponent(MOLECULES_DIR, "SearchToggle.tsx");
+    expect(src).not.toMatch(/theme\.color\./);
+    expect(src).not.toMatch(/theme\.font\./);
+    expect(src).not.toMatch(/theme\.radius\./);
     expect(src).toContain("theme.glow.");
   });
 

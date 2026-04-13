@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Icon } from "../atoms/Icon";
 import { useTheme } from "../theme/ThemeContext";
 
@@ -48,10 +49,10 @@ export function SearchToggle({
 
   // Colors — glow tokens resolve to animated synth values or static fallbacks
   const borderColor = focused
-    ? (theme.glow.animated ? theme.glow.borderStrong : theme.color.primary)
-    : (theme.glow.animated ? theme.glow.borderSubtle : theme.color.borderSubtle);
+    ? (theme.glow.animated ? theme.glow.borderStrong : t.colorActionPrimary)
+    : (theme.glow.animated ? theme.glow.borderSubtle : `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`);
   const focusShadow = focused
-    ? (theme.glow.animated ? theme.glow.focusRing : `0 0 0 2px ${theme.color.primary}30`)
+    ? (theme.glow.animated ? theme.glow.focusRing : `0 0 0 2px color-mix(in srgb, ${t.colorActionPrimary} 19%, transparent)`)
     : (theme.glow.animated ? theme.glow.focusRingSubtle : "none");
 
   return (
@@ -61,9 +62,9 @@ export function SearchToggle({
         display: "flex",
         alignItems: "center",
         height: 38,
-        borderRadius: theme.radius.lg,
+        borderRadius: t.radiusLg,
         border: `1px solid ${borderColor}`,
-        background: theme.color.surfaceContainerHigh,
+        background: t.colorSurfaceRaised,
         transition: "border-color 0.15s, box-shadow 0.2s",
         boxShadow: focusShadow,
         overflow: "hidden",
@@ -82,9 +83,9 @@ export function SearchToggle({
           border: "none",
           outline: "none",
           background: "transparent",
-          color: theme.color.text,
-          fontFamily: theme.font.body,
-          fontSize: theme.font.size.sm,
+          color: t.colorText,
+          fontFamily: t.fontSans,
+          fontSize: t.fontSizeSm,
           paddingLeft: PADDING_H,
           paddingRight: showToggle ? TOGGLE_W + PADDING_H + 4 : PADDING_H,
           minWidth: 0,
@@ -102,8 +103,8 @@ export function SearchToggle({
             display: "flex",
             alignItems: "center",
             height: PILL_H + TOGGLE_PAD * 2,
-            borderRadius: theme.radius.md,
-            background: `${theme.color.textFaint}10`,
+            borderRadius: t.radiusMd,
+            background: `color-mix(in srgb, ${t.colorTextSecondary} 6%, transparent)`,
             padding: TOGGLE_PAD,
             gap: TOGGLE_GAP,
           }}
@@ -118,9 +119,9 @@ export function SearchToggle({
                 : TOGGLE_PAD,
               width: PILL_W,
               height: PILL_H,
-              borderRadius: theme.radius.md - 1,
-              background: theme.glow.animated ? theme.glow.borderSubtle : `${theme.color.primary}18`,
-              border: `1px solid ${theme.glow.animated ? theme.glow.borderLight : `${theme.color.primary}30`}`,
+              borderRadius: `calc(${t.radiusMd} - 1px)`,
+              background: theme.glow.animated ? theme.glow.borderSubtle : `color-mix(in srgb, ${t.colorActionPrimary} 9%, transparent)`,
+              border: `1px solid ${theme.glow.animated ? theme.glow.borderLight : `color-mix(in srgb, ${t.colorActionPrimary} 19%, transparent)`}`,
               transition: "left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               zIndex: 0,
             }}
@@ -143,11 +144,11 @@ export function SearchToggle({
               justifyContent: "center",
               border: "none",
               background: "transparent",
-              color: !semantic ? theme.color.primary : theme.color.textMuted,
+              color: !semantic ? t.colorActionPrimary : t.colorTextMuted,
               cursor: "pointer",
               transition: "color 0.2s",
               padding: 0,
-              borderRadius: theme.radius.md - 1,
+              borderRadius: `calc(${t.radiusMd} - 1px)`,
             }}
           >
             <Icon name="search" size={15} />
@@ -170,11 +171,11 @@ export function SearchToggle({
               justifyContent: "center",
               border: "none",
               background: "transparent",
-              color: semantic ? theme.color.primary : theme.color.textMuted,
+              color: semantic ? t.colorActionPrimary : t.colorTextMuted,
               cursor: "pointer",
               transition: "color 0.2s",
               padding: 0,
-              borderRadius: theme.radius.md - 1,
+              borderRadius: `calc(${t.radiusMd} - 1px)`,
             }}
           >
             <Icon name="neurology" size={15} />

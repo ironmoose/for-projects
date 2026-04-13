@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate SearchToggle molecule off compat useTheme to library tokens (glow retained)
 - Migrate DependencyChip molecule off compat useTheme to library tokens
 - Migrate TagChip molecule off compat useTheme to library tokens
 - Migrate FolderInput molecule off compat useTheme to library tokens
