@@ -16,6 +16,7 @@ import { join } from "path";
 
 const ATOMS_DIR = join(import.meta.dir);
 const MOLECULES_DIR = join(import.meta.dir, "..", "molecules");
+const ORGANISMS_DIR = join(import.meta.dir, "..", "organisms");
 
 function readComponent(dir: string, name: string): string {
   return readFileSync(join(dir, name), "utf-8");
@@ -227,5 +228,72 @@ describe("Unmapped tokens still use compat useTheme", () => {
   test("ExpandableCard.tsx uses theme.motion for transitions (unmapped)", () => {
     const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
     expect(src).toContain("theme.motion.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. Synth theme decoupling — isSynth branches replaced by glow tokens
+// ---------------------------------------------------------------------------
+
+describe("Synth theme decoupled from component logic (Phase 4a)", () => {
+  const decoupledComponents = [
+    { dir: ATOMS_DIR, file: "Input.tsx" },
+    { dir: ATOMS_DIR, file: "Select.tsx" },
+    { dir: ATOMS_DIR, file: "Textarea.tsx" },
+    { dir: ORGANISMS_DIR, file: "TaskTable.tsx" },
+    { dir: ORGANISMS_DIR, file: "ModalShell.tsx" },
+    { dir: MOLECULES_DIR, file: "SearchToggle.tsx" },
+    { dir: MOLECULES_DIR, file: "tableUtils.ts" },
+  ];
+
+  for (const { dir, file } of decoupledComponents) {
+    test(`${file} does not check isSynth or themeName === 'synth'`, () => {
+      const src = readComponent(dir, file);
+      expect(src).not.toContain("isSynth");
+      expect(src).not.toContain("themeName === \"synth\"");
+      expect(src).not.toContain("themeName === 'synth'");
+    });
+  }
+
+  for (const { dir, file } of decoupledComponents) {
+    test(`${file} does not import sg() from synthGlow`, () => {
+      const src = readComponent(dir, file);
+      expect(src).not.toContain("synthGlow");
+    });
+  }
+
+  test("tableUtils functions take only theme parameter (no isSynth)", () => {
+    const src = readComponent(MOLECULES_DIR, "tableUtils.ts");
+    expect(src).toContain("function tableWrapperStyle(theme: Theme)");
+    expect(src).toContain("function tableHeaderStyle(theme: Theme)");
+    expect(src).not.toContain("isSynth: boolean");
+  });
+
+  test("Input.tsx uses theme.glow tokens for focus styles", () => {
+    const src = readComponent(ATOMS_DIR, "Input.tsx");
+    expect(src).toContain("theme.glow.borderStrong");
+    expect(src).toContain("theme.glow.focusRing");
+  });
+
+  test("ModalShell.tsx uses theme.glow tokens for shadow/border", () => {
+    const src = readComponent(ORGANISMS_DIR, "ModalShell.tsx");
+    expect(src).toContain("theme.glow.shadowXl");
+    expect(src).toContain("theme.glow.borderMedium");
+    expect(src).toContain("theme.glow.dangerShadow");
+    expect(src).toContain("theme.glow.dangerBorder");
+  });
+
+  test("TaskTable.tsx uses theme.glow tokens for dropdown/headers", () => {
+    const src = readComponent(ORGANISMS_DIR, "TaskTable.tsx");
+    expect(src).toContain("theme.glow.animated");
+    expect(src).toContain("theme.glow.borderMedium");
+    expect(src).toContain("theme.glow.accentColor");
+  });
+
+  test("lib-themes.ts documents the synth handling architecture", () => {
+    const src = readFileSync(join(ATOMS_DIR, "..", "theme", "lib-themes.ts"), "utf-8");
+    expect(src).toContain("Synth Theme Handling");
+    expect(src).toContain("Glow token system");
+    expect(src).toContain("data-synth attribute");
   });
 });

@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef } from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { sg } from "../theme/synthGlow";
 import { Overlay } from "../atoms/Overlay";
 import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
@@ -34,8 +33,7 @@ export function ModalShell({
   style,
   ariaLabelledBy,
 }: ModalShellProps) {
-  const { theme, themeName } = useTheme();
-  const isSynth = themeName === "synth";
+  const { theme } = useTheme();
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -57,16 +55,16 @@ export function ModalShell({
 
   const isDanger = variant === "danger";
 
-  const boxShadow = isSynth
+  const boxShadow = theme.glow.animated
     ? isDanger
-      ? `0 0 25px ${theme.color.danger}25, 0 0 50px ${theme.color.tertiary}10, 0 8px 40px rgba(0,0,0,0.5)`
-      : `0 0 30px ${sg(19)}, 0 0 60px ${sg(9)}, 0 8px 40px rgba(0,0,0,0.5)`
+      ? theme.glow.dangerShadow
+      : theme.glow.shadowXl
     : theme.shadow.lg;
 
-  const borderColor = isSynth
+  const borderColor = theme.glow.animated
     ? isDanger
-      ? `${theme.color.danger}44`
-      : sg(27)
+      ? theme.glow.dangerBorder
+      : theme.glow.borderMedium
     : theme.color.borderSubtle;
 
   // Resolve aria-labelledby: explicit prop takes priority, then auto-generated title ID

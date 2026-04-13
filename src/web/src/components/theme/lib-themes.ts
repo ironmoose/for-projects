@@ -10,6 +10,41 @@
  * scale (not the app's original values) since the compat layer handles
  * the mismatch for old components, and new components should use the
  * library scale.
+ *
+ * ## Synth Theme Handling (Phase 4a)
+ *
+ * The synth theme is a custom ThemeDefinition (Option B from the migration
+ * plan). It is NOT mapped to the library's built-in synthwave theme — it
+ * uses the app's own neon color palette and glow system.
+ *
+ * Architecture:
+ *   1. **ThemeDefinition** — `synthTheme` below provides standard color
+ *      tokens to the library's ThemeProvider. These drive CSS vars like
+ *      --color-action-primary, --color-text, etc.
+ *
+ *   2. **Glow token system** — The `theme.glow` object (in theme.ts)
+ *      provides animated glow values for the synth theme and static
+ *      fallbacks for other themes (via `noGlow()`). Components use
+ *      `theme.glow.borderMedium`, `theme.glow.focusRing`, etc. instead
+ *      of checking `themeName === 'synth'`. The `glow.animated` boolean
+ *      gates glow-specific visual extras (textShadow, extra boxShadow).
+ *
+ *   3. **CSS @property cycling** — The `--synth-glow` custom property
+ *      cycles through colors via a CSS animation on `:root[data-synth]`
+ *      (injected by AnimationStyles.tsx). The `sg()` helper in
+ *      synthGlow.ts creates color-mix expressions from this property.
+ *      Theme tokens reference `sg()` at definition time, so components
+ *      get animated colors through the token layer.
+ *
+ *   4. **data-synth attribute** — Set on `<html>` by ThemeContext when
+ *      `glow.animated` is true. Used by CSS selectors (hover effects in
+ *      `[data-synth] .tfp-btn-primary:hover`, etc.) and the glow-cycle
+ *      animation.
+ *
+ *   5. **SynthBackground** — A top-level conditional in App.tsx renders
+ *      the canvas background when themeName === 'synth'. This is the
+ *      only remaining direct theme-name check; all other synth handling
+ *      flows through glow tokens.
  */
 import type { ThemeDefinition } from "@4lt7ab/ui/core";
 
@@ -253,8 +288,8 @@ export const nordTheme: ThemeDefinition = {
 };
 
 // ---------------------------------------------------------------------------
-// Synth — neon retrowave (temporary mapping; full synth handling is a
-// separate task that will integrate with @4lt7ab/ui/animations)
+// Synth — neon retrowave (custom ThemeDefinition; see file header for
+// synth handling architecture)
 // ---------------------------------------------------------------------------
 
 export const synthTheme: ThemeDefinition = {

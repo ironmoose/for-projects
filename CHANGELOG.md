@@ -27,6 +27,7 @@
 - `src/web/src/components/atoms/atoms-migration.test.ts` — 53 tests verifying atom/molecule migration to library semantic tokens
 
 ### Changed
+- **Phase 4a: Synth theme decoupling** — removed all `isSynth`/`themeName === 'synth'` branches from 7 component files (Input, Select, Textarea, SearchToggle, tableUtils, TaskTable, ModalShell). Replaced direct `sg()` calls with `theme.glow.*` token references that resolve to animated synth values or static fallbacks. Eliminated `sg()` import from all components — only theme.ts definition still uses it. Documented synth handling architecture in lib-themes.ts file header.
 - **Phase 3d: AnimationStyles migration to useInjectStyles** — replaced inline `<style>` element rendering with `useInjectStyles("tfp-animations", css)` from @4lt7ab/ui/core. CSS content extracted to module-level `ANIMATION_CSS` constant. Component now returns `null`. All 19 keyframes, `@property --synth-glow`, `:root[data-synth]` glow cycling, and `prefers-reduced-motion` media query preserved identically.
 - **Phase 3a: Migrate hover states to useInjectStyles** — replaced useState-based hover tracking with CSS :hover/:focus-visible pseudo-classes via `useInjectStyles` from @4lt7ab/ui/core:
   - `Button.tsx` — removed useState hover, added CSS hover for all variants; synth glow hover via `[data-synth]` CSS selectors using `var(--synth-glow)`
