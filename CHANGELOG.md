@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Delete unused DocumentReferenceSection organism (dead code, no consumers)
 - Migrate fieldUtils to library spacing tokens (propagates to Input, Select, Textarea)
 - Replace local ConfirmDialog with @4lt7ab/ui ConfirmDialog re-export
 - Migrate ProjectDocumentTable organism off compat useTheme to library tokens (glow retained)

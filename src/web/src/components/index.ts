@@ -59,7 +59,6 @@ export type { ReferenceType } from "./organisms/DocumentReferencePicker";
 export { ShortcutHelpOverlay } from "./organisms/ShortcutHelpOverlay";
 export { DependencyGraphView } from "./organisms/DependencyGraphView";
 export { ModalShell } from "./organisms/ModalShell";
-export { DocumentReferenceSection } from "./organisms/DocumentReferenceSection";
 export type { DependencyGraphViewProps } from "./organisms/DependencyGraphView";
 
 // Templates

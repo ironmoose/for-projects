@@ -159,11 +159,6 @@ describe("Components fully migrated off useTheme", () => {
     expect(src).not.toContain("useTheme");
   });
 
-  test("organisms/DocumentReferenceSection.tsx does not import useTheme", () => {
-    const src = readComponent(ORGANISMS_DIR, "DocumentReferenceSection.tsx");
-    expect(src).not.toContain("useTheme");
-  });
-
   test("organisms/ImportDocumentOverlay.tsx does not import useTheme", () => {
     const src = readComponent(ORGANISMS_DIR, "ImportDocumentOverlay.tsx");
     expect(src).not.toContain("useTheme");
