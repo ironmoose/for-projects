@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
 import { useTheme } from "../theme/ThemeContext";
-import type { Theme } from "../theme/theme";
 import type { DocumentReferenceDetail, ReferenceType } from "../../types";
 
 // ---------------------------------------------------------------------------
@@ -32,17 +32,14 @@ const TYPE_META: Record<ReferenceType, { label: string; icon: string }> = {
   note: { label: "Notes", icon: "sticky_note_2" },
 };
 
-function typeColor(type: ReferenceType, theme: Theme): string {
-  const map: Record<ReferenceType, string> = {
-    goal: theme.color.success,
-    plan: theme.color.primary,
-    requirements: theme.color.warning,
-    design: theme.color.tertiary,
-    reference: theme.color.textMuted,
-    note: theme.color.textFaint,
-  };
-  return map[type];
-}
+const TYPE_COLORS: Record<ReferenceType, string> = {
+  goal: t.colorSuccess,
+  plan: t.colorActionPrimary,
+  requirements: t.colorWarning,
+  design: t.colorInfo,
+  reference: t.colorTextMuted,
+  note: t.colorTextSecondary,
+};
 
 // ---------------------------------------------------------------------------
 // Sort helper — order by type priority, then title
@@ -85,10 +82,10 @@ export function ProjectDocumentTable({
     return (
       <div
         style={{
-          padding: `${theme.spacing.xl} ${theme.spacing.md}`,
+          padding: `${t.spaceXl} ${t.spaceMd}`,
           textAlign: "center",
-          color: theme.color.textFaint,
-          fontSize: theme.font.size.sm,
+          color: t.colorTextSecondary,
+          fontSize: t.fontSizeSm,
         }}
       >
         No documents linked yet
@@ -97,7 +94,7 @@ export function ProjectDocumentTable({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
       {showFilter && (
         <input
           type="text"
@@ -105,13 +102,13 @@ export function ProjectDocumentTable({
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter documents\u2026"
           style={{
-            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-            fontSize: theme.font.size.xs,
-            fontFamily: theme.font.body,
-            color: theme.color.text,
-            background: theme.color.surfaceContainer,
+            padding: `${t.spaceXs} ${t.spaceSm}`,
+            fontSize: t.fontSizeXs,
+            fontFamily: t.fontSans,
+            color: t.colorText,
+            background: t.colorSurface,
             border: `1px solid ${theme.glow.borderSubtle}`,
-            borderRadius: theme.radius.md,
+            borderRadius: t.radiusMd,
             outline: "none",
           }}
         />
@@ -122,8 +119,8 @@ export function ProjectDocumentTable({
         style={{
           width: "100%",
           borderCollapse: "collapse",
-          fontSize: theme.font.size.sm,
-          fontFamily: theme.font.body,
+          fontSize: t.fontSizeSm,
+          fontFamily: t.fontSans,
         }}
       >
         <thead>
@@ -131,13 +128,13 @@ export function ProjectDocumentTable({
             <th
               style={{
                 textAlign: "left",
-                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                fontSize: theme.font.size.xxs,
+                padding: `${t.spaceXs} ${t.spaceSm}`,
+                fontSize: t.fontSizeXs,
                 fontWeight: 700,
-                fontFamily: theme.font.headline,
-                letterSpacing: theme.font.letterSpacing.wide,
+                fontFamily: t.fontSerif,
+                letterSpacing: t.letterSpacingWide,
                 textTransform: "uppercase",
-                color: theme.color.textMuted,
+                color: t.colorTextMuted,
                 borderBottom: `1px solid ${theme.glow.borderSubtle}`,
                 width: 80,
               }}
@@ -147,13 +144,13 @@ export function ProjectDocumentTable({
             <th
               style={{
                 textAlign: "left",
-                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                fontSize: theme.font.size.xxs,
+                padding: `${t.spaceXs} ${t.spaceSm}`,
+                fontSize: t.fontSizeXs,
                 fontWeight: 700,
-                fontFamily: theme.font.headline,
-                letterSpacing: theme.font.letterSpacing.wide,
+                fontFamily: t.fontSerif,
+                letterSpacing: t.letterSpacingWide,
                 textTransform: "uppercase",
-                color: theme.color.textMuted,
+                color: t.colorTextMuted,
                 borderBottom: `1px solid ${theme.glow.borderSubtle}`,
               }}
             >
@@ -162,13 +159,13 @@ export function ProjectDocumentTable({
             <th
               style={{
                 textAlign: "right",
-                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                fontSize: theme.font.size.xxs,
+                padding: `${t.spaceXs} ${t.spaceSm}`,
+                fontSize: t.fontSizeXs,
                 fontWeight: 700,
-                fontFamily: theme.font.headline,
-                letterSpacing: theme.font.letterSpacing.wide,
+                fontFamily: t.fontSerif,
+                letterSpacing: t.letterSpacingWide,
                 textTransform: "uppercase",
-                color: theme.color.textMuted,
+                color: t.colorTextMuted,
                 borderBottom: `1px solid ${theme.glow.borderSubtle}`,
                 width: 72,
               }}
@@ -183,10 +180,10 @@ export function ProjectDocumentTable({
               <td
                 colSpan={3}
                 style={{
-                  padding: `${theme.spacing.md}`,
+                  padding: `${t.spaceMd}`,
                   textAlign: "center",
-                  color: theme.color.textFaint,
-                  fontSize: theme.font.size.sm,
+                  color: t.colorTextSecondary,
+                  fontSize: t.fontSizeSm,
                 }}
               >
                 No matching documents
@@ -225,7 +222,7 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
   const meta = TYPE_META[doc.type];
-  const accent = typeColor(doc.type, theme);
+  const accent = TYPE_COLORS[doc.type];
 
   return (
     <tr
@@ -234,18 +231,18 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
       style={{
         cursor: "pointer",
         background: selected
-          ? `${accent}11`
+          ? `color-mix(in srgb, ${accent} 7%, transparent)`
           : hovered
-            ? theme.color.surfaceContainerHigh
+            ? t.colorSurfaceRaised
             : "transparent",
-        transition: `background ${theme.motion.fast} ${theme.motion.easing}`,
+        transition: "background 0.15s ease",
       }}
       onClick={onSelect}
     >
       {/* Type badge */}
       <td
         style={{
-          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+          padding: `${t.spaceXs} ${t.spaceSm}`,
           borderBottom: `1px solid ${theme.glow.borderSubtle}`,
           verticalAlign: "middle",
         }}
@@ -255,7 +252,7 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
             display: "inline-flex",
             alignItems: "center",
             gap: 4,
-            fontSize: theme.font.size.xxs,
+            fontSize: t.fontSizeXs,
             fontWeight: 600,
             color: accent,
             whiteSpace: "nowrap",
@@ -269,21 +266,21 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
       {/* Title */}
       <td
         style={{
-          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+          padding: `${t.spaceXs} ${t.spaceSm}`,
           borderBottom: `1px solid ${theme.glow.borderSubtle}`,
           verticalAlign: "middle",
           maxWidth: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+        <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
           <span
             style={{
               fontWeight: 500,
-              color: theme.color.text,
+              color: t.colorText,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              letterSpacing: theme.font.letterSpacing.tight,
+              letterSpacing: t.letterSpacingTight,
             }}
           >
             {doc.title}
@@ -292,7 +289,7 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
             <Icon
               name="star"
               size={13}
-              style={{ color: theme.color.warning, flexShrink: 0 }}
+              style={{ color: t.colorWarning, flexShrink: 0 }}
             />
           )}
         </div>
@@ -301,7 +298,7 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
       {/* Actions */}
       <td
         style={{
-          padding: `${theme.spacing.xs} ${theme.spacing.xs}`,
+          padding: `${t.spaceXs} ${t.spaceXs}`,
           borderBottom: `1px solid ${theme.glow.borderSubtle}`,
           verticalAlign: "middle",
           textAlign: "right",
@@ -317,7 +314,7 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
               width: 24,
               height: 24,
               minWidth: 24,
-              color: doc.favorite ? theme.color.warning : theme.color.textFaint,
+              color: doc.favorite ? t.colorWarning : t.colorTextSecondary,
             }}
           />
           <IconButton
@@ -329,7 +326,7 @@ function DocumentRow({ doc, selected, onSelect, onDetach, onToggleFavorite }: Do
               width: 24,
               height: 24,
               minWidth: 24,
-              color: theme.color.textFaint,
+              color: t.colorTextSecondary,
             }}
           />
         </div>

@@ -58,6 +58,7 @@ describe("Library semantic token imports", () => {
     "TaskTable.tsx",
     "DependencyGraphView.tsx",
     "DocumentTable.tsx",
+    "ProjectDocumentTable.tsx",
   ];
 
   for (const file of organismsWithSemanticImport) {
@@ -447,6 +448,16 @@ describe("Unmapped tokens still use compat useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "Card.tsx");
     expect(src).not.toMatch(/theme\.radius\./);
     expect(src).not.toMatch(/theme\.spacing\./);
+  });
+
+  test("ProjectDocumentTable.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {
+    const src = readComponent(ORGANISMS_DIR, "ProjectDocumentTable.tsx");
+    expect(src).not.toMatch(/theme\.color\./);
+    expect(src).not.toMatch(/theme\.font\./);
+    expect(src).not.toMatch(/theme\.spacing\./);
+    expect(src).not.toMatch(/theme\.radius\./);
+    expect(src).not.toMatch(/theme\.shadow\./);
+    expect(src).toContain("theme.glow.");
   });
 
   test("FolderTileGrid.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {

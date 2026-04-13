@@ -951,6 +951,7 @@ export function registerAllComponents(): void {
     name: "ProjectDocumentTable",
     description: "Simplified document table for project detail views with detach (unlink) action instead of delete.",
     category: "organism",
+    migrated: true,
     propDefs: [],
     render: () => (
       <ProjectDocumentTable
