@@ -27,7 +27,7 @@ import {
 } from "../components";
 import { DocumentReferencePicker } from "../components/organisms/DocumentReferencePicker";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
-import { ModalShell } from "../components/organisms/ModalShell";
+import { ModalShell } from "@4lt7ab/ui/ui";
 import { Badge } from "../components/atoms/Badge";
 import { useProject } from "../hooks";
 import { useShortcut, useShortcutSuppression } from "../hooks/useKeyboardShortcuts";
@@ -545,10 +545,8 @@ function TaskDetailPanel({
     <ModalShell
       onClose={onClose}
       maxWidth={1000}
-      maxHeight="75vh"
-      handleEscape={false}
-      ariaLabelledBy="task-detail-title"
-      style={{ gap: 0, padding: 0, minHeight: "50vh" }}
+      titleId="task-detail-title"
+      style={{ maxHeight: "75vh", gap: 0, padding: 0, minHeight: "50vh" }}
     >
       {/* Header -- editable title */}
       <div

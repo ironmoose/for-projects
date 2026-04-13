@@ -19,7 +19,6 @@ import {
   MetadataTable,
   DocumentSearchBar,
   TaskTableFilters,
-  ModalShell,
 
   TopBar,
   ConnectionStatus,
@@ -102,21 +101,6 @@ function FolderInputDemo() {
       folders={["architecture", "conventions", "onboarding", "api-docs"]}
       onChange={setValue}
     />
-  );
-}
-
-function ModalShellDemo() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button onClick={() => setOpen(true)}>Open Modal</Button>
-      {open && (
-        <ModalShell onClose={() => setOpen(false)} title="Modal Title">
-          <p style={{ margin: 0 }}>This is the modal content area. Press Escape or click the overlay to close.</p>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Close</Button>
-        </ModalShell>
-      )}
-    </>
   );
 }
 
@@ -478,22 +462,6 @@ export function registerAllComponents(): void {
   // =========================================================================
   // Organisms
   // =========================================================================
-
-  registerComponent({
-    name: "ModalShell",
-    description: "Base modal container with overlay backdrop, centered content panel, and escape-to-close behavior.",
-    category: "organism",
-    propDefs: [],
-    render: () => <ModalShellDemo />,
-    codeTemplate: [
-      '<ModalShell onClose={handleClose} maxWidth={480}>',
-      '  <h2>Title</h2>',
-      '  <p>Modal content</p>',
-      '</ModalShell>',
-    ].join("\n"),
-    libraryCandidate: true,
-    migrated: true,
-  });
 
   registerComponent({
     name: "TopBar",

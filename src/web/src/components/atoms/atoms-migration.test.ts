@@ -46,7 +46,6 @@ describe("Library semantic token imports", () => {
   }
 
   const organismsWithSemanticImport = [
-    "ModalShell.tsx",
     "TopBar.tsx",
     "DocumentReferencePicker.tsx",
     "GitHubBrowserOverlay.tsx",
@@ -368,16 +367,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).toContain("theme.glow.");
   });
 
-  test("ModalShell.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {
-    const src = readComponent(ORGANISMS_DIR, "ModalShell.tsx");
-    expect(src).not.toMatch(/theme\.color\./);
-    expect(src).not.toMatch(/theme\.font\./);
-    expect(src).not.toMatch(/theme\.spacing\./);
-    expect(src).not.toMatch(/theme\.radius\./);
-    expect(src).not.toMatch(/theme\.shadow\./);
-    expect(src).toContain("theme.glow.");
-  });
-
   test("TopBar.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {
     const src = readComponent(ORGANISMS_DIR, "TopBar.tsx");
     expect(src).not.toMatch(/theme\.color\./);
@@ -427,7 +416,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
 describe("Synth theme decoupled from component logic (Phase 4a)", () => {
   const decoupledComponents = [
     { dir: ORGANISMS_DIR, file: "TaskTable.tsx" },
-    { dir: ORGANISMS_DIR, file: "ModalShell.tsx" },
     { dir: MOLECULES_DIR, file: "SearchToggle.tsx" },
     { dir: MOLECULES_DIR, file: "tableUtils.ts" },
   ];
@@ -453,14 +441,6 @@ describe("Synth theme decoupled from component logic (Phase 4a)", () => {
     expect(src).toContain("function tableWrapperStyle(theme: Theme)");
     expect(src).toContain("function tableHeaderStyle(theme: Theme)");
     expect(src).not.toContain("isSynth: boolean");
-  });
-
-  test("ModalShell.tsx uses theme.glow tokens for shadow/border", () => {
-    const src = readComponent(ORGANISMS_DIR, "ModalShell.tsx");
-    expect(src).toContain("theme.glow.shadowXl");
-    expect(src).toContain("theme.glow.borderMedium");
-    expect(src).toContain("theme.glow.dangerShadow");
-    expect(src).toContain("theme.glow.dangerBorder");
   });
 
   test("TaskTable.tsx uses theme.glow tokens for dropdown/headers", () => {

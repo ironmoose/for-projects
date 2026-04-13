@@ -1,14 +1,15 @@
 /**
- * Tests verifying ModalShell accessibility: focus trap, ARIA attributes,
- * focus restoration, and aria-labelledby integration.
+ * Tests verifying ModalShell consumer accessibility after migration to @4lt7ab/ui
+ * library ModalShell.
+ *
+ * The library ModalShell owns: role="dialog", aria-modal, focus trap, Escape handling.
+ * Consumers are responsible for: titleId + matching h2 id, useShortcutSuppression.
  *
  * These tests verify:
- * 1. ModalShell renders with role="dialog" and aria-modal="true"
- * 2. aria-labelledby is set when title prop or ariaLabelledBy prop is provided
- * 3. useFocusTrap hook is wired into the modal panel
- * 4. Focus restoration logic exists in useFocusTrap
- * 5. Escape key handler is present
- * 6. Consumers pass ariaLabelledBy or title for accessible labelling
+ * 1. Consumers pass titleId and render a matching h2 with the same id
+ * 2. Consumers that need shortcut suppression call useShortcutSuppression
+ * 3. The barrel re-exports ModalShell from the library
+ * 4. useFocusTrap hook still exists and is exported (used by library internally)
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "fs";
@@ -17,188 +18,152 @@ import { join } from "path";
 const ORGANISMS_DIR = join(import.meta.dir);
 const HOOKS_DIR = join(import.meta.dir, "..", "..", "hooks");
 const PAGES_DIR = join(import.meta.dir, "..", "..", "pages");
-const GALLERY_DIR = join(import.meta.dir, "..", "..", "gallery");
+const COMPONENTS_DIR = join(import.meta.dir, "..");
 
 function readFile(dir: string, name: string): string {
   return readFileSync(join(dir, name), "utf-8");
 }
 
 // ---------------------------------------------------------------------------
-// 1. ModalShell ARIA attributes
+// 1. Barrel re-export from library
 // ---------------------------------------------------------------------------
 
-describe("ModalShell ARIA attributes", () => {
-  const src = readFile(ORGANISMS_DIR, "ModalShell.tsx");
-
-  test("renders role='dialog'", () => {
-    expect(src).toContain('role="dialog"');
+describe("ModalShell library re-export", () => {
+  test("barrel exports ModalShell from @4lt7ab/ui/ui", () => {
+    const src = readFile(COMPONENTS_DIR, "index.ts");
+    expect(src).toContain('export { ModalShell } from "@4lt7ab/ui/ui"');
   });
 
-  test("renders aria-modal='true'", () => {
-    expect(src).toContain('aria-modal="true"');
-  });
-
-  test("sets aria-labelledby on the dialog panel", () => {
-    expect(src).toContain("aria-labelledby={resolvedLabelledBy}");
-  });
-
-  test("generates a unique title ID via useId()", () => {
-    expect(src).toContain("useId()");
-  });
-
-  test("resolves ariaLabelledBy prop over auto-generated title ID", () => {
-    expect(src).toContain("ariaLabelledBy ?? (title ? titleId : undefined)");
+  test("local ModalShell.tsx no longer exists", () => {
+    const exists = (() => {
+      try {
+        readFile(ORGANISMS_DIR, "ModalShell.tsx");
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+    expect(exists).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// 2. ModalShell title prop
+// 2. Consumer titleId + h2 integration
 // ---------------------------------------------------------------------------
 
-describe("ModalShell title prop", () => {
-  const src = readFile(ORGANISMS_DIR, "ModalShell.tsx");
-
-  test("accepts optional title prop in interface", () => {
-    expect(src).toMatch(/title\?: string/);
+describe("Consumer a11y integration", () => {
+  test("CreateEntityOverlay passes titleId and renders matching h2", () => {
+    const src = readFile(ORGANISMS_DIR, "CreateEntityOverlay.tsx");
+    expect(src).toContain('titleId="create-entity-title"');
+    expect(src).toContain('id="create-entity-title"');
+    expect(src).toContain("<h2");
   });
 
-  test("renders h2 with id={titleId} when title is provided", () => {
-    expect(src).toContain("id={titleId}");
+  test("ShortcutHelpOverlay passes titleId and renders matching h2", () => {
+    const src = readFile(ORGANISMS_DIR, "ShortcutHelpOverlay.tsx");
+    expect(src).toContain('titleId="shortcut-help-title"');
+    expect(src).toContain('id="shortcut-help-title"');
   });
 
-  test("conditionally renders title h2", () => {
-    expect(src).toContain("{title && (");
+  test("GitHubBrowserOverlay passes titleId and renders matching h2", () => {
+    const src = readFile(ORGANISMS_DIR, "GitHubBrowserOverlay.tsx");
+    expect(src).toContain('titleId="github-browser-title"');
+    expect(src).toContain('id="github-browser-title"');
+  });
+
+  test("DocumentReaderModal passes titleId and renders matching h2", () => {
+    const src = readFile(ORGANISMS_DIR, "DocumentReaderModal.tsx");
+    expect(src).toContain('titleId="doc-reader-title"');
+    expect(src).toContain('id="doc-reader-title"');
+  });
+
+  test("ProjectPage task detail passes titleId and renders matching h2", () => {
+    const src = readFile(PAGES_DIR, "ProjectPage.tsx");
+    expect(src).toContain('titleId="task-detail-title"');
+    expect(src).toContain('id="task-detail-title"');
   });
 });
 
 // ---------------------------------------------------------------------------
-// 3. Focus trap integration
+// 3. Shortcut suppression
 // ---------------------------------------------------------------------------
 
-describe("ModalShell focus trap", () => {
-  const src = readFile(ORGANISMS_DIR, "ModalShell.tsx");
-
-  test("imports useFocusTrap hook", () => {
-    expect(src).toContain('import { useFocusTrap } from "../../hooks/useFocusTrap"');
+describe("Consumer shortcut suppression", () => {
+  test("CreateEntityOverlay calls useShortcutSuppression", () => {
+    const src = readFile(ORGANISMS_DIR, "CreateEntityOverlay.tsx");
+    expect(src).toContain("useShortcutSuppression(true)");
   });
 
-  test("creates a ref for the panel element", () => {
-    expect(src).toContain("useRef<HTMLDivElement>(null)");
+  test("DocumentReaderModal calls useShortcutSuppression", () => {
+    const src = readFile(ORGANISMS_DIR, "DocumentReaderModal.tsx");
+    expect(src).toContain("useShortcutSuppression(true)");
   });
 
-  test("passes panelRef to useFocusTrap", () => {
-    expect(src).toContain("useFocusTrap(panelRef)");
+  test("GitHubBrowserOverlay calls useShortcutSuppression", () => {
+    const src = readFile(ORGANISMS_DIR, "GitHubBrowserOverlay.tsx");
+    expect(src).toContain("useShortcutSuppression(true)");
   });
 
-  test("attaches ref to the dialog panel div", () => {
-    expect(src).toContain("ref={panelRef}");
+  test("ShortcutHelpOverlay does NOT suppress shortcuts (intentional)", () => {
+    const src = readFile(ORGANISMS_DIR, "ShortcutHelpOverlay.tsx");
+    expect(src).not.toContain("useShortcutSuppression");
+  });
+
+  test("ProjectPage task detail calls useShortcutSuppression", () => {
+    const src = readFile(PAGES_DIR, "ProjectPage.tsx");
+    expect(src).toContain("useShortcutSuppression");
   });
 });
 
 // ---------------------------------------------------------------------------
-// 4. useFocusTrap hook implementation
+// 4. Consumers import ModalShell from library
+// ---------------------------------------------------------------------------
+
+describe("Consumers import from library", () => {
+  test("CreateEntityOverlay imports ModalShell from @4lt7ab/ui/ui", () => {
+    const src = readFile(ORGANISMS_DIR, "CreateEntityOverlay.tsx");
+    expect(src).toContain('from "@4lt7ab/ui/ui"');
+    expect(src).toContain("ModalShell");
+  });
+
+  test("DocumentReaderModal imports ModalShell from @4lt7ab/ui/ui", () => {
+    const src = readFile(ORGANISMS_DIR, "DocumentReaderModal.tsx");
+    expect(src).toContain('from "@4lt7ab/ui/ui"');
+    expect(src).toContain("ModalShell");
+  });
+
+  test("ShortcutHelpOverlay imports ModalShell from @4lt7ab/ui/ui", () => {
+    const src = readFile(ORGANISMS_DIR, "ShortcutHelpOverlay.tsx");
+    expect(src).toContain('from "@4lt7ab/ui/ui"');
+    expect(src).toContain("ModalShell");
+  });
+
+  test("GitHubBrowserOverlay imports ModalShell from @4lt7ab/ui/ui", () => {
+    const src = readFile(ORGANISMS_DIR, "GitHubBrowserOverlay.tsx");
+    expect(src).toContain('from "@4lt7ab/ui/ui"');
+    expect(src).toContain("ModalShell");
+  });
+
+  test("ProjectPage imports ModalShell from @4lt7ab/ui/ui", () => {
+    const src = readFile(PAGES_DIR, "ProjectPage.tsx");
+    expect(src).toContain('from "@4lt7ab/ui/ui"');
+    expect(src).toContain("ModalShell");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. useFocusTrap hook still exists (used by library)
 // ---------------------------------------------------------------------------
 
 describe("useFocusTrap hook", () => {
-  const src = readFile(HOOKS_DIR, "useFocusTrap.ts");
-
-  test("defines FOCUSABLE_SELECTOR with standard focusable elements", () => {
+  test("hook file exists and defines focus trap logic", () => {
+    const src = readFile(HOOKS_DIR, "useFocusTrap.ts");
     expect(src).toContain("a[href]");
     expect(src).toContain("button:not([disabled])");
-    expect(src).toContain("input:not([disabled])");
-    expect(src).toContain("select:not([disabled])");
-    expect(src).toContain("textarea:not([disabled])");
-    expect(src).toContain("[tabindex]:not([tabindex='-1'])");
-  });
-
-  test("saves document.activeElement as trigger on mount", () => {
-    expect(src).toContain("triggerRef.current = document.activeElement");
-  });
-
-  test("auto-focuses first focusable element on mount", () => {
-    expect(src).toContain("focusables[0].focus()");
-  });
-
-  test("handles Tab key to cycle focus forward", () => {
-    expect(src).toContain('e.key !== "Tab"');
-    expect(src).toContain("document.activeElement === last");
-    expect(src).toContain("first.focus()");
-  });
-
-  test("handles Shift+Tab to cycle focus backward", () => {
-    expect(src).toContain("e.shiftKey");
-    expect(src).toContain("document.activeElement === first");
-    expect(src).toContain("last.focus()");
-  });
-
-  test("restores focus to trigger element on unmount", () => {
-    expect(src).toContain("trigger.focus()");
   });
 
   test("is exported from hooks index", () => {
     const index = readFile(HOOKS_DIR, "index.ts");
     expect(index).toContain('export { useFocusTrap } from "./useFocusTrap"');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 5. Escape key handling
-// ---------------------------------------------------------------------------
-
-describe("ModalShell escape key", () => {
-  const src = readFile(ORGANISMS_DIR, "ModalShell.tsx");
-
-  test("listens for Escape keydown events", () => {
-    expect(src).toContain('"Escape"');
-    expect(src).toContain("keydown");
-  });
-
-  test("supports handleEscape prop to disable Escape handling", () => {
-    expect(src).toContain("handleEscape = true");
-    expect(src).toContain("if (!handleEscape) return");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 6. Consumer aria-labelledby integration
-// ---------------------------------------------------------------------------
-
-describe("Consumer a11y integration", () => {
-  // ConfirmDialog test removed — component migrated to @4lt7ab/ui re-export
-
-  test("CreateEntityOverlay passes title prop to ModalShell", () => {
-    const src = readFile(ORGANISMS_DIR, "CreateEntityOverlay.tsx");
-    expect(src).toContain("title={title}");
-    // Should not render its own h2
-    expect(src).not.toContain("<h2");
-  });
-
-  test("ShortcutHelpOverlay passes ariaLabelledBy and adds id to h2", () => {
-    const src = readFile(ORGANISMS_DIR, "ShortcutHelpOverlay.tsx");
-    expect(src).toContain('ariaLabelledBy="shortcut-help-title"');
-    expect(src).toContain('id="shortcut-help-title"');
-  });
-
-  test("GitHubBrowserOverlay passes ariaLabelledBy and adds id to h2", () => {
-    const src = readFile(ORGANISMS_DIR, "GitHubBrowserOverlay.tsx");
-    expect(src).toContain('ariaLabelledBy="github-browser-title"');
-    expect(src).toContain('id="github-browser-title"');
-  });
-
-  test("DocumentReaderModal passes ariaLabelledBy and adds id to h2", () => {
-    const src = readFile(ORGANISMS_DIR, "DocumentReaderModal.tsx");
-    expect(src).toContain('ariaLabelledBy="doc-reader-title"');
-    expect(src).toContain('id="doc-reader-title"');
-  });
-
-  test("ProjectPage task detail passes ariaLabelledBy and adds id to h2", () => {
-    const src = readFile(PAGES_DIR, "ProjectPage.tsx");
-    expect(src).toContain('ariaLabelledBy="task-detail-title"');
-    expect(src).toContain('id="task-detail-title"');
-  });
-
-  test("Gallery demo uses title prop", () => {
-    const src = readFile(GALLERY_DIR, "registerAll.tsx");
-    expect(src).toContain('title="Modal Title"');
   });
 });

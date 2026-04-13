@@ -58,7 +58,7 @@ export { DocumentReferencePicker } from "./organisms/DocumentReferencePicker";
 export type { ReferenceType } from "./organisms/DocumentReferencePicker";
 export { ShortcutHelpOverlay } from "./organisms/ShortcutHelpOverlay";
 export { DependencyGraphView } from "./organisms/DependencyGraphView";
-export { ModalShell } from "./organisms/ModalShell";
+export { ModalShell } from "@4lt7ab/ui/ui";
 export type { DependencyGraphViewProps } from "./organisms/DependencyGraphView";
 
 // Templates

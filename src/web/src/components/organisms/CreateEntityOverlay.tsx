@@ -1,6 +1,6 @@
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Button } from "@4lt7ab/ui/ui";
-import { ModalShell } from "./ModalShell";
+import { Button, ModalShell } from "@4lt7ab/ui/ui";
+import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 
 function ButtonSpinner() {
   return (
@@ -37,8 +37,11 @@ export function CreateEntityOverlay({
   submitLabel = "Create",
   children,
 }: CreateEntityOverlayProps) {
+  useShortcutSuppression(true);
+
   return (
-    <ModalShell onClose={onClose} maxWidth={480} title={title}>
+    <ModalShell onClose={onClose} maxWidth={480} titleId="create-entity-title">
+      <h2 id="create-entity-title" style={{ margin: 0, fontFamily: t.fontSans, fontSize: t.fontSizeLg, fontWeight: 600, color: t.colorText }}>{title}</h2>
       {children}
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: t.spaceSm }}>

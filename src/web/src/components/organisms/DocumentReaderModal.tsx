@@ -15,7 +15,8 @@ import { TagPicker } from "../molecules/TagPicker";
 import { FolderInput } from "../molecules/FolderInput";
 import { EmptyState } from "../molecules/EmptyState";
 import { Markdown } from "../molecules/Markdown";
-import { ModalShell } from "./ModalShell";
+import { ModalShell } from "@4lt7ab/ui/ui";
+import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 import type { TagName } from "../../types";
 
 function ButtonSpinner() {
@@ -40,6 +41,7 @@ interface DocumentReaderModalProps {
 }
 
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
+  useShortcutSuppression(true);
   const toast = useToastContext();
   const { document, notFound, loading, updateDocument } = useDocument(documentId);
   const { documents: allDocs } = useDocuments();
@@ -145,9 +147,9 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
     <ModalShell
       onClose={handleEscape}
       maxWidth={1000}
-      maxHeight="75vh"
-      ariaLabelledBy="doc-reader-title"
+      titleId="doc-reader-title"
       style={{
+        maxHeight: "75vh",
         gap: 0,
         padding: 0,
         minHeight: "50vh",

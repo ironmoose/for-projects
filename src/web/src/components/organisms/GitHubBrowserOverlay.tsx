@@ -6,7 +6,8 @@ import { Icon } from "../atoms/Icon";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TagPicker } from "../molecules/TagPicker";
 import { FolderInput } from "../molecules/FolderInput";
-import { ModalShell } from "./ModalShell";
+import { ModalShell } from "@4lt7ab/ui/ui";
+import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 import { browseGitHubRepo, importDocumentBatch } from "../../api";
 import type { GitHubTreeEntry } from "../../api";
 import type { TagName } from "../../types";
@@ -40,6 +41,8 @@ function formatSize(bytes: number): string {
 }
 
 export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBrowserOverlayProps) {
+  useShortcutSuppression(true);
+
   // Step 1: repo input
   const [repoInput, setRepoInput] = useState("");
   // Step 2: browsing
@@ -124,9 +127,9 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
     <ModalShell
       onClose={onClose}
       maxWidth={700}
-      maxHeight="80vh"
-      ariaLabelledBy="github-browser-title"
+      titleId="github-browser-title"
       style={{
+        maxHeight: "80vh",
         display: "flex",
         flexDirection: "column",
         gap: t.spaceLg,

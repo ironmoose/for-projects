@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
+import { ModalShell } from "@4lt7ab/ui/ui";
 import { IconButton } from "../atoms/IconButton";
 import { useRegisteredShortcuts } from "../../hooks/useKeyboardShortcuts";
-import { ModalShell } from "./ModalShell";
 
 interface ShortcutHelpOverlayProps {
   onClose: () => void;
@@ -44,11 +44,9 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
     <ModalShell
       onClose={onClose}
       maxWidth={520}
-      maxHeight="80vh"
       zIndex={300}
-      suppressShortcuts={false}
-      style={{ gap: 0 }}
-      ariaLabelledBy="shortcut-help-title"
+      titleId="shortcut-help-title"
+      style={{ maxHeight: "80vh", gap: 0 }}
     >
       {/* Header */}
       <div
