@@ -28,7 +28,6 @@ export { MetadataTable } from "./molecules/MetadataTable";
 export { EmptyState } from "./molecules/EmptyState";
 export { BackButton } from "./molecules/BackButton";
 export { Pagination } from "./molecules/Pagination";
-export { ThemeSwitcher } from "./molecules/ThemeSwitcher";
 export { PresenceCharm } from "./molecules/PresenceCharm";
 export { TaskTableFilters } from "./molecules/TaskTableFilters";
 export { DocumentSearchBar } from "./molecules/DocumentSearchBar";

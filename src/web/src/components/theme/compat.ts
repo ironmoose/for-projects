@@ -14,7 +14,7 @@
  *      library CSS var references where tokens map 1:1, and preserved local
  *      values where they don't.
  *   2. `legacyThemes` — the old themes record for components that iterate
- *      over themes (ThemeSwitcher, ThemesPage).
+ *      over themes (ThemesPage, PreviewPanel).
  *
  * KEY DESIGN DECISIONS:
  *   - Spacing: old values are PRESERVED (0.75rem for md, etc.) because 84

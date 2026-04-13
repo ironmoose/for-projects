@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Removed
+- `ThemeSwitcher.tsx` — thin re-export shim no longer imported by any component (replaced by direct `ThemePicker` import from `@4lt7ab/ui/ui`)
+- `theme-picker-migration.test.ts` — migration verification test for the removed ThemeSwitcher shim
+
+### Changed
+- Updated CLAUDE.md theme system documentation to reflect completed @4lt7ab/ui integration: compat layer is load-bearing (not temporary), synth glow tokens are the standard pattern
+
 ### Added
 - `src/web/src/hooks/useFocusTrap.ts` — focus trap hook: saves trigger element, auto-focuses first focusable child, traps Tab/Shift+Tab cycling, restores focus on unmount
 - `src/web/src/components/organisms/modal-a11y.test.ts` — 28 tests verifying ModalShell ARIA attributes, focus trap integration, escape key handling, and consumer a11y wiring

@@ -240,13 +240,13 @@ templates/   → DetailPageLayout, ListPageLayout
 pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage, GalleryPage
 ```
 
-**Styling:** 100% inline styles via React `style` prop. No CSS files, no CSS modules, no Tailwind. Components read semantic tokens from the theme system via `useTheme()` hook. The `@4lt7ab/ui` component library is the underlying design system — migration is in progress.
+**Styling:** 100% inline styles via React `style` prop. No CSS files, no CSS modules, no Tailwind. Components read semantic tokens from the theme system. The `@4lt7ab/ui` component library is the underlying design system.
 
-**Theme system:** Powered by `@4lt7ab/ui/core` ThemeProvider. 4 custom themes (deepTeal, ember, nord, synth) defined as `ThemeDefinition` objects in `theme/lib-themes.ts`. The library injects CSS custom properties (`var(--color-text)`, etc.) on the document root. Two import paths coexist during migration:
-- **Old (compat):** `import { useTheme } from "../theme/ThemeContext"` — returns nested token structure (`theme.color.text`, `theme.spacing.md`). Mapped tokens resolve to library CSS vars; unmapped tokens (glow, motion, layout) preserve original values.
-- **New (library):** `import { semantic as t } from "@4lt7ab/ui/core"` — flat token references (`t.colorText`, `t.spaceMd`). Preferred for new/migrated components.
-- Compat layer in `theme/compat.ts`. Legacy theme definitions preserved in `theme/theme.ts` for unmapped tokens.
-- The synth theme adds animated canvas backgrounds and cycling CSS glow effects with per-component branches (`themeName === 'synth'`).
+**Theme system:** Powered by `@4lt7ab/ui/core` ThemeProvider. 4 custom themes (deepTeal, ember, nord, synth) defined as `ThemeDefinition` objects in `theme/lib-themes.ts`. The library injects CSS custom properties (`var(--color-text)`, etc.) on the document root. Two import paths coexist:
+- **Compat (widely used):** `import { useTheme } from "../theme/ThemeContext"` — returns nested token structure (`theme.color.text`, `theme.spacing.md`). Mapped tokens resolve to library CSS vars; unmapped tokens (glow, motion, layout) preserve original values from `theme/theme.ts`.
+- **Library (preferred for new code):** `import { semantic as t } from "@4lt7ab/ui/core"` — flat token references (`t.colorText`, `t.spaceMd`).
+- Compat layer: `theme/compat.ts` bridges old token shapes to library CSS vars. `theme/theme.ts` provides legacy theme definitions for unmapped tokens (glow, motion, layout, breakpoint). `theme/ThemeContext.tsx` wraps the library ThemeProvider and exposes the compat `useTheme()` hook. All three files are load-bearing — do not delete.
+- The synth theme adds animated canvas backgrounds and cycling CSS glow effects via the glow token system (`theme.glow.*`). Only `SynthBackground` checks `themeName === 'synth'` directly; all other synth handling flows through glow tokens.
 
 **State management:** React hooks + Context API. No external state libraries. Custom hooks for data fetching (`useProject`, `useDocuments`, etc.), real-time events (`useEventSubscription`), keyboard shortcuts (`useKeyboardShortcuts`), and D3 force simulation (`useForceGraph`).
 
@@ -348,5 +348,5 @@ make clean               # remove dist and caches
 - **`document_references` has no FK on `entity_id`.** It's polymorphic — the same table references projects, tasks, and documents. Deleting an entity does NOT cascade-delete its references. Entity delete code must explicitly clean up references.
 - **`entity_tags` has the same polymorphic pattern.** No FK cascade on `entity_id`. Tags must be explicitly cleaned up on entity delete.
 - **`is_blocked` on tasks is user-managed, not computed.** Despite `task_dependencies` existing, `is_blocked` is a plain boolean set by the user. Dependency edges are informational only.
-- **The synth theme adds per-component branches.** Many components check `themeName === 'synth'` for glow effects. This is tech debt being addressed via @4lt7ab/ui integration — avoid adding new synth branches.
+- **The synth theme uses glow tokens, not theme-name checks.** Components use `theme.glow.*` tokens for glow effects. Only `SynthBackground` checks `themeName === 'synth'` directly. Do not add new `themeName === 'synth'` branches — use glow tokens instead.
 - **No DEFAULT values in SQLite schema.** All values must be explicitly provided in INSERT statements. This is by convention to keep the schema explicit.
