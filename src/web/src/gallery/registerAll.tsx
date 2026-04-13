@@ -975,6 +975,7 @@ export function registerAllComponents(): void {
       </div>
     ),
     codeTemplate: `<ShortcutHelpOverlay onClose={handleClose} />`,
+    migrated: true,
   });
 
   registerComponent({

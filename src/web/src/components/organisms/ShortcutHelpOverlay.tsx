@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { IconButton } from "../atoms/IconButton";
 import { useRegisteredShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { ModalShell } from "./ModalShell";
@@ -9,7 +9,6 @@ interface ShortcutHelpOverlayProps {
 }
 
 export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
-  const { theme } = useTheme();
   const shortcuts = useRegisteredShortcuts();
 
   // Group shortcuts by scope
@@ -28,14 +27,14 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
 
   const kbdStyle: React.CSSProperties = {
     display: "inline-block",
-    padding: `2px ${theme.spacing.xs}`,
-    fontSize: theme.font.size.xs,
-    fontFamily: theme.font.mono,
+    padding: `2px ${t.spaceXs}`,
+    fontSize: t.fontSizeXs,
+    fontFamily: t.fontMono,
     fontWeight: 600,
-    color: theme.color.text,
-    background: theme.color.surfaceContainerHigh,
-    border: `1px solid ${theme.color.border}`,
-    borderRadius: theme.radius.sm,
+    color: t.colorText,
+    background: t.colorSurfaceRaised,
+    border: `1px solid ${t.colorBorder}`,
+    borderRadius: t.radiusSm,
     minWidth: 22,
     textAlign: "center" as const,
     lineHeight: 1.4,
@@ -57,17 +56,17 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: theme.spacing.lg,
+          marginBottom: t.spaceLg,
         }}
       >
         <h2
           id="shortcut-help-title"
           style={{
             margin: 0,
-            fontFamily: theme.font.headline,
-            fontSize: theme.font.size.lg,
+            fontFamily: t.fontSerif,
+            fontSize: t.fontSizeLg,
             fontWeight: 700,
-            color: theme.color.text,
+            color: t.colorText,
           }}
         >
           Keyboard Shortcuts
@@ -84,16 +83,16 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
         }}
       >
         {grouped.map(({ scope, entries }) => (
-          <div key={scope} style={{ marginBottom: theme.spacing.lg }}>
+          <div key={scope} style={{ marginBottom: t.spaceLg }}>
             <h3
               style={{
                 margin: 0,
-                marginBottom: theme.spacing.sm,
-                fontSize: theme.font.size.xs,
+                marginBottom: t.spaceSm,
+                fontSize: t.fontSizeXs,
                 fontWeight: 700,
                 textTransform: "uppercase" as const,
                 letterSpacing: "0.08em",
-                color: theme.color.textMuted,
+                color: t.colorTextMuted,
               }}
             >
               {scope}
@@ -102,7 +101,7 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: theme.spacing.xs,
+                gap: t.spaceXs,
               }}
             >
               {entries.map(({ keys, description }) => (
@@ -112,19 +111,19 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                    borderRadius: theme.radius.sm,
+                    padding: `${t.spaceXs} ${t.spaceSm}`,
+                    borderRadius: t.radiusSm,
                   }}
                 >
                   <span
                     style={{
-                      fontSize: theme.font.size.sm,
-                      color: theme.color.text,
+                      fontSize: t.fontSizeSm,
+                      color: t.colorText,
                     }}
                   >
                     {description}
                   </span>
-                  <span style={{ display: "flex", gap: 4, flexShrink: 0, marginLeft: theme.spacing.md }}>
+                  <span style={{ display: "flex", gap: 4, flexShrink: 0, marginLeft: t.spaceMd }}>
                     {renderKeys(keys, kbdStyle)}
                   </span>
                 </div>
