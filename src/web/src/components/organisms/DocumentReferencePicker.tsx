@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import { Badge } from "../atoms/Badge";
 import { Icon } from "../atoms/Icon";
@@ -32,9 +32,9 @@ const TYPE_LABELS: Record<ReferenceType, string> = {
   note: "Note",
 };
 
-const TYPE_OPTIONS = REFERENCE_TYPES.map((t) => ({
-  value: t,
-  label: TYPE_LABELS[t],
+const TYPE_OPTIONS = REFERENCE_TYPES.map((rt) => ({
+  value: rt,
+  label: TYPE_LABELS[rt],
 }));
 
 const PAGE_SIZE = 50;
@@ -48,7 +48,6 @@ export function DocumentReferencePicker({
   onSave,
   onClose,
 }: DocumentReferencePickerProps) {
-  const { theme } = useTheme();
   const [saving, setSaving] = useState(false);
 
   // -- Search state --
@@ -177,7 +176,7 @@ export function DocumentReferencePicker({
 
   const linkDocument = (docId: string) => {
     const types = stagedTypes[docId] ?? [preselectedType];
-    const refs = types.map((t) => ({ type: t }));
+    const refs = types.map((rt) => ({ type: rt }));
     setPatch((prev) => ({ ...prev, [docId]: refs }));
     // Clear staged
     setStagedTypes((prev) => {
@@ -243,7 +242,7 @@ export function DocumentReferencePicker({
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
-          gap: theme.spacing.lg,
+          gap: t.spaceLg,
         }}
       >
         {/* Already linked section */}
@@ -251,12 +250,12 @@ export function DocumentReferencePicker({
           <div>
             <div
               style={{
-                fontSize: theme.font.size.xs,
+                fontSize: t.fontSizeXs,
                 fontWeight: 700,
-                letterSpacing: theme.font.letterSpacing.wide,
+                letterSpacing: t.letterSpacingWide,
                 textTransform: "uppercase",
-                color: theme.color.textFaint,
-                marginBottom: theme.spacing.sm,
+                color: t.colorTextSecondary,
+                marginBottom: t.spaceSm,
               }}
             >
               Already linked
@@ -265,7 +264,7 @@ export function DocumentReferencePicker({
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: theme.spacing.sm,
+                gap: t.spaceSm,
               }}
             >
               {linkedDocs.map((doc) => {
@@ -276,8 +275,8 @@ export function DocumentReferencePicker({
                     doc={doc}
                     types={types}
                     hideTypeSelection={hideTypeSelection}
-                    onAddType={(t) => addTypeToLinked(doc.id, t)}
-                    onRemoveType={(t) => removeTypeFromLinked(doc.id, t)}
+                    onAddType={(rt) => addTypeToLinked(doc.id, rt)}
+                    onRemoveType={(rt) => removeTypeFromLinked(doc.id, rt)}
                     onUnlink={() => unlinkDocument(doc.id)}
                   />
                 );
@@ -290,10 +289,10 @@ export function DocumentReferencePicker({
         {existingReferences.length > 0 && linkedDocs.length === 0 && !debouncedSearch && (
           <div
             style={{
-              fontSize: theme.font.size.sm,
-              color: theme.color.textFaint,
+              fontSize: t.fontSizeSm,
+              color: t.colorTextSecondary,
               textAlign: "center",
-              padding: theme.spacing.md,
+              padding: t.spaceMd,
             }}
           >
             No linked documents match the search
@@ -304,12 +303,12 @@ export function DocumentReferencePicker({
         <div>
           <div
             style={{
-              fontSize: theme.font.size.xs,
+              fontSize: t.fontSizeXs,
               fontWeight: 700,
-              letterSpacing: theme.font.letterSpacing.wide,
+              letterSpacing: t.letterSpacingWide,
               textTransform: "uppercase",
-              color: theme.color.textFaint,
-              marginBottom: theme.spacing.sm,
+              color: t.colorTextSecondary,
+              marginBottom: t.spaceSm,
             }}
           >
             Available documents
@@ -319,7 +318,7 @@ export function DocumentReferencePicker({
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: theme.spacing.sm,
+                gap: t.spaceSm,
               }}
             >
               {availableDocs.map((doc) => {
@@ -330,7 +329,7 @@ export function DocumentReferencePicker({
                     doc={doc}
                     stagedTypes={staged}
                     hideTypeSelection={hideTypeSelection}
-                    onUpdateType={(i, t) => updateStagedType(doc.id, i, t)}
+                    onUpdateType={(i, rt) => updateStagedType(doc.id, i, rt)}
                     onAddSlot={() => addStagedTypeSlot(doc.id)}
                     onLink={() => linkDocument(doc.id)}
                   />
@@ -340,10 +339,10 @@ export function DocumentReferencePicker({
           ) : (
             <div
               style={{
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
+                fontSize: t.fontSizeSm,
+                color: t.colorTextSecondary,
                 textAlign: "center",
-                padding: theme.spacing.md,
+                padding: t.spaceMd,
               }}
             >
               {loading ? "Loading..." : "No documents found"}
@@ -356,7 +355,7 @@ export function DocumentReferencePicker({
               style={{
                 display: "flex",
                 justifyContent: "center",
-                marginTop: theme.spacing.md,
+                marginTop: t.spaceMd,
               }}
             >
               <Button
@@ -394,36 +393,35 @@ function LinkedDocRow({
   onRemoveType: (t: ReferenceType) => void;
   onUnlink: () => void;
 }) {
-  const { theme } = useTheme();
   const [showAddType, setShowAddType] = useState(false);
   const [newType, setNewType] = useState<ReferenceType>("reference");
 
-  const usedTypes = new Set(types.map((t) => t.type));
-  const availableTypes = REFERENCE_TYPES.filter((t) => !usedTypes.has(t));
+  const usedTypes = new Set(types.map((rt) => rt.type));
+  const availableTypes = REFERENCE_TYPES.filter((rt) => !usedTypes.has(rt));
 
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: theme.spacing.xs,
-        padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-        background: theme.color.surfaceContainerLow,
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${theme.color.borderSubtle}`,
+        gap: t.spaceXs,
+        padding: `${t.spaceSm} ${t.spaceMd}`,
+        background: t.colorSurfacePanel,
+        borderRadius: t.radiusLg,
+        border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
         {doc.favorite && (
-          <Icon name="star" size={14} style={{ color: theme.color.warning, flexShrink: 0 }} />
+          <Icon name="star" size={14} style={{ color: t.colorWarning, flexShrink: 0 }} />
         )}
         <span
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: theme.font.size.sm,
+            fontSize: t.fontSizeSm,
             fontWeight: 600,
-            color: theme.color.text,
+            color: t.colorText,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -441,11 +439,11 @@ function LinkedDocRow({
         </Button>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-        {types.map((t) => (
+        {types.map((rt) => (
           <TagChip
-            key={t.type}
-            name={TYPE_LABELS[t.type]}
-            onRemove={hideTypeSelection ? undefined : () => onRemoveType(t.type)}
+            key={rt.type}
+            name={TYPE_LABELS[rt.type]}
+            onRemove={hideTypeSelection ? undefined : () => onRemoveType(rt.type)}
           />
         ))}
         {!hideTypeSelection && availableTypes.length > 0 && !showAddType && (
@@ -464,9 +462,9 @@ function LinkedDocRow({
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Select
               value={newType}
-              options={availableTypes.map((t) => ({ value: t, label: TYPE_LABELS[t] }))}
+              options={availableTypes.map((rt) => ({ value: rt, label: TYPE_LABELS[rt] }))}
               onChange={(e) => setNewType(e.currentTarget.value as ReferenceType)}
-              style={{ fontSize: theme.font.size.xs, padding: "2px 4px", minWidth: 90 }}
+              style={{ fontSize: t.fontSizeXs, padding: "2px 4px", minWidth: 90 }}
             />
             <IconButton
               icon="check"
@@ -476,7 +474,7 @@ function LinkedDocRow({
                 setShowAddType(false);
               }}
               aria-label="Confirm type"
-              style={{ width: 22, height: 22, minWidth: 22, color: theme.color.success }}
+              style={{ width: 22, height: 22, minWidth: 22, color: t.colorSuccess }}
             />
             <IconButton
               icon="close"
@@ -507,31 +505,29 @@ function AvailableDocRow({
   onAddSlot: () => void;
   onLink: () => void;
 }) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: theme.spacing.xs,
-        padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-        background: theme.color.surfaceContainerLow,
-        borderRadius: theme.radius.lg,
-        border: `1px solid ${theme.color.borderSubtle}`,
+        gap: t.spaceXs,
+        padding: `${t.spaceSm} ${t.spaceMd}`,
+        background: t.colorSurfacePanel,
+        borderRadius: t.radiusLg,
+        border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
         {doc.favorite && (
-          <Icon name="star" size={14} style={{ color: theme.color.warning, flexShrink: 0 }} />
+          <Icon name="star" size={14} style={{ color: t.colorWarning, flexShrink: 0 }} />
         )}
         <span
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: theme.font.size.sm,
+            fontSize: t.fontSizeSm,
             fontWeight: 500,
-            color: theme.color.text,
+            color: t.colorText,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -550,13 +546,13 @@ function AvailableDocRow({
       </div>
       {!hideTypeSelection && (
         <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-          {stagedTypes.map((t, i) => (
+          {stagedTypes.map((st, i) => (
             <Select
               key={i}
-              value={t}
+              value={st}
               options={TYPE_OPTIONS}
               onChange={(e) => onUpdateType(i, e.currentTarget.value as ReferenceType)}
-              style={{ fontSize: theme.font.size.xs, padding: "2px 4px", minWidth: 90 }}
+              style={{ fontSize: t.fontSizeXs, padding: "2px 4px", minWidth: 90 }}
             />
           ))}
           <IconButton
