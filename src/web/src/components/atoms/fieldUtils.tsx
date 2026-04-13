@@ -18,14 +18,14 @@ interface FieldWrapperProps {
 
 export function FieldWrapper({ label, htmlFor, children }: FieldWrapperProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
       {label && (
         <label
           htmlFor={htmlFor}
           style={{
             fontSize: t.fontSizeXs,
             fontWeight: 700,
-            letterSpacing: "0.06em",
+            letterSpacing: t.letterSpacingWide,
             textTransform: "uppercase" as const,
             color: t.colorTextSecondary,
             fontFamily: t.fontSans,
@@ -41,7 +41,7 @@ export function FieldWrapper({ label, htmlFor, children }: FieldWrapperProps) {
 
 export function baseFieldStyle(): React.CSSProperties {
   return {
-    padding: "0.5rem 0.75rem",
+    padding: `${t.spaceSm} ${t.spaceMd}`,
     border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
     borderRadius: t.radiusLg,
     fontFamily: t.fontSans,
