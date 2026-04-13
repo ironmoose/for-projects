@@ -1,6 +1,22 @@
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Button } from "../atoms/Button";
+import { Button } from "@4lt7ab/ui/ui";
 import { ModalShell } from "./ModalShell";
+
+function ButtonSpinner() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: 14,
+        height: 14,
+        border: "2px solid currentColor",
+        borderTopColor: "transparent",
+        borderRadius: "50%",
+        animation: "spin 0.6s linear infinite",
+      }}
+    />
+  );
+}
 
 interface CreateEntityOverlayProps {
   title: string;
@@ -32,10 +48,9 @@ export function CreateEntityOverlay({
         <Button
           variant="primary"
           onClick={onSubmit}
-          loading={loading}
-          disabled={submitDisabled}
+          disabled={loading || submitDisabled}
         >
-          {submitLabel}
+          {loading ? <ButtonSpinner /> : submitLabel}
         </Button>
       </div>
     </ModalShell>

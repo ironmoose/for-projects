@@ -168,38 +168,6 @@ export function registerAllComponents(): void {
   // =========================================================================
 
   registerComponent({
-    name: "Button",
-    description: "Primary action button with variants and sizes.",
-    category: "atom",
-    propDefs: [
-      { name: "variant", type: "enum", defaultValue: "primary", options: ["primary", "ghost", "danger", "icon"] },
-      { name: "size", type: "enum", defaultValue: "md", options: ["sm", "md"] },
-      { name: "children", type: "string", defaultValue: "Click Me" },
-      { name: "disabled", type: "boolean", defaultValue: false },
-    ],
-    render: (props) => (
-      <Button
-        variant={props.variant as "primary" | "ghost" | "danger" | "icon"}
-        size={props.size as "sm" | "md"}
-        disabled={props.disabled as boolean}
-      >
-        {String(props.children)}
-      </Button>
-    ),
-    variants: [
-      { name: "Primary", props: { variant: "primary" } },
-      { name: "Ghost", props: { variant: "ghost" } },
-      { name: "Danger", props: { variant: "danger", children: "Delete" } },
-      { name: "Icon", props: { variant: "icon", children: "\u2605" } },
-      { name: "Small", props: { size: "sm" } },
-      { name: "Disabled", props: { disabled: true } },
-    ],
-    codeTemplate: `<Button variant="primary" size="md">Click Me</Button>`,
-    migrated: true,
-    deprecated: "Wrap @4lt7ab/ui Button. Local adds: loading prop, icon variant, glow effects.",
-  });
-
-  registerComponent({
     name: "Badge",
     description: "Domain-specific status badge with 12 variants and synth-theme glow support. Uses library tokens (t.*) with useTheme() retained only for glow effects.",
     category: "atom",

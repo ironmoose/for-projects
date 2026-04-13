@@ -1,5 +1,5 @@
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Button } from "../atoms/Button";
+import { Button } from "@4lt7ab/ui/ui";
 import { Icon } from "../atoms/Icon";
 
 interface BackButtonProps {

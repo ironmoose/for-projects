@@ -6,7 +6,7 @@ import { useDocuments } from "../../hooks/useDocuments";
 import { refreshDocument as apiRefreshDocument } from "../../api";
 import { relativeTime } from "../../utils";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-import { Button } from "../atoms/Button";
+import { Button } from "@4lt7ab/ui/ui";
 import { Input, Textarea } from "@4lt7ab/ui/ui";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
@@ -17,6 +17,22 @@ import { EmptyState } from "../molecules/EmptyState";
 import { Markdown } from "../molecules/Markdown";
 import { ModalShell } from "./ModalShell";
 import type { TagName } from "../../types";
+
+function ButtonSpinner() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: 14,
+        height: 14,
+        border: "2px solid currentColor",
+        borderTopColor: "transparent",
+        borderRadius: "50%",
+        animation: "spin 0.6s linear infinite",
+      }}
+    />
+  );
+}
 
 interface DocumentReaderModalProps {
   documentId: string;
@@ -336,10 +352,9 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                   size="sm"
                   variant="ghost"
                   onClick={handleRefresh}
-                  loading={refreshing}
                   disabled={refreshing}
                 >
-                  Refresh
+                  {refreshing ? <ButtonSpinner /> : "Refresh"}
                 </Button>
               </div>
             )}
@@ -420,10 +435,9 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
               <Button
                 variant="primary"
                 onClick={handleSave}
-                loading={saving}
-                disabled={saveDisabled}
+                disabled={saving || saveDisabled}
               >
-                Save
+                {saving ? <ButtonSpinner /> : "Save"}
               </Button>
             </div>
           )}

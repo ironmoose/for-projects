@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Button } from "../atoms/Button";
+import { Button } from "@4lt7ab/ui/ui";
 import { Input, Field } from "@4lt7ab/ui/ui";
 import { Icon } from "../atoms/Icon";
 import { SectionLabel } from "../atoms/SectionLabel";
@@ -10,6 +10,22 @@ import { ModalShell } from "./ModalShell";
 import { browseGitHubRepo, importDocumentBatch } from "../../api";
 import type { GitHubTreeEntry } from "../../api";
 import type { TagName } from "../../types";
+
+function ButtonSpinner() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: 14,
+        height: 14,
+        border: "2px solid currentColor",
+        borderTopColor: "transparent",
+        borderRadius: "50%",
+        animation: "spin 0.6s linear infinite",
+      }}
+    />
+  );
+}
 
 interface GitHubBrowserOverlayProps {
   folders?: string[];
@@ -150,11 +166,10 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
         <Button
           size="sm"
           onClick={handleBrowse}
-          loading={browsing}
           disabled={!repoInput.trim() || browsing}
           style={{ marginBottom: 1 }}
         >
-          Browse
+          {browsing ? <ButtonSpinner /> : "Browse"}
         </Button>
       </div>
 
@@ -236,10 +251,9 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Button
               onClick={handleImport}
-              loading={importing}
               disabled={selected.size === 0 || importing}
             >
-              Import {selected.size} file{selected.size !== 1 ? "s" : ""}
+              {importing ? <ButtonSpinner /> : `Import ${selected.size} file${selected.size !== 1 ? "s" : ""}`}
             </Button>
           </div>
         </>

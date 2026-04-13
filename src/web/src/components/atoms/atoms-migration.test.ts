@@ -30,7 +30,6 @@ function readComponent(dir: string, name: string): string {
 describe("Library semantic token imports", () => {
   const atomsWithSemanticImport = [
     "fieldUtils.tsx",
-    "Button.tsx",
     "Badge.tsx",
     "IconButton.tsx",
     "MetaValue.tsx",
@@ -301,7 +300,7 @@ describe("baseFieldStyle uses library tokens", () => {
 // ---------------------------------------------------------------------------
 
 describe("Form atoms fully off theme.color.*", () => {
-  const formAtoms = ["Button.tsx", "fieldUtils.tsx"];
+  const formAtoms = ["fieldUtils.tsx"];
 
   for (const file of formAtoms) {
     test(`${file} has no theme.color.* references`, () => {

@@ -4,12 +4,28 @@ import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import { Badge } from "../atoms/Badge";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
-import { Button } from "../atoms/Button";
+import { Button } from "@4lt7ab/ui/ui";
 import { Input, Select } from "@4lt7ab/ui/ui";
 import { TagChip } from "@4lt7ab/ui/ui";
 import { fetchDocuments } from "../../api";
 import type { DocumentSummary } from "../../types";
 import { REFERENCE_TYPES, type ReferenceType, type DocumentReferenceDetail } from "../../types";
+
+function ButtonSpinner() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: 14,
+        height: 14,
+        border: "2px solid currentColor",
+        borderTopColor: "transparent",
+        borderRadius: "50%",
+        animation: "spin 0.6s linear infinite",
+      }}
+    />
+  );
+}
 
 interface DocumentReferencePickerProps {
   entityType: "project" | "task";
@@ -361,9 +377,9 @@ export function DocumentReferencePicker({
                 variant="ghost"
                 size="sm"
                 onClick={handleLoadMore}
-                loading={loading}
+                disabled={loading}
               >
-                Load More
+                {loading ? <ButtonSpinner /> : "Load More"}
               </Button>
             </div>
           )}
@@ -429,7 +445,7 @@ function LinkedDocRow({
           {doc.title}
         </span>
         <Button
-          variant="danger"
+          variant="destructive"
           size="sm"
           onClick={onUnlink}
           style={{ flexShrink: 0 }}
