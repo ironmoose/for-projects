@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { useTheme } from "../theme/ThemeContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 /** CSS color-mix helper for alpha-blending semantic tokens with transparency. */
@@ -14,7 +13,6 @@ interface ActivityIndicatorProps {
 }
 
 export function ActivityIndicator({ count, style }: ActivityIndicatorProps) {
-  const { theme } = useTheme();
   const reduced = useReducedMotion();
   const prevCount = useRef(count);
   const [bumping, setBumping] = useState(false);
@@ -44,12 +42,12 @@ export function ActivityIndicator({ count, style }: ActivityIndicatorProps) {
         background: isActive ? alpha(t.colorActionPrimary, 15) : t.colorSurfaceRaised,
         color: isActive ? t.colorActionPrimary : t.colorTextSecondary,
         fontFamily: t.fontMono,
-        fontSize: theme.font.size.xxs,
+        fontSize: t.fontSizeXs,
         fontWeight: 700,
         lineHeight: 1,
         flexShrink: 0,
         transition: "background 200ms, color 200ms",
-        ...(bumping ? { animation: `scale-bump 300ms ${theme.animation.easing.spring}` } : {}),
+        ...(bumping ? { animation: "scale-bump 300ms cubic-bezier(0.34, 1.56, 0.64, 1)" } : {}),
         ...style,
       }}
     >

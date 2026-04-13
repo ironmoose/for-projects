@@ -319,6 +319,7 @@ export function registerAllComponents(): void {
       { name: "Overflow (99+)", props: { count: 150 } },
     ],
     codeTemplate: `<ActivityIndicator count={unreadCount} />`,
+    migrated: true,
   });
 
   registerComponent({

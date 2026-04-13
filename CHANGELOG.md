@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate ActivityIndicator off compat useTheme, use library font token and hardcode spring easing
 - Migrate StatusDot off compat useTheme, hardcode animation/transition values
 - Mark 20 migrated components with `migrated: true` in gallery entries
 - Remove last compat token (theme.color.borderSubtle) from form atoms and fieldUtils
