@@ -3,21 +3,21 @@
 ## [Unreleased]
 
 ### Fixed
-- **White page backgrounds on all 4 themes:** added `css` property to each ThemeDefinition in `lib-themes.ts` so the library's ThemeProvider injects body background-color and color rules, matching the `colorSurfacePage` and `colorText` token values per theme
-- **Library built-in themes showing bright backgrounds:** replaced library `ThemePicker` with app-scoped `AppThemePicker` that only shows the 4 custom dark themes (deepTeal, ember, nord, synth), preventing light built-in themes (warm-sand, coral, etc.) from appearing in the picker or being applied via stale localStorage values
-- **ThemesPage text contrast:** theme cards now use explicit `var(--color-text)` and `var(--color-text-secondary)` overrides via `useInjectStyles`, fixing unreadable black text on dark surfaces caused by browser button `color: inherit` defaults
-- Removed deprecated `baseUrl` from `src/web/tsconfig.json` to avoid TypeScript 7.0 breakage — paths resolution is unaffected since the only alias (`@domain/*`) uses a scoped specifier
+- Add `css` body background rules to app theme definitions (white page fix)
+- Replace library ThemePicker with app-scoped AppThemePicker (hide light built-in themes)
+- Fix ThemesPage text contrast on dark surfaces
+- Remove deprecated `baseUrl` from web tsconfig
 
 ### Changed
-- **Skeleton atoms:** migrated Skeleton, CardSkeleton, RowSkeleton from local implementations to `@4lt7ab/ui/ui` re-exports — removes compat `useTheme()` dependency; accepts static background in place of shimmer animation
-- **Overlay atom:** migrated from local implementation to `@4lt7ab/ui/ui` re-export — gains `ref` forwarding, `role="presentation"`, and theme-aware `colorSurfaceOverlay` token
-- ThemesPage migrated from compat `theme.spacing.xl` to library token `t.spaceXl`; removed `useTheme` import
-- **SectionLabel atom:** migrated from compat `theme.font.size.xxs` / `theme.font.letterSpacing.wide` to library tokens `t.fontSizeXs` / `t.letterSpacingWide`; removed `useTheme` import
-- **ReferenceTypeBadge atom:** same font token migration as SectionLabel; removed `useTheme` import
+- Migrate Skeleton, CardSkeleton, RowSkeleton to `@4lt7ab/ui` re-exports
+- Migrate Overlay to `@4lt7ab/ui` re-export
+- Migrate ThemesPage to library tokens, remove compat `useTheme`
+- Migrate SectionLabel to library font tokens, remove compat `useTheme`
+- Migrate ReferenceTypeBadge to library font tokens, remove compat `useTheme`
 
 ### Removed
-- `ThemeSwitcher.tsx` — thin re-export shim no longer imported by any component (replaced by direct `ThemePicker` import from `@4lt7ab/ui/ui`)
-- `theme-picker-migration.test.ts` — migration verification test for the removed ThemeSwitcher shim
+- `ThemeSwitcher.tsx` shim (unused)
+- `theme-picker-migration.test.ts` (no longer needed)
 
 ### Changed
 - Updated CLAUDE.md theme system documentation to reflect completed @4lt7ab/ui integration: compat layer is load-bearing (not temporary), synth glow tokens are the standard pattern
