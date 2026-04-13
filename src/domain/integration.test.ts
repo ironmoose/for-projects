@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
-import { ActivityLogRepository } from "./repositories/sqlite/activity-log";
+import { ActivityLogRepository } from "./repositories/sqlite";
 import type { TagName } from "./entities";
 
 let ctx: AppContext;

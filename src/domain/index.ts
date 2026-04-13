@@ -6,16 +6,18 @@ export * from "./events";
 export * from "./bootstrap";
 export { createDatabase, getDbPath } from "./db/connection";
 export { runMigrations } from "./db/migrator";
-export { ProjectRepository } from "./repositories/sqlite/projects";
-export { TaskRepository } from "./repositories/sqlite/tasks";
+export {
+  ProjectRepository,
+  TaskRepository,
+  ActivityLogRepository,
+  DocumentRepository,
+  TagRepository,
+  DocumentReferenceRepository,
+  TaskDependencyRepository,
+} from "./repositories/sqlite";
 export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
-export { ActivityLogRepository } from "./repositories/sqlite/activity-log";
-export { DocumentRepository } from "./repositories/sqlite/documents";
-export { TagRepository } from "./repositories/sqlite/tags";
-export { DocumentReferenceRepository } from "./repositories/sqlite/document-references";
 export { DocumentReferenceService } from "./services/document-references";
-export { TaskDependencyRepository } from "./repositories/sqlite/task-dependencies";
 export { TaskDependencyService } from "./services/task-dependencies";
 export { ActivityLogService } from "./services/activity-log";
 export { SourceService } from "./services/sources";

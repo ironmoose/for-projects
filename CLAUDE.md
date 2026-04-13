@@ -2,15 +2,96 @@
 
 Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 
-## Quick reference
+## Commands
 
-- `bun run build` — build frontend assets
-- `bun test` — run tests (SQLite-backed, no external deps)
-- `bun scripts/smoke-tests/pg-migration-test.ts` — test Postgres migrations against local Docker (requires `docker-compose up postgres`)
-- `bun scripts/smoke-tests/pg-smoke-test.ts` — verify Postgres schema, vector columns, and HNSW indexes
-- `bun scripts/smoke-tests/embedding-smoke-test.ts` — test Ollama embedding pipeline end-to-end
-- `bun scripts/smoke-tests/semantic-search-smoke-test.ts` — test vector similarity search
-- `bun scripts/migrate-sqlite-to-pg.ts` — dry-run SQLite→Postgres data migration (add `--commit` to write)
+```bash
+make build           # build frontend assets (vite)
+make test            # run tests (SQLite-backed, no external deps)
+make typecheck       # tsc --noEmit
+make verify          # typecheck + test + build (full check)
+make dev             # start API + vite watch (requires SQLITE_PATH)
+make dev-pg          # same but with Postgres + Ollama
+make deploy          # bump patch, typecheck, test, build, tag, push
+```
+
+Smoke tests (require Docker services running):
+```bash
+bun scripts/smoke-tests/pg-migration-test.ts       # test Postgres migrations
+bun scripts/smoke-tests/pg-smoke-test.ts            # verify schema, vectors, indexes
+bun scripts/smoke-tests/embedding-smoke-test.ts     # Ollama embedding pipeline
+bun scripts/smoke-tests/semantic-search-smoke-test.ts  # vector similarity search
+```
+
+Other scripts:
+```bash
+bun scripts/migrate-sqlite-to-pg.ts          # dry-run SQLite→Postgres migration (--commit to write)
+bun scripts/prune-activity-log.ts            # prune old activity log entries
+bun scripts/regenerate-embeddings.sh         # re-embed all entities
+```
+
+## Source Layout
+
+```
+src/
+├── index.ts                     # server entry point
+├── domain/
+│   ├── bootstrap.ts             # dependency wiring — all services, repos, connectors
+│   ├── entities.ts              # entity types, status enums, allowed values
+│   ├── inputs.ts                # input validation schemas (Zod)
+│   ├── errors.ts                # domain error classes
+│   ├── events.ts                # event emitter for real-time updates
+│   ├── embedding.ts             # buildEmbeddingText(), vector utilities
+│   ├── embedding-pipeline.ts    # async embedding worker
+│   ├── services/                # business logic (one file per entity)
+│   │   ├── projects.ts
+│   │   ├── tasks.ts
+│   │   ├── documents.ts
+│   │   ├── sources.ts           # import/refresh via source connectors
+│   │   ├── activity-log.ts
+│   │   ├── task-dependencies.ts
+│   │   ├── document-references.ts
+│   │   └── project-context.ts   # token-budgeted context assembly
+│   ├── repositories/
+│   │   ├── interfaces.ts        # repository interfaces (shared by SQLite + Pg)
+│   │   ├── sqlite/              # SQLite implementations (one per entity)
+│   │   └── pg/                  # Postgres implementations (one per entity)
+│   ├── connectors/              # source connector plugins
+│   │   ├── types.ts             # SourceConnector interface
+│   │   ├── registry.ts          # ConnectorRegistry
+│   │   └── github.ts            # GitHub file/README connector
+│   └── db/
+│       └── migrations/
+│           ├── sqlite/          # numbered .sql migration files
+│           └── pg/              # Postgres equivalents
+├── server/
+│   └── routes/                  # Hono route handlers (one per entity)
+│       ├── projects.ts
+│       ├── tasks.ts
+│       ├── documents.ts
+│       ├── sources.ts
+│       ├── activity-log.ts
+│       └── validation.ts        # shared request validation helpers
+├── mcp/
+│   ├── server.ts                # MCP tool definitions and handlers
+│   ├── standalone.ts            # standalone MCP server (stdio transport)
+│   └── index.ts
+└── web/
+    └── src/
+        ├── main.tsx             # React entry — providers, error boundary
+        ├── App.tsx              # root component, hash routing, keyboard shortcuts
+        ├── components/
+        │   ├── atoms/           # Button, Input, Select, Icon, Badge, Skeleton, etc.
+        │   ├── molecules/       # Card, Stack, TagChip, Markdown, SearchToggle, etc.
+        │   ├── organisms/       # TopBar, ModalShell, TaskTable, DocumentTable, etc.
+        │   ├── templates/       # DetailPageLayout, ListPageLayout
+        │   └── theme/           # theme definitions, ThemeContext, token system
+        ├── pages/               # DashboardPage, ProjectPage, DocumentsPage, etc.
+        ├── hooks/               # useProject, useDocuments, useEventSubscription, etc.
+        ├── gallery/             # component gallery showcase
+        └── types/               # shared frontend types
+
+scripts/                         # operational scripts (migrations, smoke tests, etc.)
+```
 
 ## Conventions
 
@@ -136,7 +217,33 @@ Polymorphic via `entity_tags` (entity_type + entity_id + tag_id). Tags resolved 
 
 ### Frontend
 
-Documents page at `/documents` with list/detail modes. Tag filtering, title search, markdown rendering. WebSocket-driven refetch on document entity events.
+React 19 SPA served as static assets from `/web/dist/`. Hash-based routing (`#/projects`, `#/documents`, etc.).
+
+**Component hierarchy** (atomic design):
+```
+atoms/       → Button, Input, Select, Icon, Badge, Skeleton, StatusDot, etc.
+molecules/   → Card, Stack, TagChip, Markdown, SearchToggle, Pagination, etc.
+organisms/   → TopBar, ModalShell, TaskTable, DocumentTable, DependencyGraphView, etc.
+templates/   → DetailPageLayout, ListPageLayout
+pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage, GalleryPage
+```
+
+**Styling:** 100% inline styles via React `style` prop. No CSS files, no CSS modules, no Tailwind. Components read semantic tokens from a custom theme system via `useTheme()` hook. The `@4lt7ab/ui` component library is the target design system — integration is in progress.
+
+**Theme system:** 4 themes (deepTeal, ember, nord, synth). Defined in `theme/theme.ts`, provided via `theme/ThemeContext.tsx`. Tokens cover colors, spacing, typography, radius, shadows, motion, and layout constants. The synth theme adds animated canvas backgrounds and cycling CSS glow effects with per-component branches (`themeName === 'synth'`).
+
+**State management:** React hooks + Context API. No external state libraries. Custom hooks for data fetching (`useProject`, `useDocuments`, etc.), real-time events (`useEventSubscription`), keyboard shortcuts (`useKeyboardShortcuts`), and D3 force simulation (`useForceGraph`).
+
+**Real-time updates:** WebSocket connection pushes entity events. Components subscribe via `useEventSubscription` and refetch on relevant events.
+
+## Every Commit
+
+Two things are **always** touched alongside code changes:
+
+1. **Tests** — tests ship with the code, not after it. Add or update tests for every functional change. Run `bun test` and confirm green before committing.
+2. **CHANGELOG.md** — every commit adds a line to the changelog under the appropriate section (Added, Changed, Fixed, Removed). The changelog is the source of truth for what changed and when.
+
+These are not optional. A commit without updated tests and changelog is incomplete.
 
 ## Testing
 
@@ -145,3 +252,84 @@ Documents page at `/documents` with list/detail modes. Tag filtering, title sear
 - ALWAYS run Postgres smoke tests (`bun scripts/smoke-tests/pg-migration-test.ts`, `pg-smoke-test.ts`, `embedding-smoke-test.ts`, `semantic-search-smoke-test.ts`) after changes to Postgres migrations, repositories, schema, or embeddings.
 - Test API changes against the dev server at http://localhost:3000 when it's running.
 - NEVER attempt to start the dev server or Docker services — assume they're already running if needed.
+
+## Adding an API Route
+
+1. Create route handler in `src/server/routes/{resource}.ts`
+2. Add service method in `src/domain/services/{resource}.ts` with validation
+3. Add repository method in `src/domain/repositories/sqlite/{resource}.ts` (and `pg/` if applicable)
+4. Register route in `src/server/routes/` barrel and wire in `src/domain/bootstrap.ts`
+5. Add tests in `src/domain/integration.test.ts` or a dedicated test file
+6. Update CHANGELOG.md
+7. `bun test && bun run typecheck`
+
+## Adding a Migration
+
+1. Create `src/domain/db/migrations/sqlite/{NNN}_{description}.sql` (next sequential number)
+2. Create matching `src/domain/db/migrations/pg/{NNN}_{description}.sql`
+3. Update repository code if the migration adds/changes columns
+4. Update `entities.ts` if new fields or types are introduced
+5. Update service validation in `inputs.ts` if new fields need validation
+6. Add tests for the new schema behavior
+7. Update CHANGELOG.md
+8. `bun test` (SQLite migrations auto-apply in tests)
+9. `bun scripts/smoke-tests/pg-migration-test.ts` (if Postgres is running)
+
+## Adding a Frontend Component
+
+1. Create component file in the appropriate tier: `src/web/src/components/{atoms|molecules|organisms}/{Name}.tsx`
+2. Use theme tokens via `useTheme()` — no hardcoded colors or pixel values
+3. Export from `src/web/src/components/index.ts` barrel
+4. Add to component gallery in `src/web/src/gallery/` if it's a reusable atom or molecule
+5. Update CHANGELOG.md
+6. `bun run build` (vite build must succeed)
+
+## Adding an MCP Tool
+
+1. Define the tool in `src/mcp/server.ts` — add schema, description, and handler
+2. Wire to the appropriate service method (create new service method if needed)
+3. Add test in `src/mcp/server.test.ts`
+4. Update the MCP tools count in this CLAUDE.md if the total changes
+5. Update CHANGELOG.md
+6. `bun test && bun run typecheck`
+
+## Adding a Source Connector
+
+1. Implement `SourceConnector` interface (`canHandle` + `fetch`) in `src/domain/connectors/{name}.ts`
+2. Add the type string to `SOURCE_TYPES` in `entities.ts`
+3. Register the connector in `bootstrap.ts`
+4. Add tests in `src/domain/connectors/{name}.test.ts`
+5. Update CHANGELOG.md
+6. `bun test`
+
+## Releasing
+
+**Always use `make` targets, never call `deploy.sh` directly.**
+
+```bash
+make deploy              # bump patch  (0.1.8 → 0.1.9)
+make deploy-minor        # bump minor  (0.1.8 → 0.2.0)
+make deploy-major        # bump major  (0.1.8 → 1.0.0)
+make deploy V=2.0.0      # exact version
+```
+
+The deploy target: typechecks, runs tests, builds frontend, bumps `package.json` version, stamps `CHANGELOG.md` with the version and date, commits, tags (`v{version}`), and pushes to origin with tags.
+
+Other useful make targets:
+```bash
+make verify              # typecheck + test + build (no deploy)
+make smoke               # run Postgres smoke tests
+make smoke-all           # run all smoke tests including embeddings
+make clean               # remove dist and caches
+```
+
+## Gotchas
+
+- **CONTENT_FALLBACK_LIMIT must match summary max length.** `buildEmbeddingText()` uses the first 500 chars of document content as a fallback when no summary exists. If the summary column max length changes, update `CONTENT_FALLBACK_LIMIT` in `embedding.ts` to match — otherwise fallback vectors will have different weight than summary vectors.
+- **SQLite migrations auto-apply; Postgres doesn't.** Tests use SQLite with auto-migration. Postgres migrations must be explicitly tested via `pg-migration-test.ts`. A migration that works in SQLite can fail in Postgres due to syntax differences (e.g., `BOOLEAN` vs `INTEGER`, `TEXT` vs `VARCHAR`).
+- **Vite build output goes to `src/web/dist/`.** The server serves this directory as static assets. If `bun run build` fails, the server will serve stale assets without warning.
+- **`document_references` has no FK on `entity_id`.** It's polymorphic — the same table references projects, tasks, and documents. Deleting an entity does NOT cascade-delete its references. Entity delete code must explicitly clean up references.
+- **`entity_tags` has the same polymorphic pattern.** No FK cascade on `entity_id`. Tags must be explicitly cleaned up on entity delete.
+- **`is_blocked` on tasks is user-managed, not computed.** Despite `task_dependencies` existing, `is_blocked` is a plain boolean set by the user. Dependency edges are informational only.
+- **The synth theme adds per-component branches.** Many components check `themeName === 'synth'` for glow effects. This is tech debt being addressed via @4lt7ab/ui integration — avoid adding new synth branches.
+- **No DEFAULT values in SQLite schema.** All values must be explicitly provided in INSERT statements. This is by convention to keep the schema explicit.

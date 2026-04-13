@@ -5,6 +5,7 @@
     "": {
       "name": "@x4lt7ab/tab-for-projects",
       "dependencies": {
+        "@4lt7ab/ui": "github:4lt7ab/ui#v0.2.12",
         "@modelcontextprotocol/sdk": "1.27.1",
         "@types/d3-force": "^3.0.10",
         "d3-force": "^3.0.0",
@@ -33,6 +34,8 @@
     "axios": "1.13.6",
   },
   "packages": {
+    "@4lt7ab/ui": ["@4lt7ab/ui@github:4lt7ab/ui#e73f75d", {}, "4lt7ab-ui-e73f75d", "sha512-Ebz37UunBFF0usHgJ6EMZmav2dIWEyiyLVAamHmkJpg6tyQ6indYyJJVpM+qolSsj1uylLislEotI5ACKgJR1w=="],
+
     "@babel/code-frame": ["@babel/code-frame@7.29.0", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.28.5", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw=="],
 
     "@babel/compat-data": ["@babel/compat-data@7.29.0", "", {}, "sha512-T1NCJqT/j9+cn8fvkt7jtwbLBfLC/1y1c7NtCeXFRgzGTsafi68MRv8yzkYSapBnFA6L3U2VSc02ciDzoAJhJg=="],

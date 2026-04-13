@@ -4,20 +4,24 @@ import { createDatabase } from "./db/connection";
 import { runMigrations } from "./db/migrator";
 import { type PgClient, createPgClient, initPgSchema, getDatabaseUrl, pgShutdown } from "./db/pg-connection";
 import { migrateSqliteToPg } from "./db/sqlite-to-pg";
-import { ProjectRepository } from "./repositories/sqlite/projects";
-import { TaskRepository } from "./repositories/sqlite/tasks";
-import { DocumentRepository } from "./repositories/sqlite/documents";
-import { TagRepository } from "./repositories/sqlite/tags";
-import { DocumentReferenceRepository } from "./repositories/sqlite/document-references";
-import { TaskDependencyRepository } from "./repositories/sqlite/task-dependencies";
-import { ActivityLogRepository } from "./repositories/sqlite/activity-log";
-import { PgProjectRepository } from "./repositories/pg/projects";
-import { PgTaskRepository } from "./repositories/pg/tasks";
-import { PgDocumentRepository } from "./repositories/pg/documents";
-import { PgTagRepository } from "./repositories/pg/tags";
-import { PgDocumentReferenceRepository } from "./repositories/pg/document-references";
-import { PgTaskDependencyRepository } from "./repositories/pg/task-dependencies";
-import { PgActivityLogRepository } from "./repositories/pg/activity-log";
+import {
+  ProjectRepository,
+  TaskRepository,
+  DocumentRepository,
+  TagRepository,
+  DocumentReferenceRepository,
+  TaskDependencyRepository,
+  ActivityLogRepository,
+} from "./repositories/sqlite";
+import {
+  PgProjectRepository,
+  PgTaskRepository,
+  PgDocumentRepository,
+  PgTagRepository,
+  PgDocumentReferenceRepository,
+  PgTaskDependencyRepository,
+  PgActivityLogRepository,
+} from "./repositories/pg";
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
 import { TaskDependencyService } from "./services/task-dependencies";

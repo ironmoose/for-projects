@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { bootstrap, type AppContext } from "./bootstrap";
 import { ServiceError } from "./errors";
-import { DocumentReferenceRepository } from "./repositories/sqlite/document-references";
+import { DocumentReferenceRepository } from "./repositories/sqlite";
 import { DocumentReferenceService } from "./services/document-references";
 import type { IDocumentReferenceService } from "./services";
 import type { DocumentReferenceType, EntityType } from "./entities";
