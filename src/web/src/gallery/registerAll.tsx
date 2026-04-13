@@ -45,7 +45,6 @@ import type { TaskSummary, DocumentSummary } from "../types";
 import type { GraphNode } from "../api";
 import { FolderInput } from "../components/molecules/FolderInput";
 import { AppThemePicker } from "../components/molecules/AppThemePicker";
-import { SynthBackground } from "../components/atoms/SynthBackground";
 import { PresenceCharm } from "../components/molecules/PresenceCharm";
 import { ErrorBoundary } from "../components/organisms/ErrorBoundary";
 import { FolderTileGrid } from "../components/organisms/FolderTileGrid";
@@ -274,22 +273,6 @@ export function registerAllComponents(): void {
     migrated: true,
   });
 
-  registerComponent({
-    name: "SynthBackground",
-    description: "Animated canvas background for the synth theme. Renders gradient orbs, perspective grid, starfield, and glow effects. Only visible when the synth theme is active.",
-    category: "atom",
-    propDefs: [],
-    render: () => (
-      <div style={{ position: "relative", width: "100%", height: 200, borderRadius: 8, overflow: "hidden" }}>
-        <SynthBackground />
-        <div style={{ position: "relative", zIndex: 1, padding: 16, fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
-          SynthBackground fills its container. Switch to the synth theme to see the animation.
-        </div>
-      </div>
-    ),
-    codeTemplate: `<SynthBackground />`,
-    migrated: true,
-  });
 
   // =========================================================================
   // Molecules

@@ -1,27 +1,48 @@
 /**
- * App-scoped theme picker that only shows the 4 custom dark themes.
- *
- * The library's ThemePicker iterates ALL registered themes (9 built-ins +
- * custom). Since the app is dark-mode-only and the built-in themes include
- * light backgrounds (warm-sand, coral, etc.), we replace the library picker
- * with this filtered version.
+ * App-scoped theme picker that shows all library built-in themes.
  *
  * Supports two variants:
  * - `grid` — card grid for the ThemesPage
  * - `compact` — dropdown for the TopBar
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { semantic as t, useInjectStyles, useTheme as useLibTheme } from "@4lt7ab/ui/core";
+import type { ThemeDefinition } from "@4lt7ab/ui/core";
 import { Icon } from "@4lt7ab/ui/ui";
 import { useTheme } from "../theme/ThemeContext";
-import { appThemes } from "../theme/lib-themes";
+import { FEATURED_THEMES } from "../theme/lib-themes";
 
 export interface AppThemePickerProps {
   /** Optional descriptions for each theme, keyed by theme name. */
   descriptions?: Record<string, string>;
   /** Display variant. `'grid'` (default) renders a card grid; `'compact'` renders a dropdown. */
   variant?: "grid" | "compact";
+}
+
+/** Convert the library theme registry Map to a sorted array. Featured themes come first. */
+function useThemeList(): ThemeDefinition[] {
+  const lib = useLibTheme();
+  return useMemo(() => {
+    const all = Array.from(lib.themes.values());
+    const featuredSet = new Set<string>(FEATURED_THEMES);
+    const featured: ThemeDefinition[] = [];
+    const rest: ThemeDefinition[] = [];
+    for (const def of all) {
+      if (featuredSet.has(def.name)) {
+        featured.push(def);
+      } else {
+        rest.push(def);
+      }
+    }
+    // Sort featured in FEATURED_THEMES order
+    featured.sort(
+      (a, b) =>
+        FEATURED_THEMES.indexOf(a.name as typeof FEATURED_THEMES[number]) -
+        FEATURED_THEMES.indexOf(b.name as typeof FEATURED_THEMES[number]),
+    );
+    return [...featured, ...rest];
+  }, [lib.themes]);
 }
 
 // ---------------------------------------------------------------------------
@@ -78,10 +99,11 @@ const gridCSS = /* css */ `
 function GridView({ descriptions }: { descriptions: Record<string, string> }) {
   useInjectStyles(GRID_STYLES_ID, gridCSS);
   const { themeName, setTheme } = useTheme();
+  const themeList = useThemeList();
 
   return (
     <div className="tfp-theme-picker">
-      {appThemes.map((def) => {
+      {themeList.map((def) => {
         const isActive = themeName === def.name;
         return (
           <button
@@ -162,6 +184,7 @@ const compactCSS = /* css */ `
 function CompactView() {
   useInjectStyles(COMPACT_STYLES_ID, compactCSS);
   const { themeName, setTheme } = useTheme();
+  const themeList = useThemeList();
   const [open, setOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -208,19 +231,19 @@ function CompactView() {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setFocusedIndex((i) => (i + 1) % appThemes.length);
+          setFocusedIndex((i) => (i + 1) % themeList.length);
           break;
         case "ArrowUp":
           e.preventDefault();
           setFocusedIndex(
-            (i) => (i - 1 + appThemes.length) % appThemes.length,
+            (i) => (i - 1 + themeList.length) % themeList.length,
           );
           break;
         case "Enter":
         case " ":
           e.preventDefault();
-          if (focusedIndex >= 0 && focusedIndex < appThemes.length) {
-            setTheme(appThemes[focusedIndex].name);
+          if (focusedIndex >= 0 && focusedIndex < themeList.length) {
+            setTheme(themeList[focusedIndex].name);
             setOpen(false);
             triggerRef.current?.focus();
           }
@@ -231,11 +254,11 @@ function CompactView() {
           break;
         case "End":
           e.preventDefault();
-          setFocusedIndex(appThemes.length - 1);
+          setFocusedIndex(themeList.length - 1);
           break;
       }
     },
-    [open, focusedIndex, setTheme],
+    [open, focusedIndex, setTheme, themeList],
   );
 
   // Scroll focused item into view
@@ -250,12 +273,12 @@ function CompactView() {
   // Reset focus index when opening
   useEffect(() => {
     if (open) {
-      const activeIdx = appThemes.findIndex((t) => t.name === themeName);
+      const activeIdx = themeList.findIndex((td) => td.name === themeName);
       setFocusedIndex(activeIdx >= 0 ? activeIdx : 0);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const currentTheme = appThemes.find((t) => t.name === themeName);
+  const currentTheme = themeList.find((td) => td.name === themeName);
 
   return (
     <div
@@ -289,7 +312,7 @@ function CompactView() {
           role="listbox"
           aria-activedescendant={
             focusedIndex >= 0
-              ? `tfp-tp-item-${appThemes[focusedIndex]?.name}`
+              ? `tfp-tp-item-${themeList[focusedIndex]?.name}`
               : undefined
           }
           style={{
@@ -302,12 +325,14 @@ function CompactView() {
             borderRadius: t.radiusMd,
             padding: t.spaceXs,
             minWidth: "10rem",
+            maxHeight: "20rem",
+            overflowY: "auto",
             zIndex: 100,
             boxShadow: t.shadowMd,
           }}
         >
-          {appThemes.map((t, idx) => {
-            const isActive = themeName === t.name;
+          {themeList.map((td, idx) => {
+            const isActive = themeName === td.name;
             const isFocused = focusedIndex === idx;
             const classes = [
               "tfp-tp-menu-item",
@@ -319,13 +344,13 @@ function CompactView() {
 
             return (
               <button
-                key={t.name}
-                id={`tfp-tp-item-${t.name}`}
+                key={td.name}
+                id={`tfp-tp-item-${td.name}`}
                 role="option"
                 aria-selected={isActive}
                 className={classes}
                 onClick={() => {
-                  setTheme(t.name);
+                  setTheme(td.name);
                   setOpen(false);
                   triggerRef.current?.focus();
                 }}
@@ -337,12 +362,12 @@ function CompactView() {
                     height: 6,
                     borderRadius: "50%",
                     background: isActive
-                      ? t.colorActionPrimary
-                      : t.colorTextMuted,
+                      ? "var(--color-action-primary)"
+                      : "var(--color-text-muted)",
                     flexShrink: 0,
                   }}
                 />
-                {t.label}
+                {td.label}
               </button>
             );
           })}

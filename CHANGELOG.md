@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Replace custom themes with library built-ins (deepTeal→slate, ember→coral, nord→neural, synth→synthwave)
+- Replace SynthBackground with @4lt7ab/ui ThemeBackground (delete 295-line component)
 - Migrate all pages and App.tsx off compat useTheme to library tokens (244 refs across 7 files)
 - Add gallery entries for 6 unregistered components (SynthBackground, PresenceCharm, ErrorBoundary, FolderTileGrid, ImportDocumentOverlay, GitHubBrowserOverlay)
 - Replace local ModalShell with @4lt7ab/ui re-export (title→manual h2+titleId, maxHeight→style, suppressShortcuts→hook)

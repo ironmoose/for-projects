@@ -252,11 +252,55 @@ function noGlow(color: { borderSubtle: string; border: string; primary: string; 
   };
 }
 
+/** Generic dark-theme fallback glow for library themes without a specific legacy entry. */
+const genericNoGlow = noGlow({
+  borderSubtle: "rgba(255,255,255,0.06)",
+  border: "rgba(255,255,255,0.1)",
+  primary: "currentColor",
+  textMuted: "rgba(255,255,255,0.5)",
+  danger: "#ff6b6b",
+});
+
+/** Generic dark-theme color fallback for library themes without a specific legacy entry. */
+const genericDarkColor: Theme["color"] = {
+  text: "#d4e5ea",
+  textMuted: "#8ba8b2",
+  textFaint: "#5a7580",
+  surface: "#0d1b1f",
+  surfaceContainer: "#12252a",
+  surfaceContainerLow: "#0f2025",
+  surfaceContainerHigh: "#172e34",
+  surfaceContainerHighest: "#1e383f",
+  border: "#1e383f",
+  borderSubtle: "#162d33",
+  primary: "#8bd1e8",
+  primaryContainer: "#005f73",
+  onPrimary: "#003642",
+  onPrimaryContainer: "#b2ebff",
+  tertiary: "#fcb97b",
+  danger: "#ffb4ab",
+  success: "#6dd58c",
+  warning: "#fcb97b",
+  activityFlash: "rgba(139, 209, 232, 0.09)",
+  running: "#8bd1e8",
+  failed: "#ff8a80",
+  glowPrimary: "rgba(139, 209, 232, 0.30)",
+  glowSuccess: "rgba(109, 213, 140, 0.30)",
+  glowDanger: "rgba(255, 138, 128, 0.30)",
+  activityBorder: "rgba(139, 209, 232, 0.40)",
+};
+
+const genericDarkShadow: Theme["shadow"] = {
+  sm: "0 1px 3px rgba(0,0,0,0.4)",
+  md: "0 4px 20px rgba(0,0,0,0.3)",
+  lg: "0 8px 40px rgba(0,0,0,0.4)",
+};
+
 export const themes: Record<string, Theme> = {
-  // Dark teal — derived from the Stitch MD3 palette, inverted to dark
-  deepTeal: {
-    name: "deepTeal",
-    label: "Deep Teal",
+  // Slate — maps from the old deepTeal theme (closest match)
+  slate: {
+    name: "slate",
+    label: "Slate",
     ...shared,
     color: {
       text: "#d4e5ea",
@@ -293,10 +337,10 @@ export const themes: Record<string, Theme> = {
     glow: noGlow({ borderSubtle: "#162d33", border: "#1e383f", primary: "#8bd1e8", textMuted: "#8ba8b2", danger: "#ffb4ab" }),
   },
 
-  // Warm ember — dark amber/orange
-  ember: {
-    name: "ember",
-    label: "Ember",
+  // Coral — maps from the old ember theme (closest match)
+  coral: {
+    name: "coral",
+    label: "Coral",
     ...shared,
     color: {
       text: "#ede0d4",
@@ -333,50 +377,50 @@ export const themes: Record<string, Theme> = {
     glow: noGlow({ borderSubtle: "#241c18", border: "#2e2520", primary: "#e87040", textMuted: "#a89280", danger: "#ffb4ab" }),
   },
 
-  // Cool nord — arctic dark
-  nord: {
-    name: "nord",
-    label: "Nord",
+  // Neural — maps from the old deepTeal theme (blue accent match)
+  neural: {
+    name: "neural",
+    label: "Neural",
     ...shared,
     color: {
-      text: "#d8dee9",
-      textMuted: "#8892a4",
-      textFaint: "#5c6478",
-      surface: "#242933",
-      surfaceContainer: "#2e3440",
-      surfaceContainerLow: "#292e39",
-      surfaceContainerHigh: "#353c4a",
-      surfaceContainerHighest: "#3d4556",
-      border: "#3d4556",
-      borderSubtle: "#353c4a",
-      primary: "#88c0d0",
-      primaryContainer: "#2e5a66",
-      onPrimary: "#1a3640",
-      onPrimaryContainer: "#b8e8f5",
-      tertiary: "#ebcb8b",
-      danger: "#bf616a",
-      success: "#a3be8c",
-      warning: "#ebcb8b",
-      activityFlash: "rgba(136, 192, 208, 0.09)",
-      running: "#88c0d0",
-      failed: "#d08770",
-      glowPrimary: "rgba(136, 192, 208, 0.30)",
-      glowSuccess: "rgba(163, 190, 140, 0.30)",
-      glowDanger: "rgba(208, 135, 112, 0.30)",
-      activityBorder: "rgba(136, 192, 208, 0.40)",
+      text: "#d4e5ea",
+      textMuted: "#8ba8b2",
+      textFaint: "#5a7580",
+      surface: "#0d1b1f",
+      surfaceContainer: "#12252a",
+      surfaceContainerLow: "#0f2025",
+      surfaceContainerHigh: "#172e34",
+      surfaceContainerHighest: "#1e383f",
+      border: "#1e383f",
+      borderSubtle: "#162d33",
+      primary: "#8bd1e8",
+      primaryContainer: "#005f73",
+      onPrimary: "#003642",
+      onPrimaryContainer: "#b2ebff",
+      tertiary: "#fcb97b",
+      danger: "#ffb4ab",
+      success: "#6dd58c",
+      warning: "#fcb97b",
+      activityFlash: "rgba(139, 209, 232, 0.09)",
+      running: "#8bd1e8",
+      failed: "#ff8a80",
+      glowPrimary: "rgba(139, 209, 232, 0.30)",
+      glowSuccess: "rgba(109, 213, 140, 0.30)",
+      glowDanger: "rgba(255, 138, 128, 0.30)",
+      activityBorder: "rgba(139, 209, 232, 0.40)",
     },
     shadow: {
-      sm: "0 1px 3px rgba(0,0,0,0.3)",
-      md: "0 4px 20px rgba(0,0,0,0.25)",
-      lg: "0 8px 40px rgba(0,0,0,0.35)",
+      sm: "0 1px 3px rgba(0,0,0,0.4)",
+      md: "0 4px 20px rgba(0,0,0,0.3)",
+      lg: "0 8px 40px rgba(0,0,0,0.4)",
     },
-    glow: noGlow({ borderSubtle: "#353c4a", border: "#3d4556", primary: "#88c0d0", textMuted: "#8892a4", danger: "#bf616a" }),
+    glow: noGlow({ borderSubtle: "#162d33", border: "#1e383f", primary: "#8bd1e8", textMuted: "#8ba8b2", danger: "#ffb4ab" }),
   },
 
-  // Synthwave — neon-soaked retrowave
-  synth: {
-    name: "synth",
-    label: "Synth",
+  // Synthwave — neon-soaked retrowave (glow system active)
+  synthwave: {
+    name: "synthwave",
+    label: "Synthwave",
     ...shared,
     color: {
       text: "#e0d6f6",
@@ -429,6 +473,52 @@ export const themes: Record<string, Theme> = {
       dangerBorder: "#ff408044",
     },
   },
+
+  // Fallbacks for other library themes — generic dark defaults
+  "warm-sand": {
+    name: "warm-sand",
+    label: "Warm Sand",
+    ...shared,
+    color: genericDarkColor,
+    shadow: genericDarkShadow,
+    glow: genericNoGlow,
+  },
+
+  moss: {
+    name: "moss",
+    label: "Moss",
+    ...shared,
+    color: genericDarkColor,
+    shadow: genericDarkShadow,
+    glow: genericNoGlow,
+  },
+
+  pipboy: {
+    name: "pipboy",
+    label: "Pip-Boy",
+    ...shared,
+    color: genericDarkColor,
+    shadow: genericDarkShadow,
+    glow: genericNoGlow,
+  },
+
+  pacman: {
+    name: "pacman",
+    label: "Pac-Man",
+    ...shared,
+    color: genericDarkColor,
+    shadow: genericDarkShadow,
+    glow: genericNoGlow,
+  },
+
+  "black-hole": {
+    name: "black-hole",
+    label: "Black Hole",
+    ...shared,
+    color: genericDarkColor,
+    shadow: genericDarkShadow,
+    glow: genericNoGlow,
+  },
 };
 
-export const defaultThemeName = "deepTeal";
+export const defaultThemeName = "slate";

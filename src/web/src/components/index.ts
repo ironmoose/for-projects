@@ -11,7 +11,6 @@ export { StatusDot } from "@4lt7ab/ui/ui";
 export { MetaValue } from "./atoms/MetaValue";
 export { Overlay } from "./atoms/Overlay";
 export { AnimationStyles } from "./atoms/AnimationStyles";
-export { SynthBackground } from "./atoms/SynthBackground";
 export { Skeleton, CardSkeleton, RowSkeleton } from "./atoms/Skeleton";
 export { ActivityIndicator } from "./atoms/ActivityIndicator";
 export { ProgressBar } from "@4lt7ab/ui/ui";

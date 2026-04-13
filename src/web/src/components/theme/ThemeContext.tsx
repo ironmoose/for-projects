@@ -16,22 +16,8 @@ import {
 } from "@4lt7ab/ui/core";
 import type { Theme } from "./theme";
 import { themes as legacyThemes } from "./theme";
-import { appThemes, APP_DEFAULT_THEME, APP_STORAGE_KEY, APP_THEME_NAMES } from "./lib-themes";
+import { appThemes, APP_DEFAULT_THEME, APP_STORAGE_KEY } from "./lib-themes";
 import { buildCompatTheme } from "./compat";
-
-// ---------------------------------------------------------------------------
-// Sanitize stale localStorage — if the stored theme is a library built-in
-// (e.g. "warm-sand", "coral") rather than one of our dark app themes, clear
-// it so the library's ThemeProvider falls back to APP_DEFAULT_THEME.
-// This runs once at module load, before any React render.
-// ---------------------------------------------------------------------------
-
-if (typeof window !== "undefined") {
-  const stored = localStorage.getItem(APP_STORAGE_KEY);
-  if (stored && !APP_THEME_NAMES.has(stored)) {
-    localStorage.removeItem(APP_STORAGE_KEY);
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Compat context — carries the legacy Theme object

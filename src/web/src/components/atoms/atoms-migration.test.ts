@@ -450,11 +450,10 @@ describe("Synth theme decoupled from component logic (Phase 4a)", () => {
     expect(src).toContain("theme.glow.accentColor");
   });
 
-  test("lib-themes.ts documents the synth handling architecture", () => {
+  test("lib-themes.ts uses library built-in themes (no custom ThemeDefinitions)", () => {
     const src = readFileSync(join(ATOMS_DIR, "..", "theme", "lib-themes.ts"), "utf-8");
-    expect(src).toContain("Synth Theme Handling");
-    expect(src).toContain("Glow token system");
-    expect(src).toContain("data-synth attribute");
+    expect(src).toContain("library built-ins");
+    expect(src).toContain("FEATURED_THEMES");
   });
 });
 

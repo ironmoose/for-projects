@@ -4,9 +4,9 @@ import {
   ConnectionStatus,
   DisconnectionBanner,
   AnimationStyles,
-  SynthBackground,
   ErrorBoundary,
 } from "./components";
+import { ThemeBackground } from "@4lt7ab/ui/animations";
 import { semantic as t } from "@4lt7ab/ui/core";
 import { AppThemePicker } from "./components/molecules/AppThemePicker";
 import type { NavItem } from "./components";
@@ -105,7 +105,7 @@ export function App() {
     <KeyboardShortcutContext.Provider value={shortcutCtx}>
       <EventSubscriptionContext.Provider value={eventCtx}>
         <AnimationStyles />
-        <SynthBackground />
+        <ThemeBackground />
         <a
           href="#main-content"
           style={{
