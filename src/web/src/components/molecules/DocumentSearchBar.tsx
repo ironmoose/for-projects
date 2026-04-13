@@ -44,7 +44,7 @@ export function DocumentSearchBar({ title, tag, folder, folders, favorite, onTit
   ];
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: t.spaceSm, alignItems: "flex-end" }}>
       <div style={{ minWidth: 180, flex: "1 1 180px" }}>
         <Input
           placeholder="Search documents..."
