@@ -104,7 +104,6 @@ describe("Form field focus rings", () => {
   const fieldComponents = [
     { path: join(ATOMS_DIR, "Input.tsx"), name: "Input" },
     { path: join(ATOMS_DIR, "Select.tsx"), name: "Select" },
-    { path: join(ATOMS_DIR, "Textarea.tsx"), name: "Textarea" },
   ];
 
   for (const { path, name } of fieldComponents) {

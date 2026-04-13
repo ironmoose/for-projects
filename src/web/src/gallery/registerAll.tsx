@@ -16,7 +16,6 @@ import {
   TagPicker,
   DependencyChip,
   ReferenceTypeBadge,
-  Textarea,
   ActivityIndicator,
   Markdown,
   PageHeader,
@@ -267,19 +266,6 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Input label={String(props.label)} placeholder={String(props.placeholder)} />,
     codeTemplate: `<Input label="Label" placeholder="Enter text..." />`,
-    migrated: true,
-  });
-
-  registerComponent({
-    name: "Textarea",
-    description: "Multi-line text area with optional label, matching Input styling.",
-    category: "atom",
-    propDefs: [
-      { name: "label", type: "string", defaultValue: "Description" },
-      { name: "placeholder", type: "string", defaultValue: "Enter details..." },
-    ],
-    render: (props) => <Textarea label={String(props.label)} placeholder={String(props.placeholder)} />,
-    codeTemplate: `<Textarea label="Description" placeholder="Enter details..." />`,
     migrated: true,
   });
 

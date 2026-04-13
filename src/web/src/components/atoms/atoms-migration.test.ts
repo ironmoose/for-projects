@@ -308,7 +308,7 @@ describe("baseFieldStyle uses library tokens", () => {
 // ---------------------------------------------------------------------------
 
 describe("Form atoms fully off theme.color.*", () => {
-  const formAtoms = ["Button.tsx", "Input.tsx", "Select.tsx", "Textarea.tsx", "fieldUtils.tsx"];
+  const formAtoms = ["Button.tsx", "Input.tsx", "Select.tsx", "fieldUtils.tsx"];
 
   for (const file of formAtoms) {
     test(`${file} has no theme.color.* references`, () => {
@@ -453,7 +453,6 @@ describe("Synth theme decoupled from component logic (Phase 4a)", () => {
   const decoupledComponents = [
     { dir: ATOMS_DIR, file: "Input.tsx" },
     { dir: ATOMS_DIR, file: "Select.tsx" },
-    { dir: ATOMS_DIR, file: "Textarea.tsx" },
     { dir: ORGANISMS_DIR, file: "TaskTable.tsx" },
     { dir: ORGANISMS_DIR, file: "ModalShell.tsx" },
     { dir: MOLECULES_DIR, file: "SearchToggle.tsx" },

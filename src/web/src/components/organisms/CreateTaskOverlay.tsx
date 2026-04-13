@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
-import { Textarea } from "../atoms/Textarea";
+import { Textarea, Field } from "@4lt7ab/ui/ui";
 import { Select } from "../atoms/Select";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import {
@@ -124,24 +124,26 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
         />
 
         {/* Context */}
-        <Textarea
-          label="Context"
-          id="task-context"
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          placeholder="Task context (optional)"
-          rows={3}
-        />
+        <Field label="Context" htmlFor="task-context">
+          <Textarea
+            id="task-context"
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            placeholder="Task context (optional)"
+            rows={3}
+          />
+        </Field>
 
         {/* Acceptance Criteria */}
-        <Textarea
-          label="Acceptance Criteria"
-          id="task-acceptance-criteria"
-          value={acceptanceCriteria}
-          onChange={(e) => setAcceptanceCriteria(e.target.value)}
-          placeholder="Acceptance criteria (optional)"
-          rows={3}
-        />
+        <Field label="Acceptance Criteria" htmlFor="task-acceptance-criteria">
+          <Textarea
+            id="task-acceptance-criteria"
+            value={acceptanceCriteria}
+            onChange={(e) => setAcceptanceCriteria(e.target.value)}
+            placeholder="Acceptance criteria (optional)"
+            rows={3}
+          />
+        </Field>
 
         {/* Group Key */}
         <Input

@@ -8,7 +8,7 @@ import { relativeTime } from "../../utils";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
-import { Textarea } from "../atoms/Textarea";
+import { Textarea } from "@4lt7ab/ui/ui";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "@4lt7ab/ui/ui";

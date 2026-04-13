@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
-import { Textarea } from "../atoms/Textarea";
+import { Textarea, Field } from "@4lt7ab/ui/ui";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { TagPicker } from "../molecules/TagPicker";
 import { FolderInput } from "../molecules/FolderInput";
@@ -78,14 +78,15 @@ export function CreateDocumentOverlay({ folders = [], onCreated, onClose }: Crea
           placeholder="Brief description (optional)"
         />
 
-        <Textarea
-          label="Content"
-          id="document-content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Markdown content (optional)"
-          rows={8}
-        />
+        <Field label="Content" htmlFor="document-content">
+          <Textarea
+            id="document-content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Markdown content (optional)"
+            rows={8}
+          />
+        </Field>
 
         <FolderInput
           value={folder}
