@@ -1015,4 +1015,50 @@ export function registerAllComponents(): void {
       '</DetailPageLayout>',
     ].join("\n"),
   });
+
+  // ---------------------------------------------------------------------------
+  // Toast (molecule — not in component tree, rendered via ToastContainer)
+  // ---------------------------------------------------------------------------
+
+  registerComponent({
+    name: "ToastContainer",
+    description: "Fixed-position toast notification container with auto-dismiss and click-to-dismiss.",
+    category: "molecule",
+    migrated: true,
+    libraryCandidate: true,
+    propDefs: [
+      { name: "type", type: "enum", defaultValue: "error", options: ["error", "success"] },
+    ],
+    render: (props) => {
+      const type = props.type as "error" | "success";
+      return (
+        <div style={{ position: "relative", height: 60 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 14px",
+              borderRadius: 8,
+              background: type === "error" ? "var(--color-error)" : "var(--color-success)",
+              color: "#fff",
+              fontSize: 13,
+              boxShadow: "var(--shadow-md)",
+            }}
+          >
+            {type === "error" ? "⚠ Something went wrong" : "✓ Changes saved"}
+          </div>
+        </div>
+      );
+    },
+    variants: [
+      { name: "Error", props: { type: "error" } },
+      { name: "Success", props: { type: "success" } },
+    ],
+    codeTemplate: [
+      'const { toasts, showToast, dismiss } = useToast();',
+      'showToast("Something went wrong", "error");',
+      '<ToastContainer toasts={toasts} dismiss={dismiss} />',
+    ].join("\n"),
+  });
 }

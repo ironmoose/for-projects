@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate Toast to library tokens and add gallery entry (libraryCandidate)
 - Migrate AppThemePicker inline styles to library tokens
 - Migrate TaskTableFilters gap to library spacing token
 - Migrate DocumentSearchBar gap to library spacing token
