@@ -4,6 +4,7 @@
 
 ### Fixed
 - **ThemesPage text contrast:** theme cards now use explicit `var(--color-text)` and `var(--color-text-secondary)` overrides via `useInjectStyles`, fixing unreadable black text on dark surfaces caused by browser button `color: inherit` defaults
+- Removed deprecated `baseUrl` from `src/web/tsconfig.json` to avoid TypeScript 7.0 breakage — paths resolution is unaffected since the only alias (`@domain/*`) uses a scoped specifier
 
 ### Changed
 - **Skeleton atoms:** migrated Skeleton, CardSkeleton, RowSkeleton from local implementations to `@4lt7ab/ui/ui` re-exports — removes compat `useTheme()` dependency; accepts static background in place of shimmer animation
