@@ -1,6 +1,5 @@
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Button } from "../atoms/Button";
-import { useTheme } from "../theme/ThemeContext";
 
 interface PaginationProps {
   page: number;
@@ -10,16 +9,14 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, totalPages, total, onPageChange }: PaginationProps) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        gap: theme.spacing.md,
-        padding: `${theme.spacing.lg} 0`,
+        gap: t.spaceMd,
+        padding: `${t.spaceLg} 0`,
       }}
     >
       <Button

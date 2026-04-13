@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Button } from "../atoms/Button";
 import { Icon } from "../atoms/Icon";
 
@@ -9,11 +9,9 @@ interface BackButtonProps {
 }
 
 export function BackButton({ onClick, label = "Back", style }: BackButtonProps) {
-  const { theme } = useTheme();
-
   return (
     <Button variant="ghost" onClick={onClick} style={style}>
-      <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+      <span style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
         <Icon name="arrow_back" size={16} /> {label}
       </span>
     </Button>

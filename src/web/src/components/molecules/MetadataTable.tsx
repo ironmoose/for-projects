@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { SectionLabel } from "../atoms/SectionLabel";
 import { MetaValue } from "../atoms/MetaValue";
 import { Stack } from "./Stack";
@@ -15,12 +15,10 @@ interface MetadataTableProps {
 }
 
 export function MetadataTable({ title, rows, style }: MetadataTableProps) {
-  const { theme } = useTheme();
-
   return (
     <div style={style}>
       {title && (
-        <SectionLabel style={{ marginBottom: theme.spacing.sm }}>
+        <SectionLabel style={{ marginBottom: t.spaceSm }}>
           {title}
         </SectionLabel>
       )}
