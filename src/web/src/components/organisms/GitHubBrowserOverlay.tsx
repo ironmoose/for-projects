@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
 import { Icon } from "../atoms/Icon";
@@ -24,8 +24,6 @@ function formatSize(bytes: number): string {
 }
 
 export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBrowserOverlayProps) {
-  const { theme } = useTheme();
-
   // Step 1: repo input
   const [repoInput, setRepoInput] = useState("");
   // Step 2: browsing
@@ -115,19 +113,19 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: theme.spacing.lg,
-        padding: theme.spacing.xl,
-        background: theme.color.surface,
+        gap: t.spaceLg,
+        padding: t.spaceXl,
+        background: t.colorSurface,
       }}
     >
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <h2 id="github-browser-title" style={{
           margin: 0,
-          fontFamily: theme.font.headline,
-          fontSize: theme.font.size.lg,
+          fontFamily: t.fontSerif,
+          fontSize: t.fontSizeLg,
           fontWeight: 700,
-          color: theme.color.text,
+          color: t.colorText,
         }}>
           Browse GitHub
         </h2>
@@ -137,7 +135,7 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
       </div>
 
       {/* Repo input */}
-      <div style={{ display: "flex", gap: theme.spacing.sm, alignItems: "flex-end" }}>
+      <div style={{ display: "flex", gap: t.spaceSm, alignItems: "flex-end" }}>
         <div style={{ flex: 1 }}>
           <Input
             label="Repository"
@@ -160,7 +158,7 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
       </div>
 
       {browseError && (
-        <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.danger }}>
+        <p style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorActionDestructive }}>
           {browseError}
         </p>
       )}
@@ -169,7 +167,7 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
       {repoLoaded && (
         <>
           {/* Search + selection controls */}
-          <div style={{ display: "flex", gap: theme.spacing.sm, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: t.spaceSm, alignItems: "center" }}>
             <div style={{ flex: 1, position: "relative" }}>
               <Input
                 id="file-filter"
@@ -178,7 +176,7 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
                 placeholder={`Filter ${entries.length} files...`}
               />
             </div>
-            <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textMuted, whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: t.fontSizeXs, color: t.colorTextMuted, whiteSpace: "nowrap" }}>
               {selected.size} selected
             </span>
             <Button size="sm" variant="ghost" onClick={selectAll} disabled={filtered.length === 0}>
@@ -195,13 +193,13 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
               flex: 1,
               minHeight: 0,
               overflowY: "auto",
-              border: `1px solid ${theme.color.borderSubtle}`,
-              borderRadius: theme.radius.md,
+              border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
+              borderRadius: t.radiusMd,
               scrollbarWidth: "thin",
             }}
           >
             {filtered.length === 0 ? (
-              <div style={{ padding: theme.spacing.lg, textAlign: "center", color: theme.color.textMuted, fontSize: theme.font.size.sm }}>
+              <div style={{ padding: t.spaceLg, textAlign: "center", color: t.colorTextMuted, fontSize: t.fontSizeSm }}>
                 {entries.length === 0 ? "No files found in this repository." : "No files match your filter."}
               </div>
             ) : (
@@ -211,25 +209,24 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
                   entry={entry}
                   selected={selected.has(entry.url)}
                   onToggle={() => toggleSelect(entry.url)}
-                  theme={theme}
                 />
               ))
             )}
           </div>
 
           {/* Import options */}
-          <div style={{ display: "flex", gap: theme.spacing.lg, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: t.spaceLg, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 150 }}>
               <FolderInput value={folder} folders={folders} onChange={setFolder} />
             </div>
-            <div style={{ flex: 1, minWidth: 150, display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+            <div style={{ flex: 1, minWidth: 150, display: "flex", flexDirection: "column", gap: t.spaceXs }}>
               <SectionLabel>Tags</SectionLabel>
               <TagPicker selected={selectedTags} onChange={setSelectedTags} />
             </div>
           </div>
 
           {importError && (
-            <p style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.danger }}>
+            <p style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorActionDestructive }}>
               {importError}
             </p>
           )}
@@ -254,11 +251,10 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
 // File row
 // ---------------------------------------------------------------------------
 
-function FileRow({ entry, selected, onToggle, theme }: {
+function FileRow({ entry, selected, onToggle }: {
   entry: GitHubTreeEntry;
   selected: boolean;
   onToggle: () => void;
-  theme: ReturnType<typeof useTheme>["theme"];
 }) {
   return (
     <div
@@ -266,10 +262,10 @@ function FileRow({ entry, selected, onToggle, theme }: {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: theme.spacing.sm,
-        padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-        borderBottom: `1px solid ${theme.color.borderSubtle}`,
-        background: selected ? `${theme.color.primary}12` : "transparent",
+        gap: t.spaceSm,
+        padding: `${t.spaceXs} ${t.spaceSm}`,
+        borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
+        background: selected ? `color-mix(in srgb, ${t.colorActionPrimary} 7%, transparent)` : "transparent",
         cursor: "pointer",
         transition: "background 0.1s",
       }}
@@ -277,15 +273,15 @@ function FileRow({ entry, selected, onToggle, theme }: {
       <Icon
         name={selected ? "check_box" : "check_box_outline_blank"}
         size={16}
-        style={{ color: selected ? theme.color.primary : theme.color.textFaint, flexShrink: 0 }}
+        style={{ color: selected ? t.colorActionPrimary : t.colorTextSecondary, flexShrink: 0 }}
       />
       <span
         style={{
           flex: 1,
           minWidth: 0,
-          fontSize: theme.font.size.xs,
-          fontFamily: theme.font.mono,
-          color: theme.color.text,
+          fontSize: t.fontSizeXs,
+          fontFamily: t.fontMono,
+          color: t.colorText,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -294,7 +290,7 @@ function FileRow({ entry, selected, onToggle, theme }: {
       >
         {entry.path}
       </span>
-      <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint, flexShrink: 0 }}>
+      <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary, flexShrink: 0 }}>
         {formatSize(entry.size)}
       </span>
     </div>
