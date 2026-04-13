@@ -361,6 +361,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <StatusDot color={String(props.color)} size={Number(props.size)} />,
     codeTemplate: `<StatusDot color={theme.color.success} />`,
+    migrated: true,
   });
 
   registerComponent({

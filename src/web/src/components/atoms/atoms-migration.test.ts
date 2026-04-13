@@ -73,6 +73,7 @@ describe("Components fully migrated off useTheme", () => {
     "Skeleton.tsx",
     "SectionLabel.tsx",
     "ReferenceTypeBadge.tsx",
+    "StatusDot.tsx",
   ];
 
   for (const file of fullyMigrated) {
@@ -247,10 +248,10 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).toContain("theme.glow.");
   });
 
-  test("StatusDot.tsx uses theme.motion and theme.animation (unmapped)", () => {
+  test("StatusDot.tsx no longer uses theme.motion or theme.animation", () => {
     const src = readComponent(ATOMS_DIR, "StatusDot.tsx");
-    expect(src).toContain("theme.motion.");
-    expect(src).toContain("theme.animation.");
+    expect(src).not.toContain("theme.motion.");
+    expect(src).not.toContain("theme.animation.");
   });
 
   test("Card.tsx uses theme.glow for border/shadow effects (unmapped)", () => {

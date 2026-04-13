@@ -1,5 +1,4 @@
 import { semantic as t } from "@4lt7ab/ui/core";
-import { useTheme } from "../theme/ThemeContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 interface StatusDotProps {
@@ -11,14 +10,13 @@ interface StatusDotProps {
 }
 
 export function StatusDot({ color, size = 8, animate = "none", glowColor, style }: StatusDotProps) {
-  const { theme } = useTheme();
   const reduced = useReducedMotion();
 
   const shouldAnimate = animate === "pulse" && !reduced;
 
   const animationStyle: React.CSSProperties = shouldAnimate
     ? {
-        animation: `pulse-alive ${theme.animation.duration.pulse} ease-in-out infinite`,
+        animation: "pulse-alive 2s ease-in-out infinite",
         ...(glowColor
           ? {
               ["--glow-color" as string]: glowColor,
@@ -37,7 +35,7 @@ export function StatusDot({ color, size = 8, animate = "none", glowColor, style 
         borderRadius: t.radiusFull,
         background: color,
         flexShrink: 0,
-        transition: `background ${theme.motion.normal} ${theme.motion.easing}`,
+        transition: "background 0.2s ease",
         ...animationStyle,
         ...style,
       }}
