@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   TopBar,
-  useTheme,
   ConnectionStatus,
   DisconnectionBanner,
   AnimationStyles,
   SynthBackground,
   ErrorBoundary,
 } from "./components";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { AppThemePicker } from "./components/molecules/AppThemePicker";
 import type { NavItem } from "./components";
 import { ShortcutHelpOverlay } from "./components/organisms/ShortcutHelpOverlay";
@@ -38,7 +38,6 @@ const navItems: NavItem[] = [
 // ---------------------------------------------------------------------------
 
 export function App() {
-  const { theme } = useTheme();
   const { path, navigate } = useHashRoute();
   const { onEvent, subscribeEvents } = useEventFanOut();
   const { connected } = useRealtimeEvents(onEvent);
@@ -126,12 +125,12 @@ export function App() {
             e.currentTarget.style.height = "auto";
             e.currentTarget.style.overflow = "visible";
             e.currentTarget.style.padding = "8px 16px";
-            e.currentTarget.style.background = theme.color.surfaceContainer;
-            e.currentTarget.style.color = theme.color.text;
-            e.currentTarget.style.borderRadius = theme.radius.md;
-            e.currentTarget.style.border = `2px solid ${theme.color.primary}`;
-            e.currentTarget.style.fontFamily = theme.font.body;
-            e.currentTarget.style.fontSize = theme.font.size.sm;
+            e.currentTarget.style.background = t.colorSurface;
+            e.currentTarget.style.color = t.colorText;
+            e.currentTarget.style.borderRadius = t.radiusMd;
+            e.currentTarget.style.border = `2px solid ${t.colorActionPrimary}`;
+            e.currentTarget.style.fontFamily = t.fontSans;
+            e.currentTarget.style.fontSize = t.fontSizeSm;
             e.currentTarget.style.textDecoration = "none";
             e.currentTarget.style.fontWeight = "600";
           }}
@@ -145,7 +144,7 @@ export function App() {
         >
           Skip to main content
         </a>
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: theme.font.body }}>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: t.fontSans }}>
           <TopBar
             trailing={<TrailingIndicators connected={connected} />}
             navItems={navItems}
@@ -188,9 +187,8 @@ function GlobalShortcuts({ navigate }: { navigate: (path: string) => void }) {
 
 /** Renders inside EventSubscriptionContext so hooks can access it. */
 function TrailingIndicators({ connected }: { connected: boolean }) {
-  const { theme } = useTheme();
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+    <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
       <AppThemePicker variant="compact" />
       <ConnectionStatus connected={connected} />
     </div>

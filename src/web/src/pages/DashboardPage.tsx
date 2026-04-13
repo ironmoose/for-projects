@@ -5,13 +5,13 @@ import {
   Icon,
   IconButton,
   ProgressBar,
-  useTheme,
   ListPageLayout,
   PageHeader,
   EmptyState,
   ConfirmDialog,
 } from "../components";
 import type { ProgressBarSegment } from "../components";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { CreateProjectOverlay } from "../components/organisms/CreateProjectOverlay";
 import { useProjects } from "../hooks";
 import { useShortcut } from "../hooks/useKeyboardShortcuts";
@@ -39,8 +39,6 @@ function ProjectCard({
   onClick: () => void;
   onDelete: () => void;
 }) {
-  const { theme } = useTheme();
-
   return (
     <Card
       variant="default"
@@ -58,14 +56,14 @@ function ProjectCard({
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
-        gap: theme.spacing.md,
+        gap: t.spaceMd,
       }}
     >
       <span
         style={{
-          fontSize: theme.font.size.sm,
+          fontSize: t.fontSizeSm,
           fontWeight: 600,
-          color: theme.color.text,
+          color: t.colorText,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -77,8 +75,8 @@ function ProjectCard({
       {project.summary && (
         <span
           style={{
-            fontSize: theme.font.size.xs,
-            color: theme.color.textMuted,
+            fontSize: t.fontSizeXs,
+            color: t.colorTextMuted,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -91,10 +89,10 @@ function ProjectCard({
 
       {taskCount > 0 && (() => {
         const segments: ProgressBarSegment[] = [
-          { value: statusCounts["done"] ?? 0, color: theme.color.success, label: "done" },
-          { value: statusCounts["in_progress"] ?? 0, color: theme.color.tertiary, label: "in progress" },
-          { value: statusCounts["todo"] ?? 0, color: theme.color.textMuted, label: "todo" },
-          { value: statusCounts["archived"] ?? 0, color: theme.color.textFaint, label: "archived" },
+          { value: statusCounts["done"] ?? 0, color: t.colorSuccess, label: "done" },
+          { value: statusCounts["in_progress"] ?? 0, color: t.colorWarning, label: "in progress" },
+          { value: statusCounts["todo"] ?? 0, color: t.colorTextMuted, label: "todo" },
+          { value: statusCounts["archived"] ?? 0, color: t.colorTextSecondary, label: "archived" },
         ];
         return <ProgressBar segments={segments} height={6} />;
       })()}
@@ -105,12 +103,12 @@ function ProjectCard({
           alignItems: "center",
           justifyContent: "space-between",
           marginTop: "auto",
-          fontSize: theme.font.size.xxs,
-          color: theme.color.textFaint,
+          fontSize: t.fontSizeXs,
+          color: t.colorTextSecondary,
         }}
       >
         <span>{taskCount} {taskCount === 1 ? "task" : "tasks"}</span>
-        <span style={{ fontFamily: theme.font.mono }}>
+        <span style={{ fontFamily: t.fontMono }}>
           {formatDate(project.updated_at)}
         </span>
 
@@ -131,7 +129,6 @@ function ProjectCard({
 // ---------------------------------------------------------------------------
 
 export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) => void }) {
-  const { theme } = useTheme();
   const { projects, create, remove } = useProjects();
   const { showToast } = useToastContext();
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
@@ -184,13 +181,13 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
         subtitle="Monitor your projects and track progress from a centralized dashboard."
         trailing={
           <Button onClick={() => setShowCreateOverlay(true)}>
-            <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+            <span style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
               <Icon name="add" size={16} />
               New Project
             </span>
           </Button>
         }
-        style={{ marginBottom: theme.spacing.xl }}
+        style={{ marginBottom: t.spaceXl }}
       />
 
       {showCreateOverlay && (
@@ -204,7 +201,7 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: theme.spacing.lg,
+          gap: t.spaceLg,
         }}
       >
         {sorted.map((p) => (

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  useTheme,
   PageHeader,
   EmptyState,
   Pagination,
@@ -11,6 +10,7 @@ import {
   GitHubBrowserOverlay,
   FolderTileGrid,
 } from "../components";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Icon } from "../components/atoms/Icon";
 import { SearchToggle } from "../components/molecules/SearchToggle";
 import { Overlay } from "../components/atoms/Overlay";
@@ -23,7 +23,6 @@ import { useToastContext } from "../components/ToastContext";
 import { useWindowWidth, SMALL_BREAKPOINT } from "../hooks/useWindowWidth";
 import { ApiError, importDocument } from "../api";
 import { TAG_CATEGORIES } from "../types";
-import type { Theme } from "../components/theme/theme";
 import type { DocumentSummary, TagName } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -64,10 +63,8 @@ function SidebarInner({
   semanticSearchAvailable, semanticMode, onSemanticModeChange,
   mobile,
 }: SidebarProps & { mobile: boolean }) {
-  const { theme } = useTheme();
-
-  const sectionGap = theme.spacing.lg;
-  const itemGap = theme.spacing.xs;
+  const sectionGap = t.spaceLg;
+  const itemGap = t.spaceXs;
 
   return (
     <nav
@@ -75,8 +72,8 @@ function SidebarInner({
         display: "flex",
         flexDirection: "column",
         gap: sectionGap,
-        padding: mobile ? theme.spacing.md : `${theme.spacing["2xl"]} ${theme.spacing.md}`,
-        ...(mobile ? {} : { width: 220, flexShrink: 0, borderRight: `1px solid ${theme.color.borderSubtle}` }),
+        padding: mobile ? t.spaceMd : `${t.space2xl} ${t.spaceMd}`,
+        ...(mobile ? {} : { width: 220, flexShrink: 0, borderRight: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}` }),
         overflowY: "auto",
         scrollbarWidth: "none" as const,
       }}
@@ -99,13 +96,13 @@ function SidebarInner({
             display: "flex",
             alignItems: "center",
             gap: 4,
-            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-            borderRadius: theme.radius.md,
-            border: `1px solid ${theme.color.borderSubtle}`,
+            padding: `${t.spaceXs} ${t.spaceSm}`,
+            borderRadius: t.radiusMd,
+            border: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
             background: "transparent",
-            color: theme.color.textMuted,
-            fontSize: theme.font.size.xxs,
-            fontFamily: theme.font.body,
+            color: t.colorTextMuted,
+            fontSize: t.fontSizeXs,
+            fontFamily: t.fontSans,
             cursor: "pointer",
             fontWeight: 600,
           }}
@@ -120,14 +117,14 @@ function SidebarInner({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: theme.spacing.xs,
-          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-          borderRadius: theme.radius.md,
-          border: `1px solid ${favorite ? theme.color.warning + "60" : theme.color.borderSubtle}`,
-          background: favorite ? `${theme.color.warning}18` : "transparent",
-          color: favorite ? theme.color.warning : theme.color.textMuted,
-          fontSize: theme.font.size.xxs,
-          fontFamily: theme.font.body,
+          gap: t.spaceXs,
+          padding: `${t.spaceXs} ${t.spaceSm}`,
+          borderRadius: t.radiusMd,
+          border: `1px solid ${favorite ? `color-mix(in srgb, ${t.colorWarning} 38%, transparent)` : `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
+          background: favorite ? `color-mix(in srgb, ${t.colorWarning} 9%, transparent)` : "transparent",
+          color: favorite ? t.colorWarning : t.colorTextMuted,
+          fontSize: t.fontSizeXs,
+          fontFamily: t.fontSans,
           fontWeight: 600,
           cursor: "pointer",
           transition: "all 0.15s",
@@ -140,23 +137,23 @@ function SidebarInner({
       {projects.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: itemGap }}>
           <SectionLabel>Projects</SectionLabel>
-          <SidebarItem label="All projects" icon="apps" active={selectedProjectId === ""} onClick={() => onProjectChange("")} theme={theme} />
+          <SidebarItem label="All projects" icon="apps" active={selectedProjectId === ""} onClick={() => onProjectChange("")} />
           {projects.map((p) => (
-            <SidebarItem key={p.id} label={p.title} icon="folder_special" active={selectedProjectId === p.id} onClick={() => onProjectChange(selectedProjectId === p.id ? "" : p.id)} theme={theme} />
+            <SidebarItem key={p.id} label={p.title} icon="folder_special" active={selectedProjectId === p.id} onClick={() => onProjectChange(selectedProjectId === p.id ? "" : p.id)} />
           ))}
         </div>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: itemGap }}>
         <SectionLabel>Tags</SectionLabel>
-        <SidebarItem label="All tags" icon="label" active={selectedTag === ""} onClick={() => onTagChange("")} theme={theme} />
+        <SidebarItem label="All tags" icon="label" active={selectedTag === ""} onClick={() => onTagChange("")} />
         {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
           <div key={category} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-            <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint, fontWeight: 600, padding: `${theme.spacing.xs} ${theme.spacing.sm}`, paddingBottom: 0 }}>
+            <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary, fontWeight: 600, padding: `${t.spaceXs} ${t.spaceSm}`, paddingBottom: 0 }}>
               {category}
             </span>
             {(tags as readonly TagName[]).map((tag) => (
-              <SidebarItem key={tag} label={tag} active={selectedTag === tag} onClick={() => onTagChange(selectedTag === tag ? "" : tag)} theme={theme} />
+              <SidebarItem key={tag} label={tag} active={selectedTag === tag} onClick={() => onTagChange(selectedTag === tag ? "" : tag)} />
             ))}
           </div>
         ))}
@@ -165,9 +162,9 @@ function SidebarInner({
       {folders.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: itemGap }}>
           <SectionLabel>Folders</SectionLabel>
-          <SidebarItem label="All folders" icon="folder" active={selectedFolder === ""} onClick={() => onFolderChange("")} theme={theme} />
+          <SidebarItem label="All folders" icon="folder" active={selectedFolder === ""} onClick={() => onFolderChange("")} />
           {folders.map((f) => (
-            <SidebarItem key={f} label={f} icon="folder" active={selectedFolder === f} onClick={() => onFolderChange(selectedFolder === f ? "" : f)} theme={theme} />
+            <SidebarItem key={f} label={f} icon="folder" active={selectedFolder === f} onClick={() => onFolderChange(selectedFolder === f ? "" : f)} />
           ))}
         </div>
       )}
@@ -175,7 +172,7 @@ function SidebarInner({
   );
 }
 
-function SidebarItem({ label, icon, active, onClick, theme }: { label: string; icon?: string; active: boolean; onClick: () => void; theme: Theme }) {
+function SidebarItem({ label, icon, active, onClick }: { label: string; icon?: string; active: boolean; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -185,14 +182,14 @@ function SidebarItem({ label, icon, active, onClick, theme }: { label: string; i
       style={{
         display: "flex",
         alignItems: "center",
-        gap: theme.spacing.xs,
-        padding: `3px ${theme.spacing.sm}`,
-        borderRadius: theme.radius.md,
+        gap: t.spaceXs,
+        padding: `3px ${t.spaceSm}`,
+        borderRadius: t.radiusMd,
         border: "none",
-        background: active ? `${theme.color.primary}18` : hovered ? `${theme.color.textFaint}10` : "transparent",
-        color: active ? theme.color.primary : theme.color.textMuted,
-        fontSize: theme.font.size.xxs,
-        fontFamily: theme.font.body,
+        background: active ? `color-mix(in srgb, ${t.colorActionPrimary} 9%, transparent)` : hovered ? `color-mix(in srgb, ${t.colorTextSecondary} 6%, transparent)` : "transparent",
+        color: active ? t.colorActionPrimary : t.colorTextMuted,
+        fontSize: t.fontSizeXs,
+        fontFamily: t.fontSans,
         fontWeight: active ? 700 : 500,
         cursor: "pointer",
         transition: "all 0.12s",
@@ -220,10 +217,10 @@ interface ActiveFilter {
   onRemove: () => void;
 }
 
-function ActiveFilterChips({ filters, theme }: { filters: ActiveFilter[]; theme: Theme }) {
+function ActiveFilterChips({ filters }: { filters: ActiveFilter[] }) {
   if (filters.length === 0) return null;
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: `0 0 ${theme.spacing.sm}` }}>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: `0 0 ${t.spaceSm}` }}>
       {filters.map((f) => (
         <button
           key={f.key}
@@ -232,14 +229,14 @@ function ActiveFilterChips({ filters, theme }: { filters: ActiveFilter[]; theme:
             display: "inline-flex",
             alignItems: "center",
             gap: 4,
-            padding: `2px ${theme.spacing.xs} 2px ${theme.spacing.sm}`,
-            borderRadius: theme.radius.full,
-            border: `1px solid ${theme.color.primary}40`,
-            background: `${theme.color.primary}14`,
-            color: theme.color.primary,
-            fontSize: theme.font.size.xxs,
+            padding: `2px ${t.spaceXs} 2px ${t.spaceSm}`,
+            borderRadius: t.radiusFull,
+            border: `1px solid ${`color-mix(in srgb, ${t.colorActionPrimary} 25%, transparent)`}`,
+            background: `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)`,
+            color: t.colorActionPrimary,
+            fontSize: t.fontSizeXs,
             fontWeight: 600,
-            fontFamily: theme.font.body,
+            fontFamily: t.fontSans,
             cursor: "pointer",
             transition: "all 0.12s",
             maxWidth: 160,
@@ -259,8 +256,6 @@ function ActiveFilterChips({ filters, theme }: { filters: ActiveFilter[]; theme:
 // ---------------------------------------------------------------------------
 
 function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
-  const { theme } = useTheme();
-
   if (!open) return null;
 
   return (
@@ -274,9 +269,9 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
           bottom: 0,
           zIndex: 201,
           maxHeight: "65vh",
-          background: theme.color.surfaceContainer,
-          borderTop: `1px solid ${theme.color.border}`,
-          borderRadius: `${theme.radius.xl}px ${theme.radius.xl}px 0 0`,
+          background: t.colorSurface,
+          borderTop: `1px solid ${t.colorBorder}`,
+          borderRadius: `${t.radiusLg} ${t.radiusLg} 0 0`,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -284,25 +279,25 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
         }}
       >
         {/* Handle bar */}
-        <div style={{ display: "flex", justifyContent: "center", padding: `${theme.spacing.sm} 0 0` }}>
-          <div style={{ width: 36, height: 4, borderRadius: theme.radius.full, background: theme.color.textFaint, opacity: 0.4 }} />
+        <div style={{ display: "flex", justifyContent: "center", padding: `${t.spaceSm} 0 0` }}>
+          <div style={{ width: 36, height: 4, borderRadius: t.radiusFull, background: t.colorTextSecondary, opacity: 0.4 }} />
         </div>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: `${theme.spacing.sm} ${theme.spacing.md}` }}>
-          <span style={{ fontSize: theme.font.size.sm, fontWeight: 700, fontFamily: theme.font.headline, color: theme.color.text }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: `${t.spaceSm} ${t.spaceMd}` }}>
+          <span style={{ fontSize: t.fontSizeSm, fontWeight: 700, fontFamily: t.fontSerif, color: t.colorText }}>
             Filters
           </span>
           <button
             onClick={onClose}
             style={{
-              padding: theme.spacing.xs,
+              padding: t.spaceXs,
               border: "none",
               background: "transparent",
-              color: theme.color.primary,
-              fontSize: theme.font.size.xs,
+              color: t.colorActionPrimary,
+              fontSize: t.fontSizeXs,
               fontWeight: 600,
-              fontFamily: theme.font.body,
+              fontFamily: t.fontSans,
               cursor: "pointer",
             }}
           >
@@ -335,19 +330,17 @@ function MobileSearchBar({
   semanticMode?: boolean;
   onSemanticModeChange?: (v: boolean) => void;
 }) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
         position: "sticky",
         top: 0,
         zIndex: 10,
-        background: theme.color.surface,
-        paddingTop: theme.spacing.sm,
-        paddingBottom: theme.spacing.sm,
+        background: t.colorSurface,
+        paddingTop: t.spaceSm,
+        paddingBottom: t.spaceSm,
         display: "flex",
-        gap: theme.spacing.sm,
+        gap: t.spaceSm,
         alignItems: "center",
       }}
     >
@@ -367,14 +360,14 @@ function MobileSearchBar({
           display: "flex",
           alignItems: "center",
           gap: 4,
-          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-          borderRadius: theme.radius.md,
-          border: `1px solid ${activeCount > 0 ? theme.color.primary : theme.color.borderSubtle}`,
-          background: activeCount > 0 ? `${theme.color.primary}18` : "transparent",
-          color: activeCount > 0 ? theme.color.primary : theme.color.textMuted,
-          fontSize: theme.font.size.xxs,
+          padding: `${t.spaceXs} ${t.spaceSm}`,
+          borderRadius: t.radiusMd,
+          border: `1px solid ${activeCount > 0 ? t.colorActionPrimary : `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
+          background: activeCount > 0 ? `color-mix(in srgb, ${t.colorActionPrimary} 9%, transparent)` : "transparent",
+          color: activeCount > 0 ? t.colorActionPrimary : t.colorTextMuted,
+          fontSize: t.fontSizeXs,
           fontWeight: 600,
-          fontFamily: theme.font.body,
+          fontFamily: t.fontSans,
           cursor: "pointer",
           flexShrink: 0,
         }}
@@ -391,7 +384,6 @@ function MobileSearchBar({
 // ---------------------------------------------------------------------------
 
 export function DocumentsPage() {
-  const { theme } = useTheme();
   const { showToast } = useToastContext();
   const windowWidth = useWindowWidth();
   const isWide = windowWidth >= SMALL_BREAKPOINT;
@@ -544,7 +536,7 @@ export function DocumentsPage() {
         style={{
           flex: 1,
           minWidth: 0,
-          padding: isWide ? `${theme.spacing["2xl"]} ${theme.spacing.xl}` : `${theme.spacing.md} ${theme.spacing.md}`,
+          padding: isWide ? `${t.space2xl} ${t.spaceXl}` : `${t.spaceMd} ${t.spaceMd}`,
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
@@ -557,16 +549,16 @@ export function DocumentsPage() {
           title="Knowledge Base"
           subtitle={total > 0 ? `${total} document${total !== 1 ? "s" : ""}` : undefined}
           trailing={
-            <div style={{ display: "flex", gap: theme.spacing.sm, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: t.spaceSm, alignItems: "center" }}>
               {/* View mode toggle */}
-              <div style={{ display: "flex", border: `1px solid ${theme.color.borderSubtle}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
+              <div style={{ display: "flex", border: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`, borderRadius: t.radiusMd, overflow: "hidden" }}>
                 <button
                   onClick={() => setViewMode("directory")}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 30, height: 28, border: "none", cursor: "pointer",
-                    background: viewMode === "directory" ? `${theme.color.primary}18` : "transparent",
-                    color: viewMode === "directory" ? theme.color.primary : theme.color.textMuted,
+                    background: viewMode === "directory" ? `color-mix(in srgb, ${t.colorActionPrimary} 9%, transparent)` : "transparent",
+                    color: viewMode === "directory" ? t.colorActionPrimary : t.colorTextMuted,
                   }}
                   title="Directory view"
                 >
@@ -577,9 +569,9 @@ export function DocumentsPage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 30, height: 28, border: "none", cursor: "pointer",
-                    borderLeft: `1px solid ${theme.color.borderSubtle}`,
-                    background: viewMode === "grid" ? `${theme.color.primary}18` : "transparent",
-                    color: viewMode === "grid" ? theme.color.primary : theme.color.textMuted,
+                    borderLeft: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
+                    background: viewMode === "grid" ? `color-mix(in srgb, ${t.colorActionPrimary} 9%, transparent)` : "transparent",
+                    color: viewMode === "grid" ? t.colorActionPrimary : t.colorTextMuted,
                   }}
                   title="Grid view"
                 >
@@ -597,7 +589,7 @@ export function DocumentsPage() {
               </Button>
             </div>
           }
-          style={{ marginBottom: isWide ? theme.spacing.lg : theme.spacing.sm }}
+          style={{ marginBottom: isWide ? t.spaceLg : t.spaceSm }}
         />
 
         {/* Breadcrumb — directory mode with active path */}
@@ -625,12 +617,12 @@ export function DocumentsPage() {
         )}
 
         {/* Mobile: active filter chips */}
-        {!isWide && <ActiveFilterChips filters={activeFilters} theme={theme} />}
+        {!isWide && <ActiveFilterChips filters={activeFilters} />}
 
         {/* Document grid */}
         <div style={{ flex: 1 }}>
           {loading ? (
-            <div style={{ textAlign: "center", padding: theme.spacing.xl, color: theme.color.textMuted }}>
+            <div style={{ textAlign: "center", padding: t.spaceXl, color: t.colorTextMuted }}>
               Loading...
             </div>
           ) : sorted.length === 0 ? (
@@ -759,14 +751,12 @@ export function DocumentsPage() {
 // ---------------------------------------------------------------------------
 
 function DirectoryBreadcrumb({ path, onNavigate }: { path: string; onNavigate: (path: string) => void }) {
-  const { theme } = useTheme();
-
   if (path === "__unfiled__") {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginBottom: theme.spacing.md }}>
-        <BreadcrumbLink label="All Folders" icon="folder" onClick={() => onNavigate("")} theme={theme} />
-        <Icon name="chevron_right" size={14} style={{ color: theme.color.textFaint }} />
-        <span style={{ fontSize: theme.font.size.xs, fontFamily: theme.font.body, color: theme.color.text, fontWeight: 600 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, marginBottom: t.spaceMd }}>
+        <BreadcrumbLink label="All Folders" icon="folder" onClick={() => onNavigate("")} />
+        <Icon name="chevron_right" size={14} style={{ color: t.colorTextSecondary }} />
+        <span style={{ fontSize: t.fontSizeXs, fontFamily: t.fontSans, color: t.colorText, fontWeight: 600 }}>
           Unfiled
         </span>
       </div>
@@ -775,20 +765,20 @@ function DirectoryBreadcrumb({ path, onNavigate }: { path: string; onNavigate: (
 
   const segments = path.split("/");
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, marginBottom: theme.spacing.md, flexWrap: "wrap" }}>
-      <BreadcrumbLink label="All Folders" icon="folder" onClick={() => onNavigate("")} theme={theme} />
+    <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, marginBottom: t.spaceMd, flexWrap: "wrap" }}>
+      <BreadcrumbLink label="All Folders" icon="folder" onClick={() => onNavigate("")} />
       {segments.map((segment, i) => {
         const isLast = i === segments.length - 1;
         const pathUpTo = segments.slice(0, i + 1).join("/");
         return (
-          <span key={pathUpTo} style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
-            <Icon name="chevron_right" size={14} style={{ color: theme.color.textFaint }} />
+          <span key={pathUpTo} style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+            <Icon name="chevron_right" size={14} style={{ color: t.colorTextSecondary }} />
             {isLast ? (
-              <span style={{ fontSize: theme.font.size.xs, fontFamily: theme.font.body, color: theme.color.text, fontWeight: 600 }}>
+              <span style={{ fontSize: t.fontSizeXs, fontFamily: t.fontSans, color: t.colorText, fontWeight: 600 }}>
                 {segment}
               </span>
             ) : (
-              <BreadcrumbLink label={segment} onClick={() => onNavigate(pathUpTo)} theme={theme} />
+              <BreadcrumbLink label={segment} onClick={() => onNavigate(pathUpTo)} />
             )}
           </span>
         );
@@ -797,15 +787,15 @@ function DirectoryBreadcrumb({ path, onNavigate }: { path: string; onNavigate: (
   );
 }
 
-function BreadcrumbLink({ label, icon, onClick, theme }: { label: string; icon?: string; onClick: () => void; theme: Theme }) {
+function BreadcrumbLink({ label, icon, onClick }: { label: string; icon?: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       style={{
         display: "flex", alignItems: "center", gap: 4,
         border: "none", background: "transparent", cursor: "pointer",
-        fontSize: theme.font.size.xs, fontFamily: theme.font.body,
-        color: theme.color.primary, fontWeight: 600, padding: 0,
+        fontSize: t.fontSizeXs, fontFamily: t.fontSans,
+        color: t.colorActionPrimary, fontWeight: 600, padding: 0,
       }}
     >
       {icon && <Icon name={icon} size={14} />}
@@ -832,12 +822,9 @@ function DirectoryView({
   onDeleteFolder: (path: string, docCount: number) => void;
   onToggleFavorite: (doc: DocumentSummary) => void;
 }) {
-  const { theme } = useTheme();
-
   // Compute documents at exactly this path (not deeper)
   const docsAtLevel = useMemo(() => {
     if (!currentPath) return documents.filter(d => !d.folder);
-    const prefix = currentPath + "/";
     return documents.filter(d =>
       d.folder === currentPath || // exact match — doc is filed at this folder
       false // don't include docs in subfolders
@@ -854,7 +841,7 @@ function DirectoryView({
   }, [documents, currentPath]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.lg }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: t.spaceLg }}>
       {/* Folder tiles */}
       <FolderTileGrid
         documents={documents}
@@ -869,17 +856,17 @@ function DirectoryView({
         <div>
           {hasSubfolders && (
             <div style={{
-              display: "flex", alignItems: "center", gap: theme.spacing.xs,
-              marginBottom: theme.spacing.sm, paddingLeft: theme.spacing.sm,
+              display: "flex", alignItems: "center", gap: t.spaceXs,
+              marginBottom: t.spaceSm, paddingLeft: t.spaceSm,
             }}>
-              <Icon name="description" size={15} style={{ color: theme.color.textFaint }} />
+              <Icon name="description" size={15} style={{ color: t.colorTextSecondary }} />
               <span style={{
-                fontSize: theme.font.size.xs, fontWeight: 700,
-                fontFamily: theme.font.body, color: theme.color.textMuted,
+                fontSize: t.fontSizeXs, fontWeight: 700,
+                fontFamily: t.fontSans, color: t.colorTextMuted,
               }}>
                 Documents
               </span>
-              <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+              <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
                 {docsAtLevel.length}
               </span>
             </div>

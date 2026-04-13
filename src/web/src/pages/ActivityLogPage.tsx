@@ -7,8 +7,8 @@ import {
   PageHeader,
   Pagination,
   Select,
-  useTheme,
 } from "../components";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useToastContext } from "../components/ToastContext";
 import { DocumentReaderModal } from "../components/organisms/DocumentReaderModal";
 import { useActivityLog } from "../hooks/useActivityLog";
@@ -35,8 +35,6 @@ function ActionBadge({ action }: { action: string }) {
 // ---------------------------------------------------------------------------
 
 function SummaryCell({ summary }: { summary: string }) {
-  const { theme } = useTheme();
-
   const parsed = useMemo(() => {
     try {
       return JSON.parse(summary) as Record<string, unknown>;
@@ -46,7 +44,7 @@ function SummaryCell({ summary }: { summary: string }) {
   }, [summary]);
 
   if (!parsed || Object.keys(parsed).length === 0) {
-    return <span style={{ color: theme.color.textFaint }}>--</span>;
+    return <span style={{ color: t.colorTextSecondary }}>--</span>;
   }
 
   const parts: string[] = [];
@@ -64,9 +62,9 @@ function SummaryCell({ summary }: { summary: string }) {
   return (
     <span
       style={{
-        fontFamily: theme.font.mono,
-        fontSize: theme.font.size.xxs,
-        color: theme.color.textMuted,
+        fontFamily: t.fontMono,
+        fontSize: t.fontSizeXs,
+        color: t.colorTextMuted,
       }}
     >
       {parts.join(" \u00b7 ") || summary}
@@ -84,7 +82,6 @@ interface LogRowProps {
 }
 
 function LogRow({ log, onClick }: LogRowProps) {
-  const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
   const isClickable = onClick !== null;
 
@@ -95,44 +92,44 @@ function LogRow({ log, onClick }: LogRowProps) {
       onMouseLeave={isClickable ? () => setHovered(false) : undefined}
       style={{
         cursor: isClickable ? "pointer" : "default",
-        background: hovered ? theme.color.surfaceContainerHigh : undefined,
+        background: hovered ? t.colorSurfaceRaised : undefined,
         transition: "background 120ms ease",
       }}
     >
-      <td style={cellStyle(theme)}>
+      <td style={cellStyle()}>
         <ActionBadge action={log.action} />
       </td>
-      <td style={cellStyle(theme)}>
+      <td style={cellStyle()}>
         <Badge variant="default">{log.entity_type}</Badge>
       </td>
       <td
         style={{
-          ...cellStyle(theme),
-          fontFamily: theme.font.mono,
-          fontSize: theme.font.size.xxs,
-          color: theme.color.textFaint,
+          ...cellStyle(),
+          fontFamily: t.fontMono,
+          fontSize: t.fontSizeXs,
+          color: t.colorTextSecondary,
         }}
       >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: theme.spacing.xs }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceXs }}>
           {log.entity_id ? log.entity_id.slice(-8) : "--"}
           {isClickable && (
             <Icon
               name="open_in_new"
               size={14}
-              style={{ color: theme.color.textFaint, opacity: hovered ? 1 : 0.5 }}
+              style={{ color: t.colorTextSecondary, opacity: hovered ? 1 : 0.5 }}
             />
           )}
         </span>
       </td>
-      <td style={cellStyle(theme)}>
+      <td style={cellStyle()}>
         <SummaryCell summary={log.summary} />
       </td>
       <td
         style={{
-          ...cellStyle(theme),
-          fontFamily: theme.font.mono,
-          fontSize: theme.font.size.xxs,
-          color: theme.color.textFaint,
+          ...cellStyle(),
+          fontFamily: t.fontMono,
+          fontSize: t.fontSizeXs,
+          color: t.colorTextSecondary,
           whiteSpace: "nowrap",
         }}
         title={formatDate(log.created_at)}
@@ -143,10 +140,10 @@ function LogRow({ log, onClick }: LogRowProps) {
   );
 }
 
-function cellStyle(theme: ReturnType<typeof useTheme>["theme"]): React.CSSProperties {
+function cellStyle(): React.CSSProperties {
   return {
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    borderBottom: `1px solid ${theme.color.border}`,
+    padding: `${t.spaceSm} ${t.spaceMd}`,
+    borderBottom: `1px solid ${t.colorBorder}`,
     verticalAlign: "middle",
   };
 }
@@ -160,7 +157,6 @@ interface ActivityLogPageProps {
 }
 
 export function ActivityLogPage({ onNavigate }: ActivityLogPageProps) {
-  const { theme } = useTheme();
   const { showToast } = useToastContext();
   const [entityType, setEntityType] = useState<string | undefined>(undefined);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
@@ -237,11 +233,11 @@ export function ActivityLogPage({ onNavigate }: ActivityLogPageProps) {
             style={{ minWidth: 140 }}
           />
         }
-        style={{ marginBottom: theme.spacing.xl }}
+        style={{ marginBottom: t.spaceXl }}
       />
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: theme.spacing.xl, color: theme.color.textMuted }}>
+        <div style={{ textAlign: "center", padding: t.spaceXl, color: t.colorTextMuted }}>
           Loading...
         </div>
       ) : logs.length === 0 ? (
@@ -250,17 +246,17 @@ export function ActivityLogPage({ onNavigate }: ActivityLogPageProps) {
         <div
           style={{
             overflowX: "auto",
-            borderRadius: theme.radius.lg,
-            border: `1px solid ${theme.color.border}`,
-            background: theme.color.surface,
+            borderRadius: t.radiusLg,
+            border: `1px solid ${t.colorBorder}`,
+            background: t.colorSurface,
           }}
         >
           <table
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              fontSize: theme.font.size.sm,
-              color: theme.color.text,
+              fontSize: t.fontSizeSm,
+              color: t.colorText,
             }}
           >
             <thead>
@@ -269,14 +265,14 @@ export function ActivityLogPage({ onNavigate }: ActivityLogPageProps) {
                   <th
                     key={h}
                     style={{
-                      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                      padding: `${t.spaceSm} ${t.spaceMd}`,
                       textAlign: "left",
                       fontWeight: 600,
-                      fontSize: theme.font.size.xxs,
-                      color: theme.color.textMuted,
+                      fontSize: t.fontSizeXs,
+                      color: t.colorTextMuted,
                       textTransform: "uppercase",
-                      letterSpacing: theme.font.letterSpacing.wide,
-                      borderBottom: `2px solid ${theme.color.border}`,
+                      letterSpacing: t.letterSpacingWide,
+                      borderBottom: `2px solid ${t.colorBorder}`,
                       whiteSpace: "nowrap",
                     }}
                   >

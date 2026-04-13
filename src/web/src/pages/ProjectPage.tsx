@@ -9,7 +9,6 @@ import {
   SectionLabel,
   Textarea,
   Stack,
-  useTheme,
   DetailPageLayout,
   BackButton,
   ExpandableCard,
@@ -25,6 +24,7 @@ import {
   DependencyGraphView,
   ProjectDocumentTable,
 } from "../components";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { DocumentReferencePicker } from "../components/organisms/DocumentReferencePicker";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
 import { ModalShell } from "@4lt7ab/ui/ui";
@@ -43,6 +43,7 @@ import type { TaskDetail, TaskDependencies, DependencyDetail, DocumentsMergePatc
 import type { TaskSummary, TaskStatus } from "../types";
 import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../types";
 import { formatDate } from "../utils";
+import { MEDIUM_BREAKPOINT } from "../constants";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -90,7 +91,6 @@ function AddDependencySearch({
   onAdd: (targetTaskId: string) => void;
   onClose: () => void;
 }) {
-  const { theme } = useTheme();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TaskSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -122,64 +122,64 @@ function AddDependencySearch({
   }, [query, projectId, currentTaskId, existingIds]);
 
   return (
-    <div style={{ marginTop: theme.spacing.xs }}>
+    <div style={{ marginTop: t.spaceXs }}>
       <Input
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search tasks by title..."
-        style={{ fontSize: theme.font.size.xs, padding: "4px 8px" }}
+        style={{ fontSize: t.fontSizeXs, padding: "4px 8px" }}
       />
       {error && (
-        <p style={{ margin: `${theme.spacing.xs} 0 0`, fontSize: theme.font.size.xxs, color: theme.color.danger }}>
+        <p style={{ margin: `${t.spaceXs} 0 0`, fontSize: t.fontSizeXs, color: t.colorActionDestructive }}>
           {error}
         </p>
       )}
       {loading && (
-        <p style={{ margin: `${theme.spacing.xs} 0 0`, fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+        <p style={{ margin: `${t.spaceXs} 0 0`, fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
           Searching...
         </p>
       )}
       {!loading && query.trim() && results.length === 0 && !error && (
-        <p style={{ margin: `${theme.spacing.xs} 0 0`, fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+        <p style={{ margin: `${t.spaceXs} 0 0`, fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
           No matching tasks
         </p>
       )}
       {results.length > 0 && (
         <div
           style={{
-            marginTop: theme.spacing.xs,
-            border: `1px solid ${theme.color.borderSubtle}`,
-            borderRadius: theme.radius.md,
-            background: theme.color.surfaceContainer,
+            marginTop: t.spaceXs,
+            border: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
+            borderRadius: t.radiusMd,
+            background: t.colorSurface,
             maxHeight: 150,
             overflowY: "auto",
           }}
         >
-          {results.map((t) => (
+          {results.map((task) => (
             <div
-              key={t.id}
+              key={task.id}
               role="button"
               tabIndex={0}
-              onClick={() => onAdd(t.id)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onAdd(t.id); }}
+              onClick={() => onAdd(task.id)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onAdd(task.id); }}
               style={{
-                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                fontSize: theme.font.size.xs,
-                color: theme.color.text,
+                padding: `${t.spaceXs} ${t.spaceSm}`,
+                fontSize: t.fontSizeXs,
+                color: t.colorText,
                 cursor: "pointer",
-                borderBottom: `1px solid ${theme.color.borderSubtle}`,
+                borderBottom: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = theme.color.surfaceContainerHigh; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.colorSurfaceRaised; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
             >
-              <Badge variant={statusBadgeVariant(t.status)} style={{ marginRight: theme.spacing.xs }}>
-                {STATUS_LABELS[t.status] ?? t.status}
+              <Badge variant={statusBadgeVariant(task.status)} style={{ marginRight: t.spaceXs }}>
+                {STATUS_LABELS[task.status] ?? task.status}
               </Badge>
-              {t.title}
+              {task.title}
             </div>
           ))}
         </div>
@@ -215,17 +215,16 @@ function DependencySection({
   onRemove: (item: DependencyDetail, section: DependencySectionType) => void;
   onAdd: (targetTaskId: string, section: DependencySectionType) => void;
 }) {
-  const { theme } = useTheme();
   const [showAdd, setShowAdd] = useState(false);
 
   return (
-    <div style={{ marginBottom: theme.spacing.md }}>
-      <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm, marginBottom: theme.spacing.xs }}>
+    <div style={{ marginBottom: t.spaceMd }}>
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm, marginBottom: t.spaceXs }}>
         <span
           style={{
-            fontSize: theme.font.size.xxs,
+            fontSize: t.fontSizeXs,
             fontWeight: 700,
-            color: theme.color.textMuted,
+            color: t.colorTextMuted,
             textTransform: "uppercase",
             letterSpacing: "0.06em",
           }}
@@ -235,11 +234,11 @@ function DependencySection({
         {items.length > 0 && (
           <span
             style={{
-              fontSize: theme.font.size.xxs,
+              fontSize: t.fontSizeXs,
               fontWeight: 700,
-              color: theme.color.textFaint,
-              background: theme.color.surfaceContainerHigh,
-              borderRadius: theme.radius.full,
+              color: t.colorTextSecondary,
+              background: t.colorSurfaceRaised,
+              borderRadius: t.radiusFull,
               padding: "1px 6px",
               lineHeight: 1.4,
             }}
@@ -249,7 +248,7 @@ function DependencySection({
         )}
       </div>
       {items.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: t.spaceXs }}>
           {items.map((dep) => (
             <DependencyChip
               key={dep.task_id}
@@ -263,7 +262,7 @@ function DependencySection({
           ))}
         </div>
       ) : (
-        <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
+        <p style={{ margin: 0, fontSize: t.fontSizeXs, color: t.colorTextSecondary, fontStyle: "italic" }}>
           None
         </p>
       )}
@@ -280,15 +279,15 @@ function DependencySection({
         <button
           onClick={() => setShowAdd(true)}
           style={{
-            marginTop: theme.spacing.xs,
+            marginTop: t.spaceXs,
             background: "none",
             border: "none",
             padding: 0,
             cursor: "pointer",
-            fontSize: theme.font.size.xxs,
-            color: theme.color.primary,
+            fontSize: t.fontSizeXs,
+            color: t.colorActionPrimary,
             fontWeight: 600,
-            fontFamily: theme.font.body,
+            fontFamily: t.fontSans,
           }}
         >
           + Add
@@ -327,17 +326,16 @@ function MetadataField({
   label: string;
   children: React.ReactNode;
 }) {
-  const { theme } = useTheme();
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
       <label
         style={{
-          fontSize: theme.font.size.xs,
+          fontSize: t.fontSizeXs,
           fontWeight: 700,
           letterSpacing: "0.06em",
           textTransform: "uppercase" as const,
-          color: theme.color.textFaint,
-          fontFamily: theme.font.body,
+          color: t.colorTextSecondary,
+          fontFamily: t.fontSans,
         }}
       >
         {label}
@@ -358,8 +356,6 @@ function TaskDetailPanel({
   onUpdate: (taskId: string, input: Record<string, unknown>) => Promise<void>;
   taskTitles: Map<string, string>;
 }) {
-  const { theme } = useTheme();
-
   // Title editing state
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(task.title);
@@ -551,8 +547,8 @@ function TaskDetailPanel({
       {/* Header -- editable title */}
       <div
         style={{
-          padding: `${theme.spacing.xl} ${theme.spacing.xl} ${theme.spacing.lg}`,
-          borderBottom: `1px solid ${theme.color.borderSubtle}`,
+          padding: `${t.spaceXl} ${t.spaceXl} ${t.spaceLg}`,
+          borderBottom: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
           flexShrink: 0,
         }}
       >
@@ -569,10 +565,10 @@ function TaskDetailPanel({
                 onBlur={handleTitleSave}
                 autoFocus
                 style={{
-                  fontFamily: theme.font.headline,
-                  fontSize: theme.font.size.xl,
+                  fontFamily: t.fontSerif,
+                  fontSize: t.fontSizeXl,
                   fontWeight: 800,
-                  letterSpacing: theme.font.letterSpacing.tight,
+                  letterSpacing: t.letterSpacingTight,
                 }}
               />
             ) : (
@@ -581,11 +577,11 @@ function TaskDetailPanel({
                 onClick={() => setEditingTitle(true)}
                 style={{
                   margin: 0,
-                  fontFamily: theme.font.headline,
-                  fontSize: theme.font.size.xl,
+                  fontFamily: t.fontSerif,
+                  fontSize: t.fontSizeXl,
                   fontWeight: 800,
-                  letterSpacing: theme.font.letterSpacing.tight,
-                  color: theme.color.text,
+                  letterSpacing: t.letterSpacingTight,
+                  color: t.colorText,
                   lineHeight: 1.3,
                   cursor: "pointer",
                 }}
@@ -604,7 +600,7 @@ function TaskDetailPanel({
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: theme.spacing.xl,
+          padding: t.spaceXl,
           display: "flex",
           flexDirection: "column",
         }}
@@ -614,8 +610,8 @@ function TaskDetailPanel({
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
-            gap: theme.spacing.md,
-            marginBottom: theme.spacing.lg,
+            gap: t.spaceMd,
+            marginBottom: t.spaceLg,
           }}
         >
           <MetadataField label="Status">
@@ -659,7 +655,7 @@ function TaskDetailPanel({
         </div>
 
         {/* Group key -- editable */}
-        <div style={{ marginBottom: theme.spacing.lg }}>
+        <div style={{ marginBottom: t.spaceLg }}>
           <MetadataField label="Group Key">
             {editingGroupKey ? (
               <Input
@@ -677,12 +673,12 @@ function TaskDetailPanel({
               <span
                 onClick={() => setEditingGroupKey(true)}
                 style={{
-                  fontSize: theme.font.size.sm,
-                  color: task.group_key ? theme.color.text : theme.color.textFaint,
+                  fontSize: t.fontSizeSm,
+                  color: task.group_key ? t.colorText : t.colorTextSecondary,
                   fontStyle: task.group_key ? "normal" : "italic",
                   cursor: "pointer",
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  borderRadius: theme.radius.lg,
+                  padding: `${t.spaceSm} ${t.spaceMd}`,
+                  borderRadius: t.radiusLg,
                   border: `1px solid transparent`,
                   display: "inline-block",
                 }}
@@ -700,7 +696,7 @@ function TaskDetailPanel({
           open={expandedCard === "summary"}
           onToggle={(isOpen) => setExpandedCard(isOpen ? "summary" : null)}
           variant="flat"
-          style={{ marginBottom: theme.spacing.md }}
+          style={{ marginBottom: t.spaceMd }}
           headerAction={
             !editingSummary ? (
               <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }} aria-label="Edit summary" />
@@ -708,7 +704,7 @@ function TaskDetailPanel({
           }
         >
           {editingSummary ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
               <Textarea
                 value={summaryValue}
                 onChange={(e) => setSummaryValue(e.target.value)}
@@ -717,7 +713,7 @@ function TaskDetailPanel({
                 placeholder="Task summary..."
                 style={{ width: "100%", boxSizing: "border-box" }}
               />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
                 <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(task.summary ?? ""); }}>
                   Cancel
                 </Button>
@@ -733,8 +729,8 @@ function TaskDetailPanel({
               onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }}
               style={{
                 margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
+                fontSize: t.fontSizeSm,
+                color: t.colorTextSecondary,
                 fontStyle: "italic",
                 cursor: "pointer",
               }}
@@ -751,7 +747,7 @@ function TaskDetailPanel({
           open={expandedCard === "context"}
           onToggle={(isOpen) => setExpandedCard(isOpen ? "context" : null)}
           variant="flat"
-          style={{ marginBottom: theme.spacing.md }}
+          style={{ marginBottom: t.spaceMd }}
           headerAction={
             !editingContext ? (
               <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("context"); setEditingContext(true); }} aria-label="Edit context" />
@@ -759,7 +755,7 @@ function TaskDetailPanel({
           }
         >
           {editingContext ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
               <Textarea
                 value={contextValue}
                 onChange={(e) => setContextValue(e.target.value)}
@@ -768,7 +764,7 @@ function TaskDetailPanel({
                 placeholder="Task context..."
                 style={{ width: "100%", boxSizing: "border-box" }}
               />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
                 <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(task.context ?? ""); }}>
                   Cancel
                 </Button>
@@ -784,8 +780,8 @@ function TaskDetailPanel({
               onClick={() => { setExpandedCard("context"); setEditingContext(true); }}
               style={{
                 margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
+                fontSize: t.fontSizeSm,
+                color: t.colorTextSecondary,
                 fontStyle: "italic",
                 cursor: "pointer",
               }}
@@ -802,7 +798,7 @@ function TaskDetailPanel({
           open={expandedCard === "acceptance_criteria"}
           onToggle={(isOpen) => setExpandedCard(isOpen ? "acceptance_criteria" : null)}
           variant="flat"
-          style={{ marginBottom: theme.spacing.md }}
+          style={{ marginBottom: t.spaceMd }}
           headerAction={
             !editingAC ? (
               <IconButton icon="edit" size={14} onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }} aria-label="Edit acceptance criteria" />
@@ -810,7 +806,7 @@ function TaskDetailPanel({
           }
         >
           {editingAC ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
               <Textarea
                 value={acValue}
                 onChange={(e) => setACValue(e.target.value)}
@@ -819,7 +815,7 @@ function TaskDetailPanel({
                 placeholder="Acceptance criteria..."
                 style={{ width: "100%", boxSizing: "border-box" }}
               />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
                 <Button variant="ghost" onClick={() => { setEditingAC(false); setACValue(task.acceptance_criteria ?? ""); }}>
                   Cancel
                 </Button>
@@ -835,8 +831,8 @@ function TaskDetailPanel({
               onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }}
               style={{
                 margin: 0,
-                fontSize: theme.font.size.sm,
-                color: theme.color.textFaint,
+                fontSize: t.fontSizeSm,
+                color: t.colorTextSecondary,
                 fontStyle: "italic",
                 cursor: "pointer",
               }}
@@ -848,10 +844,10 @@ function TaskDetailPanel({
         </ExpandableCard>
 
         {/* Dependencies -- always visible */}
-        <Card variant="flat" padding="md" style={{ marginBottom: theme.spacing.sm }}>
-          <SectionLabel style={{ marginBottom: theme.spacing.sm }}>Dependencies</SectionLabel>
+        <Card variant="flat" padding="md" style={{ marginBottom: t.spaceSm }}>
+          <SectionLabel style={{ marginBottom: t.spaceSm }}>Dependencies</SectionLabel>
           {depsLoading ? (
-            <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint }}>Loading dependencies...</p>
+            <p style={{ margin: 0, fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>Loading dependencies...</p>
           ) : dependencies ? (
             <>
               <div ref={blockedByRef}>
@@ -891,7 +887,7 @@ function TaskDetailPanel({
               />
             </>
           ) : (
-            <p style={{ margin: 0, fontSize: theme.font.size.xs, color: theme.color.textFaint, fontStyle: "italic" }}>
+            <p style={{ margin: 0, fontSize: t.fontSizeXs, color: t.colorTextSecondary, fontStyle: "italic" }}>
               Dependencies not available
             </p>
           )}
@@ -901,8 +897,8 @@ function TaskDetailPanel({
         <div
           style={{
             marginTop: "auto",
-            paddingTop: theme.spacing.xl,
-            borderTop: `1px solid ${theme.color.borderSubtle}`,
+            paddingTop: t.spaceXl,
+            borderTop: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
           }}
         >
           <MetadataTable
@@ -925,9 +921,8 @@ function TaskDetailPanel({
 // ---------------------------------------------------------------------------
 
 export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: () => void }) {
-  const { theme } = useTheme();
   const windowWidth = useWindowWidth();
-  const isWide = windowWidth >= theme.breakpoint.md;
+  const isWide = windowWidth >= MEDIUM_BREAKPOINT;
   const { project, notFound, updateProject, addTask, updateTask, deleteTask } = useProject(projectId);
   const { showToast } = useToastContext();
   const [showCreateTask, setShowCreateTask] = useState(false);
@@ -976,7 +971,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
     [tasks, projectId],
   );
 
-  const taskTitles = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
+  const taskTitles = useMemo(() => new Map(tasks.map((task) => [task.id, task.title])), [tasks]);
 
   useEffect(() => {
     if (editingTitle && titleInputRef.current) {
@@ -995,7 +990,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   const loadSelectedTask = useCallback((taskId: string) => {
     let cancelled = false;
     fetchTask(taskId)
-      .then((t) => { if (!cancelled && selectedTaskIdRef.current === taskId) setSelectedTask(t); })
+      .then((task) => { if (!cancelled && selectedTaskIdRef.current === taskId) setSelectedTask(task); })
       .catch(() => { if (!cancelled && selectedTaskIdRef.current === taskId) setSelectedTask(null); });
     return () => { cancelled = true; };
   }, []);
@@ -1091,13 +1086,13 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   if (notFound) {
     return (
-      <div style={{ flex: 1, width: "100%", maxWidth: 900, padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`, boxSizing: "border-box" }}>
+      <div style={{ flex: 1, width: "100%", maxWidth: 900, padding: `${t.space2xl} ${t.spaceXl}`, boxSizing: "border-box" }}>
         <BackButton onClick={onBack} />
         <EmptyState
           icon="error_outline"
           message="Project not found."
           variant="card"
-          style={{ marginTop: theme.spacing.xl }}
+          style={{ marginTop: t.spaceXl }}
         />
       </div>
     );
@@ -1105,8 +1100,8 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
   if (!project) {
     return (
-      <div style={{ flex: 1, width: "100%", maxWidth: 900, padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`, boxSizing: "border-box" }}>
-        <p style={{ color: theme.color.textMuted, fontSize: theme.font.size.sm }}>Loading...</p>
+      <div style={{ flex: 1, width: "100%", maxWidth: 900, padding: `${t.space2xl} ${t.spaceXl}`, boxSizing: "border-box" }}>
+        <p style={{ color: t.colorTextMuted, fontSize: t.fontSizeSm }}>Loading...</p>
       </div>
     );
   }
@@ -1117,7 +1112,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       <div style={{
         flex: 1,
         minWidth: 0,
-        padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`,
+        padding: `${t.space2xl} ${t.spaceXl}`,
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
@@ -1125,9 +1120,9 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         scrollbarWidth: "none" as const,
       }}>
         {/* Full-width header */}
-        <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: theme.spacing.lg }} />
+        <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: t.spaceLg }} />
 
-        <Stack direction="horizontal" justify="space-between" align="flex-start" wrap style={{ gap: theme.spacing.lg, marginBottom: theme.spacing.md }}>
+        <Stack direction="horizontal" justify="space-between" align="flex-start" wrap style={{ gap: t.spaceLg, marginBottom: t.spaceMd }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             {editingTitle ? (
               <Input
@@ -1151,16 +1146,16 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 }}
                 aria-label="Edit project title"
                 style={{
-                  fontFamily: theme.font.headline,
-                  fontSize: theme.font.size.xl,
+                  fontFamily: t.fontSerif,
+                  fontSize: t.fontSizeXl,
                   fontWeight: 800,
-                  letterSpacing: theme.font.letterSpacing.tight,
-                  color: theme.color.text,
+                  letterSpacing: t.letterSpacingTight,
+                  color: t.colorText,
                   width: "100%",
-                  padding: `0 ${theme.spacing.xs}`,
-                  border: `1px solid ${theme.color.primary}`,
-                  borderRadius: theme.radius.sm,
-                  background: theme.color.surfaceContainer,
+                  padding: `0 ${t.spaceXs}`,
+                  border: `1px solid ${t.colorActionPrimary}`,
+                  borderRadius: t.radiusSm,
+                  background: t.colorSurface,
                   lineHeight: 1.3,
                 }}
               />
@@ -1179,11 +1174,11 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                   }}
                   style={{
                     margin: 0,
-                    fontFamily: theme.font.headline,
-                    fontSize: theme.font.size.xl,
+                    fontFamily: t.fontSerif,
+                    fontSize: t.fontSizeXl,
                     fontWeight: 800,
-                    letterSpacing: theme.font.letterSpacing.tight,
-                    color: theme.color.text,
+                    letterSpacing: t.letterSpacingTight,
+                    color: t.colorText,
                     cursor: "pointer",
                   }}
                   title="Click to edit title"
@@ -1207,7 +1202,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           open={expandedCard === "summary"}
           onToggle={(isOpen) => setExpandedCard(isOpen ? "summary" : null)}
           variant="flat"
-          style={{ marginBottom: theme.spacing.md }}
+          style={{ marginBottom: t.spaceMd }}
           headerAction={
             !editingSummary ? (
               <IconButton icon="edit" size={14} onClick={handleStartEditSummary} aria-label="Edit summary" />
@@ -1215,7 +1210,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           }
         >
           {editingSummary ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
               <Textarea
                 value={summaryValue}
                 onChange={(e) => setSummaryValue(e.target.value)}
@@ -1224,7 +1219,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 placeholder="Project summary..."
                 style={{ width: "100%", boxSizing: "border-box" }}
               />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
                 <Button variant="ghost" onClick={() => { setEditingSummary(false); setSummaryValue(project.summary ?? ""); }}>Cancel</Button>
                 <Button onClick={handleSaveSummary}>Save</Button>
               </div>
@@ -1236,7 +1231,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           ) : (
             <p
               onClick={handleStartEditSummary}
-              style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic", cursor: "pointer" }}
+              style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorTextSecondary, fontStyle: "italic", cursor: "pointer" }}
               title="Click to add summary"
             >
               No summary
@@ -1250,7 +1245,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           open={expandedCard === "context"}
           onToggle={(isOpen) => setExpandedCard(isOpen ? "context" : null)}
           variant="flat"
-          style={{ marginBottom: theme.spacing.md }}
+          style={{ marginBottom: t.spaceMd }}
           headerAction={
             !editingContext ? (
               <IconButton icon="edit" size={14} onClick={handleStartEditContext} aria-label="Edit context" />
@@ -1258,7 +1253,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           }
         >
           {editingContext ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
               <Textarea
                 value={contextValue}
                 onChange={(e) => setContextValue(e.target.value)}
@@ -1267,7 +1262,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 placeholder="Project context..."
                 style={{ width: "100%", boxSizing: "border-box" }}
               />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
                 <Button variant="ghost" onClick={() => { setEditingContext(false); setContextValue(project.context ?? ""); }}>Cancel</Button>
                 <Button onClick={handleSaveContext}>Save</Button>
               </div>
@@ -1279,7 +1274,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           ) : (
             <p
               onClick={handleStartEditContext}
-              style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic", cursor: "pointer" }}
+              style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorTextSecondary, fontStyle: "italic", cursor: "pointer" }}
               title="Click to add context"
             >
               No context
@@ -1293,7 +1288,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           open={expandedCard === "requirements"}
           onToggle={(isOpen) => setExpandedCard(isOpen ? "requirements" : null)}
           variant="flat"
-          style={{ marginBottom: theme.spacing.xl }}
+          style={{ marginBottom: t.spaceXl }}
           headerAction={
             !editingRequirements ? (
               <IconButton icon="edit" size={14} onClick={handleStartEditRequirements} aria-label="Edit requirements" />
@@ -1301,7 +1296,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           }
         >
           {editingRequirements ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
               <Textarea
                 value={requirementsValue}
                 onChange={(e) => setRequirementsValue(e.target.value)}
@@ -1310,7 +1305,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
                 placeholder="Project requirements..."
                 style={{ width: "100%", boxSizing: "border-box" }}
               />
-              <div style={{ display: "flex", gap: theme.spacing.sm, justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
                 <Button variant="ghost" onClick={() => { setEditingRequirements(false); setRequirementsValue(project.requirements ?? ""); }}>Cancel</Button>
                 <Button onClick={handleSaveRequirements}>Save</Button>
               </div>
@@ -1322,7 +1317,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           ) : (
             <p
               onClick={handleStartEditRequirements}
-              style={{ margin: 0, fontSize: theme.font.size.sm, color: theme.color.textFaint, fontStyle: "italic", cursor: "pointer" }}
+              style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorTextSecondary, fontStyle: "italic", cursor: "pointer" }}
               title="Click to add requirements"
             >
               No requirements
@@ -1335,13 +1330,13 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           <ExpandableCard
             title="Dependency Graph"
             defaultOpen={false}
-            style={{ marginBottom: theme.spacing.xl }}
+            style={{ marginBottom: t.spaceXl }}
             headerAction={
               <Select
                 value={graphStatusFilter}
                 onChange={(e) => setGraphStatusFilter(e.target.value)}
                 options={graphStatusFilterOptions}
-                style={{ minWidth: 120, fontSize: theme.font.size.xs }}
+                style={{ minWidth: 120, fontSize: t.fontSizeXs }}
               />
             }
           >
@@ -1358,7 +1353,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         <div style={{
           display: "flex",
           flexDirection: isWide ? "row" : "column",
-          gap: theme.spacing.xl,
+          gap: t.spaceXl,
         }}>
         {/* Left column — documents */}
         <div style={{
@@ -1367,10 +1362,10 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           <ExpandableCard
             title="Documents"
             defaultOpen={true}
-            style={{ marginBottom: theme.spacing.xl }}
+            style={{ marginBottom: t.spaceXl }}
             headerAction={
               <Button variant="ghost" onClick={() => setShowDocPicker(true)}>
-                <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+                <span style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
                   <Icon name="edit_note" size={16} />
                   Manage
                 </span>
@@ -1397,25 +1392,25 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           flex: 1,
           minWidth: 0,
         }}>
-          <Stack direction="horizontal" justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
+          <Stack direction="horizontal" justify="space-between" align="center" style={{ marginBottom: t.spaceMd }}>
             <h3
               style={{
                 margin: 0,
-                fontFamily: theme.font.headline,
-                fontSize: theme.font.size.lg,
+                fontFamily: t.fontSerif,
+                fontSize: t.fontSizeLg,
                 fontWeight: 700,
-                color: theme.color.text,
+                color: t.colorText,
               }}
             >
               Tasks
             </h3>
-            <span style={{ fontSize: theme.font.size.xs, color: theme.color.textFaint }}>
+            <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
               {total} task{total !== 1 ? "s" : ""}
             </span>
           </Stack>
 
-          <Button onClick={() => setShowCreateTask(true)} style={{ marginBottom: theme.spacing.lg }}>
-            <span style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+          <Button onClick={() => setShowCreateTask(true)} style={{ marginBottom: t.spaceLg }}>
+            <span style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
               <Icon name="add" size={16} />
               Add Task
             </span>
@@ -1423,9 +1418,9 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
 
           <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} groupKeys={groupKeys} />
 
-          <div style={{ marginTop: theme.spacing.lg }}>
+          <div style={{ marginTop: t.spaceLg }}>
             {tasksLoading ? (
-              <div style={{ textAlign: "center", padding: theme.spacing.xl, color: theme.color.textMuted }}>
+              <div style={{ textAlign: "center", padding: t.spaceXl, color: t.colorTextMuted }}>
                 Loading...
               </div>
             ) : tasks.length === 0 ? (

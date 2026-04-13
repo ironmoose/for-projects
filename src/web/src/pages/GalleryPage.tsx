@@ -1,9 +1,5 @@
-import { useRef } from "react";
-import {
-  useTheme,
-  ListPageLayout,
-  PageHeader,
-} from "../components";
+import { ListPageLayout, PageHeader } from "../components";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { GalleryIndex } from "../gallery/GalleryIndex";
 import { GalleryComponentView } from "../gallery/GalleryComponentView";
 import { getComponent } from "../gallery/registry";
@@ -25,7 +21,6 @@ interface GalleryPageProps {
 
 export function GalleryPage({ componentName, onNavigate }: GalleryPageProps) {
   ensureRegistered();
-  const { theme } = useTheme();
 
   const entry = componentName ? getComponent(componentName) : undefined;
 
@@ -34,15 +29,15 @@ export function GalleryPage({ componentName, onNavigate }: GalleryPageProps) {
       <PageHeader
         title="Component Gallery"
         subtitle="Browse all UI components with multi-theme previews. Open with Ctrl+Shift+G."
-        style={{ marginBottom: theme.spacing.xl }}
+        style={{ marginBottom: t.spaceXl }}
       />
 
       <div
         style={{
-          borderRadius: theme.radius.lg,
-          border: `1px solid ${theme.color.borderSubtle}`,
+          borderRadius: t.radiusLg,
+          border: `1px solid ${`color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
           overflow: "hidden",
-          background: theme.color.surfaceContainerLow,
+          background: t.colorSurfacePanel,
         }}
       >
         {entry ? (
