@@ -56,6 +56,7 @@ describe("Library semantic token imports", () => {
     "PresenceCharm.tsx",
     "DocumentSearchBar.tsx",
     "Stack.tsx",
+    "FolderInput.tsx",
   ];
 
   for (const file of moleculesWithSemanticImport) {
@@ -115,6 +116,11 @@ describe("Components fully migrated off useTheme", () => {
 
   test("molecules/Stack.tsx does not import useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "Stack.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("molecules/FolderInput.tsx does not import useTheme", () => {
+    const src = readComponent(MOLECULES_DIR, "FolderInput.tsx");
     expect(src).not.toContain("useTheme");
   });
 });

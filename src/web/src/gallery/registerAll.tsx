@@ -711,6 +711,7 @@ export function registerAllComponents(): void {
     propDefs: [],
     render: () => <FolderInputDemo />,
     codeTemplate: `<FolderInput value={folder} folders={knownFolders} onChange={setFolder} />`,
+    migrated: true,
   });
 
   registerComponent({

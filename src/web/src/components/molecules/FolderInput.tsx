@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 
 interface FolderInputProps {
@@ -11,7 +11,6 @@ interface FolderInputProps {
 }
 
 export function FolderInput({ value, folders, onChange, label = "Folder", placeholder = "Type or select a folder..." }: FolderInputProps) {
-  const { theme } = useTheme();
   const [open, setOpen] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,10 +64,10 @@ export function FolderInput({ value, folders, onChange, label = "Folder", placeh
             right: 0,
             zIndex: 10,
             marginTop: 2,
-            background: theme.color.surface,
-            border: `1px solid ${theme.color.border}`,
-            borderRadius: theme.radius.md,
-            boxShadow: theme.shadow.md,
+            background: t.colorSurface,
+            border: `1px solid ${t.colorBorder}`,
+            borderRadius: t.radiusMd,
+            boxShadow: t.shadowMd,
             maxHeight: 160,
             overflowY: "auto",
           }}
@@ -84,17 +83,17 @@ export function FolderInput({ value, folders, onChange, label = "Folder", placeh
                 alignItems: "center",
                 gap: 6,
                 width: "100%",
-                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                padding: `${t.spaceXs} ${t.spaceSm}`,
                 border: "none",
                 background: "none",
-                color: theme.color.text,
-                fontSize: theme.font.size.sm,
-                fontFamily: theme.font.body,
+                color: t.colorText,
+                fontSize: t.fontSizeSm,
+                fontFamily: t.fontSans,
                 cursor: "pointer",
                 textAlign: "left",
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 14, color: theme.color.textMuted }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 14, color: t.colorTextMuted }}>
                 folder
               </span>
               {f}
