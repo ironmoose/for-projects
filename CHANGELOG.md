@@ -29,6 +29,7 @@
 - Remove `theme-picker-migration.test.ts` (no longer needed)
 - Migrate BackButton, Pagination, MetadataTable off compat `useTheme`
 - Migrate ListPageLayout, DisconnectionBanner, Toast off compat `useTheme`
+- Migrate ConfirmDialog, CreateEntityOverlay, CreateProjectOverlay, CreateTaskOverlay off compat `useTheme`
 
 ## [0.1.9] - 2026-04-13
 

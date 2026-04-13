@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 import { Textarea } from "../atoms/Textarea";
 import { Select } from "../atoms/Select";
@@ -49,8 +49,16 @@ const EFFORT_OPTIONS = toSelectOptions(EFFORT_LEVELS);
 const IMPACT_OPTIONS = toSelectOptions(IMPACT_LEVELS);
 const CATEGORY_OPTIONS = toSelectOptions(TASK_CATEGORIES);
 
+const labelStyle: React.CSSProperties = {
+  fontSize: t.fontSizeXs,
+  fontWeight: 700,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  color: t.colorTextSecondary,
+  fontFamily: t.fontSans,
+};
+
 export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps) {
-  const { theme } = useTheme();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [context, setContext] = useState("");
@@ -96,7 +104,7 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
       loading={loading}
       submitDisabled={!title.trim()}
     >
-      <div style={{ maxHeight: "60vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: theme.spacing.lg, paddingRight: theme.spacing.xs }}>
+      <div style={{ maxHeight: "60vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: t.spaceLg, paddingRight: t.spaceXs }}>
         {/* Title (required) */}
         <Input
           label="Title"
@@ -145,21 +153,9 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
         />
 
         {/* Row of selects */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.md }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
-            <label
-              htmlFor="task-status"
-              style={{
-                fontSize: theme.font.size.xs,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase" as const,
-                color: theme.color.textFaint,
-                fontFamily: theme.font.body,
-              }}
-            >
-              Status
-            </label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: t.spaceMd }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
+            <label htmlFor="task-status" style={labelStyle}>Status</label>
             <Select
               id="task-status"
               options={STATUS_OPTIONS}
@@ -168,20 +164,8 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
-            <label
-              htmlFor="task-effort"
-              style={{
-                fontSize: theme.font.size.xs,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase" as const,
-                color: theme.color.textFaint,
-                fontFamily: theme.font.body,
-              }}
-            >
-              Effort
-            </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
+            <label htmlFor="task-effort" style={labelStyle}>Effort</label>
             <Select
               id="task-effort"
               options={EFFORT_OPTIONS}
@@ -190,20 +174,8 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
-            <label
-              htmlFor="task-impact"
-              style={{
-                fontSize: theme.font.size.xs,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase" as const,
-                color: theme.color.textFaint,
-                fontFamily: theme.font.body,
-              }}
-            >
-              Impact
-            </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
+            <label htmlFor="task-impact" style={labelStyle}>Impact</label>
             <Select
               id="task-impact"
               options={IMPACT_OPTIONS}
@@ -212,20 +184,8 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
-            <label
-              htmlFor="task-category"
-              style={{
-                fontSize: theme.font.size.xs,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase" as const,
-                color: theme.color.textFaint,
-                fontFamily: theme.font.body,
-              }}
-            >
-              Category
-            </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
+            <label htmlFor="task-category" style={labelStyle}>Category</label>
             <Select
               id="task-category"
               options={CATEGORY_OPTIONS}
@@ -240,9 +200,9 @@ export function CreateTaskOverlay({ onCreated, onClose }: CreateTaskOverlayProps
         <p
           style={{
             margin: 0,
-            fontSize: theme.font.size.sm,
-            color: theme.color.danger,
-            fontFamily: theme.font.body,
+            fontSize: t.fontSizeSm,
+            color: t.colorActionDestructive,
+            fontFamily: t.fontSans,
           }}
         >
           {error}

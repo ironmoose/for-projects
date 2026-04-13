@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Button } from "../atoms/Button";
 import { ModalShell } from "./ModalShell";
 
@@ -18,7 +18,6 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
@@ -35,15 +34,15 @@ export function ConfirmDialog({
       <p
         style={{
           margin: 0,
-          fontFamily: theme.font.body,
-          fontSize: theme.font.size.sm,
-          color: theme.color.textMuted,
+          fontFamily: t.fontSans,
+          fontSize: t.fontSizeSm,
+          color: t.colorTextMuted,
         }}
       >
         {message}
       </p>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: theme.spacing.sm }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: t.spaceSm }}>
         <Button variant="ghost" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>

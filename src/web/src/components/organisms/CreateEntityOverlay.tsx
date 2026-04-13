@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Button } from "../atoms/Button";
 import { ModalShell } from "./ModalShell";
 
@@ -21,13 +21,11 @@ export function CreateEntityOverlay({
   submitLabel = "Create",
   children,
 }: CreateEntityOverlayProps) {
-  const { theme } = useTheme();
-
   return (
     <ModalShell onClose={onClose} maxWidth={480} title={title}>
       {children}
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: theme.spacing.sm }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: t.spaceSm }}>
         <Button variant="ghost" onClick={onClose} disabled={loading}>
           Cancel
         </Button>

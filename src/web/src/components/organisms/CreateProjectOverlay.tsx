@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 
@@ -9,7 +9,6 @@ interface CreateProjectOverlayProps {
 }
 
 export function CreateProjectOverlay({ onCreated, onClose }: CreateProjectOverlayProps) {
-  const { theme } = useTheme();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,9 +60,9 @@ export function CreateProjectOverlay({ onCreated, onClose }: CreateProjectOverla
         <p
           style={{
             margin: 0,
-            fontSize: theme.font.size.sm,
-            color: theme.color.danger,
-            fontFamily: theme.font.body,
+            fontSize: t.fontSizeSm,
+            color: t.colorActionDestructive,
+            fontFamily: t.fontSans,
           }}
         >
           {error}
