@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 import { Select } from "../atoms/Select";
 import { IconButton } from "../atoms/IconButton";
-import { useTheme } from "../theme/ThemeContext";
 import { TAG_NAMES } from "../../types";
 
 interface DocumentSearchBarProps {
@@ -19,13 +19,12 @@ interface DocumentSearchBarProps {
 
 const tagOptions = [
   { value: "", label: "All tags" },
-  ...TAG_NAMES.map((t) => ({ value: t, label: t })),
+  ...TAG_NAMES.map((tag) => ({ value: tag, label: tag })),
 ];
 
 export function DocumentSearchBar({ title, tag, folder, folders, favorite, onTitleChange, onTagChange, onFolderChange, onFavoriteChange }: DocumentSearchBarProps) {
   const [localTitle, setLocalTitle] = useState(title);
   const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { theme } = useTheme();
 
   useEffect(() => {
     setLocalTitle(title);
@@ -74,7 +73,7 @@ export function DocumentSearchBar({ title, tag, folder, folders, favorite, onTit
         aria-label={favorite ? "Show all documents" : "Show favorites only"}
         aria-pressed={favorite}
         style={{
-          color: favorite ? theme.color.warning : theme.color.textMuted,
+          color: favorite ? t.colorWarning : t.colorTextMuted,
           flexShrink: 0,
         }}
       />

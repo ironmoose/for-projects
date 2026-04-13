@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Migrate PageHeader molecule off compat useTheme to library tokens
+- Migrate DocumentSearchBar molecule off compat useTheme to library tokens
 - Migrate PresenceCharm molecule off compat useTheme to library tokens
 - Migrate ActivityIndicator off compat useTheme, use library font token and hardcode spring easing
 - Migrate StatusDot off compat useTheme, hardcode animation/transition values

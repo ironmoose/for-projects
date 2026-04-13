@@ -52,7 +52,9 @@ describe("Library semantic token imports", () => {
     "ExpandableCard.tsx",
     "EmptyState.tsx",
     "Pagination.tsx",
+    "PageHeader.tsx",
     "PresenceCharm.tsx",
+    "DocumentSearchBar.tsx",
   ];
 
   for (const file of moleculesWithSemanticImport) {
@@ -90,8 +92,18 @@ describe("Components fully migrated off useTheme", () => {
     expect(src).not.toContain("useTheme");
   });
 
+  test("molecules/PageHeader.tsx does not import useTheme", () => {
+    const src = readComponent(MOLECULES_DIR, "PageHeader.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
   test("molecules/PresenceCharm.tsx does not import useTheme", () => {
     const src = readComponent(MOLECULES_DIR, "PresenceCharm.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("molecules/DocumentSearchBar.tsx does not import useTheme", () => {
+    const src = readComponent(MOLECULES_DIR, "DocumentSearchBar.tsx");
     expect(src).not.toContain("useTheme");
   });
 });

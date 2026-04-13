@@ -619,6 +619,7 @@ export function registerAllComponents(): void {
       { name: "Title only", props: { title: "Settings", subtitle: "" } },
     ],
     codeTemplate: `<PageHeader title="Projects" subtitle="Overview" trailing={<Button>Create</Button>} />`,
+    migrated: true,
   });
 
   registerComponent({
@@ -673,6 +674,7 @@ export function registerAllComponents(): void {
     name: "DocumentSearchBar",
     description: "Search and filter bar for the documents list with title search, tag filter, folder filter, and favorites toggle.",
     category: "molecule",
+    migrated: true,
     propDefs: [],
     render: () => <DocumentSearchBarDemo />,
     codeTemplate: `<DocumentSearchBar title={title} tag={tag} folder={folder} folders={folders} favorite={fav} onTitleChange={setTitle} onTagChange={setTag} onFolderChange={setFolder} onFavoriteChange={setFav} />`,
