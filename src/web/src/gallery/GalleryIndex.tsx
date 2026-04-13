@@ -44,7 +44,18 @@ export function GalleryIndex({ onSelect }: GalleryIndexProps) {
                   onMouseEnter={(e) => (e.currentTarget.style.borderColor = vt.accent)}
                   onMouseLeave={(e) => (e.currentTarget.style.borderColor = vt.border)}
                 >
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{entry.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                    {entry.name}
+                    {entry.migrated && (
+                      <span title="Migrated to @4lt7ab/ui tokens" style={{ fontSize: 11, opacity: 0.8 }}>&#x2705;</span>
+                    )}
+                    {entry.libraryCandidate && (
+                      <span title="Candidate for @4lt7ab/ui library" style={{ fontSize: 11, opacity: 0.8 }}>&#x1F4E6;</span>
+                    )}
+                    {entry.deprecated && (
+                      <span title={`Deprecated: ${entry.deprecated}`} style={{ fontSize: 11, opacity: 0.8 }}>&#x26A0;&#xFE0F;</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 11, color: vt.textMuted, lineHeight: 1.4 }}>{entry.description}</div>
                 </button>
               ))}

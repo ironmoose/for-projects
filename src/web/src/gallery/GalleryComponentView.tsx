@@ -58,8 +58,21 @@ export function GalleryComponentView({ entry, onBack }: GalleryComponentViewProp
         >
           {entry.category}
         </span>
-        <h1 style={{ margin: "8px 0 4px", color: vt.text, fontSize: 24, fontFamily: vt.font }}>{entry.name}</h1>
+        <h1 style={{ margin: "8px 0 4px", color: vt.text, fontSize: 24, fontFamily: vt.font, display: "flex", alignItems: "center", gap: 8 }}>
+          {entry.name}
+          {entry.migrated && (
+            <span title="Migrated to @4lt7ab/ui tokens" style={{ fontSize: 16 }}>&#x2705;</span>
+          )}
+          {entry.libraryCandidate && (
+            <span title="Candidate for @4lt7ab/ui library" style={{ fontSize: 16 }}>&#x1F4E6;</span>
+          )}
+        </h1>
         <p style={{ margin: 0, color: vt.textMuted, fontSize: 14 }}>{entry.description}</p>
+        {entry.deprecated && (
+          <div style={{ fontSize: 13, color: vt.textMuted, marginTop: 4, padding: "4px 8px", background: "rgba(255,180,0,0.1)", borderRadius: 4 }}>
+            &#x26A0;&#xFE0F; <strong>Deprecated:</strong> {entry.deprecated}
+          </div>
+        )}
       </div>
 
       {/* Multi-theme preview */}

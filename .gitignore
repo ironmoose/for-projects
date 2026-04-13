@@ -20,3 +20,4 @@ src/web/dist/
 .local/
 *.local.*
 .claude/worktrees/
+.claude/scheduled_tasks.lock

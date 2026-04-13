@@ -14,6 +14,12 @@ export interface ComponentEntry {
   render: (props: Record<string, unknown>) => React.ReactNode;
   variants?: { name: string; props: Record<string, unknown> }[];
   codeTemplate?: string;
+  /** True when the component uses @4lt7ab/ui library tokens (no compat useTheme for non-glow tokens). */
+  migrated?: boolean;
+  /** True when this component is generic enough to be upstreamed into @4lt7ab/ui. */
+  libraryCandidate?: boolean;
+  /** Reason for deprecation — when set, the component should be replaced with the library equivalent (thin wrapper or re-export). */
+  deprecated?: string;
 }
 
 const entries: ComponentEntry[] = [];
