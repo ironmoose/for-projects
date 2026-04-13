@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Remove Themes page and simplify AppThemePicker to compact-only dropdown
 - Fix broken theme: migrate old localStorage names (synth→synthwave, etc.) and use CSS var fallbacks for non-glow borders/shadows
 - Remove legacy theme tokens from compat layer (color, shadow, radius, spacing, font stripped — glow/motion/layout remain)
 - Replace custom themes with library built-ins (deepTeal→slate, ember→coral, nord→neural, synth→synthwave)

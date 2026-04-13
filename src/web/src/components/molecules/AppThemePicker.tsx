@@ -1,9 +1,6 @@
 /**
- * App-scoped theme picker that shows all library built-in themes.
- *
- * Supports two variants:
- * - `grid` — card grid for the ThemesPage
- * - `compact` — dropdown for the TopBar
+ * App-scoped theme picker — compact dropdown for the TopBar.
+ * Shows all library built-in themes with featured themes sorted first.
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -12,13 +9,6 @@ import type { ThemeDefinition } from "@4lt7ab/ui/core";
 import { Icon } from "@4lt7ab/ui/ui";
 import { useTheme } from "../theme/ThemeContext";
 import { FEATURED_THEMES } from "../theme/lib-themes";
-
-export interface AppThemePickerProps {
-  /** Optional descriptions for each theme, keyed by theme name. */
-  descriptions?: Record<string, string>;
-  /** Display variant. `'grid'` (default) renders a card grid; `'compact'` renders a dropdown. */
-  variant?: "grid" | "compact";
-}
 
 /** Convert the library theme registry Map to a sorted array. Featured themes come first. */
 function useThemeList(): ThemeDefinition[] {
@@ -46,89 +36,10 @@ function useThemeList(): ThemeDefinition[] {
 }
 
 // ---------------------------------------------------------------------------
-// Grid variant
+// Styles
 // ---------------------------------------------------------------------------
 
-const GRID_STYLES_ID = "tfp-app-theme-picker";
-
-const gridCSS = /* css */ `
-  .tfp-theme-picker {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .tfp-theme-card {
-    appearance: none;
-    -webkit-appearance: none;
-    background: var(--color-surface, #12252a);
-    border: 2px solid var(--color-border, #1e383f);
-    border-radius: 8px;
-    padding: 1.5rem;
-    text-align: left;
-    cursor: pointer;
-    transition: border-color 0.15s ease, transform 0.15s ease;
-    font-family: inherit;
-    color: var(--color-text, #d4e5ea);
-  }
-
-  .tfp-theme-card:hover {
-    border-color: var(--color-text-link);
-    transform: translateY(-2px);
-  }
-
-  .tfp-theme-card--active {
-    border-color: var(--color-text-link);
-  }
-
-  .tfp-theme-card__name {
-    display: block;
-    font-family: var(--font-serif);
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-  }
-
-  .tfp-theme-card__desc {
-    display: block;
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-  }
-`;
-
-function GridView({ descriptions }: { descriptions: Record<string, string> }) {
-  useInjectStyles(GRID_STYLES_ID, gridCSS);
-  const { themeName, setTheme } = useTheme();
-  const themeList = useThemeList();
-
-  return (
-    <div className="tfp-theme-picker">
-      {themeList.map((def) => {
-        const isActive = themeName === def.name;
-        return (
-          <button
-            key={def.name}
-            className={`tfp-theme-card${isActive ? " tfp-theme-card--active" : ""}`}
-            onClick={() => setTheme(def.name)}
-          >
-            <span className="tfp-theme-card__name">{def.label}</span>
-            {descriptions[def.name] && (
-              <span className="tfp-theme-card__desc">
-                {descriptions[def.name]}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Compact variant
-// ---------------------------------------------------------------------------
-
-const COMPACT_STYLES_ID = "tfp-app-theme-picker-compact";
+const STYLES_ID = "tfp-app-theme-picker-compact";
 
 const compactCSS = /* css */ `
   .tfp-tp-trigger {
@@ -181,8 +92,12 @@ const compactCSS = /* css */ `
   }
 `;
 
-function CompactView() {
-  useInjectStyles(COMPACT_STYLES_ID, compactCSS);
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function AppThemePicker() {
+  useInjectStyles(STYLES_ID, compactCSS);
   const { themeName, setTheme } = useTheme();
   const themeList = useThemeList();
   const [open, setOpen] = useState(false);
@@ -283,7 +198,7 @@ function CompactView() {
   return (
     <div
       ref={containerRef}
-      style={{ position: "relative" }}
+      style={{ position: "relative", display: "inline-block" }}
       onKeyDown={handleKeyDown}
     >
       <button
@@ -375,23 +290,4 @@ function CompactView() {
       )}
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-export function AppThemePicker({
-  descriptions = {},
-  variant = "grid",
-}: AppThemePickerProps) {
-  if (variant === "compact") {
-    return (
-      <div style={{ display: "inline-block" }}>
-        <CompactView />
-      </div>
-    );
-  }
-
-  return <GridView descriptions={descriptions} />;
 }

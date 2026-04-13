@@ -22,7 +22,6 @@ import {
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { GalleryPage } from "./pages/GalleryPage";
-import { ThemesPage } from "./pages/ThemesPage";
 import { ActivityLogPage } from "./pages/ActivityLogPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 
@@ -31,7 +30,6 @@ const navItems: NavItem[] = [
   { label: "Documents", path: "/documents" },
   { label: "Activity", path: "/activity" },
   { label: "Gallery", path: "/gallery" },
-  { label: "Themes", path: "/themes" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -56,8 +54,6 @@ export function App() {
     ? "/gallery"
     : path.startsWith("/activity")
     ? "/activity"
-    : path.startsWith("/themes")
-    ? "/themes"
     : "/";
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
@@ -92,9 +88,6 @@ export function App() {
     }
     if (path.startsWith("/activity")) {
       return <ActivityLogPage onNavigate={navigate} />;
-    }
-    if (path.startsWith("/themes")) {
-      return <ThemesPage />;
     }
     if (projectId) {
       return <ProjectPage projectId={projectId} onBack={() => navigate("/")} />;
@@ -191,7 +184,7 @@ function GlobalShortcuts({ navigate }: { navigate: (path: string) => void }) {
 function TrailingIndicators({ connected }: { connected: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
-      <AppThemePicker variant="compact" />
+      <AppThemePicker />
       <ConnectionStatus connected={connected} />
     </div>
   );

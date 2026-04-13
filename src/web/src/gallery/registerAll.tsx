@@ -410,27 +410,12 @@ export function registerAllComponents(): void {
 
   registerComponent({
     name: "AppThemePicker",
-    description: "App-scoped theme picker showing only the 4 custom dark themes. Supports grid (card layout) and compact (dropdown) variants.",
+    description: "Compact theme picker dropdown for the TopBar. Shows all library built-in themes with featured themes first.",
     category: "molecule",
-    propDefs: [
-      { name: "variant", type: "enum", defaultValue: "grid", options: ["grid", "compact"] },
-    ],
-    render: (props) => (
-      <AppThemePicker
-        variant={props.variant as "grid" | "compact"}
-        descriptions={{
-          deepTeal: "Cool teals and warm accents",
-          ember: "Warm amber tones",
-          nord: "Arctic blue palette",
-          synth: "Neon glow effects",
-        }}
-      />
-    ),
-    variants: [
-      { name: "Grid", props: { variant: "grid" } },
-      { name: "Compact", props: { variant: "compact" } },
-    ],
-    codeTemplate: `<AppThemePicker variant="grid" descriptions={{ deepTeal: "Cool teals" }} />`,
+    propDefs: [],
+    render: () => <AppThemePicker />,
+    codeTemplate: `<AppThemePicker />`,
+    migrated: true,
   });
 
   registerComponent({
