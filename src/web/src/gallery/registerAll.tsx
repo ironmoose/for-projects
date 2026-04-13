@@ -514,29 +514,6 @@ export function registerAllComponents(): void {
   });
 
   registerComponent({
-    name: "PageHeader",
-    description: "Page-level heading with optional subtitle and trailing action slot.",
-    category: "molecule",
-    propDefs: [
-      { name: "title", type: "string", defaultValue: "All Projects" },
-      { name: "subtitle", type: "string", defaultValue: "Manage and track your active projects" },
-    ],
-    render: (props) => (
-      <PageHeader
-        title={String(props.title)}
-        subtitle={String(props.subtitle) || undefined}
-        trailing={<Button size="sm">New Project</Button>}
-      />
-    ),
-    variants: [
-      { name: "With subtitle", props: { title: "Documents", subtitle: "Browse and manage knowledge base documents" } },
-      { name: "Title only", props: { title: "Settings", subtitle: "" } },
-    ],
-    codeTemplate: `<PageHeader title="Projects" subtitle="Overview" trailing={<Button>Create</Button>} />`,
-    migrated: true,
-  });
-
-  registerComponent({
     name: "MetadataTable",
     description: "Vertical list of label/value pairs with an optional section title.",
     category: "molecule",

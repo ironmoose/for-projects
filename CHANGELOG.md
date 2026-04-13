@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local PageHeader with @4lt7ab/ui re-export (delete local, remove gallery entry)
 - Replace local StatusDot with @4lt7ab/ui re-export (delete local, remove gallery entry)
 - Replace local ProgressBar with @4lt7ab/ui re-export (delete local, remove gallery entry)
 - Migrate Toast to library tokens and add gallery entry (libraryCandidate)
