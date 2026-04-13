@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Fixed
+- **ThemesPage text contrast:** theme cards now use explicit `var(--color-text)` and `var(--color-text-secondary)` overrides via `useInjectStyles`, fixing unreadable black text on dark surfaces caused by browser button `color: inherit` defaults
+
+### Changed
+- **Skeleton atoms:** migrated Skeleton, CardSkeleton, RowSkeleton from local implementations to `@4lt7ab/ui/ui` re-exports — removes compat `useTheme()` dependency; accepts static background in place of shimmer animation
+- **Overlay atom:** migrated from local implementation to `@4lt7ab/ui/ui` re-export — gains `ref` forwarding, `role="presentation"`, and theme-aware `colorSurfaceOverlay` token
+- ThemesPage migrated from compat `theme.spacing.xl` to library token `t.spaceXl`; removed `useTheme` import
+
 ### Removed
 - `ThemeSwitcher.tsx` — thin re-export shim no longer imported by any component (replaced by direct `ThemePicker` import from `@4lt7ab/ui/ui`)
 - `theme-picker-migration.test.ts` — migration verification test for the removed ThemeSwitcher shim
