@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 import { Select } from "../atoms/Select";
 import type { TaskFilter } from "../../hooks/useProjectTasks";
@@ -61,7 +62,7 @@ export function TaskTableFilters({ filter, onChange, groupKeys }: TaskTableFilte
   }, []);
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: t.spaceSm, alignItems: "flex-end" }}>
       <div style={{ minWidth: 180, flex: "1 1 180px" }}>
         <Input
           placeholder="Search tasks..."

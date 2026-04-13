@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate TaskTableFilters gap to library spacing token
 - Migrate DocumentSearchBar gap to library spacing token
 - Migrate ProgressBar tooltip to library tokens (fontSize, borderRadius, color)
 - Delete unused DocumentReferenceSection organism (dead code, no consumers)
