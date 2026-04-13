@@ -24,7 +24,7 @@ function glowForVariant(variant: BadgeVariant, theme: ReturnType<typeof useTheme
     running: t.colorActionPrimary,
     complete: t.colorSuccess,
     failed: t.colorActionDestructive,
-    in_progress: theme.color.tertiary,
+    in_progress: t.colorWarning,
     done: t.colorSuccess,
   };
   const color = glowMap[variant];
@@ -81,8 +81,8 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
       color: t.colorTextMuted,
     },
     in_progress: {
-      background: alpha(theme.color.tertiary, 15),
-      color: theme.color.tertiary,
+      background: alpha(t.colorWarning, 15),
+      color: t.colorWarning,
     },
     done: {
       background: alpha(t.colorSuccess, 15),
@@ -100,10 +100,10 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
         display: "inline-block",
         padding: "0.2rem 0.5rem",
         borderRadius: t.radiusMd,
-        fontSize: theme.font.size.xxs,
+        fontSize: t.fontSizeXs,
         fontWeight: 700,
         fontFamily: t.fontSans,
-        letterSpacing: theme.font.letterSpacing.wide,
+        letterSpacing: t.letterSpacingWide,
         textTransform: "uppercase",
         lineHeight: 1.4,
         transition: `background 200ms, color 200ms, box-shadow 200ms`,

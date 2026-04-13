@@ -206,14 +206,13 @@ describe("color-mix alpha helper", () => {
 // ---------------------------------------------------------------------------
 
 describe("Unmapped tokens still use compat useTheme", () => {
-  test("Badge.tsx uses theme.color.tertiary (unmapped)", () => {
+  test("Badge.tsx only uses theme.glow from compat (fully migrated otherwise)", () => {
     const src = readComponent(ATOMS_DIR, "Badge.tsx");
-    expect(src).toContain("theme.color.tertiary");
-  });
-
-  test("Badge.tsx uses theme.font.size.xxs (no library equivalent)", () => {
-    const src = readComponent(ATOMS_DIR, "Badge.tsx");
-    expect(src).toContain("theme.font.size.xxs");
+    expect(src).not.toContain("theme.color.");
+    expect(src).not.toContain("theme.font.");
+    expect(src).not.toContain("theme.spacing.");
+    expect(src).not.toContain("theme.radius.");
+    expect(src).toContain("theme.glow.");
   });
 
   test("StatusDot.tsx uses theme.motion and theme.animation (unmapped)", () => {
