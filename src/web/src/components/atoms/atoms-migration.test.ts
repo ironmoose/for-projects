@@ -74,7 +74,6 @@ describe("Library semantic token imports", () => {
     "DocumentSearchBar.tsx",
     "Stack.tsx",
     "FolderInput.tsx",
-    "TagChip.tsx",
     "DependencyChip.tsx",
     "SearchToggle.tsx",
     "DocumentReferenceCard.tsx",
@@ -359,14 +358,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
 
   test("Card.tsx uses theme.glow for border/shadow effects (unmapped)", () => {
     const src = readComponent(MOLECULES_DIR, "Card.tsx");
-    expect(src).toContain("theme.glow.");
-  });
-
-  test("TagChip.tsx only uses theme.glow from compat (no theme.color/font/radius)", () => {
-    const src = readComponent(MOLECULES_DIR, "TagChip.tsx");
-    expect(src).not.toMatch(/theme\.color\./);
-    expect(src).not.toMatch(/theme\.font\./);
-    expect(src).not.toMatch(/theme\.radius\./);
     expect(src).toContain("theme.glow.");
   });
 

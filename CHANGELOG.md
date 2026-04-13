@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local TagChip with @4lt7ab/ui re-export (delete local, update 4 direct imports)
 - Replace local PageHeader with @4lt7ab/ui re-export (delete local, remove gallery entry)
 - Replace local StatusDot with @4lt7ab/ui re-export (delete local, remove gallery entry)
 - Replace local ProgressBar with @4lt7ab/ui re-export (delete local, remove gallery entry)

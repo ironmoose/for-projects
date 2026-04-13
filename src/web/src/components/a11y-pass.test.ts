@@ -38,7 +38,6 @@ describe("IconButton aria-labels", () => {
     { path: join(ORGANISMS_DIR, "ShortcutHelpOverlay.tsx"), name: "ShortcutHelpOverlay" },
     { path: join(MOLECULES_DIR, "DependencyChip.tsx"), name: "DependencyChip" },
     { path: join(MOLECULES_DIR, "DocumentReferenceCard.tsx"), name: "DocumentReferenceCard" },
-    { path: join(MOLECULES_DIR, "TagChip.tsx"), name: "TagChip" },
     { path: join(MOLECULES_DIR, "DocumentSearchBar.tsx"), name: "DocumentSearchBar" },
     { path: join(ORGANISMS_DIR, "ProjectDocumentTable.tsx"), name: "ProjectDocumentTable" },
   ];

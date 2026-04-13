@@ -23,7 +23,7 @@ export { ExpandableCard } from "@4lt7ab/ui/ui";
 export { Stack } from "./molecules/Stack";
 export { Markdown } from "./molecules/Markdown";
 export { PageHeader } from "@4lt7ab/ui/ui";
-export { TagChip } from "./molecules/TagChip";
+export { TagChip } from "@4lt7ab/ui/ui";
 export { MetadataTable } from "./molecules/MetadataTable";
 export { EmptyState } from "./molecules/EmptyState";
 export { BackButton } from "./molecules/BackButton";

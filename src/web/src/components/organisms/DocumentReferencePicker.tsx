@@ -7,7 +7,7 @@ import { IconButton } from "../atoms/IconButton";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
 import { Select } from "../atoms/Select";
-import { TagChip } from "../molecules/TagChip";
+import { TagChip } from "@4lt7ab/ui/ui";
 import { fetchDocuments } from "../../api";
 import type { DocumentSummary } from "../../types";
 import { REFERENCE_TYPES, type ReferenceType, type DocumentReferenceDetail } from "../../types";

@@ -1,6 +1,6 @@
 import { useInjectStyles, semantic as t } from "@4lt7ab/ui/core";
 import { Card } from "./Card";
-import { TagChip } from "./TagChip";
+import { TagChip } from "@4lt7ab/ui/ui";
 import { IconButton } from "../atoms/IconButton";
 import { Badge } from "../atoms/Badge";
 import { Icon } from "../atoms/Icon";

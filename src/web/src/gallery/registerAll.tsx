@@ -13,7 +13,6 @@ import {
   Stack,
   BackButton,
   EmptyState,
-  TagChip,
   TagPicker,
   DependencyChip,
   ReferenceTypeBadge,
@@ -440,26 +439,6 @@ export function registerAllComponents(): void {
     codeTemplate: `<EmptyState icon="folder_open" message="No items yet." />`,
     migrated: true,
     libraryCandidate: true,
-  });
-
-  registerComponent({
-    name: "TagChip",
-    description: "Tag pill with optional remove button.",
-    category: "molecule",
-    propDefs: [
-      { name: "name", type: "string", defaultValue: "frontend" },
-      { name: "prefix", type: "string", defaultValue: "" },
-    ],
-    render: (props) => (
-      <TagChip
-        name={String(props.name)}
-        prefix={String(props.prefix) || null}
-        onRemove={() => {}}
-      />
-    ),
-    codeTemplate: `<TagChip name="frontend" onRemove={handleRemove} />`,
-    libraryCandidate: true,
-    migrated: true,
   });
 
   registerComponent({

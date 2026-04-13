@@ -11,7 +11,7 @@ import { Input } from "../atoms/Input";
 import { Textarea } from "../atoms/Textarea";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
-import { TagChip } from "../molecules/TagChip";
+import { TagChip } from "@4lt7ab/ui/ui";
 import { TagPicker } from "../molecules/TagPicker";
 import { FolderInput } from "../molecules/FolderInput";
 import { EmptyState } from "../molecules/EmptyState";
