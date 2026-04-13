@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useToastContext } from "../ToastContext";
 import { useDocument } from "../../hooks/useDocument";
 import { useDocuments } from "../../hooks/useDocuments";
@@ -25,7 +25,6 @@ interface DocumentReaderModalProps {
 }
 
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
-  const { theme } = useTheme();
   const toast = useToastContext();
   const { document, notFound, loading, updateDocument } = useDocument(documentId);
   const { documents: allDocs } = useDocuments();
@@ -138,8 +137,8 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
         padding: 0,
         minHeight: "50vh",
         overflow: "hidden",
-        background: theme.color.surface,
-        animation: reduced ? undefined : `fade-in-up 200ms ${theme.animation.easing.decelerate}`,
+        background: t.colorSurface,
+        animation: reduced ? undefined : `fade-in-up 200ms ease-out`,
       }}
     >
       {loading ? (
@@ -154,8 +153,8 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
           <p
             style={{
               margin: 0,
-              color: theme.color.textMuted,
-              fontSize: theme.font.size.sm,
+              color: t.colorTextMuted,
+              fontSize: t.fontSizeSm,
             }}
           >
             Loading...
@@ -178,21 +177,21 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
           <div
             style={{
               flexShrink: 0,
-              padding: `${theme.spacing.xl} ${theme.spacing["3xl"]} ${theme.spacing.lg}`,
-              borderBottom: `1px solid ${theme.color.borderSubtle}`,
+              padding: `${t.spaceXl} ${t.space2xl} ${t.spaceLg}`,
+              borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
               display: "flex",
               flexDirection: "column",
-              gap: theme.spacing.sm,
+              gap: t.spaceSm,
             }}
           >
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: t.spaceSm }}>
               {editing ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     placeholder="Document title"
-                    style={{ fontSize: theme.font.size.lg, fontWeight: 700 }}
+                    style={{ fontSize: t.fontSizeLg, fontWeight: 700 }}
                     aria-label="Document title"
                   />
                 </div>
@@ -203,18 +202,18 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                     margin: 0,
                     flex: 1,
                     minWidth: 0,
-                    fontFamily: theme.font.headline,
-                    fontSize: theme.font.size.xl,
+                    fontFamily: t.fontSerif,
+                    fontSize: t.fontSizeXl,
                     fontWeight: 800,
-                    letterSpacing: theme.font.letterSpacing.tight,
-                    color: theme.color.text,
+                    letterSpacing: t.letterSpacingTight,
+                    color: t.colorText,
                     lineHeight: 1.3,
                   }}
                 >
                   {document.title}
                 </h2>
               )}
-              <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, flexShrink: 0 }}>
                 {!editing && (
                   <>
                     <IconButton
@@ -222,14 +221,14 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                       size={18}
                       onClick={() => updateDocument({ favorite: !document.favorite })}
                       aria-label={document.favorite ? "Remove from favorites" : "Add to favorites"}
-                      style={{ color: document.favorite ? theme.color.warning : theme.color.textMuted }}
+                      style={{ color: document.favorite ? t.colorWarning : t.colorTextMuted }}
                     />
                     <IconButton
                       icon={copied ? "check" : "content_copy"}
                       size={18}
                       onClick={handleCopy}
                       aria-label="Copy markdown to clipboard"
-                      style={{ color: copied ? theme.color.success : theme.color.textMuted }}
+                      style={{ color: copied ? t.colorSuccess : t.colorTextMuted }}
                     />
                     <IconButton icon="edit" size={18} onClick={enterEditMode} aria-label="Edit document" />
                   </>
@@ -246,7 +245,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
               />
             ) : (
               document.tags.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: t.spaceXs }}>
                   {document.tags.map((tag) => (
                     <TagChip key={tag} name={tag} />
                   ))}
@@ -256,15 +255,15 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
 
             {/* Referenced by section */}
             {!editing && document.referenced_by && document.referenced_by.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs, alignItems: "center" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: t.spaceXs, alignItems: "center" }}>
                 <span
                   style={{
-                    fontSize: theme.font.size.xxs,
+                    fontSize: t.fontSizeXs,
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
-                    color: theme.color.textFaint,
-                    marginRight: theme.spacing.xs,
+                    color: t.colorTextSecondary,
+                    marginRight: t.spaceXs,
                   }}
                 >
                   Referenced by
@@ -275,10 +274,10 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                     style={{
                       display: "inline-block",
                       padding: "1px 6px",
-                      borderRadius: theme.radius.sm,
-                      fontSize: theme.font.size.xxs,
-                      background: theme.color.surfaceContainerHigh,
-                      color: theme.color.textMuted,
+                      borderRadius: t.radiusSm,
+                      fontSize: t.fontSizeXs,
+                      background: t.colorSurfaceRaised,
+                      color: t.colorTextMuted,
                     }}
                   >
                     {ref.entity_type}: {ref.entity_title || ref.entity_id} ({ref.type})
@@ -296,7 +295,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
               />
             ) : (
               document.folder && (
-                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: theme.font.size.xs, color: theme.color.textMuted }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: t.fontSizeXs, color: t.colorTextMuted }}>
                   <Icon name="folder" size={14} />
                   {document.folder}
                 </div>
@@ -309,9 +308,9 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: theme.spacing.sm,
-                  fontSize: theme.font.size.xs,
-                  color: theme.color.textMuted,
+                  gap: t.spaceSm,
+                  fontSize: t.fontSizeXs,
+                  color: t.colorTextMuted,
                   flexWrap: "wrap",
                 }}
               >
@@ -321,7 +320,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                     href={document.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: theme.color.primary, textDecoration: "none" }}
+                    style={{ color: t.colorActionPrimary, textDecoration: "none" }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {document.source_url.length > 60
@@ -330,7 +329,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                   </a>
                 </span>
                 {document.source_fetched_at && (
-                  <span style={{ color: theme.color.textFaint, fontSize: theme.font.size.xxs }}>
+                  <span style={{ color: t.colorTextSecondary, fontSize: t.fontSizeXs }}>
                     Fetched {relativeTime(document.source_fetched_at)}
                   </span>
                 )}
@@ -352,7 +351,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 value={editSummary}
                 onChange={(e) => setEditSummary(e.target.value)}
                 placeholder="Brief summary"
-                style={{ fontSize: theme.font.size.sm }}
+                style={{ fontSize: t.fontSizeSm }}
                 aria-label="Document summary"
               />
             ) : (
@@ -360,8 +359,8 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 <p
                   style={{
                     margin: 0,
-                    fontSize: theme.font.size.sm,
-                    color: theme.color.textMuted,
+                    fontSize: t.fontSizeSm,
+                    color: t.colorTextMuted,
                     fontStyle: "italic",
                   }}
                 >
@@ -376,7 +375,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
             style={{
               flex: 1,
               overflowY: "auto",
-              padding: `${theme.spacing.xl} ${theme.spacing["3xl"]}`,
+              padding: `${t.spaceXl} ${t.space2xl}`,
             }}
           >
             {editing ? (
@@ -385,7 +384,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 onChange={(e) => setEditContent(e.target.value)}
                 placeholder="Document content (markdown supported)"
                 rows={16}
-                style={{ width: "100%", minHeight: 300, fontFamily: theme.font.mono }}
+                style={{ width: "100%", minHeight: 300, fontFamily: t.fontMono }}
                 aria-label="Document content"
               />
             ) : document.content ? (
@@ -394,8 +393,8 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
               <p
                 style={{
                   margin: 0,
-                  fontSize: theme.font.size.sm,
-                  color: theme.color.textFaint,
+                  fontSize: t.fontSizeSm,
+                  color: t.colorTextSecondary,
                   fontStyle: "italic",
                 }}
               >
@@ -409,11 +408,11 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
             <div
               style={{
                 flexShrink: 0,
-                padding: `${theme.spacing.md} ${theme.spacing["3xl"]}`,
-                borderTop: `1px solid ${theme.color.borderSubtle}`,
+                padding: `${t.spaceMd} ${t.space2xl}`,
+                borderTop: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
                 display: "flex",
                 justifyContent: "flex-end",
-                gap: theme.spacing.sm,
+                gap: t.spaceSm,
               }}
             >
               <Button variant="ghost" onClick={cancelEdit} disabled={saving}>

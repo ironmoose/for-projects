@@ -54,6 +54,7 @@ describe("Library semantic token imports", () => {
     "DocumentReferencePicker.tsx",
     "GitHubBrowserOverlay.tsx",
     "FolderTileGrid.tsx",
+    "DocumentReaderModal.tsx",
   ];
 
   for (const file of organismsWithSemanticImport) {
@@ -191,6 +192,11 @@ describe("Components fully migrated off useTheme", () => {
 
   test("organisms/GitHubBrowserOverlay.tsx does not import useTheme", () => {
     const src = readComponent(ORGANISMS_DIR, "GitHubBrowserOverlay.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("organisms/DocumentReaderModal.tsx does not import useTheme", () => {
+    const src = readComponent(ORGANISMS_DIR, "DocumentReaderModal.tsx");
     expect(src).not.toContain("useTheme");
   });
 });
