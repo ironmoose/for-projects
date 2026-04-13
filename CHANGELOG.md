@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **White page backgrounds on all 4 themes:** added `css` property to each ThemeDefinition in `lib-themes.ts` so the library's ThemeProvider injects body background-color and color rules, matching the `colorSurfacePage` and `colorText` token values per theme
 - **Library built-in themes showing bright backgrounds:** replaced library `ThemePicker` with app-scoped `AppThemePicker` that only shows the 4 custom dark themes (deepTeal, ember, nord, synth), preventing light built-in themes (warm-sand, coral, etc.) from appearing in the picker or being applied via stale localStorage values
 - **ThemesPage text contrast:** theme cards now use explicit `var(--color-text)` and `var(--color-text-secondary)` overrides via `useInjectStyles`, fixing unreadable black text on dark surfaces caused by browser button `color: inherit` defaults
 - Removed deprecated `baseUrl` from `src/web/tsconfig.json` to avoid TypeScript 7.0 breakage — paths resolution is unaffected since the only alias (`@domain/*`) uses a scoped specifier

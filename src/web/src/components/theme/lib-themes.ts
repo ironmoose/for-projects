@@ -159,6 +159,11 @@ export const deepTealTheme: ThemeDefinition = {
     focusRingWidth: "2px",
     focusRingOffset: "2px",
   },
+  css: `[data-theme="deepTeal"] body,
+[data-theme="deepTeal"] {
+  background-color: #0d1b1f;
+  color: #d4e5ea;
+}`,
 };
 
 // ---------------------------------------------------------------------------
@@ -222,6 +227,11 @@ export const emberTheme: ThemeDefinition = {
     focusRingWidth: "2px",
     focusRingOffset: "2px",
   },
+  css: `[data-theme="ember"] body,
+[data-theme="ember"] {
+  background-color: #141010;
+  color: #ede0d4;
+}`,
 };
 
 // ---------------------------------------------------------------------------
@@ -285,6 +295,11 @@ export const nordTheme: ThemeDefinition = {
     focusRingWidth: "2px",
     focusRingOffset: "2px",
   },
+  css: `[data-theme="nord"] body,
+[data-theme="nord"] {
+  background-color: #242933;
+  color: #d8dee9;
+}`,
 };
 
 // ---------------------------------------------------------------------------
@@ -349,6 +364,11 @@ export const synthTheme: ThemeDefinition = {
     focusRingWidth: "2px",
     focusRingOffset: "2px",
   },
+  css: `[data-theme="synth"] body,
+[data-theme="synth"] {
+  background-color: #0a0a1a;
+  color: #e0d6f6;
+}`,
 };
 
 /**
