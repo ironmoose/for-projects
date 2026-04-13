@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 import { Textarea } from "../atoms/Textarea";
 import { SectionLabel } from "../atoms/SectionLabel";
@@ -15,7 +15,6 @@ interface CreateDocumentOverlayProps {
 }
 
 export function CreateDocumentOverlay({ folders = [], onCreated, onClose }: CreateDocumentOverlayProps) {
-  const { theme } = useTheme();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
@@ -59,8 +58,8 @@ export function CreateDocumentOverlay({ folders = [], onCreated, onClose }: Crea
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
-          gap: theme.spacing.lg,
-          paddingRight: theme.spacing.xs,
+          gap: t.spaceLg,
+          paddingRight: t.spaceXs,
         }}
       >
         <Input
@@ -94,7 +93,7 @@ export function CreateDocumentOverlay({ folders = [], onCreated, onClose }: Crea
           onChange={setFolder}
         />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.xs }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
           <SectionLabel>Tags</SectionLabel>
           <TagPicker selected={selectedTags} onChange={setSelectedTags} />
         </div>
@@ -104,9 +103,9 @@ export function CreateDocumentOverlay({ folders = [], onCreated, onClose }: Crea
         <p
           style={{
             margin: 0,
-            fontSize: theme.font.size.sm,
-            color: theme.color.danger,
-            fontFamily: theme.font.body,
+            fontSize: t.fontSizeSm,
+            color: t.colorActionDestructive,
+            fontFamily: t.fontSans,
           }}
         >
           {error}
