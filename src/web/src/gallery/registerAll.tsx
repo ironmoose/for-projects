@@ -17,14 +17,10 @@ import {
   EmptyState,
   TagChip,
   TagPicker,
-  Skeleton,
-  CardSkeleton,
-  RowSkeleton,
   ExpandableCard,
   DependencyChip,
   ReferenceTypeBadge,
   Textarea,
-  Overlay,
   ActivityIndicator,
   Markdown,
   PageHeader,
@@ -57,6 +53,7 @@ import type { ProgressBarSegment } from "../components";
 import type { TaskSummary, DocumentSummary } from "../types";
 import type { GraphNode } from "../api";
 import { FolderInput } from "../components/molecules/FolderInput";
+import { AppThemePicker } from "../components/molecules/AppThemePicker";
 
 // ---------------------------------------------------------------------------
 // Demo wrapper components (stateful)
@@ -294,29 +291,6 @@ export function registerAllComponents(): void {
   });
 
   registerComponent({
-    name: "Overlay",
-    description: "Full-screen semi-transparent backdrop used behind modals and drawers.",
-    category: "atom",
-    propDefs: [],
-    render: () => (
-      <div style={{ position: "relative", width: 200, height: 80, border: "1px dashed #555", borderRadius: 8 }}>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(0,0,0,0.4)",
-            borderRadius: 8,
-          }}
-        />
-        <span style={{ position: "relative", zIndex: 1, color: "#fff", padding: 8, display: "block", fontSize: 12 }}>
-          Overlay preview
-        </span>
-      </div>
-    ),
-    codeTemplate: `<Overlay onClick={handleClose} zIndex={100} />`,
-  });
-
-  registerComponent({
     name: "ActivityIndicator",
     description: "Animated count badge that displays a number, showing 99+ for counts above 99.",
     category: "atom",
@@ -383,18 +357,6 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <MetaValue label={String(props.label)} value={String(props.value)} />,
     codeTemplate: `<MetaValue label="ID" value={item.id} />`,
-  });
-
-  registerComponent({
-    name: "Skeleton",
-    description: "Shimmer loading placeholder.",
-    category: "atom",
-    propDefs: [
-      { name: "width", type: "string", defaultValue: "200px" },
-      { name: "height", type: "number", defaultValue: 16 },
-    ],
-    render: (props) => <Skeleton width={String(props.width)} height={Number(props.height)} />,
-    codeTemplate: `<Skeleton width="200px" height={16} />`,
   });
 
   registerComponent({
@@ -605,24 +567,6 @@ export function registerAllComponents(): void {
   });
 
   registerComponent({
-    name: "CardSkeleton",
-    description: "Loading skeleton shaped like a card.",
-    category: "molecule",
-    propDefs: [],
-    render: () => <CardSkeleton style={{ width: 240 }} />,
-    codeTemplate: `<CardSkeleton />`,
-  });
-
-  registerComponent({
-    name: "RowSkeleton",
-    description: "Loading skeleton shaped like a list row.",
-    category: "molecule",
-    propDefs: [],
-    render: () => <RowSkeleton style={{ width: 300 }} />,
-    codeTemplate: `<RowSkeleton />`,
-  });
-
-  registerComponent({
     name: "Markdown",
     description: "Renders markdown content with themed typography, code blocks, tables, and GFM support.",
     category: "molecule",
@@ -726,6 +670,31 @@ export function registerAllComponents(): void {
     propDefs: [],
     render: () => <FolderInputDemo />,
     codeTemplate: `<FolderInput value={folder} folders={knownFolders} onChange={setFolder} />`,
+  });
+
+  registerComponent({
+    name: "AppThemePicker",
+    description: "App-scoped theme picker showing only the 4 custom dark themes. Supports grid (card layout) and compact (dropdown) variants.",
+    category: "molecule",
+    propDefs: [
+      { name: "variant", type: "enum", defaultValue: "grid", options: ["grid", "compact"] },
+    ],
+    render: (props) => (
+      <AppThemePicker
+        variant={props.variant as "grid" | "compact"}
+        descriptions={{
+          deepTeal: "Cool teals and warm accents",
+          ember: "Warm amber tones",
+          nord: "Arctic blue palette",
+          synth: "Neon glow effects",
+        }}
+      />
+    ),
+    variants: [
+      { name: "Grid", props: { variant: "grid" } },
+      { name: "Compact", props: { variant: "compact" } },
+    ],
+    codeTemplate: `<AppThemePicker variant="grid" descriptions={{ deepTeal: "Cool teals" }} />`,
   });
 
   // =========================================================================

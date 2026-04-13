@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Update gallery: remove Overlay/Skeleton/CardSkeleton/RowSkeleton (now library re-exports), add AppThemePicker
 - Add body background CSS rules to app theme definitions (white page fix)
 - Replace library ThemePicker with app-scoped AppThemePicker (hide light built-in themes)
 - Fix ThemesPage text contrast on dark surfaces
