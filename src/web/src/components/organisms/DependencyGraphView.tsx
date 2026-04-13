@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { StatusDot } from "../atoms/StatusDot";
 import { Badge } from "../atoms/Badge";
 import { EmptyState } from "../molecules/EmptyState";
@@ -104,15 +104,14 @@ function detectCycles(
 function getStatusColor(
   status: TaskStatus,
   isBlocked: boolean,
-  theme: ReturnType<typeof useTheme>["theme"],
 ): string {
-  if (isBlocked) return theme.color.danger;
+  if (isBlocked) return t.colorActionDestructive;
   switch (status) {
-    case "done": return theme.color.success;
-    case "in_progress": return theme.color.tertiary;
-    case "todo": return theme.color.textMuted;
-    case "archived": return theme.color.textFaint;
-    default: return theme.color.textMuted;
+    case "done": return t.colorSuccess;
+    case "in_progress": return t.colorWarning;
+    case "todo": return t.colorTextMuted;
+    case "archived": return t.colorTextSecondary;
+    default: return t.colorTextMuted;
   }
 }
 
@@ -137,14 +136,13 @@ function TaskCard({
   onClick: () => void;
   style: React.CSSProperties;
 }) {
-  const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
-  const statusColor = getStatusColor(task.status, isBlocked, theme);
+  const statusColor = getStatusColor(task.status, isBlocked);
 
   const leftBorderColor = isInCycle
-    ? theme.color.warning
+    ? t.colorWarning
     : isBlocked
-      ? theme.color.danger
+      ? t.colorActionDestructive
       : null;
 
   return (
@@ -163,22 +161,22 @@ function TaskCard({
         // Center the card on its simulation point
         transform: "translate(-50%, -50%)",
         background: hovered
-          ? theme.color.surfaceContainerHighest
-          : theme.color.surfaceContainerHigh,
-        border: `1px solid ${isHighlighted ? theme.color.primary : theme.color.border}`,
+          ? t.colorSurfaceRaised
+          : t.colorSurfaceRaised,
+        border: `1px solid ${isHighlighted ? t.colorActionPrimary : t.colorBorder}`,
         borderLeft: leftBorderColor
           ? `3px solid ${leftBorderColor}`
-          : `1px solid ${isHighlighted ? theme.color.primary : theme.color.border}`,
-        borderRadius: theme.radius.md,
+          : `1px solid ${isHighlighted ? t.colorActionPrimary : t.colorBorder}`,
+        borderRadius: t.radiusMd,
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
-        gap: theme.spacing.sm,
-        padding: `0 ${theme.spacing.sm}`,
+        gap: t.spaceSm,
+        padding: `0 ${t.spaceSm}`,
         boxSizing: "border-box",
-        transition: `background ${theme.motion.fast} ${theme.motion.easing}, border-color ${theme.motion.fast} ${theme.motion.easing}, opacity ${theme.motion.fast} ${theme.motion.easing}`,
+        transition: `background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease`,
         opacity: isFaded ? 0.35 : 1,
-        boxShadow: isHighlighted ? `0 0 8px ${theme.color.primary}33` : "none",
+        boxShadow: isHighlighted ? `0 0 8px color-mix(in srgb, ${t.colorActionPrimary} 20%, transparent)` : "none",
         zIndex: isHighlighted ? 2 : 1,
         ...style,
       }}
@@ -188,24 +186,24 @@ function TaskCard({
         style={{
           flex: 1,
           minWidth: 0,
-          fontSize: theme.font.size.xs,
-          fontFamily: theme.font.body,
-          color: theme.color.text,
+          fontSize: t.fontSizeXs,
+          fontFamily: t.fontSans,
+          color: t.colorText,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
-          lineHeight: theme.font.lineHeight.tight,
+          lineHeight: t.lineHeightTight,
         }}
       >
         {task.title}
       </span>
       {isInCycle && (
-        <Badge variant="warning" style={{ fontSize: theme.font.size.xxs, padding: "0 4px", lineHeight: 1.3 }}>
+        <Badge variant="warning" style={{ fontSize: t.fontSizeXs, padding: "0 4px", lineHeight: 1.3 }}>
           {"↻ cycle"}
         </Badge>
       )}
       {isBlocked && !isInCycle && (
-        <Badge variant="failed" style={{ fontSize: theme.font.size.xxs, padding: "0 4px", lineHeight: 1.3 }}>
+        <Badge variant="failed" style={{ fontSize: t.fontSizeXs, padding: "0 4px", lineHeight: 1.3 }}>
           blocked
         </Badge>
       )}
@@ -222,7 +220,6 @@ function EdgeOverlay({
   posMap,
   backEdges,
   highlightedTaskId,
-  theme,
   width,
   height,
 }: {
@@ -230,7 +227,6 @@ function EdgeOverlay({
   posMap: Map<string, { x: number; y: number }>;
   backEdges: Set<string>;
   highlightedTaskId: string | null;
-  theme: ReturnType<typeof useTheme>["theme"];
   width: number;
   height: number;
 }) {
@@ -243,16 +239,16 @@ function EdgeOverlay({
       <defs>
         {/* Dot markers at the target end of each edge */}
         <marker id="fg-dot" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <circle cx="4" cy="4" r="3" fill={theme.color.textMuted} />
+          <circle cx="4" cy="4" r="3" fill={t.colorTextMuted} />
         </marker>
         <marker id="fg-dot-hl" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <circle cx="4" cy="4" r="3.5" fill={theme.color.primary} />
+          <circle cx="4" cy="4" r="3.5" fill={t.colorActionPrimary} />
         </marker>
         <marker id="fg-dot-cycle" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <circle cx="4" cy="4" r="3" fill={theme.color.danger} />
+          <circle cx="4" cy="4" r="3" fill={t.colorActionDestructive} />
         </marker>
         <marker id="fg-dot-relates" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-          <circle cx="3" cy="3" r="2" fill={theme.color.textFaint} opacity={0.6} />
+          <circle cx="3" cy="3" r="2" fill={t.colorTextSecondary} opacity={0.6} />
         </marker>
       </defs>
       {edges.map((edge, i) => {
@@ -276,10 +272,10 @@ function EdgeOverlay({
           return (
             <g key={`${edgeKey}-${i}`} opacity={isFaded ? 0.2 : 0.7}>
               <circle cx={cx} cy={cy} r={14} fill="none"
-                stroke={isHL ? theme.color.primary : theme.color.danger}
+                stroke={isHL ? t.colorActionPrimary : t.colorActionDestructive}
                 strokeWidth={2} strokeDasharray="6,3" />
               <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
-                fontSize="10" fill={theme.color.danger}>↻</text>
+                fontSize="10" fill={t.colorActionDestructive}>↻</text>
             </g>
           );
         }
@@ -311,7 +307,7 @@ function EdgeOverlay({
             <path key={`${edgeKey}-${i}`}
               d={`M${x1},${y1} Q${cx1},${cy1} ${x2},${y2}`}
               fill="none"
-              stroke={isHL ? theme.color.primary : theme.color.danger}
+              stroke={isHL ? t.colorActionPrimary : t.colorActionDestructive}
               strokeWidth={isHL ? 3 : 2.5}
               strokeDasharray="6,3"
               strokeLinecap="round"
@@ -325,7 +321,7 @@ function EdgeOverlay({
           return (
             <line key={`${edgeKey}-${i}`}
               x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke={isHL ? theme.color.primary : theme.color.textFaint}
+              stroke={isHL ? t.colorActionPrimary : t.colorTextSecondary}
               strokeWidth={isHL ? 2 : 1.5}
               strokeDasharray="6,4"
               strokeLinecap="round"
@@ -339,7 +335,7 @@ function EdgeOverlay({
         return (
           <line key={`${edgeKey}-${i}`}
             x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke={isHL ? theme.color.primary : theme.color.textMuted}
+            stroke={isHL ? t.colorActionPrimary : t.colorTextMuted}
             strokeWidth={isHL ? 3 : 2}
             strokeLinecap="round"
             markerEnd={isHL ? "url(#fg-dot-hl)" : "url(#fg-dot)"}
@@ -361,7 +357,6 @@ export function DependencyGraphView({
   blockedTaskIds,
   onTaskClick,
 }: DependencyGraphViewProps) {
-  const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const [size, setSize] = useState({ width: 800, height: MIN_HEIGHT });
@@ -389,14 +384,14 @@ export function DependencyGraphView({
     }
 
     const scored = tasks
-      .map((t) => ({
-        task: t,
-        score: (edgeDegree.get(t.id) ?? 0) * 10 + (STATUS_SCORE[t.status] ?? 0),
+      .map((tk) => ({
+        task: tk,
+        score: (edgeDegree.get(tk.id) ?? 0) * 10 + (STATUS_SCORE[tk.status] ?? 0),
       }))
       .sort((a, b) => b.score - a.score);
 
     const kept = new Set(scored.slice(0, MAX_NODES).map((s) => s.task.id));
-    const vTasks = tasks.filter((t) => kept.has(t.id));
+    const vTasks = tasks.filter((tk) => kept.has(tk.id));
     const vEdges = edges.filter((e) => kept.has(e.source_task_id) && kept.has(e.target_task_id));
 
     return { visibleTasks: vTasks, visibleEdges: vEdges, truncated: true };
@@ -420,7 +415,7 @@ export function DependencyGraphView({
   const blockedSet = useMemo(() => new Set(blockedTaskIds), [blockedTaskIds]);
 
   const { backEdges, cycleNodeIds } = useMemo(
-    () => detectCycles(visibleTasks.map((t) => t.id), visibleEdges),
+    () => detectCycles(visibleTasks.map((tk) => tk.id), visibleEdges),
     [visibleTasks, visibleEdges],
   );
 
@@ -612,7 +607,7 @@ export function DependencyGraphView({
 
   const taskMap = useMemo(() => {
     const map = new Map<string, GraphNode>();
-    for (const t of visibleTasks) map.set(t.id, t);
+    for (const tk of visibleTasks) map.set(tk.id, tk);
     return map;
   }, [visibleTasks]);
 
@@ -633,7 +628,7 @@ export function DependencyGraphView({
       <EmptyState
         icon="account_tree"
         message="No dependencies defined. Add blocking or related dependencies between tasks to see the graph."
-        style={{ padding: theme.spacing.xl }}
+        style={{ padding: t.spaceXl }}
       />
     );
   }
@@ -665,26 +660,26 @@ export function DependencyGraphView({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: theme.spacing.md,
+            gap: t.spaceMd,
             zIndex: 20,
-            background: theme.color.surfaceContainer,
+            background: t.colorSurface,
           }}
         >
           <div
             style={{
               width: 32,
               height: 32,
-              borderRadius: theme.radius.full,
-              border: `3px solid ${theme.color.borderSubtle}`,
-              borderTopColor: theme.color.primary,
+              borderRadius: t.radiusFull,
+              border: `3px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
+              borderTopColor: t.colorActionPrimary,
               animation: "spin 0.8s linear infinite",
             }}
           />
           <span
             style={{
-              fontSize: theme.font.size.xs,
-              color: theme.color.textMuted,
-              fontFamily: theme.font.body,
+              fontSize: t.fontSizeXs,
+              color: t.colorTextMuted,
+              fontFamily: t.fontSans,
             }}
           >
             Computing layout{visibleTasks.length > 20 ? ` for ${visibleTasks.length} nodes` : ""}…
@@ -703,7 +698,7 @@ export function DependencyGraphView({
           transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
           willChange: "transform",
           opacity: settled ? 1 : 0,
-          transition: `opacity ${theme.motion.normal} ${theme.motion.easing}`,
+          transition: `opacity 0.2s ease`,
         }}
       >
         {/* SVG edge overlay */}
@@ -712,7 +707,6 @@ export function DependencyGraphView({
           posMap={posMap}
           backEdges={backEdges}
           highlightedTaskId={hoveredTaskId}
-          theme={theme}
           width={size.width}
           height={graphHeight}
         />
@@ -759,17 +753,17 @@ export function DependencyGraphView({
         <div
           style={{
             position: "absolute",
-            top: theme.spacing.sm,
-            left: theme.spacing.sm,
+            top: t.spaceSm,
+            left: t.spaceSm,
             display: "flex",
             alignItems: "center",
-            gap: theme.spacing.xs,
-            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-            borderRadius: theme.radius.md,
-            background: theme.color.surfaceContainerHigh,
-            border: `1px solid ${theme.color.borderSubtle}`,
-            fontSize: theme.font.size.xxs,
-            color: theme.color.textMuted,
+            gap: t.spaceXs,
+            padding: `${t.spaceXs} ${t.spaceSm}`,
+            borderRadius: t.radiusMd,
+            background: t.colorSurfaceRaised,
+            border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
+            fontSize: t.fontSizeXs,
+            color: t.colorTextMuted,
             zIndex: 10,
           }}
         >
@@ -783,8 +777,8 @@ export function DependencyGraphView({
         onPointerDown={(e) => e.stopPropagation()}
         style={{
           position: "absolute",
-          bottom: theme.spacing.sm,
-          right: theme.spacing.sm,
+          bottom: t.spaceSm,
+          right: t.spaceSm,
           display: "flex",
           flexDirection: "column",
           gap: 2,
@@ -808,10 +802,10 @@ export function DependencyGraphView({
               alignItems: "center",
               justifyContent: "center",
               padding: 0,
-              border: `1px solid ${theme.color.border}`,
-              borderRadius: theme.radius.sm,
-              background: theme.color.surfaceContainerHigh,
-              color: theme.color.textMuted,
+              border: `1px solid ${t.colorBorder}`,
+              borderRadius: t.radiusSm,
+              background: t.colorSurfaceRaised,
+              color: t.colorTextMuted,
               cursor: "pointer",
             }}
           >

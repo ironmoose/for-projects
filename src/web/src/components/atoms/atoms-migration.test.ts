@@ -56,6 +56,7 @@ describe("Library semantic token imports", () => {
     "FolderTileGrid.tsx",
     "DocumentReaderModal.tsx",
     "TaskTable.tsx",
+    "DependencyGraphView.tsx",
   ];
 
   for (const file of organismsWithSemanticImport) {
@@ -198,6 +199,11 @@ describe("Components fully migrated off useTheme", () => {
 
   test("organisms/DocumentReaderModal.tsx does not import useTheme", () => {
     const src = readComponent(ORGANISMS_DIR, "DocumentReaderModal.tsx");
+    expect(src).not.toContain("useTheme");
+  });
+
+  test("organisms/DependencyGraphView.tsx does not import useTheme", () => {
+    const src = readComponent(ORGANISMS_DIR, "DependencyGraphView.tsx");
     expect(src).not.toContain("useTheme");
   });
 });

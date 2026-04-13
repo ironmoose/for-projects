@@ -967,6 +967,7 @@ export function registerAllComponents(): void {
     name: "DependencyGraphView",
     description: "Force-directed graph visualization showing task dependencies with blocks/relates_to edges, hover highlighting, and cycle detection.",
     category: "organism",
+    migrated: true,
     propDefs: [],
     render: () => (
       <div style={{ width: "100%", maxWidth: 700, overflow: "auto" }}>
