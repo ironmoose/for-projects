@@ -1,6 +1,5 @@
 import { type HTMLAttributes } from "react";
 import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
-import { type Theme } from "../theme/theme";
 import { useTheme } from "../theme/ThemeContext";
 
 /** CSS color-mix helper for alpha-blending semantic tokens with transparency. */
@@ -9,9 +8,19 @@ function alpha(token: string, pct: number): string {
 }
 
 type CardVariant = "default" | "flat" | "live" | "elevated";
+type SpacingKey = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+
+const SPACE_MAP: Record<SpacingKey, string> = {
+  xs: t.spaceXs,
+  sm: t.spaceSm,
+  md: t.spaceMd,
+  lg: t.spaceLg,
+  xl: t.spaceXl,
+  "2xl": t.space2xl,
+};
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  padding?: keyof Theme["spacing"];
+  padding?: SpacingKey;
   variant?: CardVariant;
   hover?: boolean;
 }
@@ -76,8 +85,8 @@ export function Card({ padding = "lg", variant = "default", hover, style, classN
     <div
       className={className ? `${cardClassName} ${className}` : cardClassName}
       style={{
-        borderRadius: theme.radius.xl,
-        padding: theme.spacing[padding],
+        borderRadius: t.radiusLg,
+        padding: SPACE_MAP[padding],
         transition: "background 0.15s, box-shadow 0.25s, border-color 0.2s",
         ...variantStyles[variant],
         ...style,

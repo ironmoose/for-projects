@@ -453,6 +453,7 @@ export function registerAllComponents(): void {
     ],
     codeTemplate: `<Card variant="default" padding="lg">Content</Card>`,
     libraryCandidate: true,
+    migrated: true,
   });
 
   registerComponent({

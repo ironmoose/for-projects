@@ -283,6 +283,12 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).toContain("theme.glow.");
   });
 
+  test("Card.tsx has no theme.radius.* or theme.spacing.* references", () => {
+    const src = readComponent(MOLECULES_DIR, "Card.tsx");
+    expect(src).not.toMatch(/theme\.radius\./);
+    expect(src).not.toMatch(/theme\.spacing\./);
+  });
+
   test("ExpandableCard.tsx no longer uses theme.motion (hardcoded transitions)", () => {
     const src = readComponent(MOLECULES_DIR, "ExpandableCard.tsx");
     expect(src).not.toContain("theme.motion.");

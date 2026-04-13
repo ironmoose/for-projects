@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate Card molecule spacing/radius tokens off compat useTheme to library tokens
 - Migrate ExpandableCard molecule off compat useTheme to library tokens
 - Mark 13 generic components as library candidates in gallery
 - Migrate PageHeader molecule off compat useTheme to library tokens
