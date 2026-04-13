@@ -1,5 +1,4 @@
 import { semantic as t } from "@4lt7ab/ui/core";
-import { useTheme } from "../theme/ThemeContext";
 
 const REFERENCE_TYPE_LABELS: Record<string, string> = {
   goal: "Goal",
@@ -16,18 +15,16 @@ interface ReferenceTypeBadgeProps {
 }
 
 export function ReferenceTypeBadge({ type, style }: ReferenceTypeBadgeProps) {
-  const { theme } = useTheme();
-
   return (
     <span
       style={{
         display: "inline-block",
         padding: "1px 6px",
         borderRadius: t.radiusSm,
-        fontSize: theme.font.size.xxs,
+        fontSize: t.fontSizeXs,
         fontWeight: 600,
         fontFamily: t.fontSans,
-        letterSpacing: theme.font.letterSpacing.wide,
+        letterSpacing: t.letterSpacingWide,
         textTransform: "uppercase",
         lineHeight: 1.4,
         background: t.colorSurfaceRaised,

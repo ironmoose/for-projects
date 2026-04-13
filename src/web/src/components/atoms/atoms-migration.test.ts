@@ -71,6 +71,8 @@ describe("Components fully migrated off useTheme", () => {
     "IconButton.tsx",
     "MetaValue.tsx",
     "Skeleton.tsx",
+    "SectionLabel.tsx",
+    "ReferenceTypeBadge.tsx",
   ];
 
   for (const file of fullyMigrated) {

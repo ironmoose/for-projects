@@ -12,6 +12,8 @@
 - **Skeleton atoms:** migrated Skeleton, CardSkeleton, RowSkeleton from local implementations to `@4lt7ab/ui/ui` re-exports — removes compat `useTheme()` dependency; accepts static background in place of shimmer animation
 - **Overlay atom:** migrated from local implementation to `@4lt7ab/ui/ui` re-export — gains `ref` forwarding, `role="presentation"`, and theme-aware `colorSurfaceOverlay` token
 - ThemesPage migrated from compat `theme.spacing.xl` to library token `t.spaceXl`; removed `useTheme` import
+- **SectionLabel atom:** migrated from compat `theme.font.size.xxs` / `theme.font.letterSpacing.wide` to library tokens `t.fontSizeXs` / `t.letterSpacingWide`; removed `useTheme` import
+- **ReferenceTypeBadge atom:** same font token migration as SectionLabel; removed `useTheme` import
 
 ### Removed
 - `ThemeSwitcher.tsx` — thin re-export shim no longer imported by any component (replaced by direct `ThemePicker` import from `@4lt7ab/ui/ui`)
