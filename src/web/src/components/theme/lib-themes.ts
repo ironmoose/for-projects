@@ -362,6 +362,14 @@ export const appThemes: ThemeDefinition[] = [
 ];
 
 /**
+ * Set of valid app theme names. Used to validate stored preferences and
+ * filter ThemePicker to only show app-owned dark themes.
+ */
+export const APP_THEME_NAMES: ReadonlySet<string> = new Set(
+  appThemes.map((t) => t.name),
+);
+
+/**
  * Default theme name for the app.
  */
 export const APP_DEFAULT_THEME = "deepTeal";

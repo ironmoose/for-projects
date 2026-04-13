@@ -1,6 +1,6 @@
 import { PageHeader, ListPageLayout } from "../components";
-import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
-import { ThemePicker } from "@4lt7ab/ui/ui";
+import { semantic as t } from "@4lt7ab/ui/core";
+import { AppThemePicker } from "../components/molecules/AppThemePicker";
 
 // ---------------------------------------------------------------------------
 // ThemesPage
@@ -14,14 +14,6 @@ const themeDescriptions: Record<string, string> = {
 };
 
 export function ThemesPage() {
-  // Override library ThemePicker CSS — buttons default to black text via
-  // `color: inherit` / `color: ButtonText`. Force explicit theme-aware colors
-  // so text is always readable on dark surfaces.
-  useInjectStyles("tfp-theme-card", `
-    .alttab-theme-card { color: var(--color-text); }
-    .alttab-theme-card__desc { color: var(--color-text-secondary); }
-  `);
-
   return (
     <ListPageLayout>
       <PageHeader
@@ -30,7 +22,7 @@ export function ThemesPage() {
         style={{ marginBottom: t.spaceXl }}
       />
 
-      <ThemePicker descriptions={themeDescriptions} />
+      <AppThemePicker descriptions={themeDescriptions} />
     </ListPageLayout>
   );
 }

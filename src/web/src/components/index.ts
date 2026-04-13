@@ -32,6 +32,7 @@ export { PresenceCharm } from "./molecules/PresenceCharm";
 export { TaskTableFilters } from "./molecules/TaskTableFilters";
 export { DocumentSearchBar } from "./molecules/DocumentSearchBar";
 export { SearchToggle } from "./molecules/SearchToggle";
+export { AppThemePicker } from "./molecules/AppThemePicker";
 export { DependencyChip } from "./molecules/DependencyChip";
 export { TagPicker } from "./molecules/TagPicker";
 export { DocumentReferenceCard } from "./molecules/DocumentReferenceCard";
