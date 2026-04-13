@@ -514,6 +514,7 @@ export function registerAllComponents(): void {
     ),
     codeTemplate: `<Stack direction="row" gap="md">...</Stack>`,
     libraryCandidate: true,
+    migrated: true,
   });
 
   registerComponent({

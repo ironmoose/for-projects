@@ -1,10 +1,16 @@
 import { type HTMLAttributes } from "react";
-import { type Theme } from "../theme/theme";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
+
+type SpacingKey = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+
+const SPACE_MAP: Record<SpacingKey, string> = {
+  xs: t.spaceXs, sm: t.spaceSm, md: t.spaceMd,
+  lg: t.spaceLg, xl: t.spaceXl, "2xl": t.space2xl,
+};
 
 interface StackProps extends HTMLAttributes<HTMLDivElement> {
   direction?: "row" | "column";
-  gap?: keyof Theme["spacing"];
+  gap?: SpacingKey;
   align?: React.CSSProperties["alignItems"];
   justify?: React.CSSProperties["justifyContent"];
   wrap?: boolean;
@@ -19,14 +25,12 @@ export function Stack({
   style,
   ...props
 }: StackProps) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
         display: "flex",
         flexDirection: direction,
-        gap: theme.spacing[gap],
+        gap: SPACE_MAP[gap],
         alignItems: align,
         justifyContent: justify,
         flexWrap: wrap ? "wrap" : undefined,
