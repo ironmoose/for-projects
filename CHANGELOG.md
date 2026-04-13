@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- `src/web/src/components/atoms/animation-styles-migration.test.ts` — 29 tests verifying AnimationStyles migration from inline `<style>` to useInjectStyles
 - `src/web/src/components/atoms/hover-migration.test.ts` — 57 tests verifying hover state migration from useState to useInjectStyles CSS pseudo-classes
 - `src/web/src/components/theme/lib-themes.ts` — 4 custom ThemeDefinition objects (deepTeal, ember, nord, synth) mapping app colors to @4lt7ab/ui/core token structure
 - `src/web/src/components/theme/compat.ts` — compatibility layer bridging old nested token structure to library CSS var references for incremental migration
@@ -10,6 +11,7 @@
 - `src/web/src/components/atoms/atoms-migration.test.ts` — 53 tests verifying atom/molecule migration to library semantic tokens
 
 ### Changed
+- **Phase 3d: AnimationStyles migration to useInjectStyles** — replaced inline `<style>` element rendering with `useInjectStyles("tfp-animations", css)` from @4lt7ab/ui/core. CSS content extracted to module-level `ANIMATION_CSS` constant. Component now returns `null`. All 19 keyframes, `@property --synth-glow`, `:root[data-synth]` glow cycling, and `prefers-reduced-motion` media query preserved identically.
 - **Phase 3a: Migrate hover states to useInjectStyles** — replaced useState-based hover tracking with CSS :hover/:focus-visible pseudo-classes via `useInjectStyles` from @4lt7ab/ui/core:
   - `Button.tsx` — removed useState hover, added CSS hover for all variants; synth glow hover via `[data-synth]` CSS selectors using `var(--synth-glow)`
   - `IconButton.tsx` — added :hover and :focus-visible styles via useInjectStyles
