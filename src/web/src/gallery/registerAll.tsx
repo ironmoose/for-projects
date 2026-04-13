@@ -350,6 +350,7 @@ export function registerAllComponents(): void {
     render: (props) => <SectionLabel>{String(props.children)}</SectionLabel>,
     codeTemplate: `<SectionLabel>Section Title</SectionLabel>`,
     migrated: true,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -363,6 +364,7 @@ export function registerAllComponents(): void {
     render: (props) => <StatusDot color={String(props.color)} size={Number(props.size)} />,
     codeTemplate: `<StatusDot color={theme.color.success} />`,
     migrated: true,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -403,6 +405,7 @@ export function registerAllComponents(): void {
     ],
     codeTemplate: `<ProgressBar segments={[{ value: 3, color: "green", label: "done" }]} height={6} />`,
     migrated: true,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -449,6 +452,7 @@ export function registerAllComponents(): void {
       { name: "Elevated", props: { variant: "elevated" } },
     ],
     codeTemplate: `<Card variant="default" padding="lg">Content</Card>`,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -488,6 +492,7 @@ export function registerAllComponents(): void {
       "  Content",
       "</ExpandableCard>",
     ].join("\n"),
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -506,6 +511,7 @@ export function registerAllComponents(): void {
       </Stack>
     ),
     codeTemplate: `<Stack direction="row" gap="md">...</Stack>`,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -532,6 +538,7 @@ export function registerAllComponents(): void {
     render: (props) => <EmptyState icon={String(props.icon)} message={String(props.message)} variant={props.variant as "plain"} />,
     codeTemplate: `<EmptyState icon="folder_open" message="No items yet." />`,
     migrated: true,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -550,6 +557,7 @@ export function registerAllComponents(): void {
       />
     ),
     codeTemplate: `<TagChip name="frontend" onRemove={handleRemove} />`,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -598,6 +606,7 @@ export function registerAllComponents(): void {
     ],
     render: (props) => <Markdown>{String(props.children)}</Markdown>,
     codeTemplate: `<Markdown>{"## Title\\n\\nParagraph with **bold** text."}</Markdown>`,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -647,6 +656,7 @@ export function registerAllComponents(): void {
     ],
     codeTemplate: `<Pagination page={currentPage} totalPages={totalPages} total={total} onPageChange={setPage} />`,
     migrated: true,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -669,6 +679,7 @@ export function registerAllComponents(): void {
     ),
     codeTemplate: `<MetadataTable title="Details" rows={[{ label: "ID", value: task.id }]} />`,
     migrated: true,
+    libraryCandidate: true,
   });
 
   registerComponent({
@@ -740,6 +751,7 @@ export function registerAllComponents(): void {
       '  <p>Modal content</p>',
       '</ModalShell>',
     ].join("\n"),
+    libraryCandidate: true,
   });
 
   registerComponent({

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Mark 13 generic components as library candidates in gallery
 - Migrate PageHeader molecule off compat useTheme to library tokens
 - Migrate DocumentSearchBar molecule off compat useTheme to library tokens
 - Migrate PresenceCharm molecule off compat useTheme to library tokens
