@@ -2,13 +2,13 @@
  * Tests for the @4lt7ab/ui theme integration layer.
  *
  * These tests verify:
- * 1. Compat layer produces the correct token structure
- * 2. Token mapping correctness (library vars for mapped, hex for unmapped)
- * 3. All library themes have legacy entries
- * 4. lib-themes exports are correct
+ * 1. lib-themes exports are correct
+ * 2. All library themes have legacy entries with glow tokens
+ * 3. Compat layer produces the correct (slimmed) token structure
+ * 4. compatThemes record covers all themes
+ * 5. legacyThemes re-export matches original
  */
 import { describe, expect, test } from "bun:test";
-import { semantic } from "@4lt7ab/ui/core";
 import { appThemes, APP_DEFAULT_THEME, APP_STORAGE_KEY, FEATURED_THEMES } from "./lib-themes";
 import { buildCompatTheme, compatThemes, legacyThemes } from "./compat";
 import { themes as originalThemes } from "./theme";
@@ -69,7 +69,7 @@ describe("Legacy theme entries", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Compat layer structure
+// 3. Compat layer structure (slimmed — no color/shadow/radius/spacing/font)
 // ---------------------------------------------------------------------------
 
 describe("Compat layer", () => {
@@ -77,55 +77,23 @@ describe("Compat layer", () => {
     const legacy = originalThemes.slate!;
     const compat = buildCompatTheme(legacy);
 
-    // Check all top-level keys exist
     const expectedKeys: (keyof Theme)[] = [
-      "name", "label", "color", "shadow", "glow", "radius",
-      "spacing", "font", "motion", "animation", "layout", "breakpoint",
+      "name", "label", "glow", "motion", "animation", "layout", "breakpoint",
     ];
     for (const key of expectedKeys) {
       expect(compat[key]).toBeDefined();
     }
   });
 
-  test("mapped color tokens use CSS var references", () => {
-    const compat = buildCompatTheme(originalThemes.slate!);
-
-    // These should be CSS var references from the library
-    expect(compat.color.text).toBe(semantic.colorText);
-    expect(compat.color.textMuted).toBe(semantic.colorTextMuted);
-    expect(compat.color.textFaint).toBe(semantic.colorTextSecondary);
-    expect(compat.color.surface).toBe(semantic.colorSurface);
-    expect(compat.color.border).toBe(semantic.colorBorder);
-    expect(compat.color.primary).toBe(semantic.colorActionPrimary);
-    expect(compat.color.danger).toBe(semantic.colorActionDestructive);
-    expect(compat.color.success).toBe(semantic.colorSuccess);
-    expect(compat.color.warning).toBe(semantic.colorWarning);
-    expect(compat.color.onPrimary).toBe(semantic.colorTextInverse);
-    expect(compat.color.running).toBe(semantic.colorSuccess);
-    expect(compat.color.failed).toBe(semantic.colorError);
-  });
-
-  test("shadow tokens use CSS var references", () => {
-    const compat = buildCompatTheme(originalThemes.slate!);
-    expect(compat.shadow.sm).toBe(semantic.shadowSm);
-    expect(compat.shadow.md).toBe(semantic.shadowMd);
-    expect(compat.shadow.lg).toBe(semantic.shadowLg);
-  });
-
-  test("unmapped color tokens preserve original hex values", () => {
+  test("Theme interface no longer has color, shadow, radius, spacing, or font", () => {
     const legacy = originalThemes.slate!;
     const compat = buildCompatTheme(legacy);
-
-    // These have no library equivalent and should keep original values
-    expect(compat.color.borderSubtle).toBe(legacy.color.borderSubtle);
-    expect(compat.color.primaryContainer).toBe(legacy.color.primaryContainer);
-    expect(compat.color.onPrimaryContainer).toBe(legacy.color.onPrimaryContainer);
-    expect(compat.color.tertiary).toBe(legacy.color.tertiary);
-    expect(compat.color.activityFlash).toBe(legacy.color.activityFlash);
-    expect(compat.color.glowPrimary).toBe(legacy.color.glowPrimary);
-    expect(compat.color.glowSuccess).toBe(legacy.color.glowSuccess);
-    expect(compat.color.glowDanger).toBe(legacy.color.glowDanger);
-    expect(compat.color.activityBorder).toBe(legacy.color.activityBorder);
+    // These keys should not exist on the slimmed Theme
+    expect((compat as Record<string, unknown>).color).toBeUndefined();
+    expect((compat as Record<string, unknown>).shadow).toBeUndefined();
+    expect((compat as Record<string, unknown>).radius).toBeUndefined();
+    expect((compat as Record<string, unknown>).spacing).toBeUndefined();
+    expect((compat as Record<string, unknown>).font).toBeUndefined();
   });
 
   test("glow tokens are fully preserved from legacy", () => {
@@ -135,28 +103,14 @@ describe("Compat layer", () => {
     expect(compat.glow.animated).toBe(true);
   });
 
-  test("spacing preserves original values (not library scale)", () => {
+  test("non-glow themes use generic fallback glow values", () => {
     const compat = buildCompatTheme(originalThemes.slate!);
-    expect(compat.spacing.md).toBe("0.75rem");
-    expect(compat.spacing.lg).toBe("1rem");
-    expect(compat.spacing.xl).toBe("1.5rem");
-    expect(compat.spacing["2xl"]).toBe("2rem");
-  });
-
-  test("radius preserves number type", () => {
-    const compat = buildCompatTheme(originalThemes.slate!);
-    expect(typeof compat.radius.sm).toBe("number");
-    expect(typeof compat.radius.md).toBe("number");
-    expect(typeof compat.radius.lg).toBe("number");
-    expect(compat.radius.lg).toBe(8);
-  });
-
-  test("font preserves original values", () => {
-    const compat = buildCompatTheme(originalThemes.slate!);
-    expect(compat.font.headline).toContain("Manrope");
-    expect(compat.font.size.xxs).toBe("0.625rem");
-    expect(compat.font.size["2xl"]).toBe("2.25rem");
-    expect(compat.font.lineHeight.mono).toBe(1.6);
+    expect(compat.glow.animated).toBe(false);
+    expect(compat.glow.accentColor).toBe("currentColor");
+    expect(compat.glow.borderSubtle).toBe("transparent");
+    expect(compat.glow.borderMedium).toBe("var(--color-border)");
+    expect(compat.glow.shadowSm).toBe("none");
+    expect(compat.glow.focusRing).toBe("none");
   });
 
   test("motion, animation, layout, breakpoint preserved", () => {
@@ -166,6 +120,12 @@ describe("Compat layer", () => {
     expect(compat.animation).toEqual(legacy.animation);
     expect(compat.layout).toEqual(legacy.layout);
     expect(compat.breakpoint).toEqual(legacy.breakpoint);
+  });
+
+  test("buildCompatTheme returns the same object (passthrough)", () => {
+    const legacy = originalThemes.slate!;
+    const compat = buildCompatTheme(legacy);
+    expect(compat).toBe(legacy);
   });
 });
 

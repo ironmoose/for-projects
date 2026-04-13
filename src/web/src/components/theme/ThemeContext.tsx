@@ -54,11 +54,8 @@ function CompatBridge({ children }: { children: React.ReactNode }) {
     };
   }, [lib.theme, lib.setTheme]);
 
-  // Sync legacy side-effects: body font, data-synth attribute
+  // Sync legacy side-effects: data-synth attribute for glow cycling
   useEffect(() => {
-    document.body.style.fontFamily = value.theme.font.body;
-    document.body.style.margin = "0";
-
     const root = document.documentElement;
     if (value.theme.glow.animated) {
       root.setAttribute("data-synth", "");

@@ -3,50 +3,6 @@ import { sg } from "./synthGlow";
 export interface Theme {
   name: string;
   label: string;
-  color: {
-    // Text hierarchy
-    text: string;
-    textMuted: string;
-    textFaint: string;
-    // Surface layers (MD3-style tonal depth)
-    surface: string;
-    surfaceContainer: string;
-    surfaceContainerLow: string;
-    surfaceContainerHigh: string;
-    surfaceContainerHighest: string;
-    // Borders
-    border: string;
-    borderSubtle: string;
-    // Primary
-    primary: string;
-    primaryContainer: string;
-    onPrimary: string;
-    onPrimaryContainer: string;
-    // Tertiary accent
-    tertiary: string;
-    // Danger / error
-    danger: string;
-    // Semantic
-    success: string;
-    // Warning
-    warning: string;
-    // Activity flash (primary at ~9% opacity)
-    activityFlash: string;
-    // Status-specific
-    running: string;
-    failed: string;
-    // Glow/event colors
-    glowPrimary: string;
-    glowSuccess: string;
-    glowDanger: string;
-    // Activity
-    activityBorder: string;
-  };
-  shadow: {
-    sm: string;
-    md: string;
-    lg: string;
-  };
   glow: {
     // Whether the glow CSS animation (--synth-glow cycling) is active
     animated: boolean;
@@ -72,47 +28,6 @@ export interface Theme {
     // Danger-specific glow for confirm dialogs
     dangerShadow: string;
     dangerBorder: string;
-  };
-  radius: {
-    sm: number;
-    md: number;
-    lg: number;
-    xl: number;
-    full: number;
-  };
-  spacing: {
-    xs: string;
-    sm: string;
-    md: string;
-    lg: string;
-    xl: string;
-    "2xl": string;
-    "3xl": string;
-  };
-  font: {
-    headline: string;
-    body: string;
-    mono: string;
-    size: {
-      xxs: string;
-      xs: string;
-      sm: string;
-      md: string;
-      lg: string;
-      xl: string;
-      "2xl": string;
-    };
-    lineHeight: {
-      tight: number;
-      normal: number;
-      relaxed: number;
-      mono: number;
-    };
-    letterSpacing: {
-      tight: string;
-      normal: string;
-      wide: string;
-    };
   };
   motion: {
     fast: string;
@@ -154,42 +69,7 @@ export interface Theme {
   };
 }
 
-const shared: Pick<Theme, "radius" | "spacing" | "font" | "motion" | "animation" | "layout" | "breakpoint"> = {
-  radius: { sm: 2, md: 4, lg: 8, xl: 12, full: 9999 },
-  spacing: {
-    xs: "0.25rem",
-    sm: "0.5rem",
-    md: "0.75rem",
-    lg: "1rem",
-    xl: "1.5rem",
-    "2xl": "2rem",
-    "3xl": "2.5rem",
-  },
-  font: {
-    headline: "'Manrope', system-ui, sans-serif",
-    body: "'Inter', system-ui, sans-serif",
-    mono: "'JetBrains Mono', 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace",
-    size: {
-      xxs: "0.625rem",
-      xs: "0.75rem",
-      sm: "0.8125rem",
-      md: "0.875rem",
-      lg: "1rem",
-      xl: "1.25rem",
-      "2xl": "2.25rem",
-    },
-    lineHeight: {
-      tight: 1.2,
-      normal: 1.5,
-      relaxed: 1.75,
-      mono: 1.6,
-    },
-    letterSpacing: {
-      tight: "-0.02em",
-      normal: "0",
-      wide: "0.08em",
-    },
-  },
+const shared: Pick<Theme, "motion" | "animation" | "layout" | "breakpoint"> = {
   motion: {
     fast: "100ms",
     normal: "200ms",
@@ -231,14 +111,14 @@ const shared: Pick<Theme, "radius" | "spacing" | "font" | "motion" | "animation"
 };
 
 /** Glow tokens for non-glow themes: everything is transparent/none/fallback. */
-function noGlow(color: { borderSubtle: string; border: string; primary: string; textMuted: string; danger: string }): Theme["glow"] {
+function noGlow(): Theme["glow"] {
   return {
     animated: false,
-    accentColor: color.textMuted,
-    borderSubtle: color.borderSubtle,
-    borderLight: color.borderSubtle,
-    borderMedium: color.border,
-    borderStrong: color.border,
+    accentColor: "currentColor",
+    borderSubtle: "transparent",
+    borderLight: "transparent",
+    borderMedium: "var(--color-border)",
+    borderStrong: "var(--color-border)",
     shadowSm: "none",
     shadowMd: "none",
     shadowLg: "none",
@@ -248,53 +128,9 @@ function noGlow(color: { borderSubtle: string; border: string; primary: string; 
     focusRingSubtle: "none",
     hoverShadow: "none",
     dangerShadow: "none",
-    dangerBorder: `${color.danger}44`,
+    dangerBorder: "rgba(255,64,128,0.27)",
   };
 }
-
-/** Generic dark-theme fallback glow for library themes without a specific legacy entry. */
-const genericNoGlow = noGlow({
-  borderSubtle: "rgba(255,255,255,0.06)",
-  border: "rgba(255,255,255,0.1)",
-  primary: "currentColor",
-  textMuted: "rgba(255,255,255,0.5)",
-  danger: "#ff6b6b",
-});
-
-/** Generic dark-theme color fallback for library themes without a specific legacy entry. */
-const genericDarkColor: Theme["color"] = {
-  text: "#d4e5ea",
-  textMuted: "#8ba8b2",
-  textFaint: "#5a7580",
-  surface: "#0d1b1f",
-  surfaceContainer: "#12252a",
-  surfaceContainerLow: "#0f2025",
-  surfaceContainerHigh: "#172e34",
-  surfaceContainerHighest: "#1e383f",
-  border: "#1e383f",
-  borderSubtle: "#162d33",
-  primary: "#8bd1e8",
-  primaryContainer: "#005f73",
-  onPrimary: "#003642",
-  onPrimaryContainer: "#b2ebff",
-  tertiary: "#fcb97b",
-  danger: "#ffb4ab",
-  success: "#6dd58c",
-  warning: "#fcb97b",
-  activityFlash: "rgba(139, 209, 232, 0.09)",
-  running: "#8bd1e8",
-  failed: "#ff8a80",
-  glowPrimary: "rgba(139, 209, 232, 0.30)",
-  glowSuccess: "rgba(109, 213, 140, 0.30)",
-  glowDanger: "rgba(255, 138, 128, 0.30)",
-  activityBorder: "rgba(139, 209, 232, 0.40)",
-};
-
-const genericDarkShadow: Theme["shadow"] = {
-  sm: "0 1px 3px rgba(0,0,0,0.4)",
-  md: "0 4px 20px rgba(0,0,0,0.3)",
-  lg: "0 8px 40px rgba(0,0,0,0.4)",
-};
 
 export const themes: Record<string, Theme> = {
   // Slate — maps from the old deepTeal theme (closest match)
@@ -302,39 +138,7 @@ export const themes: Record<string, Theme> = {
     name: "slate",
     label: "Slate",
     ...shared,
-    color: {
-      text: "#d4e5ea",
-      textMuted: "#8ba8b2",
-      textFaint: "#5a7580",
-      surface: "#0d1b1f",
-      surfaceContainer: "#12252a",
-      surfaceContainerLow: "#0f2025",
-      surfaceContainerHigh: "#172e34",
-      surfaceContainerHighest: "#1e383f",
-      border: "#1e383f",
-      borderSubtle: "#162d33",
-      primary: "#8bd1e8",
-      primaryContainer: "#005f73",
-      onPrimary: "#003642",
-      onPrimaryContainer: "#b2ebff",
-      tertiary: "#fcb97b",
-      danger: "#ffb4ab",
-      success: "#6dd58c",
-      warning: "#fcb97b",
-      activityFlash: "rgba(139, 209, 232, 0.09)",
-      running: "#8bd1e8",
-      failed: "#ff8a80",
-      glowPrimary: "rgba(139, 209, 232, 0.30)",
-      glowSuccess: "rgba(109, 213, 140, 0.30)",
-      glowDanger: "rgba(255, 138, 128, 0.30)",
-      activityBorder: "rgba(139, 209, 232, 0.40)",
-    },
-    shadow: {
-      sm: "0 1px 3px rgba(0,0,0,0.4)",
-      md: "0 4px 20px rgba(0,0,0,0.3)",
-      lg: "0 8px 40px rgba(0,0,0,0.4)",
-    },
-    glow: noGlow({ borderSubtle: "#162d33", border: "#1e383f", primary: "#8bd1e8", textMuted: "#8ba8b2", danger: "#ffb4ab" }),
+    glow: noGlow(),
   },
 
   // Coral — maps from the old ember theme (closest match)
@@ -342,39 +146,7 @@ export const themes: Record<string, Theme> = {
     name: "coral",
     label: "Coral",
     ...shared,
-    color: {
-      text: "#ede0d4",
-      textMuted: "#a89280",
-      textFaint: "#6e5e50",
-      surface: "#141010",
-      surfaceContainer: "#1e1816",
-      surfaceContainerLow: "#1a1412",
-      surfaceContainerHigh: "#261e1a",
-      surfaceContainerHighest: "#2e2520",
-      border: "#2e2520",
-      borderSubtle: "#241c18",
-      primary: "#e87040",
-      primaryContainer: "#6e3518",
-      onPrimary: "#2d1600",
-      onPrimaryContainer: "#ffdcc0",
-      tertiary: "#d4bfff",
-      danger: "#ffb4ab",
-      success: "#a8d5a2",
-      warning: "#f5d08a",
-      activityFlash: "rgba(232, 112, 64, 0.09)",
-      running: "#e87040",
-      failed: "#ff8a80",
-      glowPrimary: "rgba(232, 112, 64, 0.30)",
-      glowSuccess: "rgba(168, 213, 162, 0.30)",
-      glowDanger: "rgba(255, 138, 128, 0.30)",
-      activityBorder: "rgba(232, 112, 64, 0.40)",
-    },
-    shadow: {
-      sm: "0 1px 3px rgba(0,0,0,0.5)",
-      md: "0 4px 20px rgba(0,0,0,0.35)",
-      lg: "0 8px 40px rgba(0,0,0,0.45)",
-    },
-    glow: noGlow({ borderSubtle: "#241c18", border: "#2e2520", primary: "#e87040", textMuted: "#a89280", danger: "#ffb4ab" }),
+    glow: noGlow(),
   },
 
   // Neural — maps from the old deepTeal theme (blue accent match)
@@ -382,39 +154,7 @@ export const themes: Record<string, Theme> = {
     name: "neural",
     label: "Neural",
     ...shared,
-    color: {
-      text: "#d4e5ea",
-      textMuted: "#8ba8b2",
-      textFaint: "#5a7580",
-      surface: "#0d1b1f",
-      surfaceContainer: "#12252a",
-      surfaceContainerLow: "#0f2025",
-      surfaceContainerHigh: "#172e34",
-      surfaceContainerHighest: "#1e383f",
-      border: "#1e383f",
-      borderSubtle: "#162d33",
-      primary: "#8bd1e8",
-      primaryContainer: "#005f73",
-      onPrimary: "#003642",
-      onPrimaryContainer: "#b2ebff",
-      tertiary: "#fcb97b",
-      danger: "#ffb4ab",
-      success: "#6dd58c",
-      warning: "#fcb97b",
-      activityFlash: "rgba(139, 209, 232, 0.09)",
-      running: "#8bd1e8",
-      failed: "#ff8a80",
-      glowPrimary: "rgba(139, 209, 232, 0.30)",
-      glowSuccess: "rgba(109, 213, 140, 0.30)",
-      glowDanger: "rgba(255, 138, 128, 0.30)",
-      activityBorder: "rgba(139, 209, 232, 0.40)",
-    },
-    shadow: {
-      sm: "0 1px 3px rgba(0,0,0,0.4)",
-      md: "0 4px 20px rgba(0,0,0,0.3)",
-      lg: "0 8px 40px rgba(0,0,0,0.4)",
-    },
-    glow: noGlow({ borderSubtle: "#162d33", border: "#1e383f", primary: "#8bd1e8", textMuted: "#8ba8b2", danger: "#ffb4ab" }),
+    glow: noGlow(),
   },
 
   // Synthwave — neon-soaked retrowave (glow system active)
@@ -422,38 +162,6 @@ export const themes: Record<string, Theme> = {
     name: "synthwave",
     label: "Synthwave",
     ...shared,
-    color: {
-      text: "#e0d6f6",
-      textMuted: "#9b8ec2",
-      textFaint: "#655b82",
-      surface: "#0a0a1a",
-      surfaceContainer: "#110f28",
-      surfaceContainerLow: "#0e0c22",
-      surfaceContainerHigh: "#181535",
-      surfaceContainerHighest: "#1f1b42",
-      border: "#1f1b42",
-      borderSubtle: "#161333",
-      primary: "#00f0ff",
-      primaryContainer: "#003d42",
-      onPrimary: "#001f22",
-      onPrimaryContainer: "#80f8ff",
-      tertiary: "#ff2d95",
-      danger: "#ff4080",
-      success: "#39ff14",
-      warning: "#ffe44d",
-      activityFlash: "rgba(0, 240, 255, 0.09)",
-      running: "#00f0ff",
-      failed: "#ff4080",
-      glowPrimary: "rgba(0, 240, 255, 0.35)",
-      glowSuccess: "rgba(57, 255, 20, 0.30)",
-      glowDanger: "rgba(255, 64, 128, 0.30)",
-      activityBorder: "rgba(0, 240, 255, 0.40)",
-    },
-    shadow: {
-      sm: "0 0 8px rgba(0, 240, 255, 0.25), 0 1px 4px rgba(0, 0, 0, 0.4)",
-      md: "0 0 20px rgba(0, 240, 255, 0.20), 0 0 40px rgba(255, 45, 149, 0.10), 0 4px 20px rgba(0, 0, 0, 0.4)",
-      lg: "0 0 30px rgba(0, 240, 255, 0.25), 0 0 60px rgba(255, 45, 149, 0.15), 0 8px 40px rgba(0, 0, 0, 0.5)",
-    },
     glow: {
       animated: true,
       accentColor: "var(--synth-glow)",
@@ -479,45 +187,35 @@ export const themes: Record<string, Theme> = {
     name: "warm-sand",
     label: "Warm Sand",
     ...shared,
-    color: genericDarkColor,
-    shadow: genericDarkShadow,
-    glow: genericNoGlow,
+    glow: noGlow(),
   },
 
   moss: {
     name: "moss",
     label: "Moss",
     ...shared,
-    color: genericDarkColor,
-    shadow: genericDarkShadow,
-    glow: genericNoGlow,
+    glow: noGlow(),
   },
 
   pipboy: {
     name: "pipboy",
     label: "Pip-Boy",
     ...shared,
-    color: genericDarkColor,
-    shadow: genericDarkShadow,
-    glow: genericNoGlow,
+    glow: noGlow(),
   },
 
   pacman: {
     name: "pacman",
     label: "Pac-Man",
     ...shared,
-    color: genericDarkColor,
-    shadow: genericDarkShadow,
-    glow: genericNoGlow,
+    glow: noGlow(),
   },
 
   "black-hole": {
     name: "black-hole",
     label: "Black Hole",
     ...shared,
-    color: genericDarkColor,
-    shadow: genericDarkShadow,
-    glow: genericNoGlow,
+    glow: noGlow(),
   },
 };
 

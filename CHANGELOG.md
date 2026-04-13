@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Remove legacy theme tokens from compat layer (color, shadow, radius, spacing, font stripped — glow/motion/layout remain)
 - Replace custom themes with library built-ins (deepTeal→slate, ember→coral, nord→neural, synth→synthwave)
 - Replace SynthBackground with @4lt7ab/ui ThemeBackground (delete 295-line component)
 - Migrate all pages and App.tsx off compat useTheme to library tokens (244 refs across 7 files)
