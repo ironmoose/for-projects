@@ -123,7 +123,7 @@ export function Button({
         letterSpacing: "0.01em",
         transition: "background 0.15s, opacity 0.15s, border-color 0.15s, filter 0.15s, box-shadow 0.2s",
         opacity: isDisabled ? 0.6 : 1,
-        ...getVariantStyles(theme.glow, theme.color.borderSubtle)[variant],
+        ...getVariantStyles(theme.glow, `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`)[variant],
         ...(variant !== "icon" ? sizeStyles[size] : {}),
         ...style,
       }}

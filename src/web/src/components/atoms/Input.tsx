@@ -29,7 +29,7 @@ export function Input({ label, style, id, onFocus, onBlur, ...props }: InputProp
         onFocus={(e) => { setFocused(true); onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         style={{
-          ...baseFieldStyle(theme),
+          ...baseFieldStyle(),
           ...glowFocusStyles,
           ...style,
         }}

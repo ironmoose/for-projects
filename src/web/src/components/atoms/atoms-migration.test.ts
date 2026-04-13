@@ -169,12 +169,44 @@ describe("baseFieldStyle uses library tokens", () => {
     expect(src).toContain("t.colorText");
   });
 
+  test("baseFieldStyle takes no theme parameter", () => {
+    const src = readComponent(ATOMS_DIR, "fieldUtils.tsx");
+    expect(src).toMatch(/export function baseFieldStyle\(\)/);
+    expect(src).not.toContain("baseFieldStyle(theme");
+  });
+
+  test("fieldUtils.tsx does not import from ../theme/theme", () => {
+    const src = readComponent(ATOMS_DIR, "fieldUtils.tsx");
+    expect(src).not.toContain('from "../theme/theme"');
+  });
+
+  test("fieldUtils.tsx uses color-mix for borderSubtle replacement", () => {
+    const src = readComponent(ATOMS_DIR, "fieldUtils.tsx");
+    expect(src).toContain("color-mix(in srgb,");
+    expect(src).toContain("t.colorBorder");
+  });
+
   test("FieldWrapper label uses library tokens", () => {
     const src = readComponent(ATOMS_DIR, "fieldUtils.tsx");
     expect(src).toContain("t.fontSizeXs");
     expect(src).toContain("t.colorTextSecondary");
     expect(src).toContain("t.fontSans");
   });
+});
+
+// ---------------------------------------------------------------------------
+// 5b. Form atoms have no theme.color.* references
+// ---------------------------------------------------------------------------
+
+describe("Form atoms fully off theme.color.*", () => {
+  const formAtoms = ["Button.tsx", "Input.tsx", "Select.tsx", "Textarea.tsx", "fieldUtils.tsx"];
+
+  for (const file of formAtoms) {
+    test(`${file} has no theme.color.* references`, () => {
+      const src = readComponent(ATOMS_DIR, file);
+      expect(src).not.toMatch(/theme\.color\./);
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------

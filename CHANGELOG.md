@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Remove last compat token (theme.color.borderSubtle) from form atoms and fieldUtils
 - Update Badge gallery entry with all 12 actual variants; add gallery sync test
 - Migrate Badge atom off compat useTheme to library tokens (keep glow-only useTheme)
 - Update gallery: remove Overlay/Skeleton/CardSkeleton/RowSkeleton (now library re-exports), add AppThemePicker

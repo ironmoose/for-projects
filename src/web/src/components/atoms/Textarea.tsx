@@ -27,7 +27,7 @@ export function Textarea({ label, style, id, onFocus, onBlur, ...props }: Textar
         onFocus={(e) => { setFocused(true); onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         style={{
-          ...baseFieldStyle(theme),
+          ...baseFieldStyle(),
           resize: "vertical",
           ...glowFocusStyles,
           ...style,

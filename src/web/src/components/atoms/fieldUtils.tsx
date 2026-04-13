@@ -1,5 +1,4 @@
 import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
-import type { Theme } from "../theme/theme";
 
 /** Inject shared focus ring styles for form fields. Call once per component that uses baseFieldStyle. */
 export function useFieldFocusStyles(): void {
@@ -40,10 +39,10 @@ export function FieldWrapper({ label, htmlFor, children }: FieldWrapperProps) {
   );
 }
 
-export function baseFieldStyle(theme: Theme): React.CSSProperties {
+export function baseFieldStyle(): React.CSSProperties {
   return {
     padding: "0.5rem 0.75rem",
-    border: `1px solid ${theme.color.borderSubtle}`,
+    border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
     borderRadius: t.radiusLg,
     fontFamily: t.fontSans,
     fontSize: t.fontSizeSm,
