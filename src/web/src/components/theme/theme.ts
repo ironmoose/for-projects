@@ -114,21 +114,21 @@ const shared: Pick<Theme, "motion" | "animation" | "layout" | "breakpoint"> = {
 function noGlow(): Theme["glow"] {
   return {
     animated: false,
-    accentColor: "currentColor",
-    borderSubtle: "transparent",
-    borderLight: "transparent",
+    accentColor: "var(--color-text-muted)",
+    borderSubtle: "color-mix(in srgb, var(--color-border) 50%, transparent)",
+    borderLight: "color-mix(in srgb, var(--color-border) 60%, transparent)",
     borderMedium: "var(--color-border)",
     borderStrong: "var(--color-border)",
-    shadowSm: "none",
-    shadowMd: "none",
-    shadowLg: "none",
-    shadowXl: "none",
+    shadowSm: "var(--shadow-sm)",
+    shadowMd: "var(--shadow-md)",
+    shadowLg: "var(--shadow-lg)",
+    shadowXl: "var(--shadow-lg)",
     textShadow: "none",
     focusRing: "none",
     focusRingSubtle: "none",
     hoverShadow: "none",
     dangerShadow: "none",
-    dangerBorder: "rgba(255,64,128,0.27)",
+    dangerBorder: "color-mix(in srgb, var(--color-action-destructive) 27%, transparent)",
   };
 }
 

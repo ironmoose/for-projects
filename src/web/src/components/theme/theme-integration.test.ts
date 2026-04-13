@@ -103,13 +103,13 @@ describe("Compat layer", () => {
     expect(compat.glow.animated).toBe(true);
   });
 
-  test("non-glow themes use generic fallback glow values", () => {
+  test("non-glow themes use library CSS var fallback glow values", () => {
     const compat = buildCompatTheme(originalThemes.slate!);
     expect(compat.glow.animated).toBe(false);
-    expect(compat.glow.accentColor).toBe("currentColor");
-    expect(compat.glow.borderSubtle).toBe("transparent");
+    expect(compat.glow.accentColor).toBe("var(--color-text-muted)");
+    expect(compat.glow.borderSubtle).toContain("color-mix");
     expect(compat.glow.borderMedium).toBe("var(--color-border)");
-    expect(compat.glow.shadowSm).toBe("none");
+    expect(compat.glow.shadowSm).toBe("var(--shadow-sm)");
     expect(compat.glow.focusRing).toBe("none");
   });
 

@@ -20,6 +20,24 @@ import { appThemes, APP_DEFAULT_THEME, APP_STORAGE_KEY } from "./lib-themes";
 import { buildCompatTheme } from "./compat";
 
 // ---------------------------------------------------------------------------
+// Migrate stale localStorage — map old custom theme names to library equivalents.
+// Runs once at module load, before any React render.
+// ---------------------------------------------------------------------------
+
+if (typeof window !== "undefined") {
+  const OLD_TO_NEW: Record<string, string> = {
+    synth: "synthwave",
+    deepTeal: "slate",
+    ember: "coral",
+    nord: "neural",
+  };
+  const stored = localStorage.getItem(APP_STORAGE_KEY);
+  if (stored && stored in OLD_TO_NEW) {
+    localStorage.setItem(APP_STORAGE_KEY, OLD_TO_NEW[stored]);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Compat context — carries the legacy Theme object
 // ---------------------------------------------------------------------------
 

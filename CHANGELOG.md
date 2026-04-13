@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fix broken theme: migrate old localStorage names (synth→synthwave, etc.) and use CSS var fallbacks for non-glow borders/shadows
 - Remove legacy theme tokens from compat layer (color, shadow, radius, spacing, font stripped — glow/motion/layout remain)
 - Replace custom themes with library built-ins (deepTeal→slate, ember→coral, nord→neural, synth→synthwave)
 - Replace SynthBackground with @4lt7ab/ui ThemeBackground (delete 295-line component)
