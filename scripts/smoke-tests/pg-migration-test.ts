@@ -11,7 +11,7 @@ import { runPgMigrations } from "../../src/domain/db/pg-migrator";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ??
-  "postgres://tab_projects:tab_projects@localhost:5433/tab_projects";
+  "postgres://tab_projects:tab_projects@localhost:3001/tab_projects";
 
 const sql = createPgClient({ databaseUrl: DATABASE_URL });
 

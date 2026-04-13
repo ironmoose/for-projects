@@ -2,6 +2,18 @@
 
 Self-contained project management tool. TypeScript, Bun, Hono, React, SQLite.
 
+## Dev Environment
+
+When running locally, three services are available:
+
+| Service | Port | Description |
+|---------|------|-------------|
+| App (dev server) | `localhost:3000` | Hono API + static SPA. Started via `make dev` or `make dev-pg`. |
+| PostgreSQL | `localhost:3001` | pgvector-enabled Postgres. Started via `docker-compose up`. |
+| Ollama | `localhost:3002` | Embedding model server (nomic-embed-text). Started via `docker-compose up`. |
+
+`docker-compose up` starts Postgres, Ollama, and the model pull sidecar. The `app` service is behind the `app` profile — it only starts with `docker-compose --profile app up`. For local dev, run the app directly via `make dev` or `make dev-pg` instead.
+
 ## Commands
 
 ```bash
@@ -238,10 +250,11 @@ pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage, Gal
 
 ## Every Commit
 
-Two things are **always** touched alongside code changes:
+Three things are **always** touched alongside code changes:
 
 1. **Tests** — tests ship with the code, not after it. Add or update tests for every functional change. Run `bun test` and confirm green before committing.
 2. **CHANGELOG.md** — every commit adds a line to the changelog under the appropriate section (Added, Changed, Fixed, Removed). The changelog is the source of truth for what changed and when.
+3. **CLAUDE.md** — if the change adds modules, changes conventions, alters architecture, or introduces new workflows, update this file. Keep it current — a stale CLAUDE.md teaches wrong patterns.
 
 These are not optional. A commit without updated tests and changelog is incomplete.
 

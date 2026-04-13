@@ -13,10 +13,10 @@
   },
   "scripts": {
     "dev": "SQLITE_PATH=.local/data/sqlite.db EMBEDDINGS_ENABLED=true concurrently --kill-others --names 'api,web' \"bun run --watch src/index.ts\" \"cd src/web && vite build --watch\"",
-    "dev:pg": "DATABASE_URL=postgresql://tab_projects:tab_projects@localhost:5433/tab_projects OLLAMA_HOST=http://localhost:11435 EMBEDDINGS_ENABLED=true SQLITE_PATH=.local/data/sqlite.db concurrently --kill-others --names 'api,web' \"bun run --watch src/index.ts\" \"cd src/web && vite build --watch\"",
+    "dev:pg": "DATABASE_URL=postgresql://tab_projects:tab_projects@localhost:3001/tab_projects OLLAMA_HOST=http://localhost:3002 EMBEDDINGS_ENABLED=true SQLITE_PATH=.local/data/sqlite.db concurrently --kill-others --names 'api,web' \"bun run --watch src/index.ts\" \"cd src/web && vite build --watch\"",
     "build": "cd src/web && vite build",
     "start": "SQLITE_PATH=.local/data/sqlite.db bun run src/index.ts",
-    "start:pg": "DATABASE_URL=postgresql://tab_projects:tab_projects@localhost:5433/tab_projects OLLAMA_HOST=http://localhost:11435 EMBEDDINGS_ENABLED=true SQLITE_PATH=.local/data/sqlite.db bun run src/index.ts",
+    "start:pg": "DATABASE_URL=postgresql://tab_projects:tab_projects@localhost:3001/tab_projects OLLAMA_HOST=http://localhost:3002 EMBEDDINGS_ENABLED=true SQLITE_PATH=.local/data/sqlite.db bun run src/index.ts",
     "serve": "bun run build && bun run start",
     "test": "bun test",
     "prepublishOnly": "bun run build",

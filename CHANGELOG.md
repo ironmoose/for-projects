@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- docker-compose: remove all volumes — containers are now fully ephemeral
+- docker-compose: app service behind `app` profile (`docker-compose --profile app up`)
+- docker-compose: Postgres on port 3001, Ollama on port 3002 (was 5433/11435)
+- Updated all port references across package.json, embedding.ts, smoke tests, README
+- CLAUDE.md: "Every Commit" section now includes CLAUDE.md alongside tests and changelog
+
 ### Added
+- CLAUDE.md: dev environment section with service ports table
 - `@4lt7ab/ui` component library dependency (v0.2.12)
 - Makefile with build, test, typecheck, verify, deploy, and smoke test targets
 - `deploy.sh` — version bumping, build pipeline, changelog stamping, git tagging, and push

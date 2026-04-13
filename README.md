@@ -76,7 +76,7 @@ All configuration is via environment variables. Copy `.env.example` to `.env` an
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EMBEDDINGS_ENABLED` | `false` | Set to `true` to activate the embedding pipeline. Requires PostgreSQL and Ollama. |
-| `OLLAMA_HOST` | — | Ollama API URL (e.g., `http://localhost:11435`). Required when embeddings are enabled. |
+| `OLLAMA_HOST` | — | Ollama API URL (e.g., `http://localhost:3002`). Required when embeddings are enabled. |
 
 ### Server
 
@@ -89,8 +89,8 @@ All configuration is via environment variables. Copy `.env.example` to `.env` an
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PG_PORT` | `5433` | Host port mapped to PostgreSQL. |
-| `OLLAMA_PORT` | `11435` | Host port mapped to Ollama. |
+| `PG_PORT` | `3001` | Host port mapped to PostgreSQL. |
+| `OLLAMA_PORT` | `3002` | Host port mapped to Ollama. |
 | `POSTGRES_DB` | `tab_projects` | PostgreSQL database name. |
 | `POSTGRES_USER` | `tab_projects` | PostgreSQL user. |
 | `POSTGRES_PASSWORD` | `tab_projects` | PostgreSQL password. |

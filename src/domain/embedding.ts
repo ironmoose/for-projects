@@ -27,7 +27,7 @@ interface OllamaEmbeddingResponse {
 }
 
 export function getOllamaHost(): string {
-  return process.env.OLLAMA_HOST ?? "http://localhost:11435";
+  return process.env.OLLAMA_HOST ?? "http://localhost:3002";
 }
 
 export function createEmbeddingService(options?: Partial<OllamaOptions>): EmbeddingService {

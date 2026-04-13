@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    profiles: ["app"]
     ports:
       - "0.0.0.0:3000:3000"
     depends_on:
@@ -13,21 +14,16 @@ services:
       - SQLITE_PATH=/app/data/sqlite.db
       - EMBEDDINGS_ENABLED=true
       - OLLAMA_HOST=http://ollama:11434
-    volumes:
-      - ./.local/data:/app/data:ro
 
   postgres:
     image: pgvector/pgvector:0.8.0-pg17
     container_name: tab-projects-pg
     ports:
-      - "${PG_PORT:-5433}:5432"
+      - "${PG_PORT:-3001}:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-tab_projects}
       POSTGRES_USER: ${POSTGRES_USER:-tab_projects}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tab_projects}
-    volumes:
-      - pg-data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tab_projects"]
       interval: 5s
@@ -38,9 +34,7 @@ services:
     image: ollama/ollama:0.20.4
     container_name: tab-projects-ollama
     ports:
-      - "${OLLAMA_PORT:-11435}:11434"
-    volumes:
-      - ollama-data:/root/.ollama
+      - "${OLLAMA_PORT:-3002}:11434"
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -56,7 +50,3 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
     restart: on-failure
-
-volumes:
-  pg-data:
-  ollama-data:
