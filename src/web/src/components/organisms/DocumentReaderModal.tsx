@@ -132,6 +132,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
       onClose={handleEscape}
       maxWidth={1000}
       maxHeight="75vh"
+      ariaLabelledBy="doc-reader-title"
       style={{
         gap: 0,
         padding: 0,
@@ -197,6 +198,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 </div>
               ) : (
                 <h2
+                  id="doc-reader-title"
                   style={{
                     margin: 0,
                     flex: 1,

@@ -31,19 +31,7 @@ export function ConfirmDialog({
   };
 
   return (
-    <ModalShell onClose={onCancel} maxWidth={400} variant="danger">
-      <h2
-        style={{
-          margin: 0,
-          fontFamily: theme.font.body,
-          fontSize: theme.font.size.lg,
-          fontWeight: 600,
-          color: theme.color.text,
-        }}
-      >
-        {title}
-      </h2>
-
+    <ModalShell onClose={onCancel} maxWidth={400} variant="danger" title={title}>
       <p
         style={{
           margin: 0,

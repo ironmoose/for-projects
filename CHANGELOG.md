@@ -3,6 +3,16 @@
 ## [Unreleased]
 
 ### Added
+- `src/web/src/hooks/useFocusTrap.ts` — focus trap hook: saves trigger element, auto-focuses first focusable child, traps Tab/Shift+Tab cycling, restores focus on unmount
+- `src/web/src/components/organisms/modal-a11y.test.ts` — 28 tests verifying ModalShell ARIA attributes, focus trap integration, escape key handling, and consumer a11y wiring
+
+### Fixed
+- **ModalShell accessibility:** added `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, focus trap via `useFocusTrap` hook, and focus restoration on close
+- ModalShell now accepts optional `title` prop (renders accessible h2 with auto-generated ID) and `ariaLabelledBy` prop (for consumers with custom title layouts)
+- ConfirmDialog and CreateEntityOverlay migrated to use ModalShell `title` prop instead of rendering duplicate h2 elements
+- ShortcutHelpOverlay, GitHubBrowserOverlay, DocumentReaderModal, and ProjectPage task detail modal now pass `ariaLabelledBy` with matching h2 IDs
+
+### Added (continued)
 - `src/web/src/components/atoms/animation-styles-migration.test.ts` — 29 tests verifying AnimationStyles migration from inline `<style>` to useInjectStyles
 - `src/web/src/components/atoms/hover-migration.test.ts` — 57 tests verifying hover state migration from useState to useInjectStyles CSS pseudo-classes
 - `src/web/src/components/theme/lib-themes.ts` — 4 custom ThemeDefinition objects (deepTeal, ember, nord, synth) mapping app colors to @4lt7ab/ui/core token structure

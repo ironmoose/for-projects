@@ -49,6 +49,7 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
       zIndex={300}
       suppressShortcuts={false}
       style={{ gap: 0 }}
+      ariaLabelledBy="shortcut-help-title"
     >
       {/* Header */}
       <div
@@ -60,6 +61,7 @@ export function ShortcutHelpOverlay({ onClose }: ShortcutHelpOverlayProps) {
         }}
       >
         <h2
+          id="shortcut-help-title"
           style={{
             margin: 0,
             fontFamily: theme.font.headline,

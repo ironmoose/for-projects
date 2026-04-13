@@ -24,19 +24,7 @@ export function CreateEntityOverlay({
   const { theme } = useTheme();
 
   return (
-    <ModalShell onClose={onClose} maxWidth={480}>
-      <h2
-        style={{
-          margin: 0,
-          fontFamily: theme.font.body,
-          fontSize: theme.font.size.lg,
-          fontWeight: 600,
-          color: theme.color.text,
-        }}
-      >
-        {title}
-      </h2>
-
+    <ModalShell onClose={onClose} maxWidth={480} title={title}>
       {children}
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: theme.spacing.sm }}>

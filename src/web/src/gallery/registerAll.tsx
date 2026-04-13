@@ -122,8 +122,7 @@ function ModalShellDemo() {
     <>
       <Button onClick={() => setOpen(true)}>Open Modal</Button>
       {open && (
-        <ModalShell onClose={() => setOpen(false)}>
-          <h2 style={{ margin: 0 }}>Modal Title</h2>
+        <ModalShell onClose={() => setOpen(false)} title="Modal Title">
           <p style={{ margin: 0 }}>This is the modal content area. Press Escape or click the overlay to close.</p>
           <Button variant="ghost" onClick={() => setOpen(false)}>Close</Button>
         </ModalShell>

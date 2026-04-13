@@ -23,3 +23,4 @@ export {
 export type { ShortcutEntry, KeyboardShortcutContextValue } from "./useKeyboardShortcuts";
 export { useDependencyGraph } from "./useDependencyGraph";
 export type { DependencyGraph } from "./useDependencyGraph";
+export { useFocusTrap } from "./useFocusTrap";

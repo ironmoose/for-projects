@@ -547,6 +547,7 @@ function TaskDetailPanel({
       maxWidth={1000}
       maxHeight="75vh"
       handleEscape={false}
+      ariaLabelledBy="task-detail-title"
       style={{ gap: 0, padding: 0, minHeight: "50vh" }}
     >
       {/* Header -- editable title */}
@@ -578,6 +579,7 @@ function TaskDetailPanel({
               />
             ) : (
               <h2
+                id="task-detail-title"
                 onClick={() => setEditingTitle(true)}
                 style={{
                   margin: 0,

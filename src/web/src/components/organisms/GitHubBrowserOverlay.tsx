@@ -111,6 +111,7 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
       onClose={onClose}
       maxWidth={700}
       maxHeight="80vh"
+      ariaLabelledBy="github-browser-title"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -121,7 +122,7 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
     >
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h2 style={{
+        <h2 id="github-browser-title" style={{
           margin: 0,
           fontFamily: theme.font.headline,
           fontSize: theme.font.size.lg,
