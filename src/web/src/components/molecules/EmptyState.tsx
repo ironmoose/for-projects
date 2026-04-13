@@ -1,7 +1,7 @@
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Icon } from "../atoms/Icon";
 import { Stack } from "@4lt7ab/ui/ui";
-import { Card } from "./Card";
+import { Card } from "@4lt7ab/ui/ui";
 
 interface EmptyStateProps {
   icon: string;

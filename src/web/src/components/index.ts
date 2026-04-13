@@ -18,7 +18,7 @@ export { ProgressBar } from "@4lt7ab/ui/ui";
 export type { ProgressBarSegment, ProgressBarProps } from "@4lt7ab/ui/ui";
 export { ReferenceTypeBadge } from "./atoms/ReferenceTypeBadge";
 // Molecules
-export { Card } from "./molecules/Card";
+export { Card } from "@4lt7ab/ui/ui";
 export { ExpandableCard } from "@4lt7ab/ui/ui";
 export { Stack } from "@4lt7ab/ui/ui";
 export { Markdown } from "./molecules/Markdown";

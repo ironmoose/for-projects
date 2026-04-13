@@ -1,5 +1,5 @@
 import { useInjectStyles, semantic as t } from "@4lt7ab/ui/core";
-import { Card } from "./Card";
+import { Card } from "@4lt7ab/ui/ui";
 import { TagChip } from "@4lt7ab/ui/ui";
 import { IconButton } from "../atoms/IconButton";
 import { Badge } from "../atoms/Badge";
@@ -62,7 +62,6 @@ export function DocumentReferenceCard({
     <Card
       variant="flat"
       padding="sm"
-      hover
       className="tfp-doc-ref"
       style={{ cursor: "pointer", position: "relative" }}
       onClick={onOpen}

@@ -66,7 +66,6 @@ describe("Library semantic token imports", () => {
   }
 
   const moleculesWithSemanticImport = [
-    "Card.tsx",
     "EmptyState.tsx",
     "PresenceCharm.tsx",
     "DocumentSearchBar.tsx",
@@ -327,11 +326,6 @@ describe("color-mix alpha helper", () => {
     expect(src).toContain("function alpha(");
   });
 
-  test("Card.tsx uses color-mix for live variant", () => {
-    const src = readComponent(MOLECULES_DIR, "Card.tsx");
-    expect(src).toContain("color-mix(in srgb,");
-    expect(src).toContain("function alpha(");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -345,11 +339,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).not.toContain("theme.font.");
     expect(src).not.toContain("theme.spacing.");
     expect(src).not.toContain("theme.radius.");
-    expect(src).toContain("theme.glow.");
-  });
-
-  test("Card.tsx uses theme.glow for border/shadow effects (unmapped)", () => {
-    const src = readComponent(MOLECULES_DIR, "Card.tsx");
     expect(src).toContain("theme.glow.");
   });
 
@@ -407,12 +396,6 @@ describe("Unmapped tokens still use compat useTheme", () => {
     expect(src).not.toMatch(/theme\.radius\./);
     expect(src).not.toMatch(/theme\.shadow\./);
     expect(src).toContain("theme.glow.");
-  });
-
-  test("Card.tsx has no theme.radius.* or theme.spacing.* references", () => {
-    const src = readComponent(MOLECULES_DIR, "Card.tsx");
-    expect(src).not.toMatch(/theme\.radius\./);
-    expect(src).not.toMatch(/theme\.spacing\./);
   });
 
   test("ProjectDocumentTable.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {

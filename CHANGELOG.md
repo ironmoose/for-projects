@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local Card with @4lt7ab/ui re-export (drop hover prop, lose glow effects)
 - Replace local Button with @4lt7ab/ui re-export (danger→destructive, loading→inline spinner)
 - Replace local Stack with @4lt7ab/ui re-export (direction row→horizontal at 4 call sites)
 - Replace local Input with @4lt7ab/ui re-export (label sites wrapped with Field, 10 imports updated)

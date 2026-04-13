@@ -291,30 +291,6 @@ export function registerAllComponents(): void {
   // =========================================================================
 
   registerComponent({
-    name: "Card",
-    description: "Container card with surface background and multiple visual variants.",
-    category: "molecule",
-    propDefs: [
-      { name: "variant", type: "enum", defaultValue: "default", options: ["default", "flat", "live", "elevated"] },
-      { name: "padding", type: "enum", defaultValue: "lg", options: ["xs", "sm", "md", "lg", "xl", "2xl"] },
-    ],
-    render: (props) => (
-      <Card variant={props.variant as "default" | "flat" | "live" | "elevated"} padding={props.padding as "lg"} style={{ width: 200 }}>
-        <span>Card content</span>
-      </Card>
-    ),
-    variants: [
-      { name: "Default", props: { variant: "default" } },
-      { name: "Flat", props: { variant: "flat" } },
-      { name: "Live", props: { variant: "live" } },
-      { name: "Elevated", props: { variant: "elevated" } },
-    ],
-    codeTemplate: `<Card variant="default" padding="lg">Content</Card>`,
-    libraryCandidate: true,
-    migrated: true,
-  });
-
-  registerComponent({
     name: "BackButton",
     description: "Ghost button with arrow_back icon.",
     category: "molecule",

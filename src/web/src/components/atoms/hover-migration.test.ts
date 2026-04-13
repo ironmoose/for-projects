@@ -31,7 +31,6 @@ describe("useInjectStyles imports", () => {
   ];
 
   const moleculeFiles = [
-    { dir: MOLECULES_DIR, file: "Card.tsx" },
     { dir: MOLECULES_DIR, file: "DependencyChip.tsx" },
     { dir: MOLECULES_DIR, file: "DocumentReferenceCard.tsx" },
   ];
@@ -59,7 +58,6 @@ describe("useInjectStyles imports", () => {
 
 describe("useState hover tracking removed", () => {
   const migratedComponents = [
-    { dir: MOLECULES_DIR, file: "Card.tsx", statePattern: "useState(false)" },
     { dir: MOLECULES_DIR, file: "DependencyChip.tsx", statePattern: "useState(false)" },
     { dir: MOLECULES_DIR, file: "DocumentReferenceCard.tsx", statePattern: "useState(false)" },
   ];
@@ -91,12 +89,6 @@ describe("CSS class names applied", () => {
   test("IconButton.tsx applies tfp-icon-btn class", () => {
     const src = readComponent(ATOMS_DIR, "IconButton.tsx");
     expect(src).toContain('className="tfp-icon-btn"');
-  });
-
-  test("Card.tsx applies conditional tfp-card / tfp-card-hoverable class", () => {
-    const src = readComponent(MOLECULES_DIR, "Card.tsx");
-    expect(src).toContain("tfp-card-hoverable");
-    expect(src).toContain("tfp-card");
   });
 
   test("DependencyChip.tsx applies tfp-dep-chip class", () => {
@@ -134,12 +126,6 @@ describe("CSS class names applied", () => {
 // ---------------------------------------------------------------------------
 
 describe("onMouseEnter/onMouseLeave handlers removed", () => {
-  test("Card.tsx has no onMouseEnter/onMouseLeave", () => {
-    const src = readComponent(MOLECULES_DIR, "Card.tsx");
-    expect(src).not.toContain("onMouseEnter");
-    expect(src).not.toContain("onMouseLeave");
-  });
-
   test("DependencyChip.tsx has no onMouseEnter/onMouseLeave", () => {
     const src = readComponent(MOLECULES_DIR, "DependencyChip.tsx");
     expect(src).not.toContain("onMouseEnter");
@@ -167,11 +153,6 @@ describe("useInjectStyles called with correct IDs", () => {
   test("IconButton.tsx injects styles with 'tfp-icon-btn' ID", () => {
     const src = readComponent(ATOMS_DIR, "IconButton.tsx");
     expect(src).toContain('useInjectStyles("tfp-icon-btn"');
-  });
-
-  test("Card.tsx injects styles with 'tfp-card' ID", () => {
-    const src = readComponent(MOLECULES_DIR, "Card.tsx");
-    expect(src).toContain('useInjectStyles("tfp-card"');
   });
 
   test("DependencyChip.tsx injects styles with 'tfp-dep-chip' ID", () => {
@@ -207,7 +188,6 @@ describe("useInjectStyles called with correct IDs", () => {
 describe("focus-visible styles included", () => {
   const componentsWithFocus = [
     { dir: ATOMS_DIR, file: "IconButton.tsx", id: "tfp-icon-btn" },
-    { dir: MOLECULES_DIR, file: "Card.tsx", id: "tfp-card" },
     { dir: MOLECULES_DIR, file: "DependencyChip.tsx", id: "tfp-dep-chip" },
     { dir: MOLECULES_DIR, file: "DocumentReferenceCard.tsx", id: "tfp-doc-ref" },
     { dir: ORGANISMS_DIR, file: "TopBar.tsx", id: "tfp-topbar" },
@@ -243,12 +223,6 @@ describe("TopBar manual injection removed", () => {
 // ---------------------------------------------------------------------------
 
 describe("Synth theme hover via CSS selectors", () => {
-  test("Card.tsx uses [data-synth] selector for synth hover glow", () => {
-    const src = readComponent(MOLECULES_DIR, "Card.tsx");
-    expect(src).toContain("[data-synth]");
-    expect(src).toContain("var(--synth-glow)");
-  });
-
   test("DocumentTable.tsx uses [data-synth] selector for synth hover glow", () => {
     const src = readComponent(ORGANISMS_DIR, "DocumentTable.tsx");
     expect(src).toContain("[data-synth]");

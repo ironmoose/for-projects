@@ -43,7 +43,6 @@ function ProjectCard({
 
   return (
     <Card
-      hover
       variant="default"
       padding="lg"
       role="button"
