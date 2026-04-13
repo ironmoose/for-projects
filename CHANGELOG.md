@@ -9,6 +9,10 @@
 - `src/web/src/components/atoms/atoms-migration.test.ts` — 53 tests verifying atom/molecule migration to library semantic tokens
 
 ### Changed
+- `ThemeSwitcher.tsx` — replaced custom swatch-button implementation with re-export of `ThemePicker` from `@4lt7ab/ui/ui`; barrel export preserved as `ThemeSwitcher` alias
+- `ThemesPage.tsx` — replaced custom `ThemeCard` grid with library `<ThemePicker />` grid variant with theme descriptions
+- `App.tsx` — added `<ThemePicker variant="compact" />` to TopBar trailing area for quick theme switching
+- `theme-picker-migration.test.ts` — 9 tests verifying ThemePicker library integration across ThemeSwitcher, ThemesPage, and TopBar
 - `ThemeContext.tsx` — replaced hand-rolled ThemeProvider/useTheme with @4lt7ab/ui/core ThemeProvider wrapper + compat bridge; old API preserved for existing components
 - `Button.tsx` — migrated to use `semantic` tokens from @4lt7ab/ui/core directly (proof-of-concept for migration pattern); glow effects still use compat theme
 - Theme system now uses @4lt7ab/ui/core as the underlying provider (CSS custom properties on document root, automatic localStorage persistence)

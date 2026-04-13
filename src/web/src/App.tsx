@@ -8,6 +8,7 @@ import {
   SynthBackground,
   ErrorBoundary,
 } from "./components";
+import { ThemePicker } from "@4lt7ab/ui/ui";
 import type { NavItem } from "./components";
 import { ShortcutHelpOverlay } from "./components/organisms/ShortcutHelpOverlay";
 import { useRealtimeEvents } from "./useRealtimeEvents";
@@ -152,6 +153,7 @@ function TrailingIndicators({ connected }: { connected: boolean }) {
   const { theme } = useTheme();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+      <ThemePicker variant="compact" />
       <ConnectionStatus connected={connected} />
     </div>
   );
