@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
-import { useInjectStyles } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
 import { TagChip } from "../molecules/TagChip";
 import { useTheme } from "../theme/ThemeContext";
 import { useWindowWidth, SMALL_BREAKPOINT } from "../../hooks/useWindowWidth";
-import type { Theme } from "../theme/theme";
 import type { DocumentSummary } from "../../types";
 import { formatDate } from "../../utils";
 
@@ -27,7 +26,7 @@ interface DocumentTableProps {
 // Project chips — reused inside each card
 // ---------------------------------------------------------------------------
 
-function ProjectChips({ projects, compact, theme }: { projects: DocumentSummary["linked_projects"]; compact: boolean; theme: Theme }) {
+function ProjectChips({ projects, compact }: { projects: DocumentSummary["linked_projects"]; compact: boolean }) {
   if (projects.length === 0) return null;
 
   if (compact) {
@@ -37,14 +36,14 @@ function ProjectChips({ projects, compact, theme }: { projects: DocumentSummary[
           display: "inline-flex",
           alignItems: "center",
           gap: 3,
-          fontSize: theme.font.size.xxs,
-          color: theme.color.textMuted,
+          fontSize: t.fontSizeXs,
+          color: t.colorTextMuted,
           fontWeight: 600,
-          fontFamily: theme.font.body,
+          fontFamily: t.fontSans,
           flexShrink: 0,
         }}
       >
-        <Icon name="folder_special" size={12} style={{ color: theme.color.textFaint }} />
+        <Icon name="folder_special" size={12} style={{ color: t.colorTextSecondary }} />
         {projects.length}
       </span>
     );
@@ -58,15 +57,15 @@ function ProjectChips({ projects, compact, theme }: { projects: DocumentSummary[
           style={{
             display: "inline-block",
             maxWidth: 140,
-            padding: `1px ${theme.spacing.xs}`,
-            borderRadius: theme.radius.sm,
-            background: `${theme.color.primary}14`,
-            border: `1px solid ${theme.color.primary}30`,
-            color: theme.color.primary,
-            fontSize: theme.font.size.xxs,
+            padding: `1px ${t.spaceXs}`,
+            borderRadius: t.radiusSm,
+            background: `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${t.colorActionPrimary} 19%, transparent)`,
+            color: t.colorActionPrimary,
+            fontSize: t.fontSizeXs,
             fontWeight: 600,
-            fontFamily: theme.font.body,
-            letterSpacing: theme.font.letterSpacing.tight,
+            fontFamily: t.fontSans,
+            letterSpacing: t.letterSpacingTight,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -85,7 +84,6 @@ function ProjectChips({ projects, compact, theme }: { projects: DocumentSummary[
 // ---------------------------------------------------------------------------
 
 export function DocumentTable({ documents, selectedDocumentId, onSelectDocument, onDeleteDocument, onToggleFavorite, groupByFolder }: DocumentTableProps) {
-  const { theme } = useTheme();
   const windowWidth = useWindowWidth();
   const columns = windowWidth >= SMALL_BREAKPOINT ? 2 : 1;
 
@@ -114,7 +112,7 @@ export function DocumentTable({ documents, selectedDocumentId, onSelectDocument,
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.lg }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: t.spaceLg }}>
       {groups.folders.map(([folder, docs]) => (
         <FolderGroup key={folder} folder={folder} documents={docs} {...cardProps} />
       ))}
@@ -140,7 +138,6 @@ interface FolderGroupProps {
 }
 
 function FolderGroup({ folder, documents, ...cardGridProps }: FolderGroupProps) {
-  const { theme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -151,9 +148,9 @@ function FolderGroup({ folder, documents, ...cardGridProps }: FolderGroupProps) 
         style={{
           display: "flex",
           alignItems: "center",
-          gap: theme.spacing.xs,
-          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-          marginBottom: collapsed ? 0 : theme.spacing.sm,
+          gap: t.spaceXs,
+          padding: `${t.spaceXs} ${t.spaceSm}`,
+          marginBottom: collapsed ? 0 : t.spaceSm,
           border: "none",
           background: "transparent",
           cursor: "pointer",
@@ -164,28 +161,28 @@ function FolderGroup({ folder, documents, ...cardGridProps }: FolderGroupProps) 
         <Icon
           name={collapsed ? "chevron_right" : "expand_more"}
           size={16}
-          style={{ color: theme.color.textMuted, flexShrink: 0 }}
+          style={{ color: t.colorTextMuted, flexShrink: 0 }}
         />
         <Icon
           name={folder ? "folder" : "draft"}
           size={15}
-          style={{ color: folder ? theme.color.primary : theme.color.textFaint, flexShrink: 0 }}
+          style={{ color: folder ? t.colorActionPrimary : t.colorTextSecondary, flexShrink: 0 }}
         />
         <span
           style={{
-            fontSize: theme.font.size.xs,
+            fontSize: t.fontSizeXs,
             fontWeight: 700,
-            fontFamily: theme.font.body,
-            color: theme.color.text,
-            letterSpacing: theme.font.letterSpacing.tight,
+            fontFamily: t.fontSans,
+            color: t.colorText,
+            letterSpacing: t.letterSpacingTight,
           }}
         >
           {folder ?? "Unfiled"}
         </span>
         <span
           style={{
-            fontSize: theme.font.size.xxs,
-            color: theme.color.textFaint,
+            fontSize: t.fontSizeXs,
+            color: t.colorTextSecondary,
             fontWeight: 500,
           }}
         >
@@ -211,13 +208,12 @@ function CardGrid({
   onDeleteDocument: (doc: DocumentSummary) => void;
   onToggleFavorite: (doc: DocumentSummary) => void;
 }) {
-  const { theme } = useTheme();
   return (
     <div
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: columns === 1 ? theme.spacing.sm : theme.spacing.md,
+        gap: columns === 1 ? t.spaceSm : t.spaceMd,
       }}
     >
       {documents.map((doc) => (
@@ -280,11 +276,11 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
   `);
 
   const borderColor = selected
-    ? theme.glow.animated ? theme.glow.borderStrong : theme.color.primary
+    ? theme.glow.animated ? theme.glow.borderStrong : t.colorActionPrimary
     : theme.glow.borderSubtle;
 
   const shadow = selected
-    ? theme.glow.animated ? theme.glow.shadowSm : theme.shadow.sm
+    ? theme.glow.animated ? theme.glow.shadowSm : t.shadowSm
     : "none";
 
   const cardClass = compact ? "tfp-doc-card tfp-doc-card-compact" : "tfp-doc-card";
@@ -302,34 +298,30 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
         }
       }}
       style={{
-        borderRadius: compact ? theme.radius.md : theme.radius.lg,
+        borderRadius: compact ? t.radiusMd : t.radiusLg,
         border: `1px solid ${borderColor}`,
-        background: selected ? theme.color.surfaceContainerHigh : theme.color.surfaceContainer,
+        background: selected ? t.colorSurfaceRaised : t.colorSurface,
         boxShadow: shadow,
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
-        padding: compact ? theme.spacing.sm : theme.spacing.md,
-        gap: compact ? theme.spacing.xs : theme.spacing.sm,
-        transition: [
-          "border-color 0.2s",
-          "box-shadow 0.25s",
-          "background 0.15s",
-        ].join(", "),
+        padding: compact ? t.spaceSm : t.spaceMd,
+        gap: compact ? t.spaceXs : t.spaceSm,
+        transition: "border-color 0.2s, box-shadow 0.25s, background 0.15s",
       }}
     >
       {/* Header row: title + project count (compact) or favorite */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: theme.spacing.xs }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceXs }}>
         <span
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: compact ? theme.font.size.xs : theme.font.size.sm,
+            fontSize: compact ? t.fontSizeXs : t.fontSizeSm,
             fontWeight: 600,
-            fontFamily: theme.font.body,
-            color: theme.color.text,
-            lineHeight: theme.font.lineHeight.tight,
-            letterSpacing: theme.font.letterSpacing.tight,
+            fontFamily: t.fontSans,
+            color: t.colorText,
+            lineHeight: t.lineHeightTight,
+            letterSpacing: t.letterSpacingTight,
             display: "-webkit-box",
             WebkitLineClamp: compact ? 1 : 2,
             WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
@@ -340,23 +332,23 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
         </span>
         {/* Source indicator */}
         {doc.source_type && !doc.source_url && (
-          <Icon name="link" size={compact ? 12 : 13} style={{ color: theme.color.textFaint, flexShrink: 0, marginTop: 2 }} title="Imported from external source" />
+          <Icon name="link" size={compact ? 12 : 13} style={{ color: t.colorTextSecondary, flexShrink: 0, marginTop: 2 }} title="Imported from external source" />
         )}
         {/* Compact: project count + favorite inline */}
         {compact && doc.linked_projects.length > 0 && (
-          <ProjectChips projects={doc.linked_projects} compact theme={theme} />
+          <ProjectChips projects={doc.linked_projects} compact />
         )}
         {doc.favorite && (
-          <Icon name="star" size={compact ? 12 : 14} style={{ color: theme.color.warning, flexShrink: 0, marginTop: 2 }} />
+          <Icon name="star" size={compact ? 12 : 14} style={{ color: t.colorWarning, flexShrink: 0, marginTop: 2 }} />
         )}
       </div>
 
       {/* Summary — always visible */}
       <div
         style={{
-          fontSize: theme.font.size.xxs,
-          color: theme.color.textMuted,
-          lineHeight: theme.font.lineHeight.normal,
+          fontSize: t.fontSizeXs,
+          color: t.colorTextMuted,
+          lineHeight: t.lineHeightBase,
           overflow: "hidden",
           display: "-webkit-box",
           WebkitLineClamp: summaryLines,
@@ -365,13 +357,13 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
         }}
       >
         {doc.summary || (
-          <span style={{ color: theme.color.textFaint, fontStyle: "italic" }}>No summary</span>
+          <span style={{ color: t.colorTextSecondary, fontStyle: "italic" }}>No summary</span>
         )}
       </div>
 
       {/* Project chips — full chips on wide only */}
       {!compact && doc.linked_projects.length > 0 && (
-        <ProjectChips projects={doc.linked_projects} compact={false} theme={theme} />
+        <ProjectChips projects={doc.linked_projects} compact={false} />
       )}
 
       {/* Footer: tags + date + actions */}
@@ -379,10 +371,10 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
         style={{
           display: "flex",
           alignItems: "center",
-          gap: compact ? theme.spacing.xs : theme.spacing.sm,
+          gap: compact ? t.spaceXs : t.spaceSm,
           marginTop: "auto",
-          paddingTop: compact ? theme.spacing.xs : theme.spacing.xs,
-          borderTop: `1px solid ${theme.color.borderSubtle}`,
+          paddingTop: t.spaceXs,
+          borderTop: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
         }}
       >
         {/* Tags */}
@@ -392,7 +384,7 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
               <TagChip key={tag} name={tag} />
             ))}
             {overflowCount > 0 && (
-              <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint }}>
+              <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
                 +{overflowCount}
               </span>
             )}
@@ -413,14 +405,14 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
               display: "inline-flex",
               alignItems: "center",
               gap: 3,
-              fontSize: theme.font.size.xxs,
-              color: theme.color.textMuted,
+              fontSize: t.fontSizeXs,
+              color: t.colorTextMuted,
               textDecoration: "none",
               flexShrink: 0,
               padding: "1px 6px",
-              borderRadius: theme.radius.sm,
-              background: theme.color.surfaceRaised,
-              border: `1px solid ${theme.color.borderSubtle}`,
+              borderRadius: t.radiusSm,
+              background: t.colorSurfaceRaised,
+              border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
             }}
           >
             <Icon name="link" size={10} />
@@ -429,7 +421,7 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
         )}
 
         {/* Date */}
-        <span style={{ fontSize: theme.font.size.xxs, color: theme.color.textFaint, flexShrink: 0 }}>
+        <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary, flexShrink: 0 }}>
           {formatDate(doc.updated_at)}
         </span>
 
@@ -448,14 +440,14 @@ function DocumentCard({ doc, compact, selected, onSelect, onDelete, onToggleFavo
             size={compact ? 13 : 14}
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
             aria-label={doc.favorite ? "Remove from favorites" : "Add to favorites"}
-            style={{ width: compact ? 24 : 26, height: compact ? 24 : 26, minWidth: compact ? 24 : 26, color: doc.favorite ? theme.color.warning : theme.color.textFaint }}
+            style={{ width: compact ? 24 : 26, height: compact ? 24 : 26, minWidth: compact ? 24 : 26, color: doc.favorite ? t.colorWarning : t.colorTextSecondary }}
           />
           <IconButton
             icon="delete"
             size={compact ? 13 : 14}
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             aria-label="Delete document"
-            style={{ width: compact ? 24 : 26, height: compact ? 24 : 26, minWidth: compact ? 24 : 26, color: theme.color.textFaint }}
+            style={{ width: compact ? 24 : 26, height: compact ? 24 : 26, minWidth: compact ? 24 : 26, color: t.colorTextSecondary }}
           />
         </div>
       </div>

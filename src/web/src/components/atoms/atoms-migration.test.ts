@@ -57,6 +57,7 @@ describe("Library semantic token imports", () => {
     "DocumentReaderModal.tsx",
     "TaskTable.tsx",
     "DependencyGraphView.tsx",
+    "DocumentTable.tsx",
   ];
 
   for (const file of organismsWithSemanticImport) {

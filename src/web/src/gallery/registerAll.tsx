@@ -944,6 +944,7 @@ export function registerAllComponents(): void {
       />
     ),
     codeTemplate: `<DocumentTable documents={docs} selectedDocumentId={selectedId} onSelectDocument={setSelected} onDeleteDocument={handleDelete} onToggleFavorite={handleFav} />`,
+    migrated: true,
   });
 
   registerComponent({
