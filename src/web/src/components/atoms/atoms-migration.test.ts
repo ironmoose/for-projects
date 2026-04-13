@@ -160,6 +160,11 @@ describe("Components fully migrated off useTheme", () => {
     const src = readComponent(ORGANISMS_DIR, "CreateDocumentOverlay.tsx");
     expect(src).not.toContain("useTheme");
   });
+
+  test("organisms/ConnectionStatus.tsx does not import useTheme", () => {
+    const src = readComponent(ORGANISMS_DIR, "ConnectionStatus.tsx");
+    expect(src).not.toContain("useTheme");
+  });
 });
 
 // ---------------------------------------------------------------------------

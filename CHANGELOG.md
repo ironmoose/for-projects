@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate ConnectionStatus organism off compat useTheme to library tokens
 - Migrate CreateDocumentOverlay organism off compat useTheme to library tokens
 - Migrate ImportDocumentOverlay organism off compat useTheme to library tokens
 - Migrate DocumentReferenceSection organism off compat useTheme to library tokens

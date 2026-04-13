@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 interface ConnectionStatusProps {
@@ -8,7 +8,6 @@ interface ConnectionStatusProps {
 }
 
 export function ConnectionStatus({ connected, style }: ConnectionStatusProps) {
-  const { theme } = useTheme();
   const reduced = useReducedMotion();
   const prevConnected = useRef(connected);
   const [ripple, setRipple] = useState(false);
@@ -32,12 +31,12 @@ export function ConnectionStatus({ connected, style }: ConnectionStatusProps) {
         display: "inline-block",
         width: 8,
         height: 8,
-        borderRadius: theme.radius.full,
-        background: connected ? theme.color.success : theme.color.textFaint,
-        transition: `background ${theme.motion.normal} ${theme.motion.easing}`,
-        animation: isPulsing ? `pulse-alive ${theme.animation.duration.pulse} ease-in-out infinite` :
+        borderRadius: t.radiusFull,
+        background: connected ? t.colorSuccess : t.colorTextSecondary,
+        transition: `background 0.2s ease`,
+        animation: isPulsing ? `pulse-alive 2s ease-in-out infinite` :
                    ripple ? "ripple-out 0.6s ease-out" : undefined,
-        color: theme.color.success,
+        color: t.colorSuccess,
         ...style,
       }}
     />

@@ -835,6 +835,7 @@ export function registerAllComponents(): void {
       { name: "Disconnected", props: { connected: false } },
     ],
     codeTemplate: `<ConnectionStatus connected={isConnected} />`,
+    migrated: true,
   });
 
   registerComponent({
