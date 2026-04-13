@@ -298,3 +298,37 @@ describe("Synth theme decoupled from component logic (Phase 4a)", () => {
     expect(src).toContain("data-synth attribute");
   });
 });
+
+// ---------------------------------------------------------------------------
+// 9. Gallery sync — component variants must match gallery entries
+// ---------------------------------------------------------------------------
+
+describe("Gallery stays in sync with components", () => {
+  const GALLERY_DIR = join(ATOMS_DIR, "..", "..", "gallery");
+
+  test("Badge gallery variants match component BadgeVariant type", () => {
+    const badgeSrc = readComponent(ATOMS_DIR, "Badge.tsx");
+    // Extract variant strings from the type union
+    const variantMatches = badgeSrc.match(/type BadgeVariant\s*=\s*([\s\S]*?);/);
+    expect(variantMatches).not.toBeNull();
+    const componentVariants = variantMatches![1]
+      .match(/"([^"]+)"/g)!
+      .map((s) => s.replace(/"/g, ""))
+      .sort();
+
+    const gallerySrc = readFileSync(join(GALLERY_DIR, "registerAll.tsx"), "utf-8");
+    // Extract the Badge registration block's options array
+    const badgeBlock = gallerySrc.match(
+      /registerComponent\(\{[^}]*name:\s*"Badge"[\s\S]*?codeTemplate:[^}]*\}\);/
+    );
+    expect(badgeBlock).not.toBeNull();
+    const optionsMatch = badgeBlock![0].match(/options:\s*\[([\s\S]*?)\]/);
+    expect(optionsMatch).not.toBeNull();
+    const galleryVariants = optionsMatch![1]
+      .match(/"([^"]+)"/g)!
+      .map((s) => s.replace(/"/g, ""))
+      .sort();
+
+    expect(galleryVariants).toEqual(componentVariants);
+  });
+});

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Update Badge gallery entry with all 12 actual variants; add gallery sync test
 - Migrate Badge atom off compat useTheme to library tokens (keep glow-only useTheme)
 - Update gallery: remove Overlay/Skeleton/CardSkeleton/RowSkeleton (now library re-exports), add AppThemePicker
 - Add body background CSS rules to app theme definitions (white page fix)

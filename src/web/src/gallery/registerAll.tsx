@@ -225,18 +225,26 @@ export function registerAllComponents(): void {
 
   registerComponent({
     name: "Badge",
-    description: "Status indicator badge.",
+    description: "Domain-specific status badge with 12 variants and synth-theme glow support. Uses library tokens (t.*) with useTheme() retained only for glow effects.",
     category: "atom",
     propDefs: [
-      { name: "variant", type: "enum", defaultValue: "active", options: ["active", "paused", "completed", "archived", "default"] },
+      { name: "variant", type: "enum", defaultValue: "active", options: ["active", "archived", "default", "pending", "running", "complete", "failed", "skipped", "todo", "in_progress", "done", "warning"] },
       { name: "children", type: "string", defaultValue: "active" },
     ],
     render: (props) => <Badge variant={props.variant as "active"}>{String(props.children)}</Badge>,
     variants: [
       { name: "Active", props: { variant: "active", children: "active" } },
-      { name: "Paused", props: { variant: "paused", children: "paused" } },
-      { name: "Completed", props: { variant: "completed", children: "completed" } },
+      { name: "Running", props: { variant: "running", children: "running" } },
+      { name: "Complete", props: { variant: "complete", children: "complete" } },
+      { name: "Failed", props: { variant: "failed", children: "failed" } },
+      { name: "In Progress", props: { variant: "in_progress", children: "in progress" } },
+      { name: "Done", props: { variant: "done", children: "done" } },
+      { name: "Warning", props: { variant: "warning", children: "warning" } },
+      { name: "Todo", props: { variant: "todo", children: "todo" } },
+      { name: "Pending", props: { variant: "pending", children: "pending" } },
+      { name: "Skipped", props: { variant: "skipped", children: "skipped" } },
       { name: "Archived", props: { variant: "archived", children: "archived" } },
+      { name: "Default", props: { variant: "default", children: "default" } },
     ],
     codeTemplate: `<Badge variant="active">active</Badge>`,
   });
