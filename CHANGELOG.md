@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate TagChip molecule off compat useTheme to library tokens
 - Migrate FolderInput molecule off compat useTheme to library tokens
 - Migrate Stack molecule off compat useTheme to library spacing tokens
 - Fix themes tab text contrast: add appearance reset and CSS var fallbacks on theme cards

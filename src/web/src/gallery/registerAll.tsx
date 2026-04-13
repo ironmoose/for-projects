@@ -561,6 +561,7 @@ export function registerAllComponents(): void {
     ),
     codeTemplate: `<TagChip name="frontend" onRemove={handleRemove} />`,
     libraryCandidate: true,
+    migrated: true,
   });
 
   registerComponent({

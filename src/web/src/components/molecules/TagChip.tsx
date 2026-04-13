@@ -1,3 +1,4 @@
+import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 import { IconButton } from "../atoms/IconButton";
 
@@ -17,10 +18,10 @@ export function TagChip({ name, prefix, onRemove, style }: TagChipProps) {
         display: "inline-flex",
         alignItems: "center",
         gap: 4,
-        fontSize: theme.font.size.xs,
-        color: theme.glow.accentColor !== theme.color.textMuted ? theme.glow.accentColor : theme.color.primary,
-        background: theme.color.surfaceContainerHigh,
-        borderRadius: theme.radius.full,
+        fontSize: t.fontSizeXs,
+        color: theme.glow.accentColor || t.colorActionPrimary,
+        background: t.colorSurfaceRaised,
+        borderRadius: t.radiusFull,
         padding: "2px 8px",
         ...(theme.glow.animated ? {
           border: `1px solid ${theme.glow.borderMedium}`,
@@ -31,7 +32,7 @@ export function TagChip({ name, prefix, onRemove, style }: TagChipProps) {
     >
       {prefix ? (
         <>
-          <span style={{ color: theme.color.textFaint, fontWeight: 600 }}>{prefix}:</span>
+          <span style={{ color: t.colorTextSecondary, fontWeight: 600 }}>{prefix}:</span>
           {name.slice(prefix.length + 1)}
         </>
       ) : (
