@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate AppThemePicker inline styles to library tokens
 - Migrate TaskTableFilters gap to library spacing token
 - Migrate DocumentSearchBar gap to library spacing token
 - Migrate ProgressBar tooltip to library tokens (fontSize, borderRadius, color)

@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useInjectStyles } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { Icon } from "@4lt7ab/ui/ui";
 import { useTheme } from "../theme/ThemeContext";
 import { appThemes } from "../theme/lib-themes";
@@ -275,7 +275,7 @@ function CompactView() {
             width: 8,
             height: 8,
             borderRadius: "50%",
-            background: "var(--color-action-primary)",
+            background: t.colorActionPrimary,
             flexShrink: 0,
           }}
         />
@@ -296,14 +296,14 @@ function CompactView() {
             position: "absolute",
             top: "100%",
             left: 0,
-            marginTop: "0.25rem",
-            background: "var(--color-surface-panel)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "0.25rem",
+            marginTop: t.spaceXs,
+            background: t.colorSurfacePanel,
+            border: `1px solid ${t.colorBorder}`,
+            borderRadius: t.radiusMd,
+            padding: t.spaceXs,
             minWidth: "10rem",
             zIndex: 100,
-            boxShadow: "var(--shadow-md)",
+            boxShadow: t.shadowMd,
           }}
         >
           {appThemes.map((t, idx) => {
@@ -337,8 +337,8 @@ function CompactView() {
                     height: 6,
                     borderRadius: "50%",
                     background: isActive
-                      ? "var(--color-action-primary)"
-                      : "var(--color-text-muted)",
+                      ? t.colorActionPrimary
+                      : t.colorTextMuted,
                     flexShrink: 0,
                   }}
                 />
