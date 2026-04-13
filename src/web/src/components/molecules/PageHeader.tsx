@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 
 interface PageHeaderProps {
   title: string;
@@ -9,8 +9,6 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, subtitle, trailing, indicator, style }: PageHeaderProps) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
@@ -18,7 +16,7 @@ export function PageHeader({ title, subtitle, trailing, indicator, style }: Page
         justifyContent: "space-between",
         alignItems: "flex-end",
         flexWrap: "wrap",
-        gap: theme.spacing.lg,
+        gap: t.spaceLg,
         ...style,
       }}
     >
@@ -26,26 +24,26 @@ export function PageHeader({ title, subtitle, trailing, indicator, style }: Page
         <h2
           style={{
             margin: 0,
-            fontFamily: theme.font.headline,
-            fontSize: theme.font.size.xl,
+            fontFamily: t.fontSerif,
+            fontSize: t.fontSizeXl,
             fontWeight: 800,
-            letterSpacing: theme.font.letterSpacing.tight,
-            color: theme.color.text,
+            letterSpacing: t.letterSpacingTight,
+            color: t.colorText,
           }}
         >
           {title}
         </h2>
         {indicator && (
-          <div style={{ marginTop: theme.spacing.xs }}>
+          <div style={{ marginTop: t.spaceXs }}>
             {indicator}
           </div>
         )}
         {subtitle && (
           <p
             style={{
-              margin: `${theme.spacing.xs} 0 0`,
-              color: theme.color.textMuted,
-              fontSize: theme.font.size.sm,
+              margin: `${t.spaceXs} 0 0`,
+              color: t.colorTextMuted,
+              fontSize: t.fontSizeSm,
             }}
           >
             {subtitle}
