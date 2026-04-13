@@ -1480,6 +1480,8 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
       <ConfirmDialog
         title="Delete Task"
         message={`Are you sure you want to delete "${deleteTaskTarget.title}"? This action cannot be undone.`}
+        variant="destructive"
+        confirmLabel="Delete"
         onConfirm={handleDeleteTask}
         onCancel={() => setDeleteTaskTarget(null)}
       />

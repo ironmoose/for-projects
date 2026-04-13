@@ -164,12 +164,7 @@ describe("ModalShell escape key", () => {
 // ---------------------------------------------------------------------------
 
 describe("Consumer a11y integration", () => {
-  test("ConfirmDialog passes title prop to ModalShell", () => {
-    const src = readFile(ORGANISMS_DIR, "ConfirmDialog.tsx");
-    expect(src).toContain("title={title}");
-    // Should not render its own h2 (ModalShell renders it now)
-    expect(src).not.toContain("<h2");
-  });
+  // ConfirmDialog test removed — component migrated to @4lt7ab/ui re-export
 
   test("CreateEntityOverlay passes title prop to ModalShell", () => {
     const src = readFile(ORGANISMS_DIR, "CreateEntityOverlay.tsx");

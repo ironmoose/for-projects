@@ -42,7 +42,7 @@ export type { NavItem } from "./organisms/TopBar";
 export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
 export { ErrorBoundary } from "./organisms/ErrorBoundary";
-export { ConfirmDialog } from "./organisms/ConfirmDialog";
+export { ConfirmDialog } from "@4lt7ab/ui/ui";
 export { CreateEntityOverlay } from "./organisms/CreateEntityOverlay";
 export { TaskTable } from "./organisms/TaskTable";
 export { CreateProjectOverlay } from "./organisms/CreateProjectOverlay";

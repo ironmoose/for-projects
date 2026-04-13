@@ -27,7 +27,7 @@ import {
   DocumentSearchBar,
   TaskTableFilters,
   ModalShell,
-  ConfirmDialog,
+
   TopBar,
   ConnectionStatus,
   DisconnectionBanner,
@@ -123,24 +123,6 @@ function ModalShellDemo() {
           <p style={{ margin: 0 }}>This is the modal content area. Press Escape or click the overlay to close.</p>
           <Button variant="ghost" onClick={() => setOpen(false)}>Close</Button>
         </ModalShell>
-      )}
-    </>
-  );
-}
-
-function ConfirmDialogDemo() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button variant="danger" onClick={() => setOpen(true)}>Delete Item</Button>
-      {open && (
-        <ConfirmDialog
-          title="Delete this item?"
-          message="This action cannot be undone. The item and all associated data will be permanently removed."
-          confirmLabel="Delete"
-          onConfirm={async () => setOpen(false)}
-          onCancel={() => setOpen(false)}
-        />
       )}
     </>
   );
@@ -722,16 +704,6 @@ export function registerAllComponents(): void {
       '</ModalShell>',
     ].join("\n"),
     libraryCandidate: true,
-    migrated: true,
-  });
-
-  registerComponent({
-    name: "ConfirmDialog",
-    description: "Destructive action confirmation modal with cancel and confirm buttons.",
-    category: "organism",
-    propDefs: [],
-    render: () => <ConfirmDialogDemo />,
-    codeTemplate: `<ConfirmDialog title="Delete item?" message="This cannot be undone." onConfirm={handleDelete} onCancel={handleCancel} />`,
     migrated: true,
   });
 

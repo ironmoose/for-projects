@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Replace local ConfirmDialog with @4lt7ab/ui ConfirmDialog re-export
 - Migrate ProjectDocumentTable organism off compat useTheme to library tokens (glow retained)
 - Migrate DocumentTable organism off compat useTheme to library tokens (glow retained)
 - Migrate DependencyGraphView organism fully off compat useTheme to library tokens

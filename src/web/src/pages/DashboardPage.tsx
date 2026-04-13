@@ -231,6 +231,8 @@ export function DashboardPage({ onOpenProject }: { onOpenProject: (id: string) =
         <ConfirmDialog
           title="Delete Project"
           message={`Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`}
+          variant="destructive"
+          confirmLabel="Delete"
           onConfirm={handleDeleteProject}
           onCancel={() => setDeleteTarget(null)}
         />

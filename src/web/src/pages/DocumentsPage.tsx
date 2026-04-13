@@ -693,6 +693,8 @@ export function DocumentsPage() {
         <ConfirmDialog
           title="Delete Document"
           message={`Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`}
+          variant="destructive"
+          confirmLabel="Delete"
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />
@@ -702,6 +704,8 @@ export function DocumentsPage() {
         <ConfirmDialog
           title="Delete Folder"
           message={`Delete all ${deleteFolderTarget.docCount} document${deleteFolderTarget.docCount !== 1 ? "s" : ""} in "${deleteFolderTarget.path}"? This action cannot be undone.`}
+          variant="destructive"
+          confirmLabel="Delete"
           onConfirm={handleDeleteFolder}
           onCancel={() => setDeleteFolderTarget(null)}
         />
