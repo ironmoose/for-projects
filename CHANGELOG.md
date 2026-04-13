@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Migrate TopBar organism off compat useTheme to library tokens (glow retained)
 - Migrate ModalShell organism off compat useTheme to library tokens (glow retained)
 - Migrate ErrorBoundary organism off compat useTheme to library tokens
 - Migrate ShortcutHelpOverlay organism off compat useTheme to library tokens

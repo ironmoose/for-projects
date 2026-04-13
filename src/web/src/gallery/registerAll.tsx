@@ -821,6 +821,7 @@ export function registerAllComponents(): void {
       { name: "With breadcrumb", props: {} },
     ],
     codeTemplate: `<TopBar navItems={navItems} activePath={location.pathname} onNavigate={navigate} trailing={<ConnectionStatus connected />} />`,
+    migrated: true,
   });
 
   registerComponent({

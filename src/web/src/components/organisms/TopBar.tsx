@@ -1,4 +1,4 @@
-import { useInjectStyles } from "@4lt7ab/ui/core";
+import { useInjectStyles, semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
 
 export interface NavItem {
@@ -60,8 +60,8 @@ export function TopBar({
   `);
 
   const cssVars = {
-    "--topbar-text": theme.color.text,
-    "--topbar-primary": theme.glow.accentColor !== theme.color.textMuted ? theme.glow.accentColor : theme.color.primary,
+    "--topbar-text": t.colorText,
+    "--topbar-primary": theme.glow.accentColor !== t.colorTextMuted ? theme.glow.accentColor : t.colorActionPrimary,
   } as React.CSSProperties;
 
   return (
@@ -75,18 +75,18 @@ export function TopBar({
         justifyContent: "space-between",
         width: "100%",
         height: 48,
-        padding: `0 ${theme.spacing.xl}`,
+        padding: `0 ${t.spaceXl}`,
         boxSizing: "border-box",
-        background: theme.glow.animated ? `${theme.color.surfaceContainer}dd` : `${theme.color.surfaceContainer}cc`,
+        background: theme.glow.animated ? `color-mix(in srgb, ${t.colorSurface} 87%, transparent)` : `color-mix(in srgb, ${t.colorSurface} 80%, transparent)`,
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : theme.color.borderSubtle}`,
+        borderBottom: `1px solid ${theme.glow.animated ? theme.glow.borderMedium : `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`}`,
         boxShadow: theme.glow.animated ? `0 2px 20px ${theme.glow.borderSubtle}, 0 1px 0 ${theme.glow.borderMedium}` : "none",
         ...cssVars,
       }}
     >
       {/* Left: Nav tabs */}
-      <nav style={{ display: "flex", alignItems: "center", gap: theme.spacing.xs }}>
+      <nav style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
         {navItems?.map((item) => {
           const isActive =
             activePath === item.path ||
@@ -100,11 +100,11 @@ export function TopBar({
               data-active={isActive ? "true" : undefined}
               onClick={() => onNavigate?.(item.path)}
               style={{
-                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-                fontSize: theme.font.size.sm,
+                padding: `${t.spaceXs} ${t.spaceMd}`,
+                fontSize: t.fontSizeSm,
                 fontWeight: isActive ? 700 : 500,
-                fontFamily: theme.font.body,
-                color: isActive ? theme.color.text : theme.color.textMuted,
+                fontFamily: t.fontSans,
+                color: isActive ? t.colorText : t.colorTextMuted,
               }}
             >
               {item.label}
@@ -120,9 +120,9 @@ export function TopBar({
             position: "absolute",
             left: "50%",
             transform: "translateX(-50%)",
-            fontFamily: theme.font.mono,
-            fontSize: theme.font.size.xs,
-            color: theme.color.textFaint,
+            fontFamily: t.fontMono,
+            fontSize: t.fontSizeXs,
+            color: t.colorTextSecondary,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",

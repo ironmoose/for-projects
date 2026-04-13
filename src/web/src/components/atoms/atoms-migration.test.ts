@@ -50,6 +50,7 @@ describe("Library semantic token imports", () => {
 
   const organismsWithSemanticImport = [
     "ModalShell.tsx",
+    "TopBar.tsx",
   ];
 
   for (const file of organismsWithSemanticImport) {
@@ -394,6 +395,16 @@ describe("Unmapped tokens still use compat useTheme", () => {
 
   test("ModalShell.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {
     const src = readComponent(ORGANISMS_DIR, "ModalShell.tsx");
+    expect(src).not.toMatch(/theme\.color\./);
+    expect(src).not.toMatch(/theme\.font\./);
+    expect(src).not.toMatch(/theme\.spacing\./);
+    expect(src).not.toMatch(/theme\.radius\./);
+    expect(src).not.toMatch(/theme\.shadow\./);
+    expect(src).toContain("theme.glow.");
+  });
+
+  test("TopBar.tsx only uses theme.glow from compat (no theme.color/font/spacing/radius/shadow)", () => {
+    const src = readComponent(ORGANISMS_DIR, "TopBar.tsx");
     expect(src).not.toMatch(/theme\.color\./);
     expect(src).not.toMatch(/theme\.font\./);
     expect(src).not.toMatch(/theme\.spacing\./);
