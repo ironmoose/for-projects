@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
-import { Select } from "../atoms/Select";
+import { Select } from "@4lt7ab/ui/ui";
 import type { TaskFilter } from "../../hooks/useProjectTasks";
 import {
   TASK_STATUSES,

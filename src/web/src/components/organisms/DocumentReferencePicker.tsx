@@ -6,7 +6,7 @@ import { Icon } from "../atoms/Icon";
 import { IconButton } from "../atoms/IconButton";
 import { Button } from "../atoms/Button";
 import { Input } from "../atoms/Input";
-import { Select } from "../atoms/Select";
+import { Select } from "@4lt7ab/ui/ui";
 import { TagChip } from "@4lt7ab/ui/ui";
 import { fetchDocuments } from "../../api";
 import type { DocumentSummary } from "../../types";

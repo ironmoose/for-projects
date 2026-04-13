@@ -2,7 +2,7 @@ import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Input } from "../atoms/Input";
 import { Textarea, Field } from "@4lt7ab/ui/ui";
-import { Select } from "../atoms/Select";
+import { Select } from "@4lt7ab/ui/ui";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import {
   TASK_STATUSES,

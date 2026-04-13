@@ -6,7 +6,6 @@ import {
   Icon,
   IconButton,
   Input,
-  Select,
   SectionLabel,
   MetaValue,
   Card,
@@ -284,24 +283,6 @@ export function registerAllComponents(): void {
       { name: "Overflow (99+)", props: { count: 150 } },
     ],
     codeTemplate: `<ActivityIndicator count={unreadCount} />`,
-    migrated: true,
-  });
-
-  registerComponent({
-    name: "Select",
-    description: "Dropdown select.",
-    category: "atom",
-    propDefs: [
-      { name: "value", type: "enum", defaultValue: "a", options: ["a", "b", "c"] },
-    ],
-    render: (props) => (
-      <Select
-        value={String(props.value)}
-        options={[{ value: "a", label: "Option A" }, { value: "b", label: "Option B" }, { value: "c", label: "Option C" }]}
-        onChange={() => {}}
-      />
-    ),
-    codeTemplate: `<Select value="a" options={[...]} onChange={handleChange} />`,
     migrated: true,
   });
 
