@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fix themes tab text contrast: add appearance reset and CSS var fallbacks on theme cards
 - Migrate Card molecule spacing/radius tokens off compat useTheme to library tokens
 - Migrate ExpandableCard molecule off compat useTheme to library tokens
 - Mark 13 generic components as library candidates in gallery

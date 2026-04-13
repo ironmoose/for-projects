@@ -38,15 +38,17 @@ const gridCSS = /* css */ `
   }
 
   .tfp-theme-card {
-    background: var(--color-surface);
-    border: 2px solid var(--color-border);
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--color-surface, #12252a);
+    border: 2px solid var(--color-border, #1e383f);
     border-radius: 8px;
     padding: 1.5rem;
     text-align: left;
     cursor: pointer;
     transition: border-color 0.15s ease, transform 0.15s ease;
     font-family: inherit;
-    color: var(--color-text);
+    color: var(--color-text, #d4e5ea);
   }
 
   .tfp-theme-card:hover {
