@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTheme } from "./theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Icon } from "./atoms/Icon";
 
 // ---------------------------------------------------------------------------
@@ -66,8 +66,6 @@ export function ToastContainer({
   toasts: Toast[];
   dismiss: (id: string) => void;
 }) {
-  const { theme } = useTheme();
-
   if (toasts.length === 0) return null;
 
   return (
@@ -87,32 +85,32 @@ export function ToastContainer({
         pointerEvents: "none",
       }}
     >
-      {toasts.map((t) => (
+      {toasts.map((toast) => (
         <div
-          key={t.id}
-          onClick={() => dismiss(t.id)}
+          key={toast.id}
+          onClick={() => dismiss(toast.id)}
           style={{
             pointerEvents: "auto",
             display: "flex",
             alignItems: "center",
             gap: 8,
             padding: "10px 14px",
-            borderRadius: theme.radius.lg,
-            background: t.type === "error" ? theme.color.danger : theme.color.success,
+            borderRadius: t.radiusLg,
+            background: toast.type === "error" ? t.colorActionDestructive : t.colorSuccess,
             color: "#fff",
-            fontSize: theme.font.size.sm,
+            fontSize: t.fontSizeSm,
             lineHeight: 1.4,
-            boxShadow: theme.shadow.md,
+            boxShadow: t.shadowMd,
             cursor: "pointer",
             animation: "toast-in 0.2s ease-out",
           }}
         >
           <Icon
-            name={t.type === "error" ? "error_outline" : "check_circle"}
+            name={toast.type === "error" ? "error_outline" : "check_circle"}
             size={16}
             style={{ flexShrink: 0 }}
           />
-          <span style={{ flex: 1, minWidth: 0 }}>{t.message}</span>
+          <span style={{ flex: 1, minWidth: 0 }}>{toast.message}</span>
         </div>
       ))}
     </div>

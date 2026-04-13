@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 import { Icon } from "../atoms/Icon";
 
 interface DisconnectionBannerProps {
@@ -9,7 +9,6 @@ interface DisconnectionBannerProps {
 const DISCONNECT_THRESHOLD_MS = 10_000;
 
 export function DisconnectionBanner({ connected }: DisconnectionBannerProps) {
-  const { theme } = useTheme();
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
@@ -31,14 +30,14 @@ export function DisconnectionBanner({ connected }: DisconnectionBannerProps) {
     <div
       style={{
         width: "100%",
-        background: theme.color.danger,
+        background: t.colorActionDestructive,
         color: "#fff",
-        padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+        padding: `${t.spaceXs} ${t.spaceMd}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: theme.spacing.sm,
-        fontSize: theme.font.size.sm,
+        gap: t.spaceSm,
+        fontSize: t.fontSizeSm,
         fontWeight: 500,
         animation: "slide-in-left 0.3s ease-out",
         zIndex: 50,

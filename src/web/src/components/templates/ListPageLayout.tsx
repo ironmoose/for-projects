@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeContext";
+import { semantic as t } from "@4lt7ab/ui/core";
 
 interface ListPageLayoutProps {
   children: React.ReactNode;
@@ -6,8 +6,6 @@ interface ListPageLayoutProps {
 }
 
 export function ListPageLayout({ children, style }: ListPageLayoutProps) {
-  const { theme } = useTheme();
-
   return (
     <div
       style={{
@@ -15,7 +13,7 @@ export function ListPageLayout({ children, style }: ListPageLayoutProps) {
         width: "100%",
         maxWidth: 1400,
         alignSelf: "center",
-        padding: `${theme.spacing["2xl"]} ${theme.spacing.xl}`,
+        padding: `${t.space2xl} ${t.spaceXl}`,
         boxSizing: "border-box",
         overflowY: "auto",
         ...style,
