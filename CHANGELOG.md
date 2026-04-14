@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Migrate to @4lt7ab/ui v0.2.15 — replace TopBar, FormModal, AlertBanner, ShortcutHelpModal, Toast, ThemeBackground, Markdown with library equivalents
+- Replace SearchToggle, TagPicker, TaskTableFilters with thin wrappers over library SearchInput/SegmentedControl, ChipPicker, TableFilters
+- Remove local spin/fade-in-up keyframe injections (library ThemeProvider ships them globally)
 - Replace custom AppThemePicker with @4lt7ab/ui ThemePicker compact variant
 - Replace custom Badge atom with @4lt7ab/ui Badge (color prop for domain variants, drop glow effects)
 - Replace custom Icon, IconButton, SectionLabel atoms with @4lt7ab/ui re-exports (v0.2.14)
