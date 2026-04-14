@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, fetchDependencyGraph } from "../api";
 import type { DependencyEdge, DependencyGraphResponse, GraphNode } from "../api";
 import { useEventSubscription } from "./useEventSubscription";
-import { useToastContext } from "../components/ToastContext";
+import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export interface DependencyGraph {
@@ -15,7 +15,7 @@ export function useDependencyGraph(projectId: string, statusFilter?: string) {
   const [graph, setGraph] = useState<DependencyGraph | null>(null);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const loadRef = useRef<(() => void) | undefined>(undefined);
 

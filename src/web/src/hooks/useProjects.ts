@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, createProjects, deleteProjects, fetchProjects, updateProjects } from "../api";
 import type { ProjectSummary } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
-import { useToastContext } from "../components/ToastContext";
+import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export function useProjects() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const loadRef = useRef<(() => void) | undefined>(undefined);
 

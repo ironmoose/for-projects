@@ -1,16 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ThemeBackground } from "@4lt7ab/ui/animations";
 import {
+  ThemeSurface,
+  ThemePicker,
+  AlertBanner,
+  ShortcutHelpModal,
   TopBar,
-  ConnectionStatus,
-  DisconnectionBanner,
   ErrorBoundary,
-} from "./components";
-import { BackgroundLoader } from "./components/atoms/BackgroundLoader";
-import { ThemeSurface } from "@4lt7ab/ui/ui";
-import { semantic as t } from "@4lt7ab/ui/core";
-import { ThemePicker } from "@4lt7ab/ui/ui";
-import type { NavItem } from "./components";
-import { ShortcutHelpOverlay } from "./components/organisms/ShortcutHelpOverlay";
+  StatusDot,
+} from "@4lt7ab/ui/ui";
+import type { NavItem } from "@4lt7ab/ui/ui";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { useRealtimeEvents } from "./useRealtimeEvents";
 import { useHashRoute, useEventFanOut, EventSubscriptionContext } from "./hooks";
 import {
@@ -18,15 +18,16 @@ import {
   useShortcut,
   KeyboardShortcutContext,
 } from "./hooks/useKeyboardShortcuts";
-import { DashboardPage } from "./pages/DashboardPage";
-import { ProjectPage } from "./pages/ProjectPage";
-import { ActivityLogPage } from "./pages/ActivityLogPage";
-import { DocumentsPage } from "./pages/DocumentsPage";
+import { useReducedMotion } from "./hooks/useReducedMotion";
+import { KnowledgeBasePage } from "./pages/KnowledgeBasePage";
+import { ProjectsPage } from "./pages/ProjectsPage";
+import { ProjectDetailPage } from "./pages/ProjectDetailPage";
+import { TasksPage } from "./pages/TasksPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
-  { label: "Documents", path: "/documents" },
-  { label: "Activity", path: "/activity" },
+  { label: "Tasks", path: "/tasks" },
+  { label: "Knowledge Base", path: "/kb" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -39,13 +40,10 @@ export function App() {
   const { connected } = useRealtimeEvents(onEvent);
   const shortcutManager = useKeyboardShortcutManager();
 
-  const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
-  const projectId = projectIdMatch?.[1] ?? null;
-
-  const activePath = path.startsWith("/documents")
-    ? "/documents"
-    : path.startsWith("/activity")
-    ? "/activity"
+  const activePath = path.startsWith("/kb")
+    ? "/kb"
+    : path.startsWith("/tasks")
+    ? "/tasks"
     : "/";
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
@@ -60,23 +58,24 @@ export function App() {
   );
 
   function renderView() {
-    if (path.startsWith("/documents")) {
-      return <DocumentsPage />;
+    if (path.startsWith("/tasks")) {
+      return <TasksPage />;
     }
-    if (path.startsWith("/activity")) {
-      return <ActivityLogPage onNavigate={navigate} />;
+    if (path.startsWith("/kb")) {
+      return <KnowledgeBasePage />;
     }
-    if (projectId) {
-      return <ProjectPage projectId={projectId} onBack={() => navigate("/")} />;
+    if (path.startsWith("/projects/")) {
+      const projectId = path.replace("/projects/", "");
+      return <ProjectDetailPage projectId={projectId} onBack={() => navigate("/")} />;
     }
-    return <DashboardPage onOpenProject={(pId) => navigate(`/projects/${pId}`)} />;
+    return <ProjectsPage onOpenProject={(pId) => navigate(`/projects/${pId}`)} />;
   }
 
   return (
     <KeyboardShortcutContext.Provider value={shortcutCtx}>
       <EventSubscriptionContext.Provider value={eventCtx}>
         <ThemeSurface global />
-        <BackgroundLoader />
+        <ThemeBackground />
         <a
           href="#main-content"
           style={{
@@ -117,12 +116,13 @@ export function App() {
         </a>
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: t.fontSans, color: t.colorText }}>
           <TopBar
+            title="Tab"
             trailing={<TrailingIndicators connected={connected} />}
-            navItems={navItems}
+            items={navItems}
             activePath={activePath}
             onNavigate={navigate}
           />
-          <DisconnectionBanner connected={connected} />
+          <DisconnectionAlert connected={connected} />
           <main
             id="main-content"
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, minHeight: 0 }}
@@ -139,29 +139,90 @@ export function App() {
 }
 
 // ---------------------------------------------------------------------------
-// GlobalShortcuts — registers app-wide shortcuts inside the context.
+// DisconnectionAlert
+// ---------------------------------------------------------------------------
+
+const DISCONNECT_THRESHOLD_MS = 10_000;
+
+function DisconnectionAlert({ connected }: { connected: boolean }) {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (connected) { setShow(false); return; }
+    const timer = setTimeout(() => setShow(true), DISCONNECT_THRESHOLD_MS);
+    return () => clearTimeout(timer);
+  }, [connected]);
+
+  if (!show) return null;
+
+  return (
+    <AlertBanner variant="warning">
+      Connection lost. Attempting to reconnect...
+    </AlertBanner>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// GlobalShortcuts
 // ---------------------------------------------------------------------------
 
 function GlobalShortcuts({ navigate }: { navigate: (path: string) => void }) {
   const [showHelp, setShowHelp] = useState(false);
+  const manager = useKeyboardShortcutManager();
 
-  // "?" — toggle help overlay
   useShortcut("?", "Show keyboard shortcuts", () => setShowHelp((prev) => !prev), "Global");
+  useShortcut("g p", "Go to projects", () => navigate("/"), "Navigation");
+  useShortcut("g t", "Go to tasks", () => navigate("/tasks"), "Navigation");
+  useShortcut("g k", "Go to knowledge base", () => navigate("/kb"), "Navigation");
 
-  // Navigation sequences
-  useShortcut("g h", "Go to dashboard", () => navigate("/"), "Navigation");
-  useShortcut("g d", "Go to documents", () => navigate("/documents"), "Navigation");
-  useShortcut("g a", "Go to activity log", () => navigate("/activity"), "Navigation");
+  if (!showHelp) return null;
 
-  return showHelp ? <ShortcutHelpOverlay onClose={() => setShowHelp(false)} /> : null;
+  const registered = manager.getShortcuts();
+  const groupMap = new Map<string, { keys: string[]; description: string }[]>();
+  for (const s of registered) {
+    const group = s.scope ?? "General";
+    if (!groupMap.has(group)) groupMap.set(group, []);
+    groupMap.get(group)!.push({ keys: s.key.split(" "), description: s.description });
+  }
+  const shortcuts = Array.from(groupMap.entries()).map(([group, items]) => ({ group, shortcuts: items }));
+
+  return <ShortcutHelpModal shortcuts={shortcuts} onClose={() => setShowHelp(false)} />;
 }
 
-/** Renders inside EventSubscriptionContext so hooks can access it. */
+// ---------------------------------------------------------------------------
+// ConnectionStatus — inline, no external component
+// ---------------------------------------------------------------------------
+
+const CONNECTION_CSS = `
+  @keyframes pulse-alive { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+`;
+
+function ConnectionStatusDot({ connected }: { connected: boolean }) {
+  useInjectStyles("tfp-connection", CONNECTION_CSS);
+  const reduced = useReducedMotion();
+  const isPulsing = !connected && !reduced;
+
+  return (
+    <span
+      title={connected ? "Live updates active" : "Reconnecting..."}
+      style={{
+        display: "inline-block",
+        width: 8,
+        height: 8,
+        borderRadius: t.radiusFull,
+        background: connected ? t.colorSuccess : t.colorTextSecondary,
+        transition: "background 0.2s ease",
+        animation: isPulsing ? "pulse-alive 2s ease-in-out infinite" : undefined,
+      }}
+    />
+  );
+}
+
 function TrailingIndicators({ connected }: { connected: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
       <ThemePicker variant="compact" />
-      <ConnectionStatus connected={connected} />
+      <ConnectionStatusDot connected={connected} />
     </div>
   );
 }

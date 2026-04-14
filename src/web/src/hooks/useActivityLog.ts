@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, fetchActivityLog } from "../api";
 import type { ActivityLog } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
-import { useToastContext } from "../components/ToastContext";
+import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 const PAGE_SIZE = 50;
@@ -13,7 +13,7 @@ export function useActivityLog(filter?: { entity_type?: string; entity_id?: stri
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const loadRef = useRef<(() => void) | undefined>(undefined);
 

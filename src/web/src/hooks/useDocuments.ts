@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, createDocuments, deleteDocuments, deleteDocumentsByFolder, fetchDocuments, searchDocuments, updateDocuments } from "../api";
 import type { DocumentSummary, SemanticSearchResult } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
-import { useToastContext } from "../components/ToastContext";
+import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 const PAGE_SIZE = 20;
@@ -32,7 +32,7 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
   const [loading, setLoading] = useState(true);
   const [isSemanticResults, setIsSemanticResults] = useState(false);
   const { subscribeEvents } = useEventSubscription();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const filterRef = useRef(filter);
   filterRef.current = filter;

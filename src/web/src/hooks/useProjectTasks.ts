@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, fetchTasks } from "../api";
 import type { TaskSummary } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
-import { useToastContext } from "../components/ToastContext";
+import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 const PAGE_SIZE = 25;
@@ -29,7 +29,7 @@ export function useProjectTasks(projectId: string, filter?: TaskFilter) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const loadRef = useRef<(() => void) | undefined>(undefined);
   const prevFilterRef = useRef<string>("");

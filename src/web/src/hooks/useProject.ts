@@ -3,7 +3,7 @@ import { ApiError, fetchProject as apiFetchProject, createTasks, updateTasks, up
 import type { DocumentsMergePatch, ProjectDetail } from "../api";
 import type { Project } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
-import { useToastContext } from "../components/ToastContext";
+import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 export function useProject(projectId: string) {
@@ -11,7 +11,7 @@ export function useProject(projectId: string) {
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;

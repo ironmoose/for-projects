@@ -3,7 +3,7 @@ import { ApiError, fetchDocument as apiFetchDocument, updateDocuments, deleteDoc
 import type { ReferencedByEntry } from "../api";
 import type { Document } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
-import { useToastContext } from "../components/ToastContext";
+import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
 type DocumentWithTags = Document & { tags: string[]; referenced_by: ReferencedByEntry[] };
@@ -13,7 +13,7 @@ export function useDocument(documentId: string) {
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const { subscribeEvents } = useEventSubscription();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const documentIdRef = useRef(documentId);
   documentIdRef.current = documentId;
