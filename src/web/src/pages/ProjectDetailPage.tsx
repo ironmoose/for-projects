@@ -1,20 +1,23 @@
 /**
- * ProjectDetailPage — self-contained project detail page.
+ * ProjectDetailPage — project "war room" dashboard.
  *
  * UI dependencies: @4lt7ab/ui only. No internal atoms/molecules/organisms.
  * Data dependencies: hooks (useProject, useProjectTasks) and api layer.
+ *
+ * Layout: back nav + title + progress bar, stat cards row, briefing panels,
+ * then a table-based task list with filters and pagination.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { semantic as t, useInjectStyles, KEYFRAMES } from "@4lt7ab/ui/core";
 import {
   Button,
+  Card,
   IconButton,
   Icon,
   Badge,
   StatusDot,
   ProgressBar,
-  ExpandableCard,
   SearchInput,
   Select,
   Input,
@@ -25,7 +28,18 @@ import {
   FormModal,
   ModalShell,
   Skeleton,
+  RowSkeleton,
   SegmentedControl,
+  Table,
+  TableHeader,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableEmptyRow,
+  EmptyState,
+  SectionLabel,
+  MetadataTable,
   useToast,
 } from "@4lt7ab/ui/ui";
 import ReactMarkdown from "react-markdown";
@@ -36,7 +50,7 @@ import { useProjectTasks } from "../hooks/useProjectTasks";
 import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
-import { ApiError, fetchTask, updateTasks } from "../api";
+import { ApiError, fetchTask, updateTasks, fetchTaskStatusCounts } from "../api";
 import type { TaskDetail } from "../api";
 import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../types";
 import type { TaskSummary, TaskStatus } from "../types";
@@ -47,17 +61,8 @@ import type { TaskSummary, TaskStatus } from "../types";
 
 const STYLES_ID = "project-detail-styles";
 const STYLES_CSS = `
-  .pd-task-row {
-    transition: background 0.1s ease;
-  }
-  .pd-task-row:hover {
-    background: ${t.colorSurfaceRaised} !important;
-  }
-  .pd-task-row:hover .pd-task-arrow {
-    opacity: 1;
-  }
   @media (prefers-reduced-motion: reduce) {
-    .pd-task-row { transition: none; }
+    .pd-stat-card, .pd-task-row { transition: none !important; animation: none !important; }
   }
 `;
 
@@ -79,6 +84,150 @@ const STATUS_LABELS: Record<string, string> = {
   archived: "Archived",
 };
 
+const CATEGORY_ICONS: Record<string, string> = {
+  feature: "lightbulb",
+  bugfix: "bug_report",
+  refactor: "construction",
+  test: "science",
+  perf: "speed",
+  infra: "dns",
+  docs: "description",
+  security: "shield",
+  design: "palette",
+  chore: "build",
+};
+
+const TABLE_COLUMNS = 7; // status, title, category, effort, impact, updated, actions
+
+// ---------------------------------------------------------------------------
+// Markdown components
+// ---------------------------------------------------------------------------
+
+const mdComponents: Record<string, React.ComponentType<Record<string, unknown>>> = {
+  h1: ({ children, ...p }) => <h1 {...p} style={{ fontSize: t.fontSizeXl, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>{children as React.ReactNode}</h1>,
+  h2: ({ children, ...p }) => <h2 {...p} style={{ fontSize: t.fontSizeLg, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>{children as React.ReactNode}</h2>,
+  h3: ({ children, ...p }) => <h3 {...p} style={{ fontSize: t.fontSizeBase, fontWeight: 600, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceMd} 0 ${t.spaceXs}` }}>{children as React.ReactNode}</h3>,
+  p: ({ children, ...p }) => <p {...p} style={{ margin: `${t.spaceSm} 0`, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}>{children as React.ReactNode}</p>,
+  a: ({ children, href, ...p }) => <a {...p} href={href as string} style={{ color: t.colorTextLink, textDecoration: "underline", textUnderlineOffset: "3px" }}>{children as React.ReactNode}</a>,
+  ul: ({ children, ...p }) => <ul {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ul>,
+  ol: ({ children, ...p }) => <ol {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ol>,
+  li: ({ children, ...p }) => <li {...p} style={{ marginTop: "0.25em" }}>{children as React.ReactNode}</li>,
+  blockquote: ({ children, ...p }) => <blockquote {...p} style={{ borderLeft: `3px solid ${t.colorBorder}`, paddingLeft: t.spaceMd, margin: `${t.spaceMd} 0`, color: t.colorTextSecondary }}>{children as React.ReactNode}</blockquote>,
+  pre: ({ children, ...p }) => <pre {...p} style={{ background: t.colorSurfacePanel, border: `1px solid ${t.colorBorder}`, borderRadius: t.radiusMd, padding: t.spaceMd, margin: `${t.spaceMd} 0`, overflowX: "auto", fontSize: t.fontSizeXs, lineHeight: t.lineHeightBase }}>{children as React.ReactNode}</pre>,
+  code: ({ children, className, ...p }) => {
+    if (className) return <code {...p} className={className as string} style={{ fontFamily: t.fontMono, fontSize: "inherit", color: t.colorTextSecondary }}>{children as React.ReactNode}</code>;
+    return <code {...p} style={{ fontFamily: t.fontMono, fontSize: "0.875em", background: t.colorSurfacePanel, padding: "0.1em 0.3em", borderRadius: t.radiusSm }}>{children as React.ReactNode}</code>;
+  },
+  strong: ({ children, ...p }) => <strong {...p} style={{ fontWeight: 600, color: t.colorText }}>{children as React.ReactNode}</strong>,
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatRelativeDate(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function MetaPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{
+      padding: `1px ${t.spaceXs}`, borderRadius: t.radiusSm,
+      background: `color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
+      fontSize: "0.6rem", fontFamily: t.fontMono, fontWeight: 500,
+      color: t.colorTextMuted, letterSpacing: "0.02em",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stat cards — task status breakdown
+// ---------------------------------------------------------------------------
+
+interface StatCardDef {
+  label: string;
+  statusKey: string;
+  color: string;
+}
+
+const STAT_CARD_DEFS: StatCardDef[] = [
+  { label: "To Do", statusKey: "todo", color: t.colorTextMuted },
+  { label: "In Progress", statusKey: "in_progress", color: t.colorWarning },
+  { label: "Done", statusKey: "done", color: t.colorSuccess },
+  { label: "Blocked", statusKey: "blocked", color: t.colorError },
+];
+
+function StatusStatCards({
+  statusCounts,
+  blockedCount,
+  loading,
+}: {
+  statusCounts: Record<string, number>;
+  blockedCount: number;
+  loading: boolean;
+}) {
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+      gap: t.spaceSm,
+    }}>
+      {STAT_CARD_DEFS.map((def, i) => {
+        if (loading) return <Skeleton key={def.statusKey} height={64} />;
+        const value = def.statusKey === "blocked" ? blockedCount : (statusCounts[def.statusKey] ?? 0);
+        return (
+          <Card
+            key={def.statusKey}
+            variant="flat"
+            padding="sm"
+            className="pd-stat-card"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: t.spaceSm,
+              animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
+              animationDelay: `${i * 50}ms`,
+            }}
+          >
+            <StatusDot color={def.color} size={10} />
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <span style={{
+                fontSize: t.fontSizeLg,
+                fontWeight: 700,
+                fontFamily: t.fontMono,
+                color: t.colorText,
+                lineHeight: 1,
+              }}>
+                {value}
+              </span>
+              <span style={{
+                fontSize: "0.6rem",
+                fontWeight: 600,
+                color: t.colorTextMuted,
+                textTransform: "uppercase",
+                letterSpacing: t.letterSpacingWide,
+                marginTop: 2,
+              }}>
+                {def.label}
+              </span>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Project header
 // ---------------------------------------------------------------------------
@@ -90,8 +239,10 @@ function ProjectHeader({
   requirements,
   taskTotal,
   statusCounts,
+  blockedCount,
   onBack,
   onAddTask,
+  statusLoading,
 }: {
   title: string;
   summary: string | null;
@@ -99,13 +250,15 @@ function ProjectHeader({
   requirements: string | null;
   taskTotal: number;
   statusCounts: Record<string, number>;
+  blockedCount: number;
   onBack: () => void;
   onAddTask: () => void;
+  statusLoading: boolean;
 }) {
   const done = statusCounts["done"] ?? 0;
+  const pct = taskTotal > 0 ? Math.round((done / taskTotal) * 100) : 0;
   const inProgress = statusCounts["in_progress"] ?? 0;
   const todo = statusCounts["todo"] ?? 0;
-  const pct = taskTotal > 0 ? Math.round((done / taskTotal) * 100) : 0;
 
   // Which briefing panels have content?
   const panels: { key: string; icon: string; label: string; content: string }[] = [];
@@ -187,6 +340,9 @@ function ProjectHeader({
           </span>
         </div>
       )}
+
+      {/* Status stat cards */}
+      <StatusStatCards statusCounts={statusCounts} blockedCount={blockedCount} loading={statusLoading} />
 
       {/* Briefing panels — collapsible tabs for summary/context/requirements */}
       {panels.length > 0 && (
@@ -342,10 +498,10 @@ function TaskFilters({
 }
 
 // ---------------------------------------------------------------------------
-// Task list
+// Task table
 // ---------------------------------------------------------------------------
 
-function TaskList({
+function TaskTableView({
   tasks,
   onSelect,
   onStatusChange,
@@ -357,168 +513,148 @@ function TaskList({
   onDelete: (task: TaskSummary) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      {tasks.map((task, i) => {
-        const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
-        return (
-          <div
-            key={task.id}
-            className="pd-task-row"
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect(task.id)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(task.id); } }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: t.spaceSm,
-              padding: `${t.spaceSm} ${t.spaceMd}`,
-              borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 25%, transparent)`,
-              cursor: "pointer",
-              animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
-              animationDelay: `${Math.min(i * 20, 200)}ms`,
-            }}
-          >
-            {/* Status dot */}
-            <StatusDot color={statusColor} size={8} />
+    <Table variant="default" density="sm">
+      <TableHeader>
+        <TableHeaderCell width={130}>Status</TableHeaderCell>
+        <TableHeaderCell>Title</TableHeaderCell>
+        <TableHeaderCell width={90}>Category</TableHeaderCell>
+        <TableHeaderCell width={70}>Effort</TableHeaderCell>
+        <TableHeaderCell width={70}>Impact</TableHeaderCell>
+        <TableHeaderCell width={90}>Updated</TableHeaderCell>
+        <TableHeaderCell width={40} aria-label="Actions" />
+      </TableHeader>
+      <TableBody>
+        {tasks.length === 0 ? (
+          <TableEmptyRow colSpan={TABLE_COLUMNS}>
+            No tasks match the current filters.
+          </TableEmptyRow>
+        ) : (
+          tasks.map((task, i) => {
+            const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
+            return (
+              <TableRow
+                key={task.id}
+                hoverable
+                onClick={() => onSelect(task.id)}
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(task.id); } }}
+                style={{
+                  animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
+                  animationDelay: `${Math.min(i * 20, 200)}ms`,
+                }}
+              >
+                {/* Status */}
+                <TableCell width={130}>
+                  <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+                    <StatusDot color={statusColor} size={8} animate={task.status === "in_progress" ? "pulse" : undefined} />
+                    <select
+                      value={task.status}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => { e.stopPropagation(); onStatusChange(task.id, e.target.value as TaskStatus); }}
+                      aria-label={`Status for ${task.title}`}
+                      style={{
+                        appearance: "none",
+                        border: "none",
+                        background: "transparent",
+                        color: statusColor,
+                        fontSize: "0.6rem",
+                        fontFamily: t.fontMono,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        cursor: "pointer",
+                        width: 70,
+                        padding: 0,
+                        outline: "none",
+                        letterSpacing: "0.03em",
+                      }}
+                    >
+                      {TASK_STATUSES.map((s) => (
+                        <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
+                      ))}
+                    </select>
+                    {task.is_blocked && <Badge variant="error">blocked</Badge>}
+                  </div>
+                </TableCell>
 
-            {/* Status quick-toggle */}
-            <select
-              value={task.status}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => { e.stopPropagation(); onStatusChange(task.id, e.target.value as TaskStatus); }}
-              aria-label={`Status for ${task.title}`}
-              style={{
-                appearance: "none",
-                border: "none",
-                background: "transparent",
-                color: statusColor,
-                fontSize: "0.6rem",
-                fontFamily: t.fontMono,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                cursor: "pointer",
-                width: 70,
-                padding: 0,
-                outline: "none",
-                letterSpacing: "0.03em",
-              }}
-            >
-              {TASK_STATUSES.map((s) => (
-                <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
-              ))}
-            </select>
+                {/* Title + summary */}
+                <TableCell truncate>
+                  <span style={{
+                    fontWeight: 600,
+                    fontSize: t.fontSizeSm,
+                    color: task.status === "done" ? t.colorTextMuted : t.colorText,
+                    textDecoration: task.status === "done" ? "line-through" : "none",
+                  }}>
+                    {task.title}
+                  </span>
+                  {task.summary && (
+                    <span style={{
+                      marginLeft: t.spaceXs,
+                      fontSize: t.fontSizeXs,
+                      color: `color-mix(in srgb, ${t.colorTextMuted} 70%, transparent)`,
+                    }}>
+                      — {task.summary}
+                    </span>
+                  )}
+                </TableCell>
 
-            {/* Title + summary */}
-            <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-              <span style={{
-                fontWeight: 600,
-                fontSize: t.fontSizeSm,
-                color: task.status === "done" ? t.colorTextMuted : t.colorText,
-                textDecoration: task.status === "done" ? "line-through" : "none",
-              }}>
-                {task.title}
-              </span>
-              {task.summary && (
-                <span style={{
-                  marginLeft: t.spaceXs,
-                  fontSize: t.fontSizeXs,
-                  color: `color-mix(in srgb, ${t.colorTextMuted} 70%, transparent)`,
-                }}>
-                  — {task.summary}
-                </span>
-              )}
-            </div>
+                {/* Category */}
+                <TableCell width={90} muted>
+                  {task.category ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      <Icon name={CATEGORY_ICONS[task.category] ?? "label"} size={12} style={{ color: t.colorTextMuted }} />
+                      <span style={{ fontSize: t.fontSizeXs }}>{task.category}</span>
+                    </span>
+                  ) : (
+                    <span style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }}>--</span>
+                  )}
+                </TableCell>
 
-            {/* Blocked badge */}
-            {task.is_blocked && (
-              <Badge variant="error">blocked</Badge>
-            )}
+                {/* Effort */}
+                <TableCell width={70} muted>
+                  {task.effort ? (
+                    <MetaPill>{task.effort}</MetaPill>
+                  ) : (
+                    <span style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }}>--</span>
+                  )}
+                </TableCell>
 
-            {/* Metadata pills */}
-            {task.effort && (
-              <span style={{
-                padding: `1px ${t.spaceXs}`,
-                borderRadius: t.radiusSm,
-                background: `color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
-                fontSize: "0.6rem",
-                fontFamily: t.fontMono,
-                color: t.colorTextMuted,
-              }}>
-                {task.effort}
-              </span>
-            )}
-            {task.impact && (
-              <span style={{
-                padding: `1px ${t.spaceXs}`,
-                borderRadius: t.radiusSm,
-                background: `color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
-                fontSize: "0.6rem",
-                fontFamily: t.fontMono,
-                color: t.colorTextMuted,
-              }}>
-                {task.impact}
-              </span>
-            )}
+                {/* Impact */}
+                <TableCell width={70} muted>
+                  {task.impact ? (
+                    <MetaPill>{task.impact}</MetaPill>
+                  ) : (
+                    <span style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }}>--</span>
+                  )}
+                </TableCell>
 
-            {/* Group key */}
-            {task.group_key && (
-              <span style={{
-                fontSize: "0.6rem",
-                fontFamily: t.fontMono,
-                color: `color-mix(in srgb, ${t.colorTextMuted} 60%, transparent)`,
-                maxWidth: 80,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}>
-                {task.group_key}
-              </span>
-            )}
+                {/* Updated */}
+                <TableCell width={90} muted>
+                  <span style={{ fontSize: "0.65rem", fontFamily: t.fontMono }}>
+                    {formatRelativeDate(task.updated_at)}
+                  </span>
+                </TableCell>
 
-            {/* Arrow hint */}
-            <Icon
-              name="chevron_right"
-              size={14}
-              className="pd-task-arrow"
-              style={{ color: t.colorTextMuted, opacity: 0, transition: "opacity 0.15s", flexShrink: 0 }}
-            />
-
-            {/* Delete */}
-            <IconButton
-              icon="delete"
-              size={14}
-              aria-label={`Delete ${task.title}`}
-              onClick={(e) => { e.stopPropagation(); onDelete(task); }}
-            />
-          </div>
-        );
-      })}
-    </div>
+                {/* Actions */}
+                <TableCell width={40}>
+                  <IconButton
+                    icon="delete"
+                    size={14}
+                    aria-label={`Delete ${task.title}`}
+                    onClick={(e) => { e.stopPropagation(); onDelete(task); }}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })
+        )}
+      </TableBody>
+    </Table>
   );
 }
 
 // ---------------------------------------------------------------------------
 // Task detail modal
 // ---------------------------------------------------------------------------
-
-const mdComponents: Record<string, React.ComponentType<Record<string, unknown>>> = {
-  h1: ({ children, ...p }) => <h1 {...p} style={{ fontSize: t.fontSizeXl, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>{children as React.ReactNode}</h1>,
-  h2: ({ children, ...p }) => <h2 {...p} style={{ fontSize: t.fontSizeLg, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>{children as React.ReactNode}</h2>,
-  h3: ({ children, ...p }) => <h3 {...p} style={{ fontSize: t.fontSizeBase, fontWeight: 600, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceMd} 0 ${t.spaceXs}` }}>{children as React.ReactNode}</h3>,
-  p: ({ children, ...p }) => <p {...p} style={{ margin: `${t.spaceSm} 0`, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}>{children as React.ReactNode}</p>,
-  a: ({ children, href, ...p }) => <a {...p} href={href as string} style={{ color: t.colorTextLink, textDecoration: "underline", textUnderlineOffset: "3px" }}>{children as React.ReactNode}</a>,
-  ul: ({ children, ...p }) => <ul {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ul>,
-  ol: ({ children, ...p }) => <ol {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ol>,
-  li: ({ children, ...p }) => <li {...p} style={{ marginTop: "0.25em" }}>{children as React.ReactNode}</li>,
-  blockquote: ({ children, ...p }) => <blockquote {...p} style={{ borderLeft: `3px solid ${t.colorBorder}`, paddingLeft: t.spaceMd, margin: `${t.spaceMd} 0`, color: t.colorTextSecondary }}>{children as React.ReactNode}</blockquote>,
-  pre: ({ children, ...p }) => <pre {...p} style={{ background: t.colorSurfacePanel, border: `1px solid ${t.colorBorder}`, borderRadius: t.radiusMd, padding: t.spaceMd, margin: `${t.spaceMd} 0`, overflowX: "auto", fontSize: t.fontSizeXs, lineHeight: t.lineHeightBase }}>{children as React.ReactNode}</pre>,
-  code: ({ children, className, ...p }) => {
-    if (className) return <code {...p} className={className as string} style={{ fontFamily: t.fontMono, fontSize: "inherit", color: t.colorTextSecondary }}>{children as React.ReactNode}</code>;
-    return <code {...p} style={{ fontFamily: t.fontMono, fontSize: "0.875em", background: t.colorSurfacePanel, padding: "0.1em 0.3em", borderRadius: t.radiusSm }}>{children as React.ReactNode}</code>;
-  },
-  strong: ({ children, ...p }) => <strong {...p} style={{ fontWeight: 600, color: t.colorText }}>{children as React.ReactNode}</strong>,
-};
 
 function TaskDetailModal({
   task,
@@ -551,10 +687,48 @@ function TaskDetailModal({
     setEditField(null);
   }
 
-  const toSelectOptions = (values: readonly string[], noneLabel = "—") => [
+  const toSelectOptions = (values: readonly string[], noneLabel = "\u2014") => [
     { value: "", label: noneLabel },
     ...values.map((v) => ({ value: v, label: v.replace(/_/g, " ") })),
   ];
+
+  // Metadata items for MetadataTable
+  const metadataItems = useMemo(() => {
+    const items: { label: string; value: React.ReactNode }[] = [];
+    items.push({
+      label: "ID",
+      value: <span style={{ fontFamily: t.fontMono, fontSize: t.fontSizeXs }}>{task.id.slice(0, 8)}...</span>,
+    });
+    if (task.category) {
+      items.push({
+        label: "Category",
+        value: (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <Icon name={CATEGORY_ICONS[task.category] ?? "label"} size={12} />
+            {task.category}
+          </span>
+        ),
+      });
+    }
+    if (task.effort) {
+      items.push({ label: "Effort", value: task.effort });
+    }
+    if (task.impact) {
+      items.push({ label: "Impact", value: task.impact });
+    }
+    if (task.group_key) {
+      items.push({ label: "Group", value: <span style={{ fontFamily: t.fontMono, fontSize: t.fontSizeXs }}>{task.group_key}</span> });
+    }
+    items.push({
+      label: "Created",
+      value: <span style={{ fontFamily: t.fontMono, fontSize: t.fontSizeXs }}>{formatRelativeDate(task.created_at)}</span>,
+    });
+    items.push({
+      label: "Updated",
+      value: <span style={{ fontFamily: t.fontMono, fontSize: t.fontSizeXs }}>{formatRelativeDate(task.updated_at)}</span>,
+    });
+    return items;
+  }, [task]);
 
   return (
     <ModalShell onClose={onClose} maxWidth={680} style={{ maxHeight: "85vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}>
@@ -565,7 +739,7 @@ function TaskDetailModal({
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceSm }}>
-          <StatusDot color={statusColor} size={10} style={{ marginTop: 8 }} />
+          <StatusDot color={statusColor} size={10} animate={task.status === "in_progress" ? "pulse" : undefined} style={{ marginTop: 8 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             {editField === "title" ? (
               <Input
@@ -596,7 +770,7 @@ function TaskDetailModal({
           <IconButton icon="close" size={18} onClick={onClose} aria-label="Close" />
         </div>
 
-        {/* Metadata row */}
+        {/* Metadata selects row */}
         <div style={{
           display: "flex",
           gap: t.spaceSm,
@@ -649,8 +823,8 @@ function TaskDetailModal({
         wordBreak: "break-word",
       }}>
         {/* Summary */}
+        <SectionLabel>Summary</SectionLabel>
         <TextSection
-          label="Summary"
           content={task.summary}
           editing={editField === "summary"}
           editValue={editValue}
@@ -658,11 +832,12 @@ function TaskDetailModal({
           onEditChange={setEditValue}
           onSave={() => saveEdit("summary")}
           onCancel={cancelEdit}
+          fieldLabel="Summary"
         />
 
         {/* Context */}
+        <SectionLabel>Context</SectionLabel>
         <TextSection
-          label="Context"
           content={task.context}
           editing={editField === "context"}
           editValue={editValue}
@@ -670,11 +845,12 @@ function TaskDetailModal({
           onEditChange={setEditValue}
           onSave={() => saveEdit("context")}
           onCancel={cancelEdit}
+          fieldLabel="Context"
         />
 
         {/* Acceptance Criteria */}
+        <SectionLabel>Acceptance Criteria</SectionLabel>
         <TextSection
-          label="Acceptance Criteria"
           content={task.acceptance_criteria}
           editing={editField === "acceptance_criteria"}
           editValue={editValue}
@@ -682,23 +858,12 @@ function TaskDetailModal({
           onEditChange={setEditValue}
           onSave={() => saveEdit("acceptance_criteria")}
           onCancel={cancelEdit}
+          fieldLabel="Acceptance Criteria"
         />
 
-        {/* Footer meta */}
-        <div style={{
-          marginTop: "auto",
-          paddingTop: t.spaceMd,
-          borderTop: `1px solid color-mix(in srgb, ${t.colorBorder} 30%, transparent)`,
-          display: "flex",
-          gap: t.spaceLg,
-          fontSize: "0.65rem",
-          fontFamily: t.fontMono,
-          color: `color-mix(in srgb, ${t.colorTextMuted} 60%, transparent)`,
-        }}>
-          <span>ID: {task.id.slice(0, 8)}…</span>
-          <span>Created: {formatRelativeDate(task.created_at)}</span>
-          <span>Updated: {formatRelativeDate(task.updated_at)}</span>
-        </div>
+        {/* Metadata table */}
+        <SectionLabel>Details</SectionLabel>
+        <MetadataTable items={metadataItems} />
       </div>
     </ModalShell>
   );
@@ -748,7 +913,6 @@ function MetaSelect({
 
 /** Editable text section with markdown preview */
 function TextSection({
-  label,
   content,
   editing,
   editValue,
@@ -756,8 +920,8 @@ function TextSection({
   onEditChange,
   onSave,
   onCancel,
+  fieldLabel,
 }: {
-  label: string;
   content: string | null;
   editing: boolean;
   editValue: string;
@@ -765,23 +929,10 @@ function TextSection({
   onEditChange: (v: string) => void;
   onSave: () => void;
   onCancel: () => void;
+  fieldLabel: string;
 }) {
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm, marginBottom: t.spaceXs }}>
-        <span style={{
-          fontSize: t.fontSizeXs,
-          fontWeight: 700,
-          color: t.colorTextMuted,
-          textTransform: "uppercase",
-          letterSpacing: t.letterSpacingWide,
-        }}>
-          {label}
-        </span>
-        {!editing && (
-          <IconButton icon="edit" size={12} onClick={onStartEdit} aria-label={`Edit ${label}`} />
-        )}
-      </div>
       {editing ? (
         <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
           <Textarea
@@ -789,7 +940,7 @@ function TextSection({
             onChange={(e) => onEditChange(e.target.value)}
             autoFocus
             rows={4}
-            placeholder={`${label}...`}
+            placeholder={`${fieldLabel}...`}
             style={{ width: "100%", boxSizing: "border-box" }}
           />
           <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
@@ -827,7 +978,7 @@ function TextSection({
             cursor: "pointer",
           }}
         >
-          No {label.toLowerCase()}. Click to add.
+          No {fieldLabel.toLowerCase()}. Click to add.
         </p>
       )}
     </div>
@@ -835,7 +986,7 @@ function TextSection({
 }
 
 // ---------------------------------------------------------------------------
-// Create task form
+// Create task form (richer — includes category, effort, impact)
 // ---------------------------------------------------------------------------
 
 function CreateTaskForm({
@@ -848,6 +999,9 @@ function CreateTaskForm({
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [status, setStatus] = useState("todo");
+  const [category, setCategory] = useState("");
+  const [effort, setEffort] = useState("");
+  const [impact, setImpact] = useState("");
 
   return (
     <FormModal
@@ -859,11 +1013,14 @@ function CreateTaskForm({
           title: title.trim(),
           ...(summary.trim() ? { summary: summary.trim() } : {}),
           status,
+          ...(category ? { category } : {}),
+          ...(effort ? { effort } : {}),
+          ...(impact ? { impact } : {}),
         });
         onClose();
       }}
       onCancel={onClose}
-      maxWidth={480}
+      maxWidth={520}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
         <Field label="Title" required>
@@ -881,32 +1038,44 @@ function CreateTaskForm({
             rows={3}
           />
         </Field>
-        <Field label="Status">
-          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-            {TASK_STATUSES.map((s) => (
-              <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
-            ))}
-          </Select>
-        </Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: t.spaceMd }}>
+          <Field label="Status">
+            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {TASK_STATUSES.map((s) => (
+                <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Category">
+            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">None</option>
+              {TASK_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: t.spaceMd }}>
+          <Field label="Effort">
+            <Select value={effort} onChange={(e) => setEffort(e.target.value)}>
+              <option value="">None</option>
+              {EFFORT_LEVELS.map((e) => (
+                <option key={e} value={e}>{e}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Impact">
+            <Select value={impact} onChange={(e) => setImpact(e.target.value)}>
+              <option value="">None</option>
+              {IMPACT_LEVELS.map((i) => (
+                <option key={i} value={i}>{i}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
       </div>
     </FormModal>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatRelativeDate(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }
 
 // ---------------------------------------------------------------------------
@@ -931,17 +1100,26 @@ export function ProjectDetailPage({
 
   // Compute status counts from all tasks (fetch separately for the progress bar)
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [statusCountsLoading, setStatusCountsLoading] = useState(true);
   useEffect(() => {
     if (!project) return;
-    // Quick fetch with no filters to get totals
-    import("../api").then(({ fetchTaskStatusCounts }) => {
-      fetchTaskStatusCounts([projectId]).then((r) => {
-        setStatusCounts(r[projectId]?.counts ?? {});
-      }).catch(() => {});
-    });
+    setStatusCountsLoading(true);
+    fetchTaskStatusCounts([projectId]).then((r) => {
+      setStatusCounts(r[projectId]?.counts ?? {});
+    }).catch(() => {}).finally(() => setStatusCountsLoading(false));
   }, [projectId, project, tasks]); // re-fetch when tasks change
 
   const allTaskTotal = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+
+  // Derive blocked count from tasks (is_blocked field)
+  // We count blocked from the statusCounts if available, otherwise from filtered tasks
+  const blockedCount = useMemo(() => {
+    // is_blocked is a user-managed field, not a status. We need to count from tasks.
+    // Since we only have the current page of tasks, we use a simple heuristic:
+    // fetch blocked count via a lightweight query. For now, just count from visible tasks
+    // and the statusCounts won't have "blocked" as a status key.
+    return tasks.filter((t) => t.is_blocked).length;
+  }, [tasks]);
 
   // Task detail
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -998,11 +1176,14 @@ export function ProjectDetailPage({
   // Loading / not found
   if (projectLoading && !project) {
     return (
-      <div style={{ flex: 1, width: "100%", maxWidth: 900, alignSelf: "center", padding: `${t.space2xl} ${t.spaceXl}` }}>
+      <div style={{ flex: 1, width: "100%", maxWidth: 960, alignSelf: "center", padding: `${t.space2xl} ${t.spaceXl}` }}>
         <Skeleton height={32} width="40%" />
         <div style={{ marginTop: t.spaceLg }}><Skeleton height={16} width="70%" /></div>
-        <div style={{ marginTop: t.spaceXl, display: "flex", flexDirection: "column", gap: t.spaceSm }}>
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={40} />)}
+        <div style={{ marginTop: t.spaceMd, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: t.spaceSm }}>
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={64} />)}
+        </div>
+        <div style={{ marginTop: t.spaceXl, display: "flex", flexDirection: "column", gap: 1 }}>
+          {Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)}
         </div>
       </div>
     );
@@ -1010,9 +1191,8 @@ export function ProjectDetailPage({
 
   if (notFound) {
     return (
-      <div style={{ flex: 1, width: "100%", maxWidth: 900, alignSelf: "center", padding: `${t.space2xl} ${t.spaceXl}`, display: "flex", flexDirection: "column", alignItems: "center", gap: t.spaceMd }}>
-        <Icon name="error" size={48} style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }} />
-        <p style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorTextMuted }}>Project not found.</p>
+      <div style={{ flex: 1, width: "100%", maxWidth: 960, alignSelf: "center", padding: `${t.space2xl} ${t.spaceXl}`, display: "flex", flexDirection: "column", alignItems: "center", gap: t.spaceMd }}>
+        <EmptyState icon="error" message="Project not found." />
         <Button size="sm" variant="ghost" onClick={onBack}>Back to projects</Button>
       </div>
     );
@@ -1024,7 +1204,7 @@ export function ProjectDetailPage({
     <div style={{
       flex: 1,
       width: "100%",
-      maxWidth: 900,
+      maxWidth: 960,
       alignSelf: "center",
       display: "flex",
       flexDirection: "column",
@@ -1034,7 +1214,7 @@ export function ProjectDetailPage({
       scrollbarWidth: "none" as const,
       gap: t.spaceLg,
     }}>
-      {/* Header */}
+      {/* Header with progress, stat cards, and briefing panels */}
       <ProjectHeader
         title={project.title}
         summary={project.summary}
@@ -1042,9 +1222,22 @@ export function ProjectDetailPage({
         requirements={project.requirements}
         taskTotal={allTaskTotal}
         statusCounts={statusCounts}
+        blockedCount={blockedCount}
         onBack={onBack}
         onAddTask={() => setShowCreate(true)}
+        statusLoading={statusCountsLoading && Object.keys(statusCounts).length === 0}
       />
+
+      {/* Tasks section */}
+      <SectionLabel>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceXs }}>
+          <Icon name="checklist" size={14} />
+          Tasks
+          {total > 0 && (
+            <Badge variant="muted" style={{ marginLeft: t.spaceXs }}>{total}</Badge>
+          )}
+        </span>
+      </SectionLabel>
 
       {/* Task filters */}
       <TaskFilters
@@ -1054,34 +1247,28 @@ export function ProjectDetailPage({
         onSearchChange={setTaskSearch}
       />
 
-      {/* Task list */}
+      {/* Task table */}
       {tasksLoading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={40} />)}
+          {Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)}
         </div>
       ) : tasks.length === 0 ? (
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: t.spaceMd,
-          padding: `${t.spaceXl} 0`,
-        }}>
-          <Icon name="checklist" size={40} style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 35%, transparent)` }} />
-          <p style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorTextMuted, textAlign: "center" }}>
-            {taskFilter.status || taskFilter.title
+        <EmptyState
+          icon={taskFilter.status || taskFilter.title ? "search_off" : "checklist"}
+          message={
+            taskFilter.status || taskFilter.title
               ? "No tasks match those filters."
-              : "No tasks yet. Add one to get started."}
-          </p>
-          {!taskFilter.title && (
+              : "No tasks yet. Add one to get started."
+          }
+          action={!taskFilter.title ? (
             <Button size="sm" onClick={() => setShowCreate(true)}>
               <Icon name="add" size={15} />
               Add Task
             </Button>
-          )}
-        </div>
+          ) : undefined}
+        />
       ) : (
-        <TaskList
+        <TaskTableView
           tasks={tasks}
           onSelect={setSelectedTaskId}
           onStatusChange={handleStatusChange}

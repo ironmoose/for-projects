@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Redesign ProjectsPage as mission control dashboard — aggregate stat cards, richer project cards with status breakdown badges, SectionLabel headings, EmptyState component
+- Redesign TasksPage as observability dashboard — status distribution cards, category distribution chips, Table compound component for list view, StatusDot pulse animation on in-progress tasks
+- Redesign KnowledgeBasePage as library — prose-width reader using Container/Prose/Markdown from @4lt7ab/ui/content, MetadataTable in reader, ChipPicker for tag selection, Combobox for folder input
+- Redesign ProjectDetailPage — status stat cards, Table-based task list, richer create task form with category/effort/impact fields, MetadataTable in task detail modal
 - Migrate to @4lt7ab/ui v0.2.15 — replace TopBar, FormModal, AlertBanner, ShortcutHelpModal, Toast, ThemeBackground, Markdown with library equivalents
 - Replace SearchToggle, TagPicker, TaskTableFilters with thin wrappers over library SearchInput/SegmentedControl, ChipPicker, TableFilters
 - Remove local spin/fade-in-up keyframe injections (library ThemeProvider ships them globally)

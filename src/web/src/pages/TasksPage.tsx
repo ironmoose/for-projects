@@ -1,5 +1,5 @@
 /**
- * TasksPage — cross-project task search and management.
+ * TasksPage — observability dashboard for cross-project task management.
  *
  * UI dependencies: @4lt7ab/ui only.
  * Data dependencies: hooks, api layer, types.
@@ -9,18 +9,33 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { semantic as t, useInjectStyles, KEYFRAMES } from "@4lt7ab/ui/core";
 import {
   Button,
+  Card,
   IconButton,
   Icon,
   Badge,
   StatusDot,
+  Stack,
   SearchInput,
   Input,
   Textarea,
+  Select,
+  Field,
+  Table,
+  TableHeader,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableEmptyRow,
   Pagination,
   ConfirmDialog,
   ModalShell,
   Skeleton,
+  RowSkeleton,
   SegmentedControl,
+  SectionLabel,
+  MetadataTable,
+  EmptyState,
   useToast,
 } from "@4lt7ab/ui/ui";
 import ReactMarkdown from "react-markdown";
@@ -46,15 +61,6 @@ import type { TaskSummary, TaskStatus } from "../types";
 
 const STYLES_ID = "tasks-page-styles";
 const STYLES_CSS = `
-  .tp-row {
-    transition: background 0.1s ease;
-  }
-  .tp-row:hover {
-    background: ${t.colorSurfaceRaised} !important;
-  }
-  .tp-row:hover .tp-arrow {
-    opacity: 1;
-  }
   .tp-card {
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
@@ -67,7 +73,7 @@ const STYLES_CSS = `
     color: ${t.colorActionPrimary};
   }
   @media (prefers-reduced-motion: reduce) {
-    .tp-row, .tp-card { transition: none; }
+    .tp-card { transition: none; }
   }
 `;
 
@@ -119,10 +125,169 @@ interface TaskFilters {
 }
 
 // ---------------------------------------------------------------------------
-// Hero
+// Status distribution cards
 // ---------------------------------------------------------------------------
 
-function HeroSection({
+function StatusDistribution({
+  tasks,
+  total,
+}: {
+  tasks: TaskSummary[];
+  total: number;
+}) {
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { todo: 0, in_progress: 0, done: 0, archived: 0 };
+    for (const task of tasks) {
+      if (task.status in c) c[task.status]++;
+    }
+    return c;
+  }, [tasks]);
+
+  const blockedCount = useMemo(() => tasks.filter((t) => t.is_blocked).length, [tasks]);
+
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+      gap: t.spaceSm,
+    }}>
+      {TASK_STATUSES.map((status) => {
+        const count = counts[status] ?? 0;
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        return (
+          <Card key={status} variant="flat" style={{ padding: t.spaceMd }}>
+            <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, marginBottom: t.spaceXs }}>
+              <StatusDot
+                color={STATUS_COLORS[status]}
+                size={8}
+                animate={status === "in_progress" && count > 0 ? "pulse" : "none"}
+              />
+              <span style={{
+                fontSize: t.fontSizeXs,
+                fontFamily: t.fontMono,
+                fontWeight: 600,
+                color: t.colorTextMuted,
+                textTransform: "uppercase",
+                letterSpacing: t.letterSpacingWide,
+              }}>
+                {STATUS_LABELS[status]}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: t.spaceXs }}>
+              <span style={{
+                fontSize: t.fontSizeXl,
+                fontWeight: 700,
+                fontFamily: t.fontSerif,
+                color: count > 0 ? t.colorText : t.colorTextMuted,
+              }}>
+                {count}
+              </span>
+              <span style={{
+                fontSize: t.fontSizeXs,
+                color: `color-mix(in srgb, ${t.colorTextMuted} 60%, transparent)`,
+                fontFamily: t.fontMono,
+              }}>
+                {pct}%
+              </span>
+            </div>
+          </Card>
+        );
+      })}
+
+      {/* Blocked indicator card */}
+      <Card variant="flat" style={{
+        padding: t.spaceMd,
+        borderLeft: blockedCount > 0 ? `3px solid ${t.colorError}` : undefined,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, marginBottom: t.spaceXs }}>
+          <Icon name="block" size={12} style={{ color: blockedCount > 0 ? t.colorError : t.colorTextMuted }} />
+          <span style={{
+            fontSize: t.fontSizeXs,
+            fontFamily: t.fontMono,
+            fontWeight: 600,
+            color: blockedCount > 0 ? t.colorError : t.colorTextMuted,
+            textTransform: "uppercase",
+            letterSpacing: t.letterSpacingWide,
+          }}>
+            Blocked
+          </span>
+        </div>
+        <span style={{
+          fontSize: t.fontSizeXl,
+          fontWeight: 700,
+          fontFamily: t.fontSerif,
+          color: blockedCount > 0 ? t.colorError : t.colorTextMuted,
+        }}>
+          {blockedCount}
+        </span>
+      </Card>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Category distribution chips
+// ---------------------------------------------------------------------------
+
+function CategoryDistribution({ tasks }: { tasks: TaskSummary[] }) {
+  const categoryCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const task of tasks) {
+      if (task.category) {
+        c[task.category] = (c[task.category] ?? 0) + 1;
+      }
+    }
+    return Object.entries(c).sort((a, b) => b[1] - a[1]);
+  }, [tasks]);
+
+  if (categoryCounts.length === 0) return null;
+
+  return (
+    <div style={{ display: "flex", gap: t.spaceXs, flexWrap: "wrap", alignItems: "center" }}>
+      <span style={{
+        fontSize: t.fontSizeXs,
+        fontFamily: t.fontMono,
+        fontWeight: 600,
+        color: t.colorTextMuted,
+        textTransform: "uppercase",
+        letterSpacing: t.letterSpacingWide,
+        marginRight: t.spaceXs,
+      }}>
+        Categories
+      </span>
+      {categoryCounts.map(([cat, count]) => (
+        <span key={cat} style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: `2px ${t.spaceSm}`,
+          borderRadius: t.radiusFull,
+          background: `color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
+          fontSize: t.fontSizeXs,
+          fontFamily: t.fontMono,
+          fontWeight: 500,
+          color: t.colorTextMuted,
+        }}>
+          <Icon name={CATEGORY_ICONS[cat] ?? "label"} size={11} style={{ color: t.colorTextMuted }} />
+          {cat}
+          <span style={{
+            fontWeight: 700,
+            color: t.colorTextSecondary,
+            marginLeft: 2,
+          }}>
+            {count}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard header
+// ---------------------------------------------------------------------------
+
+function DashboardHeader({
   total,
   search,
   onSearchChange,
@@ -134,16 +299,16 @@ function HeroSection({
   return (
     <div style={{
       display: "flex",
-      flexDirection: "column",
       alignItems: "center",
       gap: t.spaceMd,
-      padding: `${t.space2xl} 0 ${t.spaceLg}`,
+      padding: `${t.spaceLg} 0 ${t.spaceSm}`,
+      flexWrap: "wrap",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
-        <Icon name="task_alt" size={28} style={{ color: t.colorActionPrimary }} />
+      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm, flex: "0 0 auto" }}>
+        <Icon name="task_alt" size={24} style={{ color: t.colorActionPrimary }} />
         <h1 style={{
           margin: 0,
-          fontSize: t.fontSize2xl,
+          fontSize: t.fontSizeXl,
           fontWeight: 700,
           fontFamily: t.fontSerif,
           color: t.colorText,
@@ -151,22 +316,20 @@ function HeroSection({
         }}>
           Tasks
         </h1>
+        <span style={{
+          fontSize: t.fontSizeSm,
+          fontFamily: t.fontMono,
+          color: t.colorTextMuted,
+          fontWeight: 500,
+        }}>
+          {total}
+        </span>
       </div>
-      <p style={{
-        margin: 0,
-        fontSize: t.fontSizeSm,
-        color: t.colorTextMuted,
-        textAlign: "center",
-      }}>
-        {total > 0
-          ? `${total} task${total !== 1 ? "s" : ""} across all projects.`
-          : "No tasks yet."}
-      </p>
-      <div style={{ width: "100%", maxWidth: 520 }}>
+      <div style={{ flex: 1, minWidth: 200, maxWidth: 400 }}>
         <SearchInput
           value={search}
           onSearch={onSearchChange}
-          placeholder="Search all tasks..."
+          placeholder="Search tasks..."
           debounceMs={200}
         />
       </div>
@@ -186,6 +349,7 @@ function FilterBar({
   onClearAll,
   viewMode,
   onViewModeChange,
+  blockedCount,
 }: {
   filters: TaskFilters;
   onChange: (f: TaskFilters) => void;
@@ -194,6 +358,7 @@ function FilterBar({
   onClearAll: () => void;
   viewMode: "list" | "cards";
   onViewModeChange: (v: "list" | "cards") => void;
+  blockedCount: number;
 }) {
   return (
     <div style={{
@@ -275,7 +440,7 @@ function FilterBar({
       <PillSelect
         value={filters.blocked ?? ""}
         options={[
-          { value: "", label: "Blocked" },
+          { value: "", label: `Blocked${blockedCount > 0 ? ` (${blockedCount})` : ""}` },
           { value: "true", label: "Yes" },
           { value: "false", label: "No" },
         ]}
@@ -344,10 +509,12 @@ function PillSelect({
 }
 
 // ---------------------------------------------------------------------------
-// Task list view
+// Task table view (proper Table compound component)
 // ---------------------------------------------------------------------------
 
-function TaskListView({
+const TABLE_COLUMNS = 8; // status, title, category, effort, impact, project, updated, actions
+
+function TaskTableView({
   tasks,
   projectMap,
   onSelect,
@@ -361,100 +528,145 @@ function TaskListView({
   onDelete: (task: TaskSummary) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      {tasks.map((task, i) => {
-        const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
-        const projectName = projectMap.get(task.project_id);
-        return (
-          <div
-            key={task.id}
-            className="tp-row"
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect(task.id)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(task.id); } }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: t.spaceSm,
-              padding: `${t.spaceSm} ${t.spaceMd}`,
-              borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 25%, transparent)`,
-              cursor: "pointer",
-              animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
-              animationDelay: `${Math.min(i * 15, 200)}ms`,
-            }}
-          >
-            <StatusDot color={statusColor} size={8} />
+    <Table variant="default" density="sm">
+      <TableHeader>
+        <TableHeaderCell width={130}>Status</TableHeaderCell>
+        <TableHeaderCell>Title</TableHeaderCell>
+        <TableHeaderCell width={90}>Category</TableHeaderCell>
+        <TableHeaderCell width={70}>Effort</TableHeaderCell>
+        <TableHeaderCell width={70}>Impact</TableHeaderCell>
+        <TableHeaderCell width={120}>Project</TableHeaderCell>
+        <TableHeaderCell width={90}>Updated</TableHeaderCell>
+        <TableHeaderCell width={40} aria-label="Actions" />
+      </TableHeader>
+      <TableBody>
+        {tasks.length === 0 ? (
+          <TableEmptyRow colSpan={TABLE_COLUMNS}>
+            No tasks match the current filters.
+          </TableEmptyRow>
+        ) : (
+          tasks.map((task, i) => {
+            const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
+            const projectName = projectMap.get(task.project_id);
+            return (
+              <TableRow
+                key={task.id}
+                hoverable
+                onClick={() => onSelect(task.id)}
+                style={{
+                  cursor: "pointer",
+                  animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
+                  animationDelay: `${Math.min(i * 15, 200)}ms`,
+                }}
+              >
+                {/* Status */}
+                <TableCell width={130}>
+                  <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+                    <StatusDot
+                      color={statusColor}
+                      size={8}
+                      animate={task.status === "in_progress" ? "pulse" : "none"}
+                    />
+                    <select
+                      value={task.status}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => { e.stopPropagation(); onStatusChange(task.id, e.target.value as TaskStatus); }}
+                      aria-label={`Status for ${task.title}`}
+                      style={{
+                        appearance: "none", border: "none", background: "transparent",
+                        color: statusColor, fontSize: "0.6rem", fontFamily: t.fontMono,
+                        fontWeight: 700, textTransform: "uppercase", cursor: "pointer",
+                        padding: 0, outline: "none", letterSpacing: "0.03em",
+                      }}
+                    >
+                      {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
+                    </select>
+                    {task.is_blocked && <Badge variant="error">blocked</Badge>}
+                  </div>
+                </TableCell>
 
-            {/* Status quick-toggle */}
-            <select
-              value={task.status}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => { e.stopPropagation(); onStatusChange(task.id, e.target.value as TaskStatus); }}
-              aria-label={`Status for ${task.title}`}
-              style={{
-                appearance: "none", border: "none", background: "transparent",
-                color: statusColor, fontSize: "0.6rem", fontFamily: t.fontMono,
-                fontWeight: 700, textTransform: "uppercase", cursor: "pointer",
-                width: 70, padding: 0, outline: "none", letterSpacing: "0.03em",
-              }}
-            >
-              {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
-            </select>
+                {/* Title */}
+                <TableCell truncate>
+                  <span style={{
+                    fontWeight: 600, fontSize: t.fontSizeSm,
+                    color: task.status === "done" ? t.colorTextMuted : t.colorText,
+                    textDecoration: task.status === "done" ? "line-through" : "none",
+                  }}>
+                    {task.title}
+                  </span>
+                  {task.summary && (
+                    <span style={{
+                      marginLeft: t.spaceXs, fontSize: t.fontSizeXs,
+                      color: `color-mix(in srgb, ${t.colorTextMuted} 70%, transparent)`,
+                    }}>
+                      — {task.summary}
+                    </span>
+                  )}
+                </TableCell>
 
-            {/* Title + summary */}
-            <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-              <span style={{
-                fontWeight: 600, fontSize: t.fontSizeSm,
-                color: task.status === "done" ? t.colorTextMuted : t.colorText,
-                textDecoration: task.status === "done" ? "line-through" : "none",
-              }}>
-                {task.title}
-              </span>
-              {task.summary && (
-                <span style={{ marginLeft: t.spaceXs, fontSize: t.fontSizeXs, color: `color-mix(in srgb, ${t.colorTextMuted} 70%, transparent)` }}>
-                  — {task.summary}
-                </span>
-              )}
-            </div>
+                {/* Category */}
+                <TableCell width={90} muted>
+                  {task.category ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      <Icon name={CATEGORY_ICONS[task.category] ?? "label"} size={12} style={{ color: t.colorTextMuted }} />
+                      <span style={{ fontSize: t.fontSizeXs }}>{task.category}</span>
+                    </span>
+                  ) : (
+                    <span style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }}>--</span>
+                  )}
+                </TableCell>
 
-            {/* Blocked */}
-            {task.is_blocked && <Badge variant="error">blocked</Badge>}
+                {/* Effort */}
+                <TableCell width={70} muted>
+                  {task.effort ? (
+                    <MetaPill>{task.effort}</MetaPill>
+                  ) : (
+                    <span style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }}>--</span>
+                  )}
+                </TableCell>
 
-            {/* Category icon */}
-            {task.category && (
-              <Icon
-                name={CATEGORY_ICONS[task.category] ?? "label"}
-                size={14}
-                title={task.category}
-                style={{ color: t.colorTextMuted, flexShrink: 0 }}
-              />
-            )}
+                {/* Impact */}
+                <TableCell width={70} muted>
+                  {task.impact ? (
+                    <MetaPill>{task.impact}</MetaPill>
+                  ) : (
+                    <span style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }}>--</span>
+                  )}
+                </TableCell>
 
-            {/* Effort/impact pills */}
-            {task.effort && <MetaPill>{task.effort}</MetaPill>}
-            {task.impact && <MetaPill>{task.impact}</MetaPill>}
+                {/* Project */}
+                <TableCell width={120} truncate muted>
+                  {projectName ? (
+                    <span style={{ fontSize: "0.65rem", fontFamily: t.fontMono }}>
+                      {projectName}
+                    </span>
+                  ) : (
+                    <span style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }}>--</span>
+                  )}
+                </TableCell>
 
-            {/* Project name */}
-            {projectName && (
-              <span style={{
-                fontSize: "0.6rem", fontFamily: t.fontMono,
-                color: `color-mix(in srgb, ${t.colorTextMuted} 60%, transparent)`,
-                maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0,
-              }}>
-                {projectName}
-              </span>
-            )}
+                {/* Updated */}
+                <TableCell width={90} muted>
+                  <span style={{ fontSize: "0.65rem", fontFamily: t.fontMono }}>
+                    {formatRelativeDate(task.updated_at)}
+                  </span>
+                </TableCell>
 
-            <Icon name="chevron_right" size={14} className="tp-arrow"
-              style={{ color: t.colorTextMuted, opacity: 0, transition: "opacity 0.15s", flexShrink: 0 }} />
-
-            <IconButton icon="delete" size={14} aria-label={`Delete ${task.title}`}
-              onClick={(e) => { e.stopPropagation(); onDelete(task); }} />
-          </div>
-        );
-      })}
-    </div>
+                {/* Actions */}
+                <TableCell width={40}>
+                  <IconButton
+                    icon="delete"
+                    size={14}
+                    aria-label={`Delete ${task.title}`}
+                    onClick={(e) => { e.stopPropagation(); onDelete(task); }}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })
+        )}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -511,7 +723,11 @@ function TaskCardGrid({
             {/* Header: status + actions */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
-                <StatusDot color={statusColor} size={8} />
+                <StatusDot
+                  color={statusColor}
+                  size={8}
+                  animate={task.status === "in_progress" ? "pulse" : "none"}
+                />
                 <select
                   value={task.status}
                   onClick={(e) => e.stopPropagation()}
@@ -650,13 +866,8 @@ function TaskDetailModal({
   }
   function cancelEdit() { setEditField(null); }
 
-  const toOpts = (values: readonly string[], none = "—") => [
-    { value: "", label: none },
-    ...values.map((v) => ({ value: v, label: v.replace(/_/g, " ") })),
-  ];
-
   return (
-    <ModalShell onClose={onClose} maxWidth={680} style={{ maxHeight: "85vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}>
+    <ModalShell onClose={onClose} maxWidth={720} style={{ maxHeight: "85vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <div style={{
         padding: `${t.spaceLg} ${t.spaceXl}`,
@@ -664,7 +875,12 @@ function TaskDetailModal({
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceSm }}>
-          <StatusDot color={statusColor} size={10} style={{ marginTop: 8 }} />
+          <StatusDot
+            color={statusColor}
+            size={10}
+            animate={task.status === "in_progress" ? "pulse" : "none"}
+            style={{ marginTop: 8 }}
+          />
           <div style={{ flex: 1, minWidth: 0 }}>
             {editField === "title" ? (
               <Input value={editValue} onChange={(e) => setEditValue(e.target.value)}
@@ -687,108 +903,236 @@ function TaskDetailModal({
           </div>
           <IconButton icon="close" size={18} onClick={onClose} aria-label="Close" />
         </div>
-
-        <div style={{ display: "flex", gap: t.spaceSm, flexWrap: "wrap", marginTop: t.spaceSm, alignItems: "center" }}>
-          <MetaSelect label="Status" value={task.status} color={statusColor}
-            options={TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] ?? s }))}
-            onChange={(v) => onUpdate(task.id, { status: v })} />
-          <MetaSelect label="Effort" value={task.effort ?? ""} options={toOpts(EFFORT_LEVELS)}
-            onChange={(v) => onUpdate(task.id, { effort: v || null })} />
-          <MetaSelect label="Impact" value={task.impact ?? ""} options={toOpts(IMPACT_LEVELS)}
-            onChange={(v) => onUpdate(task.id, { impact: v || null })} />
-          <MetaSelect label="Category" value={task.category ?? ""} options={toOpts(TASK_CATEGORIES)}
-            onChange={(v) => onUpdate(task.id, { category: v || null })} />
-          {task.is_blocked && <Badge variant="error">blocked</Badge>}
-        </div>
       </div>
 
       {/* Body */}
       <div style={{
         flex: 1, overflowY: "auto", padding: t.spaceXl,
-        display: "flex", flexDirection: "column", gap: t.spaceMd,
+        display: "flex", flexDirection: "column", gap: t.spaceLg,
         scrollbarWidth: "none" as const, minWidth: 0,
         overflowWrap: "break-word", wordBreak: "break-word",
       }}>
-        <TextSection label="Summary" content={task.summary} editing={editField === "summary"} editValue={editValue}
-          onStartEdit={() => startEdit("summary", task.summary ?? "")} onEditChange={setEditValue}
-          onSave={() => saveEdit("summary")} onCancel={cancelEdit} />
-        <TextSection label="Context" content={task.context} editing={editField === "context"} editValue={editValue}
-          onStartEdit={() => startEdit("context", task.context ?? "")} onEditChange={setEditValue}
-          onSave={() => saveEdit("context")} onCancel={cancelEdit} />
-        <TextSection label="Acceptance Criteria" content={task.acceptance_criteria} editing={editField === "acceptance_criteria"} editValue={editValue}
-          onStartEdit={() => startEdit("acceptance_criteria", task.acceptance_criteria ?? "")} onEditChange={setEditValue}
-          onSave={() => saveEdit("acceptance_criteria")} onCancel={cancelEdit} />
+        {/* Metadata section */}
+        <div>
+          <SectionLabel>Properties</SectionLabel>
+          <div style={{ marginTop: t.spaceSm }}>
+            <MetadataTable items={[
+              {
+                label: "Status",
+                value: (
+                  <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+                    <StatusDot color={statusColor} size={8} animate={task.status === "in_progress" ? "pulse" : "none"} />
+                    <select
+                      value={task.status}
+                      onChange={(e) => onUpdate(task.id, { status: e.target.value })}
+                      aria-label="Status"
+                      style={{
+                        appearance: "none", border: "none", background: "transparent",
+                        color: statusColor, fontSize: t.fontSizeXs,
+                        fontFamily: t.fontSans, fontWeight: 600, cursor: "pointer",
+                        padding: 0, outline: "none",
+                      }}
+                    >
+                      {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
+                    </select>
+                  </div>
+                ),
+              },
+              {
+                label: "Effort",
+                value: (
+                  <select
+                    value={task.effort ?? ""}
+                    onChange={(e) => onUpdate(task.id, { effort: e.target.value || null })}
+                    aria-label="Effort"
+                    style={{
+                      appearance: "none", border: "none", background: "transparent",
+                      color: t.colorTextSecondary, fontSize: t.fontSizeXs,
+                      fontFamily: t.fontSans, fontWeight: 600, cursor: "pointer",
+                      padding: 0, outline: "none",
+                    }}
+                  >
+                    <option value="">--</option>
+                    {EFFORT_LEVELS.map((e) => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                ),
+              },
+              {
+                label: "Impact",
+                value: (
+                  <select
+                    value={task.impact ?? ""}
+                    onChange={(e) => onUpdate(task.id, { impact: e.target.value || null })}
+                    aria-label="Impact"
+                    style={{
+                      appearance: "none", border: "none", background: "transparent",
+                      color: t.colorTextSecondary, fontSize: t.fontSizeXs,
+                      fontFamily: t.fontSans, fontWeight: 600, cursor: "pointer",
+                      padding: 0, outline: "none",
+                    }}
+                  >
+                    <option value="">--</option>
+                    {IMPACT_LEVELS.map((i) => <option key={i} value={i}>{i}</option>)}
+                  </select>
+                ),
+              },
+              {
+                label: "Category",
+                value: (
+                  <select
+                    value={task.category ?? ""}
+                    onChange={(e) => onUpdate(task.id, { category: e.target.value || null })}
+                    aria-label="Category"
+                    style={{
+                      appearance: "none", border: "none", background: "transparent",
+                      color: t.colorTextSecondary, fontSize: t.fontSizeXs,
+                      fontFamily: t.fontSans, fontWeight: 600, cursor: "pointer",
+                      padding: 0, outline: "none",
+                    }}
+                  >
+                    <option value="">--</option>
+                    {TASK_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                ),
+              },
+              ...(task.is_blocked ? [{
+                label: "Blocked",
+                value: <Badge variant="error">Yes</Badge>,
+              }] : []),
+            ]} />
+          </div>
+        </div>
 
+        {/* Summary */}
+        <div>
+          <SectionLabel>Summary</SectionLabel>
+          <div style={{ marginTop: t.spaceSm }}>
+            {editField === "summary" ? (
+              <Field label="Summary" htmlFor="edit-summary">
+                <Textarea
+                  id="edit-summary"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  autoFocus
+                  rows={3}
+                  placeholder="Task summary..."
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                  onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
+                />
+                <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end", marginTop: t.spaceSm }}>
+                  <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                  <Button size="sm" onClick={() => saveEdit("summary")}>Save</Button>
+                </div>
+              </Field>
+            ) : task.summary ? (
+              <div onClick={() => startEdit("summary", task.summary ?? "")} style={{
+                cursor: "pointer", fontSize: t.fontSizeSm, lineHeight: t.lineHeightRelaxed,
+                color: t.colorTextMuted, overflowWrap: "break-word", wordBreak: "break-word", whiteSpace: "pre-wrap",
+              }} title="Click to edit">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{task.summary}</ReactMarkdown>
+              </div>
+            ) : (
+              <p onClick={() => startEdit("summary", "")} style={{
+                margin: 0, fontSize: t.fontSizeSm, color: `color-mix(in srgb, ${t.colorTextMuted} 50%, transparent)`,
+                fontStyle: "italic", cursor: "pointer",
+              }}>
+                No summary. Click to add.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Context */}
+        <div>
+          <SectionLabel>Context</SectionLabel>
+          <div style={{ marginTop: t.spaceSm }}>
+            {editField === "context" ? (
+              <Field label="Context" htmlFor="edit-context">
+                <Textarea
+                  id="edit-context"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  autoFocus
+                  rows={5}
+                  placeholder="Background, rationale, design notes..."
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                  onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
+                />
+                <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end", marginTop: t.spaceSm }}>
+                  <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                  <Button size="sm" onClick={() => saveEdit("context")}>Save</Button>
+                </div>
+              </Field>
+            ) : task.context ? (
+              <div onClick={() => startEdit("context", task.context ?? "")} style={{
+                cursor: "pointer", fontSize: t.fontSizeSm, lineHeight: t.lineHeightRelaxed,
+                color: t.colorTextMuted, overflowWrap: "break-word", wordBreak: "break-word", whiteSpace: "pre-wrap",
+              }} title="Click to edit">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{task.context}</ReactMarkdown>
+              </div>
+            ) : (
+              <p onClick={() => startEdit("context", "")} style={{
+                margin: 0, fontSize: t.fontSizeSm, color: `color-mix(in srgb, ${t.colorTextMuted} 50%, transparent)`,
+                fontStyle: "italic", cursor: "pointer",
+              }}>
+                No context. Click to add.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Acceptance Criteria */}
+        <div>
+          <SectionLabel>Acceptance Criteria</SectionLabel>
+          <div style={{ marginTop: t.spaceSm }}>
+            {editField === "acceptance_criteria" ? (
+              <Field label="Acceptance Criteria" htmlFor="edit-ac">
+                <Textarea
+                  id="edit-ac"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  autoFocus
+                  rows={5}
+                  placeholder="What conditions must be met..."
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                  onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
+                />
+                <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end", marginTop: t.spaceSm }}>
+                  <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                  <Button size="sm" onClick={() => saveEdit("acceptance_criteria")}>Save</Button>
+                </div>
+              </Field>
+            ) : task.acceptance_criteria ? (
+              <div onClick={() => startEdit("acceptance_criteria", task.acceptance_criteria ?? "")} style={{
+                cursor: "pointer", fontSize: t.fontSizeSm, lineHeight: t.lineHeightRelaxed,
+                color: t.colorTextMuted, overflowWrap: "break-word", wordBreak: "break-word", whiteSpace: "pre-wrap",
+              }} title="Click to edit">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{task.acceptance_criteria}</ReactMarkdown>
+              </div>
+            ) : (
+              <p onClick={() => startEdit("acceptance_criteria", "")} style={{
+                margin: 0, fontSize: t.fontSizeSm, color: `color-mix(in srgb, ${t.colorTextMuted} 50%, transparent)`,
+                fontStyle: "italic", cursor: "pointer",
+              }}>
+                No acceptance criteria. Click to add.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer metadata */}
         <div style={{
           marginTop: "auto", paddingTop: t.spaceMd,
           borderTop: `1px solid color-mix(in srgb, ${t.colorBorder} 30%, transparent)`,
           display: "flex", gap: t.spaceLg, fontSize: "0.65rem",
           fontFamily: t.fontMono, color: `color-mix(in srgb, ${t.colorTextMuted} 60%, transparent)`,
         }}>
-          <span>ID: {task.id.slice(0, 8)}…</span>
+          <span>ID: {task.id.slice(0, 8)}...</span>
           <span>Created: {formatRelativeDate(task.created_at)}</span>
           <span>Updated: {formatRelativeDate(task.updated_at)}</span>
         </div>
       </div>
     </ModalShell>
-  );
-}
-
-function MetaSelect({ label, value, options, color, onChange }: {
-  label: string; value: string; options: { value: string; label: string }[];
-  color?: string; onChange: (v: string) => void;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-      <span style={{ fontSize: "0.6rem", fontFamily: t.fontMono, color: t.colorTextMuted, textTransform: "uppercase" }}>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}
-        style={{ appearance: "none", border: "none", background: "transparent",
-          color: color ?? t.colorTextSecondary, fontSize: t.fontSizeXs,
-          fontFamily: t.fontSans, fontWeight: 600, cursor: "pointer",
-          padding: `2px ${t.spaceXs}`, outline: "none" }}>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  );
-}
-
-function TextSection({ label, content, editing, editValue, onStartEdit, onEditChange, onSave, onCancel }: {
-  label: string; content: string | null; editing: boolean; editValue: string;
-  onStartEdit: () => void; onEditChange: (v: string) => void; onSave: () => void; onCancel: () => void;
-}) {
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm, marginBottom: t.spaceXs }}>
-        <span style={{ fontSize: t.fontSizeXs, fontWeight: 700, color: t.colorTextMuted, textTransform: "uppercase", letterSpacing: t.letterSpacingWide }}>
-          {label}
-        </span>
-        {!editing && <IconButton icon="edit" size={12} onClick={onStartEdit} aria-label={`Edit ${label}`} />}
-      </div>
-      {editing ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
-          <Textarea value={editValue} onChange={(e) => onEditChange(e.target.value)} autoFocus rows={4}
-            placeholder={`${label}...`} style={{ width: "100%", boxSizing: "border-box" }} />
-          <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
-            <Button size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>
-            <Button size="sm" onClick={onSave}>Save</Button>
-          </div>
-        </div>
-      ) : content ? (
-        <div onClick={onStartEdit} style={{
-          cursor: "pointer", fontSize: t.fontSizeSm, lineHeight: t.lineHeightRelaxed,
-          color: t.colorTextMuted, overflowWrap: "break-word", wordBreak: "break-word", whiteSpace: "pre-wrap",
-        }} title="Click to edit">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{content}</ReactMarkdown>
-        </div>
-      ) : (
-        <p onClick={onStartEdit} style={{
-          margin: 0, fontSize: t.fontSizeSm, color: `color-mix(in srgb, ${t.colorTextMuted} 50%, transparent)`,
-          fontStyle: "italic", cursor: "pointer",
-        }}>
-          No {label.toLowerCase()}. Click to add.
-        </p>
-      )}
-    </div>
   );
 }
 
@@ -835,6 +1179,9 @@ export function TasksPage() {
   const [deleteTarget, setDeleteTarget] = useState<TaskSummary | null>(null);
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p.title])), [projects]);
+
+  // Blocked count computed from loaded tasks
+  const blockedCount = useMemo(() => tasks.filter((t) => t.is_blocked).length, [tasks]);
 
   // Load tasks
   const filtersRef = useRef(filters);
@@ -948,14 +1295,26 @@ export function TasksPage() {
 
   return (
     <div style={{
-      flex: 1, width: "100%", maxWidth: 1100, alignSelf: "center",
+      flex: 1, width: "100%", maxWidth: 1200, alignSelf: "center",
       display: "flex", flexDirection: "column",
       padding: `0 ${t.spaceXl} ${t.space2xl}`,
       boxSizing: "border-box", overflowY: "auto",
-      scrollbarWidth: "none" as const, gap: t.spaceLg,
+      scrollbarWidth: "none" as const, gap: t.spaceMd,
     }}>
-      <HeroSection total={total} search={search} onSearchChange={handleSearchChange} />
+      {/* Dashboard header */}
+      <DashboardHeader total={total} search={search} onSearchChange={handleSearchChange} />
 
+      {/* Status distribution */}
+      {!loading && tasks.length > 0 && (
+        <StatusDistribution tasks={tasks} total={total} />
+      )}
+
+      {/* Category distribution */}
+      {!loading && tasks.length > 0 && (
+        <CategoryDistribution tasks={tasks} />
+      )}
+
+      {/* Filter bar */}
       <FilterBar
         filters={filters}
         onChange={setFilters}
@@ -964,6 +1323,7 @@ export function TasksPage() {
         onClearAll={clearFilters}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        blockedCount={blockedCount}
       />
 
       {/* Content */}
@@ -974,21 +1334,19 @@ export function TasksPage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={40} />)}
+            {Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)}
           </div>
         )
       ) : tasks.length === 0 ? (
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center",
-          gap: t.spaceMd, padding: `${t.spaceXl} 0`,
-        }}>
-          <Icon name="search_off" size={48} style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 35%, transparent)` }} />
-          <p style={{ margin: 0, fontSize: t.fontSizeSm, color: t.colorTextMuted, textAlign: "center", maxWidth: 320, lineHeight: t.lineHeightRelaxed }}>
-            {activeFilterCount > 0 || search
+        <EmptyState
+          icon="search"
+          message={
+            activeFilterCount > 0 || search
               ? "No tasks match those filters. Try broadening your search."
-              : "No tasks across any project yet."}
-          </p>
-        </div>
+              : "No tasks across any project yet."
+          }
+          variant="card"
+        />
       ) : viewMode === "cards" ? (
         <TaskCardGrid
           tasks={tasks}
@@ -998,7 +1356,7 @@ export function TasksPage() {
           onDelete={setDeleteTarget}
         />
       ) : (
-        <TaskListView
+        <TaskTableView
           tasks={tasks}
           projectMap={projectMap}
           onSelect={setSelectedTaskId}

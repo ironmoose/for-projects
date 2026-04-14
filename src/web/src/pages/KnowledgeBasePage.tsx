@@ -2,7 +2,7 @@
  * KnowledgeBasePage — self-contained page component.
  *
  * UI dependencies: @4lt7ab/ui only. No internal atoms/molecules/organisms.
- * Data dependencies: hooks (useDocuments, useDocument, useHealth) and api layer.
+ * Data dependencies: hooks (useDocuments, useDocument) and api layer.
  *
  * This is a "Page component" — it owns its entire UI tree. Sub-components are
  * defined inline in this file, not extracted to the atomic hierarchy. This
@@ -25,19 +25,21 @@ import {
   Field,
   Input,
   Textarea,
-  Select,
   SearchInput,
   Skeleton,
   SegmentedControl,
+  SectionLabel,
+  MetadataTable,
+  ChipPicker,
+  Combobox,
   useToast,
 } from "@4lt7ab/ui/ui";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Container, Prose, Markdown } from "@4lt7ab/ui/content";
 
 import { useDocuments } from "../hooks/useDocuments";
 import { useDocument } from "../hooks/useDocument";
 import { ApiError, importDocument } from "../api";
-import { TAG_NAMES } from "../types";
+import { TAG_NAMES, TAG_CATEGORIES } from "../types";
 import type { DocumentSummary } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -47,10 +49,10 @@ import type { DocumentSummary } from "../types";
 const KB_STYLES_ID = "kb-page-styles";
 const KB_STYLES_CSS = `
   .kb-card {
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   }
   .kb-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     border-color: ${t.colorBorderFocused};
     box-shadow: ${t.shadowMd};
   }
@@ -58,7 +60,7 @@ const KB_STYLES_CSS = `
     color: ${t.colorActionPrimary};
   }
   .kb-card-accent {
-    transition: width 0.2s ease;
+    transition: width 0.18s ease;
   }
   .kb-card:hover .kb-card-accent {
     width: 4px !important;
@@ -70,11 +72,60 @@ const KB_STYLES_CSS = `
   .kb-filter-chip:hover {
     background: ${t.colorSurfaceRaised} !important;
   }
+  .kb-list-row {
+    transition: background 0.1s ease;
+  }
+  .kb-list-row:hover {
+    background: ${t.colorSurfaceRaised};
+  }
   @media (prefers-reduced-motion: reduce) {
-    .kb-card { transition: none; }
-    .kb-card-accent { transition: none; }
+    .kb-card, .kb-card-accent, .kb-list-row { transition: none; }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatRelativeDate(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** Deterministic accent color per folder so cards cluster visually. */
+function folderAccentColor(folder: string | null): string {
+  if (!folder) return t.colorBorder;
+  const accents = [
+    t.colorActionPrimary,
+    t.colorInfo,
+    t.colorSuccess,
+    t.colorWarning,
+    t.colorError,
+  ];
+  let hash = 0;
+  for (let i = 0; i < folder.length; i++) hash = ((hash << 5) - hash + folder.charCodeAt(i)) | 0;
+  return accents[Math.abs(hash) % accents.length];
+}
+
+/** Build ChipPicker items from TAG_CATEGORIES. */
+const TAG_CHIP_ITEMS = Object.entries(TAG_CATEGORIES).flatMap(([category, tags]) =>
+  tags.map((tag) => ({ value: tag, label: tag, group: category })),
+);
 
 // ---------------------------------------------------------------------------
 // Hero — welcoming header with centered search
@@ -171,24 +222,12 @@ function FavoritesStrip({
       flexDirection: "column",
       gap: t.spaceSm,
     }}>
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: t.spaceXs,
-        paddingLeft: t.spaceXs,
-      }}>
-        <Icon name="star" size={14} style={{ color: t.colorWarning }} />
-        <span style={{
-          fontSize: t.fontSizeXs,
-          fontWeight: 700,
-          fontFamily: t.fontSans,
-          color: t.colorTextMuted,
-          textTransform: "uppercase",
-          letterSpacing: t.letterSpacingWide,
-        }}>
+      <SectionLabel>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceXs }}>
+          <Icon name="star" size={13} style={{ color: t.colorWarning }} />
           Favorites
         </span>
-      </div>
+      </SectionLabel>
       <div
         className="kb-fav-strip"
         style={{
@@ -418,23 +457,8 @@ function FilterChip({ label, icon, active, onClick }: { label: string; icon: str
 }
 
 // ---------------------------------------------------------------------------
-// Document card grid — the main browsing experience
+// Document card grid — index-card style browsing
 // ---------------------------------------------------------------------------
-
-/** Deterministic accent color per folder so cards cluster visually. */
-function folderAccentColor(folder: string | null): string {
-  if (!folder) return t.colorBorder;
-  const accents = [
-    t.colorActionPrimary,
-    t.colorInfo,
-    t.colorSuccess,
-    t.colorWarning,
-    t.colorError,
-  ];
-  let hash = 0;
-  for (let i = 0; i < folder.length; i++) hash = ((hash << 5) - hash + folder.charCodeAt(i)) | 0;
-  return accents[Math.abs(hash) % accents.length];
-}
 
 function DocumentCardGrid({
   documents,
@@ -450,7 +474,7 @@ function DocumentCardGrid({
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
       gap: t.spaceMd,
     }}>
       {documents.map((doc, i) => {
@@ -497,6 +521,15 @@ function DocumentCardGrid({
             }}>
               {/* Title row */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceXs }}>
+                <Icon
+                  name="description"
+                  size={16}
+                  style={{
+                    color: `color-mix(in srgb, ${accent} 70%, ${t.colorTextMuted})`,
+                    flexShrink: 0,
+                    marginTop: 2,
+                  }}
+                />
                 <h3
                   className="kb-card-title"
                   style={{
@@ -596,7 +629,15 @@ function DocumentCardGrid({
                 fontFamily: t.fontMono,
               }}>
                 {doc.folder ? (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 3,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    color: `color-mix(in srgb, ${folderAccentColor(doc.folder)} 80%, ${t.colorTextMuted})`,
+                  }}>
                     <Icon name="folder" size={10} />
                     {doc.folder}
                   </span>
@@ -612,7 +653,7 @@ function DocumentCardGrid({
 }
 
 // ---------------------------------------------------------------------------
-// Document table — compact list view
+// Document list — compact catalog listing
 // ---------------------------------------------------------------------------
 
 function DocumentList({
@@ -633,6 +674,7 @@ function DocumentList({
         return (
           <div
             key={doc.id}
+            className="kb-list-row"
             role="button"
             tabIndex={0}
             onClick={() => onSelect(doc.id)}
@@ -644,21 +686,19 @@ function DocumentList({
               padding: `${t.spaceSm} ${t.spaceMd}`,
               borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 30%, transparent)`,
               cursor: "pointer",
-              transition: "background 0.1s",
               animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
               animationDelay: `${Math.min(i * 20, 200)}ms`,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = t.colorSurfaceRaised; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
           >
-            {/* Accent dot */}
-            <div style={{
-              width: 6,
-              height: 6,
-              borderRadius: t.radiusFull,
-              background: `color-mix(in srgb, ${accent} 60%, transparent)`,
-              flexShrink: 0,
-            }} />
+            {/* Document icon with accent color */}
+            <Icon
+              name="description"
+              size={16}
+              style={{
+                color: `color-mix(in srgb, ${accent} 70%, ${t.colorTextMuted})`,
+                flexShrink: 0,
+              }}
+            />
 
             {/* Favorite */}
             <IconButton
@@ -705,6 +745,26 @@ function DocumentList({
               ))}
             </div>
 
+            {/* Folder */}
+            {doc.folder && (
+              <span style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                fontSize: "0.65rem",
+                fontFamily: t.fontMono,
+                color: `color-mix(in srgb, ${accent} 80%, ${t.colorTextMuted})`,
+                flexShrink: 0,
+                maxWidth: 100,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}>
+                <Icon name="folder" size={10} />
+                {doc.folder}
+              </span>
+            )}
+
             {/* Date */}
             <span style={{
               fontSize: "0.65rem",
@@ -732,193 +792,159 @@ function DocumentList({
 }
 
 // ---------------------------------------------------------------------------
-// Markdown component overrides — sans-serif, compact, no editorial flourishes
-// ---------------------------------------------------------------------------
-
-const mdComponents: Record<string, React.ComponentType<Record<string, unknown>>> = {
-  h1: ({ children, ...p }) => (
-    <h1 {...p} style={{ fontSize: t.fontSizeXl, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>
-      {children as React.ReactNode}
-    </h1>
-  ),
-  h2: ({ children, ...p }) => (
-    <h2 {...p} style={{ fontSize: t.fontSizeLg, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>
-      {children as React.ReactNode}
-    </h2>
-  ),
-  h3: ({ children, ...p }) => (
-    <h3 {...p} style={{ fontSize: t.fontSizeBase, fontWeight: 600, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceMd} 0 ${t.spaceXs}` }}>
-      {children as React.ReactNode}
-    </h3>
-  ),
-  p: ({ children, ...p }) => (
-    <p {...p} style={{ margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</p>
-  ),
-  a: ({ children, href, ...p }) => (
-    <a {...p} href={href as string} style={{ color: t.colorTextLink, textDecoration: "underline", textUnderlineOffset: "3px" }}>
-      {children as React.ReactNode}
-    </a>
-  ),
-  ul: ({ children, ...p }) => (
-    <ul {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ul>
-  ),
-  ol: ({ children, ...p }) => (
-    <ol {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ol>
-  ),
-  li: ({ children, ...p }) => (
-    <li {...p} style={{ marginTop: "0.25em" }}>{children as React.ReactNode}</li>
-  ),
-  blockquote: ({ children, ...p }) => (
-    <blockquote {...p} style={{ borderLeft: `3px solid ${t.colorBorder}`, paddingLeft: t.spaceMd, margin: `${t.spaceMd} 0`, color: t.colorTextSecondary }}>
-      {children as React.ReactNode}
-    </blockquote>
-  ),
-  pre: ({ children, ...p }) => (
-    <pre {...p} style={{
-      background: t.colorSurfacePanel,
-      border: `1px solid ${t.colorBorder}`,
-      borderRadius: t.radiusMd,
-      padding: t.spaceMd,
-      margin: `${t.spaceMd} 0`,
-      overflowX: "auto",
-      fontSize: t.fontSizeXs,
-      lineHeight: t.lineHeightBase,
-    }}>
-      {children as React.ReactNode}
-    </pre>
-  ),
-  code: ({ children, className, ...p }) => {
-    if (className) {
-      return <code {...p} className={className as string} style={{ fontFamily: t.fontMono, fontSize: "inherit", color: t.colorTextSecondary }}>{children as React.ReactNode}</code>;
-    }
-    return (
-      <code {...p} style={{ fontFamily: t.fontMono, fontSize: "0.875em", background: t.colorSurfacePanel, padding: "0.1em 0.3em", borderRadius: t.radiusSm }}>
-        {children as React.ReactNode}
-      </code>
-    );
-  },
-  table: ({ children, ...p }) => (
-    <table {...p} style={{ width: "100%", borderCollapse: "collapse", margin: `${t.spaceMd} 0`, fontSize: t.fontSizeXs }}>
-      {children as React.ReactNode}
-    </table>
-  ),
-  th: ({ children, ...p }) => (
-    <th {...p} style={{ textAlign: "left", fontWeight: 600, padding: `${t.spaceXs} ${t.spaceSm}`, borderBottom: `2px solid ${t.colorBorder}`, color: t.colorText }}>
-      {children as React.ReactNode}
-    </th>
-  ),
-  td: ({ children, ...p }) => (
-    <td {...p} style={{ padding: `${t.spaceXs} ${t.spaceSm}`, borderBottom: `1px solid ${t.colorBorder}`, color: t.colorTextSecondary }}>
-      {children as React.ReactNode}
-    </td>
-  ),
-  hr: (p) => (
-    <hr {...p} style={{ border: "none", borderTop: `1px solid ${t.colorBorder}`, margin: `${t.spaceLg} 0` }} />
-  ),
-  strong: ({ children, ...p }) => (
-    <strong {...p} style={{ fontWeight: 600, color: t.colorText }}>{children as React.ReactNode}</strong>
-  ),
-};
-
-// ---------------------------------------------------------------------------
-// Document reader modal
+// Document reader modal — the library reading experience
 // ---------------------------------------------------------------------------
 
 function DocumentReader({ documentId, onClose }: { documentId: string; onClose: () => void }) {
   const { document: doc, loading, notFound } = useDocument(documentId);
 
+  // Build metadata rows for MetadataTable
+  const metadataItems = useMemo(() => {
+    if (!doc) return [];
+    const items: Array<{ label: string; value: React.ReactNode }> = [];
+
+    if (doc.folder) {
+      const accent = folderAccentColor(doc.folder);
+      items.push({
+        label: "Folder",
+        value: (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceXs }}>
+            <Icon name="folder" size={14} style={{ color: accent }} />
+            {doc.folder}
+          </span>
+        ),
+      });
+    }
+
+    if (doc.tags.length > 0) {
+      items.push({
+        label: "Tags",
+        value: (
+          <span style={{ display: "inline-flex", gap: t.spaceXs, flexWrap: "wrap" }}>
+            {doc.tags.map((tag) => <TagChip key={tag} name={tag} />)}
+          </span>
+        ),
+      });
+    }
+
+    if (doc.source_url) {
+      items.push({
+        label: "Source",
+        value: (
+          <a
+            href={doc.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: t.colorTextLink,
+              textDecoration: "none",
+              fontSize: t.fontSizeSm,
+              wordBreak: "break-all",
+            }}
+          >
+            {doc.source_url}
+          </a>
+        ),
+      });
+    }
+
+    items.push({ label: "Created", value: formatDate(doc.created_at) });
+    items.push({ label: "Updated", value: formatDate(doc.updated_at) });
+
+    return items;
+  }, [doc]);
+
   return (
-    <ModalShell onClose={onClose} maxWidth={720} style={{ maxHeight: "85vh", overflowY: "auto" }}>
+    <ModalShell onClose={onClose} maxWidth={800} style={{ maxHeight: "90vh", overflowY: "auto" }}>
       {loading ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd, padding: t.spaceMd }}>
-          <Skeleton height={28} width="60%" />
-          <Skeleton height={16} width="40%" />
-          <Skeleton height={200} />
+        <div style={{ padding: t.spaceXl }}>
+          <Container width="prose">
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
+              <Skeleton height={36} width="70%" />
+              <Skeleton height={18} width="50%" />
+              <Skeleton height={1} />
+              <Skeleton height={300} />
+            </div>
+          </Container>
         </div>
       ) : notFound ? (
-        <EmptyState icon="error" message="Document not found." />
+        <div style={{ padding: t.spaceXl }}>
+          <EmptyState icon="error" message="Document not found." />
+        </div>
       ) : doc ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
-          {/* Header */}
-          <div>
-            <h2 style={{
-              margin: 0,
-              fontSize: t.fontSizeXl,
-              fontWeight: 700,
-              fontFamily: t.fontSerif,
-              color: t.colorText,
-            }}>
-              {doc.title}
-            </h2>
-            {doc.summary && (
-              <p style={{
-                margin: `${t.spaceXs} 0 0`,
-                fontSize: t.fontSizeSm,
-                color: t.colorTextSecondary,
+        <div style={{ padding: `${t.space2xl} 0 ${t.spaceXl}` }}>
+          <Container width="prose">
+            {/* Header — serif title, summary, metadata */}
+            <header style={{ marginBottom: t.spaceLg }}>
+              {/* Title */}
+              <h1 style={{
+                margin: 0,
+                fontSize: "clamp(1.5rem, 4vw, 2rem)",
+                fontWeight: 600,
+                fontFamily: t.fontSerif,
+                color: t.colorText,
+                lineHeight: 1.25,
+                letterSpacing: t.letterSpacingTight,
               }}>
-                {doc.summary}
-              </p>
-            )}
-          </div>
+                {doc.title}
+              </h1>
 
-          {/* Meta row */}
-          <div style={{ display: "flex", gap: t.spaceSm, alignItems: "center", flexWrap: "wrap" }}>
-            {doc.folder && (
-              <Badge variant="default">
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                  <Icon name="folder" size={12} />
-                  {doc.folder}
-                </span>
-              </Badge>
-            )}
-            {doc.tags.map((tag) => (
-              <TagChip key={tag} name={tag} />
-            ))}
-            {doc.favorite && (
-              <Icon name="star" size={16} style={{ color: t.colorWarning }} />
-            )}
-          </div>
+              {/* Summary */}
+              {doc.summary && (
+                <p style={{
+                  margin: `${t.spaceMd} 0 0`,
+                  fontSize: t.fontSizeLg,
+                  fontFamily: t.fontSans,
+                  color: t.colorTextSecondary,
+                  lineHeight: t.lineHeightRelaxed,
+                }}>
+                  {doc.summary}
+                </p>
+              )}
 
-          {/* Content */}
-          {doc.content ? (
-            <div style={{
+              {/* Favorite badge */}
+              {doc.favorite && (
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: t.spaceXs,
+                  marginTop: t.spaceMd,
+                }}>
+                  <Icon name="star" size={16} style={{ color: t.colorWarning }} />
+                  <span style={{
+                    fontSize: t.fontSizeXs,
+                    fontWeight: 600,
+                    color: t.colorWarning,
+                    textTransform: "uppercase",
+                    letterSpacing: t.letterSpacingWide,
+                  }}>
+                    Favorite
+                  </span>
+                </div>
+              )}
+
+              {/* Metadata table */}
+              {metadataItems.length > 0 && (
+                <div style={{ marginTop: t.spaceLg }}>
+                  <MetadataTable items={metadataItems} />
+                </div>
+              )}
+            </header>
+
+            {/* Divider */}
+            <hr style={{
+              border: "none",
               borderTop: `1px solid ${t.colorBorder}`,
-              paddingTop: t.spaceMd,
-              fontSize: t.fontSizeSm,
-              lineHeight: t.lineHeightRelaxed,
-              fontFamily: t.fontSans,
-              color: t.colorTextMuted,
-            }}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
-                {doc.content}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <EmptyState icon="info" message="No content." variant="card" />
-          )}
+              margin: `${t.spaceLg} 0`,
+            }} />
 
-          {/* Source info */}
-          {doc.source_url && (
-            <div style={{
-              borderTop: `1px solid ${t.colorBorder}`,
-              paddingTop: t.spaceSm,
-              fontSize: t.fontSizeXs,
-              color: t.colorTextMuted,
-              display: "flex",
-              alignItems: "center",
-              gap: t.spaceXs,
-            }}>
-              <Icon name="link" size={12} />
-              <a
-                href={doc.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: t.colorTextLink, textDecoration: "none" }}
-              >
-                {doc.source_url}
-              </a>
-            </div>
-          )}
+            {/* Content — the star of the show */}
+            {doc.content ? (
+              <Markdown>{doc.content}</Markdown>
+            ) : (
+              <EmptyState icon="article" message="This document has no content yet." variant="card" />
+            )}
+          </Container>
         </div>
       ) : null}
     </ModalShell>
@@ -944,10 +970,10 @@ function CreateDocumentForm({
   const [folder, setFolder] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  const folderOptions = [
-    { value: "", label: "No folder" },
-    ...folders.map((f) => ({ value: f, label: f })),
-  ];
+  const folderOptions = useMemo(() =>
+    folders.map((f) => ({ value: f, label: f })),
+    [folders],
+  );
 
   return (
     <FormModal
@@ -964,7 +990,7 @@ function CreateDocumentForm({
         onClose();
       }}
       onCancel={onClose}
-      maxWidth={560}
+      maxWidth={600}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
         <Field label="Title" required>
@@ -983,50 +1009,21 @@ function CreateDocumentForm({
           />
         </Field>
 
-        {folders.length > 0 && (
-          <Field label="Folder">
-            <Select value={folder} onChange={(e) => setFolder(e.target.value)}>
-              {folderOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
-          </Field>
-        )}
+        <Field label="Folder">
+          <Combobox
+            options={folderOptions}
+            value={folder}
+            onChange={setFolder}
+            placeholder="Type a folder name or pick existing..."
+          />
+        </Field>
 
         <Field label="Tags">
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            {TAG_NAMES.map((tag) => {
-              const active = selectedTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() =>
-                    setSelectedTags(
-                      active
-                        ? selectedTags.filter((t) => t !== tag)
-                        : [...selectedTags, tag],
-                    )
-                  }
-                  aria-pressed={active}
-                  style={{
-                    padding: `2px ${t.spaceSm}`,
-                    borderRadius: t.radiusFull,
-                    border: `1px solid ${active ? t.colorActionPrimary : t.colorBorder}`,
-                    background: active ? `color-mix(in srgb, ${t.colorActionPrimary} 12%, transparent)` : "transparent",
-                    color: active ? t.colorActionPrimary : t.colorTextMuted,
-                    fontSize: t.fontSizeXs,
-                    fontFamily: t.fontSans,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.12s",
-                  }}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
+          <ChipPicker
+            items={TAG_CHIP_ITEMS}
+            selected={selectedTags}
+            onChange={setSelectedTags}
+          />
         </Field>
 
         <Field label="Content">
@@ -1058,10 +1055,10 @@ function ImportUrlForm({
   const [url, setUrl] = useState("");
   const [folder, setFolder] = useState("");
 
-  const folderOptions = [
-    { value: "", label: "No folder" },
-    ...folders.map((f) => ({ value: f, label: f })),
-  ];
+  const folderOptions = useMemo(() =>
+    folders.map((f) => ({ value: f, label: f })),
+    [folders],
+  );
 
   return (
     <FormModal
@@ -1086,34 +1083,17 @@ function ImportUrlForm({
           />
         </Field>
 
-        {folders.length > 0 && (
-          <Field label="Folder">
-            <Select value={folder} onChange={(e) => setFolder(e.target.value)}>
-              {folderOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
-          </Field>
-        )}
+        <Field label="Folder">
+          <Combobox
+            options={folderOptions}
+            value={folder}
+            onChange={setFolder}
+            placeholder="Type a folder name or pick existing..."
+          />
+        </Field>
       </div>
     </FormModal>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatRelativeDate(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }
 
 // ---------------------------------------------------------------------------
@@ -1236,7 +1216,7 @@ export function KnowledgeBasePage() {
       {/* Content */}
       {loading ? (
         viewMode === "cards" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: t.spaceMd }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: t.spaceMd }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} height={140} />
             ))}
@@ -1249,37 +1229,26 @@ export function KnowledgeBasePage() {
           </div>
         )
       ) : sorted.length === 0 ? (
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: t.spaceMd,
-          padding: `${t.space2xl} 0`,
-        }}>
-          <Icon name="menu_book" size={48} style={{ color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)` }} />
-          <p style={{
-            margin: 0,
-            fontSize: t.fontSizeSm,
-            color: t.colorTextMuted,
-            textAlign: "center",
-            maxWidth: 320,
-            lineHeight: t.lineHeightRelaxed,
-          }}>
-            {activeFilterCount > 0 || search
+        <EmptyState
+          icon="menu_book"
+          message={
+            activeFilterCount > 0 || search
               ? "Nothing matches those filters. Try broadening your search."
-              : "Your library is waiting. Import a URL or write your first document."}
-          </p>
-          {!search && activeFilterCount === 0 && (
-            <div style={{ display: "flex", gap: t.spaceSm }}>
-              <Button size="sm" variant="ghost" onClick={() => setShowImport(true)}>
-                Import URL
-              </Button>
-              <Button size="sm" onClick={() => setShowCreate(true)}>
-                New Document
-              </Button>
-            </div>
-          )}
-        </div>
+              : "Your library is waiting. Import a URL or write your first document."
+          }
+          action={
+            !search && activeFilterCount === 0 ? (
+              <div style={{ display: "flex", gap: t.spaceSm }}>
+                <Button size="sm" variant="ghost" onClick={() => setShowImport(true)}>
+                  Import URL
+                </Button>
+                <Button size="sm" onClick={() => setShowCreate(true)}>
+                  New Document
+                </Button>
+              </div>
+            ) : undefined
+          }
+        />
       ) : viewMode === "cards" ? (
         <DocumentCardGrid
           documents={sorted}
