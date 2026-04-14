@@ -29,7 +29,7 @@ export { TopBar } from "./organisms/TopBar";
 export type { NavItem } from "./organisms/TopBar";
 export { ConnectionStatus } from "./organisms/ConnectionStatus";
 export { DisconnectionBanner } from "./organisms/DisconnectionBanner";
-export { ErrorBoundary } from "./organisms/ErrorBoundary";
+export { ErrorBoundary } from "@4lt7ab/ui/ui";
 export { ConfirmDialog } from "@4lt7ab/ui/ui";
 export { CreateEntityOverlay } from "./organisms/CreateEntityOverlay";
 export { TaskTable } from "./organisms/TaskTable";
