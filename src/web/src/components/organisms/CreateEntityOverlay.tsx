@@ -1,8 +1,11 @@
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { Button, ModalShell } from "@4lt7ab/ui/ui";
 import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 
+const SPIN_CSS = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+
 function ButtonSpinner() {
+  useInjectStyles("tfp-spin", SPIN_CSS);
   return (
     <span
       style={{

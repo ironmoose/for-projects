@@ -1,25 +1,25 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
+
+const SPIN_CSS = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+const FADE_IN_UP_CSS = `@keyframes fade-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`;
 import { useToastContext } from "../ToastContext";
 import { useDocument } from "../../hooks/useDocument";
 import { useDocuments } from "../../hooks/useDocuments";
 import { refreshDocument as apiRefreshDocument } from "../../api";
 import { relativeTime } from "../../utils";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-import { Button } from "@4lt7ab/ui/ui";
-import { Input, Textarea } from "@4lt7ab/ui/ui";
-import { Icon } from "../atoms/Icon";
-import { IconButton } from "../atoms/IconButton";
-import { TagChip } from "@4lt7ab/ui/ui";
+import { Button, Input, Textarea, Icon, IconButton, TagChip, EmptyState, Field, Select } from "@4lt7ab/ui/ui";
 import { TagPicker } from "../molecules/TagPicker";
-import { FolderInput } from "../molecules/FolderInput";
-import { EmptyState } from "../molecules/EmptyState";
-import { Markdown } from "../molecules/Markdown";
+import { Prose } from "@4lt7ab/ui/content";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ModalShell } from "@4lt7ab/ui/ui";
 import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 import type { TagName } from "../../types";
 
 function ButtonSpinner() {
+  useInjectStyles("tfp-spin", SPIN_CSS);
   return (
     <span
       style={{
@@ -41,6 +41,7 @@ interface DocumentReaderModalProps {
 }
 
 export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModalProps) {
+  useInjectStyles("tfp-fade-in-up", FADE_IN_UP_CSS);
   useShortcutSuppression(true);
   const toast = useToastContext();
   const { document, notFound, loading, updateDocument } = useDocument(documentId);
@@ -305,11 +306,14 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
 
             {/* Folder section */}
             {editing ? (
-              <FolderInput
-                value={editFolder}
-                folders={knownFolders}
-                onChange={setEditFolder}
-              />
+              <Field label="Folder" htmlFor="edit-folder">
+                <Select
+                  id="edit-folder"
+                  value={editFolder}
+                  onChange={(e) => setEditFolder(e.target.value)}
+                  options={[{ value: "", label: "No folder" }, ...knownFolders.map((f) => ({ value: f, label: f }))]}
+                />
+              </Field>
             ) : (
               document.folder && (
                 <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: t.fontSizeXs, color: t.colorTextMuted }}>
@@ -404,7 +408,7 @@ export function DocumentReaderModal({ documentId, onClose }: DocumentReaderModal
                 aria-label="Document content"
               />
             ) : document.content ? (
-              <Markdown>{document.content}</Markdown>
+              <Prose><ReactMarkdown remarkPlugins={[remarkGfm]}>{document.content}</ReactMarkdown></Prose>
             ) : (
               <p
                 style={{

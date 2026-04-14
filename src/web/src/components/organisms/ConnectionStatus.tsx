@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
+
+const CONNECTION_CSS = `
+  @keyframes pulse-alive { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes ripple-out { from { box-shadow: 0 0 0 0 currentColor; opacity: 0.3; } to { box-shadow: 0 0 0 8px currentColor; opacity: 0; } }
+`;
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 interface ConnectionStatusProps {
@@ -8,6 +13,7 @@ interface ConnectionStatusProps {
 }
 
 export function ConnectionStatus({ connected, style }: ConnectionStatusProps) {
+  useInjectStyles("tfp-connection", CONNECTION_CSS);
   const reduced = useReducedMotion();
   const prevConnected = useRef(connected);
   const [ripple, setRipple] = useState(false);

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
+
+const SPIN_CSS = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
 import { StatusDot } from "@4lt7ab/ui/ui";
-import { Badge } from "../atoms/Badge";
-import { EmptyState } from "../molecules/EmptyState";
-import { Icon } from "../atoms/Icon";
+import { Badge } from "@4lt7ab/ui/ui";
+import { EmptyState } from "@4lt7ab/ui/ui";
+import { Icon } from "@4lt7ab/ui/ui";
 import { useForceGraph } from "../../hooks/useForceGraph";
 import type { TaskStatus } from "../../types";
 import type { GraphNode } from "../../api";
@@ -203,7 +205,7 @@ function TaskCard({
         </Badge>
       )}
       {isBlocked && !isInCycle && (
-        <Badge variant="failed" style={{ fontSize: t.fontSizeXs, padding: "0 4px", lineHeight: 1.3 }}>
+        <Badge variant="error" style={{ fontSize: t.fontSizeXs, padding: "0 4px", lineHeight: 1.3 }}>
           blocked
         </Badge>
       )}
@@ -357,6 +359,7 @@ export function DependencyGraphView({
   blockedTaskIds,
   onTaskClick,
 }: DependencyGraphViewProps) {
+  useInjectStyles("tfp-spin", SPIN_CSS);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const [size, setSize] = useState({ width: 800, height: MIN_HEIGHT });
@@ -684,7 +687,6 @@ export function DependencyGraphView({
           >
             Computing layout{visibleTasks.length > 20 ? ` for ${visibleTasks.length} nodes` : ""}…
           </span>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
 

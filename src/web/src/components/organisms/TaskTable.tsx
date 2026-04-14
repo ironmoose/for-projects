@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
-import { Badge } from "../atoms/Badge";
-import { IconButton } from "../atoms/IconButton";
+import { Badge, IconButton } from "@4lt7ab/ui/ui";
 
 import { useTheme } from "../theme/ThemeContext";
 import type { TaskSummary } from "../../types";
 import { TASK_STATUSES } from "../../types";
 import type { TaskStatus } from "../../types";
+import { statusBadgeVariant } from "../../utils";
 
 // Local table style helpers using library tokens + glow passthrough
 function localTableWrapperStyle(glow: { animated: boolean; borderLight: string; shadowMd: string }): React.CSSProperties {
@@ -51,10 +51,6 @@ const STATUS_LABELS: Record<string, string> = {
   archived: "archived",
 };
 
-function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "archived" | "default" {
-  if (status === "todo" || status === "in_progress" || status === "done" || status === "archived") return status;
-  return "default";
-}
 
 const COLUMN_COUNT = 6; // Title, Status, Category, Effort, Impact, Actions
 

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Input, Field } from "@4lt7ab/ui/ui";
-import { SectionLabel } from "../atoms/SectionLabel";
+import { Input, Field, Select, SectionLabel } from "@4lt7ab/ui/ui";
 import { TagPicker } from "../molecules/TagPicker";
-import { FolderInput } from "../molecules/FolderInput";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
 import type { TagName } from "../../types";
 
@@ -67,11 +65,14 @@ export function ImportDocumentOverlay({ folders = [], onImport, onClose }: Impor
           />
         </Field>
 
-        <FolderInput
-          value={folder}
-          folders={folders}
-          onChange={setFolder}
-        />
+        <Field label="Folder" htmlFor="import-folder">
+          <Select
+            id="import-folder"
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
+            options={[{ value: "", label: "No folder" }, ...folders.map((f) => ({ value: f, label: f }))]}
+          />
+        </Field>
 
         <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
           <SectionLabel>Tags</SectionLabel>

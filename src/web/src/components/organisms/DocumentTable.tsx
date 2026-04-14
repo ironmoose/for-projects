@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
-import { Icon } from "../atoms/Icon";
-import { IconButton } from "../atoms/IconButton";
-import { TagChip } from "@4lt7ab/ui/ui";
+import { Icon, IconButton, TagChip } from "@4lt7ab/ui/ui";
 import { useTheme } from "../theme/ThemeContext";
 import { useWindowWidth, SMALL_BREAKPOINT } from "../../hooks/useWindowWidth";
 import type { DocumentSummary } from "../../types";

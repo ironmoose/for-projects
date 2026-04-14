@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Icon } from "../atoms/Icon";
+import { Icon } from "@4lt7ab/ui/ui";
 import { useTheme } from "../theme/ThemeContext";
 
 interface SearchToggleProps {

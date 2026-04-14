@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { CreateEntityOverlay } from "./CreateEntityOverlay";
-import { Badge } from "../atoms/Badge";
-import { Icon } from "../atoms/Icon";
-import { IconButton } from "../atoms/IconButton";
-import { Button } from "@4lt7ab/ui/ui";
-import { Input, Select } from "@4lt7ab/ui/ui";
-import { TagChip } from "@4lt7ab/ui/ui";
+import { Badge, Icon, IconButton, Button, Input, Select, TagChip } from "@4lt7ab/ui/ui";
 import { fetchDocuments } from "../../api";
 import type { DocumentSummary } from "../../types";
 import { REFERENCE_TYPES, type ReferenceType, type DocumentReferenceDetail } from "../../types";
 
+const SPIN_CSS = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+
 function ButtonSpinner() {
+  useInjectStyles("tfp-spin", SPIN_CSS);
   return (
     <span
       style={{

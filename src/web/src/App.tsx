@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   TopBar,
   ConnectionStatus,
   DisconnectionBanner,
-  AnimationStyles,
   ErrorBoundary,
 } from "./components";
-import { ThemeBackground } from "@4lt7ab/ui/animations";
+import { BackgroundLoader } from "./components/atoms/BackgroundLoader";
 import { ThemeSurface } from "@4lt7ab/ui/ui";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { AppThemePicker } from "./components/molecules/AppThemePicker";
+import { ThemePicker } from "@4lt7ab/ui/ui";
 import type { NavItem } from "./components";
 import { ShortcutHelpOverlay } from "./components/organisms/ShortcutHelpOverlay";
 import { useRealtimeEvents } from "./useRealtimeEvents";
@@ -21,7 +20,6 @@ import {
 } from "./hooks/useKeyboardShortcuts";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
-import { GalleryPage } from "./pages/GalleryPage";
 import { ActivityLogPage } from "./pages/ActivityLogPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 
@@ -29,7 +27,6 @@ const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
   { label: "Documents", path: "/documents" },
   { label: "Activity", path: "/activity" },
-  { label: "Gallery", path: "/gallery" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -45,13 +42,8 @@ export function App() {
   const projectIdMatch = path.match(/^\/projects\/([^/]+)$/);
   const projectId = projectIdMatch?.[1] ?? null;
 
-  const galleryComponentMatch = path.match(/^\/gallery\/([^/]+)$/);
-  const galleryComponent = galleryComponentMatch?.[1] ?? undefined;
-
   const activePath = path.startsWith("/documents")
     ? "/documents"
-    : path.startsWith("/gallery")
-    ? "/gallery"
     : path.startsWith("/activity")
     ? "/activity"
     : "/";
@@ -67,24 +59,9 @@ export function App() {
     [shortcutManager.register, shortcutManager.getShortcuts, shortcutManager.suppressRef],
   );
 
-  // Gallery keyboard shortcut: Ctrl+Shift+G (preserved — handled outside shortcut system since it uses modifiers)
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.ctrlKey && e.shiftKey && e.key === "G") {
-        e.preventDefault();
-        navigate("/gallery");
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [navigate]);
-
   function renderView() {
     if (path.startsWith("/documents")) {
       return <DocumentsPage />;
-    }
-    if (path.startsWith("/gallery")) {
-      return <GalleryPage componentName={galleryComponent} onNavigate={navigate} />;
     }
     if (path.startsWith("/activity")) {
       return <ActivityLogPage onNavigate={navigate} />;
@@ -98,9 +75,8 @@ export function App() {
   return (
     <KeyboardShortcutContext.Provider value={shortcutCtx}>
       <EventSubscriptionContext.Provider value={eventCtx}>
-        <AnimationStyles />
         <ThemeSurface global />
-        <ThemeBackground />
+        <BackgroundLoader />
         <a
           href="#main-content"
           style={{
@@ -139,7 +115,7 @@ export function App() {
         >
           Skip to main content
         </a>
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: t.fontSans }}>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: t.fontSans, color: t.colorText }}>
           <TopBar
             trailing={<TrailingIndicators connected={connected} />}
             navItems={navItems}
@@ -184,7 +160,7 @@ function GlobalShortcuts({ navigate }: { navigate: (path: string) => void }) {
 function TrailingIndicators({ connected }: { connected: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
-      <AppThemePicker />
+      <ThemePicker variant="compact" />
       <ConnectionStatus connected={connected} />
     </div>
   );

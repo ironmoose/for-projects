@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { semantic as t } from "@4lt7ab/ui/core";
-import { Icon } from "./atoms/Icon";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
+
+const TOAST_IN_CSS = `@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`;
+import { Icon } from "@4lt7ab/ui/ui";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,6 +68,7 @@ export function ToastContainer({
   toasts: Toast[];
   dismiss: (id: string) => void;
 }) {
+  useInjectStyles("tfp-toast-in", TOAST_IN_CSS);
   if (toasts.length === 0) return null;
 
   return (

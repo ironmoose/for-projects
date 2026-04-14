@@ -10,11 +10,13 @@ import {
   GitHubBrowserOverlay,
   FolderTileGrid,
 } from "../components";
-import { semantic as t } from "@4lt7ab/ui/core";
-import { Icon } from "../components/atoms/Icon";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
+
+const SLIDE_UP_CSS = `@keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }`;
+import { Icon } from "@4lt7ab/ui/ui";
 import { SearchToggle } from "../components/molecules/SearchToggle";
-import { Overlay } from "../components/atoms/Overlay";
-import { SectionLabel } from "../components/atoms/SectionLabel";
+import { Overlay } from "@4lt7ab/ui/ui";
+import { SectionLabel } from "@4lt7ab/ui/ui";
 import { DocumentTable } from "../components/organisms/DocumentTable";
 import { DocumentReaderModal } from "../components/organisms/DocumentReaderModal";
 import { useDocuments } from "../hooks/useDocuments";
@@ -384,6 +386,7 @@ function MobileSearchBar({
 // ---------------------------------------------------------------------------
 
 export function DocumentsPage() {
+  useInjectStyles("tfp-slide-up", SLIDE_UP_CSS);
   const { showToast } = useToastContext();
   const windowWidth = useWindowWidth();
   const isWide = windowWidth >= SMALL_BREAKPOINT;

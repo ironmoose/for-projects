@@ -13,6 +13,7 @@ import { createContext, useContext, useEffect, useMemo } from "react";
 import {
   ThemeProvider as LibThemeProvider,
   useTheme as useLibTheme,
+  useInjectStyles,
 } from "@4lt7ab/ui/core";
 import type { Theme } from "./theme";
 import { themes as legacyThemes } from "./theme";
@@ -53,7 +54,21 @@ const CompatThemeContext = createContext<CompatThemeContextValue | null>(null);
 // Inner bridge: reads from library context, provides compat context
 // ---------------------------------------------------------------------------
 
+const SYNTH_GLOW_CSS = `
+  @property --synth-glow { syntax: '<color>'; inherits: true; initial-value: #00f0ff; }
+  @keyframes synth-glow-cycle { 0%, 100% { --synth-glow: #00f0ff; } 50% { --synth-glow: #b44dff; } }
+  :root[data-synth] { animation: synth-glow-cycle 15s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+`;
+
 function CompatBridge({ children }: { children: React.ReactNode }) {
+  useInjectStyles("tfp-synth-glow", SYNTH_GLOW_CSS);
   const lib = useLibTheme();
 
   const value = useMemo<CompatThemeContextValue>(() => {

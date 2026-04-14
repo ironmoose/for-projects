@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Icon } from "../atoms/Icon";
-import { IconButton } from "../atoms/IconButton";
+import { Icon, IconButton } from "@4lt7ab/ui/ui";
 import { useTheme } from "../theme/ThemeContext";
 import type { DocumentReferenceDetail, ReferenceType } from "../../types";
 

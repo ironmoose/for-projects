@@ -1,6 +1,6 @@
 import { semantic as t } from "@4lt7ab/ui/core";
 import { useTheme } from "../theme/ThemeContext";
-import { SectionLabel } from "../atoms/SectionLabel";
+import { SectionLabel } from "@4lt7ab/ui/ui";
 import { TAG_CATEGORIES } from "../../types";
 import type { TagName } from "../../types";
 

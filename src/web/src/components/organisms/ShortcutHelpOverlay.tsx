@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { ModalShell } from "@4lt7ab/ui/ui";
-import { IconButton } from "../atoms/IconButton";
+import { ModalShell, IconButton } from "@4lt7ab/ui/ui";
 import { useRegisteredShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 interface ShortcutHelpOverlayProps {

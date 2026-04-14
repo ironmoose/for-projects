@@ -9,6 +9,7 @@ import {
   Select,
 } from "../components";
 import { semantic as t } from "@4lt7ab/ui/core";
+import { actionBadgeColor } from "../utils";
 import { useToastContext } from "../components/ToastContext";
 import { DocumentReaderModal } from "../components/organisms/DocumentReaderModal";
 import { useActivityLog } from "../hooks/useActivityLog";
@@ -20,14 +21,8 @@ import { relativeTime, formatDate } from "../utils";
 // Action badge mapping
 // ---------------------------------------------------------------------------
 
-const ACTION_VARIANTS: Record<string, "complete" | "active" | "failed" | "default"> = {
-  created: "complete",
-  updated: "active",
-  deleted: "failed",
-};
-
 function ActionBadge({ action }: { action: string }) {
-  return <Badge variant={ACTION_VARIANTS[action] ?? "default"}>{action}</Badge>;
+  return <Badge color={actionBadgeColor(action)}>{action}</Badge>;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 /**
  * Tests verifying Phase 4b accessibility pass:
- * 1. aria-label on all IconButton instances (except gallery demo)
+ * 1. aria-label on all IconButton instances
  * 2. aria-expanded on ExpandableCard
  * 3. Semantic HTML landmarks (<nav>, <main>)
  * 4. Focus rings on form fields via useFieldFocusStyles
@@ -36,9 +36,6 @@ describe("IconButton aria-labels", () => {
     { path: join(ORGANISMS_DIR, "DocumentReferencePicker.tsx"), name: "DocumentReferencePicker" },
     { path: join(ORGANISMS_DIR, "DocumentReaderModal.tsx"), name: "DocumentReaderModal" },
     { path: join(ORGANISMS_DIR, "ShortcutHelpOverlay.tsx"), name: "ShortcutHelpOverlay" },
-    { path: join(MOLECULES_DIR, "DependencyChip.tsx"), name: "DependencyChip" },
-    { path: join(MOLECULES_DIR, "DocumentReferenceCard.tsx"), name: "DocumentReferenceCard" },
-    { path: join(MOLECULES_DIR, "DocumentSearchBar.tsx"), name: "DocumentSearchBar" },
     { path: join(ORGANISMS_DIR, "ProjectDocumentTable.tsx"), name: "ProjectDocumentTable" },
   ];
 
@@ -86,43 +83,7 @@ describe("Semantic HTML landmarks", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Focus rings on form fields
-// ---------------------------------------------------------------------------
-
-describe("Form field focus rings", () => {
-  const fieldUtilsSrc = readFile(join(ATOMS_DIR, "fieldUtils.tsx"));
-
-  test("fieldUtils exports useFieldFocusStyles", () => {
-    expect(fieldUtilsSrc).toContain("export function useFieldFocusStyles");
-  });
-
-  test("useFieldFocusStyles injects :focus-visible styles", () => {
-    expect(fieldUtilsSrc).toContain(":focus-visible");
-    expect(fieldUtilsSrc).toContain("--focus-ring-color");
-  });
-
-  const fieldComponents: { path: string; name: string }[] = [];
-
-  for (const { path, name } of fieldComponents) {
-    test(`${name} imports useFieldFocusStyles`, () => {
-      const src = readFile(path);
-      expect(src).toContain("useFieldFocusStyles");
-    });
-
-    test(`${name} calls useFieldFocusStyles()`, () => {
-      const src = readFile(path);
-      expect(src).toContain("useFieldFocusStyles()");
-    });
-
-    test(`${name} applies tfp-field className`, () => {
-      const src = readFile(path);
-      expect(src).toContain('className="tfp-field"');
-    });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// 5. Table keyboard navigation
+// 4. Table keyboard navigation
 // ---------------------------------------------------------------------------
 
 describe("Table keyboard navigation", () => {
@@ -162,11 +123,6 @@ describe("aria-pressed on toggles", () => {
   test("SearchToggle semantic button has aria-pressed", () => {
     const src = readFile(join(MOLECULES_DIR, "SearchToggle.tsx"));
     expect(src).toContain('aria-pressed={semantic}');
-  });
-
-  test("DocumentSearchBar favorite toggle has aria-pressed", () => {
-    const src = readFile(join(MOLECULES_DIR, "DocumentSearchBar.tsx"));
-    expect(src).toContain("aria-pressed={favorite}");
   });
 
   test("TagPicker buttons have aria-pressed", () => {

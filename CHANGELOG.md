@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- Replace custom AppThemePicker with @4lt7ab/ui ThemePicker compact variant
+- Replace custom Badge atom with @4lt7ab/ui Badge (color prop for domain variants, drop glow effects)
+- Replace custom Icon, IconButton, SectionLabel atoms with @4lt7ab/ui re-exports (v0.2.14)
+- Add IconFontProvider for Material Symbols font fallback
+- Remove component gallery (page, routing, 8 gallery files, Ctrl+Shift+G shortcut)
+- Delete dead components: ActivityIndicator, PresenceCharm, ReferenceTypeBadge, Skeleton re-exports
+- Replace custom MetadataTable molecule and MetaValue atom with @4lt7ab/ui MetadataTable re-export
+- Delete dead fieldUtils.tsx, Overlay.tsx and Skeleton.tsx wrapper files (barrel re-exports directly)
+- Add BackgroundLoader atom — radial gradient backgrounds for static themes (slate, moss, warm-sand, coral)
+- Wrap project task list in ExpandableCard with inline header action and filters
 - Remove Themes page and simplify AppThemePicker to compact-only dropdown
 - Fix broken theme: migrate old localStorage names (synth→synthwave, etc.) and use CSS var fallbacks for non-glow borders/shadows
 - Remove legacy theme tokens from compat layer (color, shadow, radius, spacing, font stripped — glow/motion/layout remain)

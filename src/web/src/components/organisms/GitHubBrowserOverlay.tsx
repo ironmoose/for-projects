@@ -1,18 +1,17 @@
 import { useState, useMemo, useCallback } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
-import { Button } from "@4lt7ab/ui/ui";
-import { Input, Field } from "@4lt7ab/ui/ui";
-import { Icon } from "../atoms/Icon";
-import { SectionLabel } from "../atoms/SectionLabel";
+import { useInjectStyles } from "@4lt7ab/ui/core";
+import { Button, Input, Field, Select, Icon, SectionLabel, ModalShell } from "@4lt7ab/ui/ui";
+
+const SPIN_CSS = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
 import { TagPicker } from "../molecules/TagPicker";
-import { FolderInput } from "../molecules/FolderInput";
-import { ModalShell } from "@4lt7ab/ui/ui";
 import { useShortcutSuppression } from "../../hooks/useKeyboardShortcuts";
 import { browseGitHubRepo, importDocumentBatch } from "../../api";
 import type { GitHubTreeEntry } from "../../api";
 import type { TagName } from "../../types";
 
 function ButtonSpinner() {
+  useInjectStyles("tfp-spin", SPIN_CSS);
   return (
     <span
       style={{
@@ -236,7 +235,14 @@ export function GitHubBrowserOverlay({ folders = [], onDone, onClose }: GitHubBr
           {/* Import options */}
           <div style={{ display: "flex", gap: t.spaceLg, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 150 }}>
-              <FolderInput value={folder} folders={folders} onChange={setFolder} />
+              <Field label="Folder" htmlFor="gh-folder">
+                <Select
+                  id="gh-folder"
+                  value={folder}
+                  onChange={(e) => setFolder(e.target.value)}
+                  options={[{ value: "", label: "No folder" }, ...folders.map((f) => ({ value: f, label: f }))]}
+                />
+              </Field>
             </div>
             <div style={{ flex: 1, minWidth: 150, display: "flex", flexDirection: "column", gap: t.spaceXs }}>
               <SectionLabel>Tags</SectionLabel>

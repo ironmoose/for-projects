@@ -10,9 +10,7 @@ import {
   Textarea,
   Stack,
   DetailPageLayout,
-  BackButton,
   ExpandableCard,
-  Markdown,
   MetadataTable,
   EmptyState,
   ConfirmDialog,
@@ -20,15 +18,16 @@ import {
   TaskTable,
   TaskTableFilters,
   DocumentReaderModal,
-  DependencyChip,
   DependencyGraphView,
   ProjectDocumentTable,
 } from "../components";
 import { semantic as t } from "@4lt7ab/ui/core";
+import { Prose } from "@4lt7ab/ui/content";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { DocumentReferencePicker } from "../components/organisms/DocumentReferencePicker";
 import { CreateTaskOverlay } from "../components/organisms/CreateTaskOverlay";
-import { ModalShell } from "@4lt7ab/ui/ui";
-import { Badge } from "../components/atoms/Badge";
+import { ModalShell, Badge, StatusDot } from "@4lt7ab/ui/ui";
 import { useProject } from "../hooks";
 import { useShortcut, useShortcutSuppression } from "../hooks/useKeyboardShortcuts";
 import { useWindowWidth } from "../hooks/useWindowWidth";
@@ -42,7 +41,7 @@ import { ApiError, fetchTask, updateTasks, updateDocuments, fetchTaskDependencie
 import type { TaskDetail, TaskDependencies, DependencyDetail, DocumentsMergePatch } from "../api";
 import type { TaskSummary, TaskStatus } from "../types";
 import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../types";
-import { formatDate } from "../utils";
+import { formatDate, statusBadgeVariant } from "../utils";
 import { MEDIUM_BREAKPOINT } from "../constants";
 
 // ---------------------------------------------------------------------------
@@ -56,10 +55,6 @@ const STATUS_LABELS: Record<string, string> = {
   archived: "archived",
 };
 
-function statusBadgeVariant(status: string): "todo" | "in_progress" | "done" | "archived" | "default" {
-  if (status === "todo" || status === "in_progress" || status === "done" || status === "archived") return status;
-  return "default";
-}
 
 const graphStatusFilterOptions = [
   { value: "in_progress,todo", label: "Active" },
@@ -249,17 +244,44 @@ function DependencySection({
       </div>
       {items.length > 0 ? (
         <div style={{ display: "flex", flexWrap: "wrap", gap: t.spaceXs }}>
-          {items.map((dep) => (
-            <DependencyChip
-              key={dep.task_id}
-              taskId={dep.task_id}
-              taskTitle={dep.task_title}
-              taskStatus={dep.task_status}
-              dependencyType={dep.dependency_type}
-              onClick={() => onSelectTask(dep.task_id)}
-              onRemove={() => onRemove(dep, section)}
-            />
-          ))}
+          {items.map((dep) => {
+            const statusColor = ({ todo: t.colorTextMuted, in_progress: t.colorWarning, done: t.colorSuccess, archived: t.colorTextSecondary } as Record<string, string>)[dep.task_status] ?? t.colorTextMuted;
+            return (
+              <span
+                key={dep.task_id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectTask(dep.task_id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectTask(dep.task_id); }}
+                title={dep.task_title}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: t.fontSizeXs,
+                  color: t.colorText,
+                  background: t.colorSurfaceRaised,
+                  borderRadius: t.radiusFull,
+                  padding: "3px 8px",
+                  cursor: "pointer",
+                  maxWidth: 220,
+                  border: `1px solid color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
+                }}
+              >
+                <StatusDot color={statusColor} size={7} />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+                  {dep.task_title}
+                </span>
+                <IconButton
+                  icon="close"
+                  size={11}
+                  onClick={(e) => { e.stopPropagation(); onRemove(dep, section); }}
+                  aria-label={`Remove dependency ${dep.task_title}`}
+                  style={{ width: 16, height: 16, minWidth: 16, flexShrink: 0 }}
+                />
+              </span>
+            );
+          })}
         </div>
       ) : (
         <p style={{ margin: 0, fontSize: t.fontSizeXs, color: t.colorTextSecondary, fontStyle: "italic" }}>
@@ -722,7 +744,7 @@ function TaskDetailPanel({
             </div>
           ) : task.summary ? (
             <div onClick={() => { setExpandedCard("summary"); setEditingSummary(true); }} style={{ cursor: "pointer" }} title="Click to edit summary">
-              <Markdown>{task.summary}</Markdown>
+              <Prose><ReactMarkdown remarkPlugins={[remarkGfm]}>{task.summary}</ReactMarkdown></Prose>
             </div>
           ) : (
             <p
@@ -773,7 +795,7 @@ function TaskDetailPanel({
             </div>
           ) : task.context ? (
             <div onClick={() => { setExpandedCard("context"); setEditingContext(true); }} style={{ cursor: "pointer" }} title="Click to edit context">
-              <Markdown>{task.context}</Markdown>
+              <Prose><ReactMarkdown remarkPlugins={[remarkGfm]}>{task.context}</ReactMarkdown></Prose>
             </div>
           ) : (
             <p
@@ -824,7 +846,7 @@ function TaskDetailPanel({
             </div>
           ) : task.acceptance_criteria ? (
             <div onClick={() => { setExpandedCard("acceptance_criteria"); setEditingAC(true); }} style={{ cursor: "pointer" }} title="Click to edit acceptance criteria">
-              <Markdown>{task.acceptance_criteria}</Markdown>
+              <Prose><ReactMarkdown remarkPlugins={[remarkGfm]}>{task.acceptance_criteria}</ReactMarkdown></Prose>
             </div>
           ) : (
             <p
@@ -903,7 +925,7 @@ function TaskDetailPanel({
         >
           <MetadataTable
             title="Info"
-            rows={[
+            items={[
               { label: "ID", value: task.id },
               { label: "Created", value: formatDate(task.created_at) },
               { label: "Updated", value: formatDate(task.updated_at) },
@@ -1087,7 +1109,11 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
   if (notFound) {
     return (
       <div style={{ flex: 1, width: "100%", maxWidth: 900, padding: `${t.space2xl} ${t.spaceXl}`, boxSizing: "border-box" }}>
-        <BackButton onClick={onBack} />
+        <Button variant="ghost" onClick={onBack}>
+          <span style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+            <Icon name="arrow_back" size={16} /> Back
+          </span>
+        </Button>
         <EmptyState
           icon="error_outline"
           message="Project not found."
@@ -1120,7 +1146,11 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         scrollbarWidth: "none" as const,
       }}>
         {/* Full-width header */}
-        <BackButton onClick={onBack} label="All Projects" style={{ marginBottom: t.spaceLg }} />
+        <Button variant="ghost" onClick={onBack} style={{ marginBottom: t.spaceLg }}>
+          <span style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+            <Icon name="arrow_back" size={16} /> All Projects
+          </span>
+        </Button>
 
         <Stack direction="horizontal" justify="space-between" align="flex-start" wrap style={{ gap: t.spaceLg, marginBottom: t.spaceMd }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -1226,7 +1256,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             </div>
           ) : project.summary ? (
             <div onClick={handleStartEditSummary} style={{ cursor: "pointer" }} title="Click to edit summary">
-              <Markdown>{project.summary}</Markdown>
+              <Prose><ReactMarkdown remarkPlugins={[remarkGfm]}>{project.summary}</ReactMarkdown></Prose>
             </div>
           ) : (
             <p
@@ -1269,7 +1299,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             </div>
           ) : project.context ? (
             <div onClick={handleStartEditContext} style={{ cursor: "pointer" }} title="Click to edit context">
-              <Markdown>{project.context}</Markdown>
+              <Prose><ReactMarkdown remarkPlugins={[remarkGfm]}>{project.context}</ReactMarkdown></Prose>
             </div>
           ) : (
             <p
@@ -1312,7 +1342,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
             </div>
           ) : project.requirements ? (
             <div onClick={handleStartEditRequirements} style={{ cursor: "pointer" }} title="Click to edit requirements">
-              <Markdown>{project.requirements}</Markdown>
+              <Prose><ReactMarkdown remarkPlugins={[remarkGfm]}>{project.requirements}</ReactMarkdown></Prose>
             </div>
           ) : (
             <p
@@ -1361,6 +1391,7 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
         }}>
           <ExpandableCard
             title="Documents"
+            variant="flat"
             defaultOpen={true}
             style={{ marginBottom: t.spaceXl }}
             headerAction={
@@ -1392,58 +1423,49 @@ export function ProjectPage({ projectId, onBack }: { projectId: string; onBack: 
           flex: 1,
           minWidth: 0,
         }}>
-          <Stack direction="horizontal" justify="space-between" align="center" style={{ marginBottom: t.spaceMd }}>
-            <h3
-              style={{
-                margin: 0,
-                fontFamily: t.fontSerif,
-                fontSize: t.fontSizeLg,
-                fontWeight: 700,
-                color: t.colorText,
-              }}
-            >
-              Tasks
-            </h3>
-            <span style={{ fontSize: t.fontSizeXs, color: t.colorTextSecondary }}>
-              {total} task{total !== 1 ? "s" : ""}
-            </span>
-          </Stack>
+          <ExpandableCard
+            title={`Tasks (${total})`}
+            variant="flat"
+            defaultOpen={true}
+            style={{ marginBottom: t.spaceXl }}
+            headerAction={
+              <Button variant="ghost" onClick={() => setShowCreateTask(true)}>
+                <span style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+                  <Icon name="add" size={16} />
+                  Add Task
+                </span>
+              </Button>
+            }
+          >
+            <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} groupKeys={groupKeys} />
 
-          <Button onClick={() => setShowCreateTask(true)} style={{ marginBottom: t.spaceLg }}>
-            <span style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
-              <Icon name="add" size={16} />
-              Add Task
-            </span>
-          </Button>
+            <div style={{ marginTop: t.spaceMd }}>
+              {tasksLoading ? (
+                <div style={{ textAlign: "center", padding: t.spaceXl, color: t.colorTextMuted }}>
+                  Loading...
+                </div>
+              ) : tasks.length === 0 ? (
+                <EmptyState icon="task" message="No tasks match the current filters." />
+              ) : (
+                <TaskTable
+                  tasks={tasks}
+                  selectedTaskId={selectedTaskId}
+                  onSelectTask={(id) => setSelectedTaskId(id)}
+                  onDeleteTask={(task) => setDeleteTaskTarget(task)}
+                  onUpdateTaskStatus={handleUpdateTaskStatus}
+                />
+              )}
+            </div>
 
-          <TaskTableFilters filter={taskFilter} onChange={setTaskFilter} groupKeys={groupKeys} />
-
-          <div style={{ marginTop: t.spaceLg }}>
-            {tasksLoading ? (
-              <div style={{ textAlign: "center", padding: t.spaceXl, color: t.colorTextMuted }}>
-                Loading...
-              </div>
-            ) : tasks.length === 0 ? (
-              <EmptyState icon="task" message="No tasks match the current filters." />
-            ) : (
-              <TaskTable
-                tasks={tasks}
-                selectedTaskId={selectedTaskId}
-                onSelectTask={(id) => setSelectedTaskId(id)}
-                onDeleteTask={(task) => setDeleteTaskTarget(task)}
-                onUpdateTaskStatus={handleUpdateTaskStatus}
+            {totalPages > 1 && (
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                onPageChange={setPage}
               />
             )}
-          </div>
-
-          {totalPages > 1 && (
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              onPageChange={setPage}
-            />
-          )}
+          </ExpandableCard>
         </div>
         </div>
       </div>

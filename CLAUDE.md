@@ -99,7 +99,6 @@ src/
         │   └── theme/           # ThemeContext (compat wrapper), lib-themes (ThemeDefinitions), compat (migration layer), theme (legacy tokens)
         ├── pages/               # DashboardPage, ProjectPage, DocumentsPage, etc.
         ├── hooks/               # useProject, useDocuments, useEventSubscription, etc.
-        ├── gallery/             # component gallery showcase
         └── types/               # shared frontend types
 
 scripts/                         # operational scripts (migrations, smoke tests, etc.)
@@ -116,6 +115,7 @@ scripts/                         # operational scripts (migrations, smoke tests,
 - Dependencies wired explicitly in `bootstrap.ts` — no globals or service locators
 - No DEFAULT values in the schema
 - Document-first: all rich content is stored as documents, linked to entities via typed references. Projects and tasks hold only `title` and `summary` (max 1000 chars) inline. Tasks also have `context` (freeform background/rationale, max 100K chars) and `acceptance_criteria` (freeform completion criteria, max 100K chars) as inline text fields.
+- **Accessibility is required, not optional.** Every `IconButton` needs `aria-label`. Interactive elements need keyboard handlers (`tabIndex`, `onKeyDown`). Toggles need `aria-pressed`. Collapsible sections need `aria-expanded`. Use semantic HTML (`<main>`, `<nav>`, `<header>`). The `a11y-pass.test.ts` suite enforces these — update it when adding interactive components.
 
 ### Document reference types
 
@@ -237,7 +237,7 @@ atoms/       → Button, Input, Select, Icon, Badge, Skeleton, StatusDot, etc.
 molecules/   → Card, Stack, TagChip, Markdown, SearchToggle, Pagination, etc.
 organisms/   → TopBar, ModalShell, TaskTable, DocumentTable, DependencyGraphView, etc.
 templates/   → DetailPageLayout, ListPageLayout
-pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage, GalleryPage
+pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage
 ```
 
 **Styling:** 100% inline styles via React `style` prop. No CSS files, no CSS modules, no Tailwind. Components read semantic tokens from the theme system. The `@4lt7ab/ui` component library is the underlying design system.
@@ -260,8 +260,6 @@ Three things are **always** touched alongside code changes:
 2. **CHANGELOG.md** — every commit adds a bullet to the changelog under the current `## [Unreleased]` section. **No category headers** (no `### Added`, `### Fixed`, etc.) — just flat bullets under the version. **Keep entries terse** — one short line per change, no implementation details. The changelog says *what* changed, not *how* or *why*. Example: `- Migrate Overlay atom to @4lt7ab/ui re-export`.
 3. **CLAUDE.md** — if the change adds modules, changes conventions, alters architecture, or introduces new workflows, update this file. Keep it current — a stale CLAUDE.md teaches wrong patterns.
 
-4. **Gallery** — the component gallery (`src/web/src/gallery/`) documents **only custom components and layouts that are NOT re-exported from `@4lt7ab/ui`**. Components re-exported from the library are already documented there. When adding or modifying a custom atom/molecule, update its gallery entry. When migrating a component to a library re-export, remove its gallery entry. When migrating a component to library tokens, set `migrated: true` in its gallery entry so the gallery index shows a checkmark indicator. This is required for every theme migration commit. For components generic enough to upstream to `@4lt7ab/ui`, set `libraryCandidate: true` in the gallery entry.
-
 These are not optional. A commit without updated tests and changelog is incomplete.
 
 ## Testing
@@ -271,6 +269,7 @@ These are not optional. A commit without updated tests and changelog is incomple
 - ALWAYS run Postgres smoke tests (`bun scripts/smoke-tests/pg-migration-test.ts`, `pg-smoke-test.ts`, `embedding-smoke-test.ts`, `semantic-search-smoke-test.ts`) after changes to Postgres migrations, repositories, schema, or embeddings.
 - Test API changes against the dev server at http://localhost:3000 when it's running.
 - NEVER attempt to start the dev server or Docker services — assume they're already running if needed.
+- **Accessibility tests (`a11y-pass.test.ts`) are load-bearing.** They guard: `aria-label` on every `IconButton`, semantic HTML landmarks (`<main>`, `<nav>`, `<header>`), keyboard navigation on table rows and document cards, `aria-pressed` on toggles, toast `aria-live` region, skip-to-content link, and `aria-expanded` on collapsible groups. When adding an `IconButton`, toggle, or interactive element — update these tests. Do not delete this file.
 
 ## Adding an API Route
 
@@ -299,9 +298,8 @@ These are not optional. A commit without updated tests and changelog is incomple
 1. Create component file in the appropriate tier: `src/web/src/components/{atoms|molecules|organisms}/{Name}.tsx`
 2. Use theme tokens via `useTheme()` — no hardcoded colors or pixel values
 3. Export from `src/web/src/components/index.ts` barrel
-4. Add to component gallery in `src/web/src/gallery/` if it's a reusable atom or molecule. Set `migrated: true` in the gallery entry if the component uses library tokens (no compat `useTheme` for non-glow tokens)
-5. Update CHANGELOG.md
-6. `bun run build` (vite build must succeed)
+4. Update CHANGELOG.md
+5. `bun run build` (vite build must succeed)
 
 ## Adding an MCP Tool
 

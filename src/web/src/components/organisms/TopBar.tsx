@@ -133,7 +133,7 @@ export function TopBar({
         </div>
       )}
 
-      {/* Right: trailing (ConnectionStatus, ActivityIndicator, etc.) */}
+      {/* Right: trailing (ConnectionStatus, theme picker, etc.) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {trailing}
       </div>
