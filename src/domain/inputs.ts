@@ -1,4 +1,4 @@
-import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType, DocumentReferenceType, SourceType } from './entities';
+import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType, DocumentReferenceType } from './entities';
 
 /**
  * Merge-patch for document references on an entity.
@@ -84,4 +84,25 @@ export interface UpdateTaskInput {
   remove_dependencies?: { task_id: string }[];
   /** Merge-patch for document references. Key = document_id. Array = replace types for that doc. null = remove all refs. Absent key = untouched. */
   documents?: DocumentsMergePatch;
+}
+
+export interface CreateAutomationInput {
+  title: string;
+  summary?: string;
+  prompt?: string;
+  agent?: string;
+  category?: string;
+  is_favorite?: boolean;
+  tags?: TagName[];
+}
+
+export interface UpdateAutomationInput {
+  id: string;
+  title?: string;
+  summary?: string | null;
+  prompt?: string | null;
+  agent?: string | null;
+  category?: string | null;
+  is_favorite?: boolean;
+  tags?: TagName[];
 }

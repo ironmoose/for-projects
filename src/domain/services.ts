@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, SemanticSearchResult, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, EntityType, ActivityLog } from "./entities";
+import type { Project, ProjectSummary, Task, TaskSummary, GraphTaskSummary, Document, DocumentSummary, SemanticSearchResult, Automation, AutomationSummary, TagName, TaskDependency, NormalizedDependencyDetail, DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, EntityType, ActivityLog } from "./entities";
 import type { TreeEntry } from "./connectors/types";
 import type {
   CreateProjectInput,
@@ -7,6 +7,8 @@ import type {
   UpdateTaskInput,
   CreateDocumentInput,
   UpdateDocumentInput,
+  CreateAutomationInput,
+  UpdateAutomationInput,
   ImportDocumentInput,
 } from "./inputs";
 
@@ -81,6 +83,14 @@ export interface IProjectContextService {
     focus?: string;
     since?: string;
   }): Promise<ProjectContextResult>;
+}
+
+export interface IAutomationService {
+  list(filter?: { title?: string; category?: string; is_favorite?: boolean; tag?: string; limit?: number; offset?: number }): Promise<Paginated<AutomationSummary>>;
+  get(id: string): Promise<Automation & { tags: TagName[] }>;
+  create(inputs: CreateAutomationInput[]): Promise<(Automation & { tags: TagName[] })[]>;
+  update(inputs: UpdateAutomationInput[]): Promise<(Automation & { tags: TagName[] })[]>;
+  remove(ids: string[]): Promise<void>;
 }
 
 export interface IDocumentService {

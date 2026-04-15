@@ -1675,3 +1675,158 @@ describe("Activity Log Retention", () => {
     expect(deleted).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Automation CRUD
+// ---------------------------------------------------------------------------
+
+describe("Automation CRUD", () => {
+  it("creates an automation with title only", async () => {
+    const [automation] = await ctx.automationService.create([{ title: "My Prompt" }]);
+    expect(automation.id).toBeTruthy();
+    expect(automation.title).toBe("My Prompt");
+    expect(automation.summary).toBeNull();
+    expect(automation.prompt).toBeNull();
+    expect(automation.agent).toBeNull();
+    expect(automation.category).toBeNull();
+    expect(automation.is_favorite).toBe(false);
+    expect(automation.tags).toEqual([]);
+  });
+
+  it("creates an automation with all fields", async () => {
+    const [automation] = await ctx.automationService.create([{
+      title: "Full Prompt",
+      summary: "Runs a code review",
+      prompt: "Review this code for bugs and style issues.",
+      agent: "code-reviewer",
+      category: "code-review",
+      is_favorite: true,
+      tags: ["ui" as TagName],
+    }]);
+    expect(automation.title).toBe("Full Prompt");
+    expect(automation.summary).toBe("Runs a code review");
+    expect(automation.prompt).toBe("Review this code for bugs and style issues.");
+    expect(automation.agent).toBe("code-reviewer");
+    expect(automation.category).toBe("code-review");
+    expect(automation.is_favorite).toBe(true);
+    expect(automation.tags).toEqual(["ui"]);
+  });
+
+  it("lists automations", async () => {
+    const result = await ctx.automationService.list();
+    expect(result.data).toBeArray();
+    expect(result.total).toBeGreaterThanOrEqual(2);
+    // Summaries should have has_prompt, not prompt
+    const first = result.data[0];
+    expect(first).toHaveProperty("has_prompt");
+    expect(first).not.toHaveProperty("prompt");
+  });
+
+  it("filters by title", async () => {
+    const result = await ctx.automationService.list({ title: "Full Prompt" });
+    expect(result.total).toBe(1);
+    expect(result.data[0].title).toBe("Full Prompt");
+  });
+
+  it("filters by category", async () => {
+    const result = await ctx.automationService.list({ category: "code-review" });
+    expect(result.total).toBe(1);
+  });
+
+  it("filters by is_favorite", async () => {
+    const result = await ctx.automationService.list({ is_favorite: true });
+    expect(result.total).toBeGreaterThanOrEqual(1);
+    for (const a of result.data) expect(a.is_favorite).toBe(true);
+  });
+
+  it("filters by tag", async () => {
+    const result = await ctx.automationService.list({ tag: "ui" });
+    expect(result.total).toBeGreaterThanOrEqual(1);
+  });
+
+  it("paginates with limit/offset", async () => {
+    const result = await ctx.automationService.list({ limit: 1, offset: 0 });
+    expect(result.data).toHaveLength(1);
+    expect(result.total).toBeGreaterThanOrEqual(2);
+  });
+
+  it("gets a single automation with tags", async () => {
+    const [created] = await ctx.automationService.create([{
+      title: "Get Test",
+      prompt: "test prompt",
+      tags: ["data" as TagName],
+    }]);
+    const fetched = await ctx.automationService.get(created.id);
+    expect(fetched.title).toBe("Get Test");
+    expect(fetched.prompt).toBe("test prompt");
+    expect(fetched.tags).toEqual(["data"]);
+  });
+
+  it("throws 404 for missing automation", async () => {
+    await expect(ctx.automationService.get("nonexistent")).rejects.toThrow(ServiceError);
+  });
+
+  it("updates automation fields", async () => {
+    const [created] = await ctx.automationService.create([{ title: "Update Me" }]);
+    const [updated] = await ctx.automationService.update([{
+      id: created.id,
+      title: "Updated",
+      summary: "New summary",
+      prompt: "New prompt",
+      agent: "my-agent",
+      category: "refactor",
+      is_favorite: true,
+    }]);
+    expect(updated.title).toBe("Updated");
+    expect(updated.summary).toBe("New summary");
+    expect(updated.prompt).toBe("New prompt");
+    expect(updated.agent).toBe("my-agent");
+    expect(updated.category).toBe("refactor");
+    expect(updated.is_favorite).toBe(true);
+  });
+
+  it("updates tags", async () => {
+    const [created] = await ctx.automationService.create([{ title: "Tag Update", tags: ["ui" as TagName] }]);
+    const [updated] = await ctx.automationService.update([{ id: created.id, tags: ["data" as TagName, "infra" as TagName] }]);
+    expect(updated.tags.sort()).toEqual(["data", "infra"]);
+  });
+
+  it("deletes automations", async () => {
+    const [created] = await ctx.automationService.create([{ title: "Delete Me" }]);
+    await ctx.automationService.remove([created.id]);
+    await expect(ctx.automationService.get(created.id)).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects empty title", async () => {
+    await expect(ctx.automationService.create([{ title: "" }])).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects title over 255 chars", async () => {
+    await expect(ctx.automationService.create([{ title: "x".repeat(256) }])).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects prompt over 100K chars", async () => {
+    await expect(ctx.automationService.create([{ title: "Big", prompt: "x".repeat(100_001) }])).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects invalid tag", async () => {
+    await expect(ctx.automationService.create([{ title: "Bad Tag", tags: ["nonexistent" as TagName] }])).rejects.toThrow(ServiceError);
+  });
+
+  it("creates activity log entries", async () => {
+    const logBefore = await activityLogRepo.count({ entity_type: "automation" });
+    await ctx.automationService.create([{ title: "Log Test" }]);
+    const logAfter = await activityLogRepo.count({ entity_type: "automation" });
+    expect(logAfter).toBeGreaterThan(logBefore);
+  });
+
+  it("batch creates multiple automations", async () => {
+    const results = await ctx.automationService.create([
+      { title: "Batch 1" },
+      { title: "Batch 2" },
+      { title: "Batch 3" },
+    ]);
+    expect(results).toHaveLength(3);
+    expect(results.map((r) => r.title)).toEqual(["Batch 1", "Batch 2", "Batch 3"]);
+  });
+});

@@ -15,6 +15,7 @@ import {
   type ITaskService,
   type ITaskDependencyService,
   type IDocumentService,
+  type IAutomationService,
   type ISourceService,
   type IProjectContextService,
 } from "../domain";
@@ -24,6 +25,7 @@ export interface McpServiceContext {
   taskService: ITaskService;
   taskDependencyService: ITaskDependencyService;
   documentService: IDocumentService;
+  automationService: IAutomationService;
   sourceService: ISourceService;
   projectContextService: IProjectContextService;
 }
@@ -64,7 +66,7 @@ const documentsMergePatchSchema = z.record(
 
 /** Create an McpServer with all tools registered. */
 export function createMcpServer(ctx: McpServiceContext): McpServer {
-  const { projectService, taskService, taskDependencyService, documentService, sourceService, projectContextService } = ctx;
+  const { projectService, taskService, taskDependencyService, documentService, automationService, sourceService, projectContextService } = ctx;
 
   const server = new McpServer({
     name: "tab-for-projects",
@@ -327,6 +329,72 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ query, tag, folder, favorite, limit }) => handle(() => documentService.semanticSearch(query, { tag, folder, favorite, limit }))
+  );
+
+  // -- Automations ------------------------------------------------------
+
+  server.registerTool(
+    "list_automations",
+    {
+      description: "List automation summaries. Filterable by title, category, is_favorite, tag. Returns { data, total } with automation summaries (id, title, summary, agent, category, has_prompt, is_favorite, tags, timestamps).",
+      inputSchema: {
+        title: z.string().max(255).optional(),
+        category: z.string().max(64).optional(),
+        is_favorite: z.boolean().optional(),
+        tag: z.string().max(50).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    ({ title, category, is_favorite, tag, limit, offset }) => handle(() => automationService.list({ title, category, is_favorite, tag, limit, offset }))
+  );
+
+  server.registerTool(
+    "get_automation",
+    {
+      description: "Retrieve a single automation by ID with full prompt content, agent, tags.",
+      inputSchema: { id: z.string().max(26) },
+    },
+    ({ id }) => handle(() => automationService.get(id))
+  );
+
+  server.registerTool(
+    "create_automation",
+    {
+      description: "Create automations. Pass an `items` array with required title. Optional summary (max 1000 chars), prompt (max 100K chars), agent (max 255 chars), category (max 64 chars), is_favorite, tags.",
+      inputSchema: {
+        items: z.array(z.object({
+          title: z.string().max(255),
+          summary: z.string().max(1000).optional(),
+          prompt: z.string().max(100_000).optional(),
+          agent: z.string().max(255).optional(),
+          category: z.string().max(64).optional(),
+          is_favorite: z.boolean().optional(),
+          tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
+        })),
+      },
+    },
+    ({ items }) => handle(() => automationService.create(items))
+  );
+
+  server.registerTool(
+    "update_automation",
+    {
+      description: "Update automations by ID. Pass an `items` array. Only provided fields are changed. Providing tags replaces all existing tags.",
+      inputSchema: {
+        items: z.array(z.object({
+          id: z.string().max(26),
+          title: z.string().max(255).optional(),
+          summary: z.string().max(1000).optional(),
+          prompt: z.string().max(100_000).optional(),
+          agent: z.string().max(255).nullable().optional(),
+          category: z.string().max(64).nullable().optional(),
+          is_favorite: z.boolean().optional(),
+          tags: z.array(z.enum([...TAG_NAMES])).max(20).optional(),
+        })),
+      },
+    },
+    ({ items }) => handle(() => automationService.update(items))
   );
 
   // -- Source import ----------------------------------------------------

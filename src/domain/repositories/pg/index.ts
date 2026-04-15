@@ -5,3 +5,4 @@ export { PgTagRepository } from "./tags";
 export { PgDocumentReferenceRepository } from "./document-references";
 export { PgTaskDependencyRepository } from "./task-dependencies";
 export { PgActivityLogRepository } from "./activity-log";
+export { PgAutomationRepository } from "./automations";

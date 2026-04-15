@@ -10,6 +10,8 @@ export type {
   Document,
   DocumentSummary,
   SemanticSearchResult,
+  Automation,
+  AutomationSummary,
   DocumentReference,
   DocumentReferenceSummary,
   DocumentReferenceDetail,

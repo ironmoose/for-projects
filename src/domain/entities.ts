@@ -18,7 +18,7 @@ export type DependencyType = typeof DEPENDENCY_TYPES[number];
 export const SOURCE_TYPES = ['github'] as const;
 export type SourceType = typeof SOURCE_TYPES[number];
 
-export const ENTITY_TYPES = ['project', 'task', 'document'] as const;
+export const ENTITY_TYPES = ['project', 'task', 'document', 'automation'] as const;
 export const ACTIVITY_ACTIONS = ['created', 'updated', 'deleted'] as const;
 
 export type TaskStatus = typeof TASK_STATUSES[number];
@@ -140,6 +140,42 @@ export interface Document {
   source_fetched_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Automation {
+  id: string;
+  title: string;
+  summary: string | null;
+  prompt: string | null;
+  agent: string | null;
+  category: string | null;
+  is_favorite: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutomationSummary {
+  id: string;
+  title: string;
+  summary: string | null;
+  agent: string | null;
+  category: string | null;
+  has_prompt: boolean;
+  is_favorite: boolean;
+  tags: TagName[];
+  created_at: string;
+  updated_at: string;
+}
+
+export function toAutomationSummary(a: Automation, tags: TagName[] = []): AutomationSummary {
+  return {
+    id: a.id, title: a.title, summary: a.summary,
+    agent: a.agent, category: a.category,
+    has_prompt: a.prompt != null,
+    is_favorite: a.is_favorite,
+    tags,
+    created_at: a.created_at, updated_at: a.updated_at,
+  };
 }
 
 export interface LinkedProject {
