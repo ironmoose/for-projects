@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { semantic as t, useInjectStyles, KEYFRAMES } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import {
   Badge,
   Button,
@@ -32,6 +32,8 @@ import {
 import { useProjects } from "../hooks/useProjects";
 import { ApiError, fetchTaskStatusCounts } from "../api";
 import type { ProjectSummary } from "../types";
+import { formatRelativeDate, staggerStyle } from "../utils";
+import { PageShell } from "../components/PageShell";
 
 // ---------------------------------------------------------------------------
 // Injected styles
@@ -78,18 +80,6 @@ interface AggregateStats {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeDate(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
 
 function computeAggregates(
   projects: ProjectSummary[],
@@ -201,8 +191,7 @@ function StatCards({
               display: "flex",
               alignItems: "center",
               gap: t.spaceMd,
-              animation: `${KEYFRAMES.fadeInUp} 0.3s ease both`,
-              animationDelay: `${i * 60}ms`,
+              ...staggerStyle(i, { delayMs: 60 }),
             }}
           >
             <div
@@ -370,6 +359,7 @@ function ProjectCardGrid({
   taskData: TaskCountMap;
   onOpen: (id: string) => void;
   onDelete: (p: ProjectSummary) => void;
+  onCopyId: (id: string) => void;
 }) {
   return (
     <div
@@ -410,11 +400,10 @@ function ProjectCardGrid({
               padding: t.spaceLg,
               borderRadius: t.radiusLg,
               border: `1px solid ${t.colorBorder}`,
-              background: t.colorSurface,
+              background: t.colorSurfaceSolid,
               boxShadow: t.shadowSm,
               cursor: "pointer",
-              animation: `${KEYFRAMES.fadeInUp} 0.3s ease both`,
-              animationDelay: `${Math.min(i * 40, 300)}ms`,
+              ...staggerStyle(i, { delayMs: 40 }),
             }}
           >
             {/* Header: title + recent indicator + arrow */}
@@ -602,6 +591,15 @@ function ProjectCardGrid({
               >
                 <span>{formatRelativeDate(project.updated_at)}</span>
                 <IconButton
+                  icon="content_copy"
+                  size={14}
+                  aria-label={`Copy ID for ${project.title}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCopyId(project.id);
+                  }}
+                />
+                <IconButton
                   icon="delete"
                   size={14}
                   aria-label={`Delete ${project.title}`}
@@ -746,21 +744,7 @@ export function ProjectsPage({
   }
 
   return (
-    <div
-      style={{
-        flex: 1,
-        width: "100%",
-        maxWidth: 1100,
-        alignSelf: "center",
-        display: "flex",
-        flexDirection: "column",
-        padding: `${t.spaceLg} ${t.spaceXl} ${t.space2xl}`,
-        boxSizing: "border-box",
-        overflowY: "auto",
-        scrollbarWidth: "none" as const,
-        gap: t.spaceLg,
-      }}
-    >
+    <PageShell>
       {/* Header */}
       <HeaderBar
         projectCount={projects.length}
@@ -811,6 +795,10 @@ export function ProjectsPage({
           taskData={taskData}
           onOpen={onOpenProject}
           onDelete={setDeleteTarget}
+          onCopyId={(id) => {
+            navigator.clipboard.writeText(id);
+            showToast("Project ID copied", "success");
+          }}
         />
       )}
 
@@ -845,6 +833,6 @@ export function ProjectsPage({
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

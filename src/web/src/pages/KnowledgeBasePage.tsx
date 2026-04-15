@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { semantic as t, useInjectStyles, KEYFRAMES } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import {
   Button,
   IconButton,
@@ -41,6 +41,9 @@ import { useDocument } from "../hooks/useDocument";
 import { ApiError, importDocument } from "../api";
 import { TAG_NAMES, TAG_CATEGORIES } from "../types";
 import type { DocumentSummary } from "../types";
+import { PillSelect } from "../components/PillSelect";
+import { PageShell } from "../components/PageShell";
+import { formatRelativeDate, formatShortDate, staggerStyle } from "../utils";
 
 // ---------------------------------------------------------------------------
 // Injected styles — hover effects, stagger animations, scrollbar hiding
@@ -86,26 +89,6 @@ const KB_STYLES_CSS = `
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatRelativeDate(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 /** Deterministic accent color per folder so cards cluster visually. */
 function folderAccentColor(folder: string | null): string {
@@ -335,71 +318,21 @@ function FilterPills({
       />
 
       {/* Tag filter */}
-      <div style={{ position: "relative" }}>
-        <select
-          value={tag}
-          onChange={(e) => onTagChange(e.target.value)}
-          aria-label="Filter by tag"
-          style={{
-            appearance: "none",
-            padding: `4px ${t.spaceLg} 4px ${t.spaceSm}`,
-            borderRadius: t.radiusFull,
-            border: `1px solid ${tag ? t.colorActionPrimary : `color-mix(in srgb, ${t.colorBorder} 60%, transparent)`}`,
-            background: tag ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)` : "transparent",
-            color: tag ? t.colorActionPrimary : t.colorTextMuted,
-            fontSize: t.fontSizeXs,
-            fontFamily: t.fontSans,
-            fontWeight: 600,
-            cursor: "pointer",
-            outline: "none",
-          }}
-        >
-          <option value="">Tag</option>
-          {TAG_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
-        </select>
-        <Icon name="expand_more" size={12} style={{
-          position: "absolute",
-          right: 8,
-          top: "50%",
-          transform: "translateY(-50%)",
-          pointerEvents: "none",
-          color: tag ? t.colorActionPrimary : t.colorTextMuted,
-        }} />
-      </div>
+      <PillSelect
+        value={tag}
+        options={[{ value: "", label: "Tag" }, ...TAG_NAMES.map((n) => ({ value: n, label: n }))]}
+        onChange={onTagChange}
+        ariaLabel="Filter by tag"
+      />
 
       {/* Folder filter */}
       {folders.length > 0 && (
-        <div style={{ position: "relative" }}>
-          <select
-            value={folder}
-            onChange={(e) => onFolderChange(e.target.value)}
-            aria-label="Filter by folder"
-            style={{
-              appearance: "none",
-              padding: `4px ${t.spaceLg} 4px ${t.spaceSm}`,
-              borderRadius: t.radiusFull,
-              border: `1px solid ${folder ? t.colorActionPrimary : `color-mix(in srgb, ${t.colorBorder} 60%, transparent)`}`,
-              background: folder ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)` : "transparent",
-              color: folder ? t.colorActionPrimary : t.colorTextMuted,
-              fontSize: t.fontSizeXs,
-              fontFamily: t.fontSans,
-              fontWeight: 600,
-              cursor: "pointer",
-              outline: "none",
-            }}
-          >
-            <option value="">Folder</option>
-            {folders.map((f) => <option key={f} value={f}>{f}</option>)}
-          </select>
-          <Icon name="expand_more" size={12} style={{
-            position: "absolute",
-            right: 8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            pointerEvents: "none",
-            color: folder ? t.colorActionPrimary : t.colorTextMuted,
-          }} />
-        </div>
+        <PillSelect
+          value={folder}
+          options={[{ value: "", label: "Folder" }, ...folders.map((f) => ({ value: f, label: f }))]}
+          onChange={onFolderChange}
+          ariaLabel="Filter by folder"
+        />
       )}
 
       {/* Clear all */}
@@ -491,12 +424,11 @@ function DocumentCardGrid({
               display: "flex",
               borderRadius: t.radiusLg,
               border: `1px solid ${t.colorBorder}`,
-              background: t.colorSurface,
+              background: t.colorSurfaceSolid,
               boxShadow: t.shadowSm,
               cursor: "pointer",
               overflow: "hidden",
-              animation: `${KEYFRAMES.fadeInUp} 0.3s ease both`,
-              animationDelay: `${Math.min(i * 30, 300)}ms`,
+              ...staggerStyle(i),
             }}
           >
             {/* Left accent bar */}
@@ -668,7 +600,14 @@ function DocumentList({
   onToggleFavorite: (doc: DocumentSummary) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      background: t.colorSurfaceSolid,
+      borderRadius: t.radiusMd,
+      border: `1px solid ${t.colorBorder}`,
+      overflow: "hidden",
+    }}>
       {documents.map((doc, i) => {
         const accent = folderAccentColor(doc.folder);
         return (
@@ -686,8 +625,7 @@ function DocumentList({
               padding: `${t.spaceSm} ${t.spaceMd}`,
               borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 30%, transparent)`,
               cursor: "pointer",
-              animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
-              animationDelay: `${Math.min(i * 20, 200)}ms`,
+              ...staggerStyle(i, { delayMs: 20, maxMs: 200, duration: 0.25 }),
             }}
           >
             {/* Document icon with accent color */}
@@ -848,14 +786,14 @@ function DocumentReader({ documentId, onClose }: { documentId: string; onClose: 
       });
     }
 
-    items.push({ label: "Created", value: formatDate(doc.created_at) });
-    items.push({ label: "Updated", value: formatDate(doc.updated_at) });
+    items.push({ label: "Created", value: formatShortDate(doc.created_at) });
+    items.push({ label: "Updated", value: formatShortDate(doc.updated_at) });
 
     return items;
   }, [doc]);
 
   return (
-    <ModalShell onClose={onClose} maxWidth={800} style={{ maxHeight: "90vh", overflowY: "auto" }}>
+    <ModalShell onClose={onClose} maxWidth={800} style={{ maxHeight: "90vh", overflowY: "auto", background: t.colorSurfaceSolid }}>
       {loading ? (
         <div style={{ padding: t.spaceXl }}>
           <Container width="prose">
@@ -1168,19 +1106,7 @@ export function KnowledgeBasePage() {
   }
 
   return (
-    <div style={{
-      flex: 1,
-      width: "100%",
-      maxWidth: 1100,
-      alignSelf: "center",
-      display: "flex",
-      flexDirection: "column",
-      padding: `0 ${t.spaceXl} ${t.space2xl}`,
-      boxSizing: "border-box",
-      overflowY: "auto",
-      scrollbarWidth: "none" as const,
-      gap: t.spaceLg,
-    }}>
+    <PageShell topPadding={false}>
       {/* Hero */}
       <HeroSection
         total={total}
@@ -1328,6 +1254,6 @@ export function KnowledgeBasePage() {
           onClose={() => setShowImport(false)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

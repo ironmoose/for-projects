@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+- Extract shared PillSelect component from TasksPage, KnowledgeBasePage, and ProjectDetailPage — deduplicate 9 inline pill-shaped filter selects into one reusable component
+- Consolidate formatRelativeDate and formatShortDate into utils.ts — remove 4 duplicate definitions across all pages
+- Extract shared MetaPill component from TasksPage and ProjectDetailPage
+- Extract shared TextSection component (click-to-edit markdown) from both TaskDetailModal implementations — replace 6 inline edit blocks
+- Extract STATUS_COLORS, STATUS_LABELS, CATEGORY_ICONS to shared constants/task module — deduplicate between TasksPage and ProjectDetailPage
+- Extract useInlineEdit hook from both TaskDetailModal implementations — shared edit-field state machine
+- Extract PageShell component — standardize page container layout across all 4 pages
+- Add staggerStyle utility for fadeInUp entrance animations — replace 8 inline animation/delay pairs across all pages
+- Extract TaskStatusSelect component — inline status dot + select + blocked badge used in task table rows and cards
+- Replace hand-rolled ReactMarkdown components with library Markdown from @4lt7ab/ui/content on ProjectDetailPage and TasksPage
+- Fix transparent modal backgrounds on canvas themes — use colorSurfaceSolid on all ModalShell instances
+- Upgrade @4lt7ab/ui to v0.2.22 — tighter list spacing in Markdown component
+- Add `scripts/seed.ts` — curated dev data seeder (3 projects, 25 tasks, 8 KB documents, dependencies, references)
 - Redesign ProjectsPage as mission control dashboard — aggregate stat cards, richer project cards with status breakdown badges, SectionLabel headings, EmptyState component
 - Redesign TasksPage as observability dashboard — status distribution cards, category distribution chips, Table compound component for list view, StatusDot pulse animation on in-progress tasks
 - Redesign KnowledgeBasePage as library — prose-width reader using Container/Prose/Markdown from @4lt7ab/ui/content, MetadataTable in reader, ChipPicker for tag selection, Combobox for folder input

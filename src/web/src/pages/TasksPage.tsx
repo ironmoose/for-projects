@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { semantic as t, useInjectStyles, KEYFRAMES } from "@4lt7ab/ui/core";
+import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import {
   Button,
   Card,
@@ -17,9 +17,7 @@ import {
   Stack,
   SearchInput,
   Input,
-  Textarea,
   Select,
-  Field,
   Table,
   TableHeader,
   TableHeaderCell,
@@ -38,8 +36,6 @@ import {
   EmptyState,
   useToast,
 } from "@4lt7ab/ui/ui";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 import { useProjects } from "../hooks/useProjects";
 import { useEventSubscription } from "../hooks/useEventSubscription";
@@ -54,6 +50,14 @@ import {
 import type { TaskDetail } from "../api";
 import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../types";
 import type { TaskSummary, TaskStatus } from "../types";
+import { PillSelect } from "../components/PillSelect";
+import { formatRelativeDate, staggerStyle } from "../utils";
+import { MetaPill } from "../components/MetaPill";
+import { useInlineEdit } from "../hooks/useInlineEdit";
+import { TextSection } from "../components/TextSection";
+import { STATUS_COLORS, STATUS_LABELS, CATEGORY_ICONS } from "../constants/task";
+import { PageShell } from "../components/PageShell";
+import { TaskStatusSelect } from "../components/TaskStatusSelect";
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -83,32 +87,7 @@ const STYLES_CSS = `
 
 const PAGE_SIZE = 25;
 
-const STATUS_COLORS: Record<string, string> = {
-  todo: t.colorTextMuted,
-  in_progress: t.colorWarning,
-  done: t.colorSuccess,
-  archived: t.colorTextSecondary,
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: "To Do",
-  in_progress: "In Progress",
-  done: "Done",
-  archived: "Archived",
-};
-
-const CATEGORY_ICONS: Record<string, string> = {
-  feature: "lightbulb",
-  bugfix: "bug_report",
-  refactor: "construction",
-  test: "science",
-  perf: "speed",
-  infra: "dns",
-  docs: "description",
-  security: "shield",
-  design: "palette",
-  chore: "build",
-};
+// STATUS_COLORS, STATUS_LABELS, CATEGORY_ICONS imported from ../constants/task
 
 // ---------------------------------------------------------------------------
 // Filter state
@@ -468,45 +447,7 @@ function FilterBar({
   );
 }
 
-function PillSelect({
-  value, options, active, onChange, ariaLabel,
-}: {
-  value: string;
-  options: { value: string; label: string }[];
-  active: boolean;
-  onChange: (v: string) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div style={{ position: "relative" }}>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={ariaLabel}
-        style={{
-          appearance: "none",
-          padding: `4px ${t.spaceLg} 4px ${t.spaceSm}`,
-          borderRadius: t.radiusFull,
-          border: `1px solid ${active ? t.colorActionPrimary : `color-mix(in srgb, ${t.colorBorder} 60%, transparent)`}`,
-          background: active ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)` : "transparent",
-          color: active ? t.colorActionPrimary : t.colorTextMuted,
-          fontSize: t.fontSizeXs,
-          fontFamily: t.fontSans,
-          fontWeight: 600,
-          cursor: "pointer",
-          outline: "none",
-        }}
-      >
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <Icon name="expand_more" size={12} style={{
-        position: "absolute", right: 8, top: "50%",
-        transform: "translateY(-50%)", pointerEvents: "none",
-        color: active ? t.colorActionPrimary : t.colorTextMuted,
-      }} />
-    </div>
-  );
-}
+// PillSelect imported from ../components/PillSelect
 
 // ---------------------------------------------------------------------------
 // Task table view (proper Table compound component)
@@ -528,7 +469,7 @@ function TaskTableView({
   onDelete: (task: TaskSummary) => void;
 }) {
   return (
-    <Table variant="default" density="sm">
+    <Table variant="default" density="sm" style={{ background: t.colorSurfaceSolid }}>
       <TableHeader>
         <TableHeaderCell width={130}>Status</TableHeaderCell>
         <TableHeaderCell>Title</TableHeaderCell>
@@ -555,34 +496,17 @@ function TaskTableView({
                 onClick={() => onSelect(task.id)}
                 style={{
                   cursor: "pointer",
-                  animation: `${KEYFRAMES.fadeInUp} 0.25s ease both`,
-                  animationDelay: `${Math.min(i * 15, 200)}ms`,
+                  ...staggerStyle(i, { delayMs: 15, maxMs: 200, duration: 0.25 }),
                 }}
               >
                 {/* Status */}
                 <TableCell width={130}>
-                  <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
-                    <StatusDot
-                      color={statusColor}
-                      size={8}
-                      animate={task.status === "in_progress" ? "pulse" : "none"}
-                    />
-                    <select
-                      value={task.status}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => { e.stopPropagation(); onStatusChange(task.id, e.target.value as TaskStatus); }}
-                      aria-label={`Status for ${task.title}`}
-                      style={{
-                        appearance: "none", border: "none", background: "transparent",
-                        color: statusColor, fontSize: "0.6rem", fontFamily: t.fontMono,
-                        fontWeight: 700, textTransform: "uppercase", cursor: "pointer",
-                        padding: 0, outline: "none", letterSpacing: "0.03em",
-                      }}
-                    >
-                      {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
-                    </select>
-                    {task.is_blocked && <Badge variant="error">blocked</Badge>}
-                  </div>
+                  <TaskStatusSelect
+                    status={task.status}
+                    title={task.title}
+                    isBlocked={task.is_blocked}
+                    onChange={(s) => onStatusChange(task.id, s)}
+                  />
                 </TableCell>
 
                 {/* Title */}
@@ -711,39 +635,22 @@ function TaskCardGrid({
               padding: t.spaceMd,
               borderRadius: t.radiusLg,
               border: `1px solid ${t.colorBorder}`,
-              background: t.colorSurface,
+              background: t.colorSurfaceSolid,
               boxShadow: t.shadowSm,
               cursor: "pointer",
               overflow: "hidden",
-              animation: `${KEYFRAMES.fadeInUp} 0.3s ease both`,
-              animationDelay: `${Math.min(i * 25, 300)}ms`,
+              ...staggerStyle(i, { delayMs: 25 }),
               borderLeft: `3px solid color-mix(in srgb, ${statusColor} 60%, transparent)`,
             }}
           >
             {/* Header: status + actions */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
-                <StatusDot
-                  color={statusColor}
-                  size={8}
-                  animate={task.status === "in_progress" ? "pulse" : "none"}
-                />
-                <select
-                  value={task.status}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => { e.stopPropagation(); onStatusChange(task.id, e.target.value as TaskStatus); }}
-                  aria-label={`Status for ${task.title}`}
-                  style={{
-                    appearance: "none", border: "none", background: "transparent",
-                    color: statusColor, fontSize: "0.6rem", fontFamily: t.fontMono,
-                    fontWeight: 700, textTransform: "uppercase", cursor: "pointer",
-                    padding: 0, outline: "none", letterSpacing: "0.03em",
-                  }}
-                >
-                  {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
-                </select>
-                {task.is_blocked && <Badge variant="error">blocked</Badge>}
-              </div>
+              <TaskStatusSelect
+                status={task.status}
+                title={task.title}
+                isBlocked={task.is_blocked}
+                onChange={(s) => onStatusChange(task.id, s)}
+              />
               <IconButton icon="delete" size={14} aria-label={`Delete ${task.title}`}
                 onClick={(e) => { e.stopPropagation(); onDelete(task); }} />
             </div>
@@ -808,40 +715,11 @@ function TaskCardGrid({
   );
 }
 
-function MetaPill({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{
-      padding: `1px ${t.spaceXs}`, borderRadius: t.radiusSm,
-      background: `color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
-      fontSize: "0.6rem", fontFamily: t.fontMono, fontWeight: 500,
-      color: t.colorTextMuted, letterSpacing: "0.02em",
-    }}>
-      {children}
-    </span>
-  );
-}
+// MetaPill imported from ../components/MetaPill
 
 // ---------------------------------------------------------------------------
 // Task detail modal
 // ---------------------------------------------------------------------------
-
-const mdComponents: Record<string, React.ComponentType<Record<string, unknown>>> = {
-  h1: ({ children, ...p }) => <h1 {...p} style={{ fontSize: t.fontSizeXl, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>{children as React.ReactNode}</h1>,
-  h2: ({ children, ...p }) => <h2 {...p} style={{ fontSize: t.fontSizeLg, fontWeight: 700, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceLg} 0 ${t.spaceSm}` }}>{children as React.ReactNode}</h2>,
-  h3: ({ children, ...p }) => <h3 {...p} style={{ fontSize: t.fontSizeBase, fontWeight: 600, fontFamily: t.fontSans, color: t.colorText, margin: `${t.spaceMd} 0 ${t.spaceXs}` }}>{children as React.ReactNode}</h3>,
-  p: ({ children, ...p }) => <p {...p} style={{ margin: `${t.spaceSm} 0`, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}>{children as React.ReactNode}</p>,
-  a: ({ children, href, ...p }) => <a {...p} href={href as string} style={{ color: t.colorTextLink, textDecoration: "underline", textUnderlineOffset: "3px" }}>{children as React.ReactNode}</a>,
-  ul: ({ children, ...p }) => <ul {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ul>,
-  ol: ({ children, ...p }) => <ol {...p} style={{ paddingLeft: "1.25rem", margin: `${t.spaceSm} 0` }}>{children as React.ReactNode}</ol>,
-  li: ({ children, ...p }) => <li {...p} style={{ marginTop: "0.25em" }}>{children as React.ReactNode}</li>,
-  blockquote: ({ children, ...p }) => <blockquote {...p} style={{ borderLeft: `3px solid ${t.colorBorder}`, paddingLeft: t.spaceMd, margin: `${t.spaceMd} 0`, color: t.colorTextSecondary }}>{children as React.ReactNode}</blockquote>,
-  pre: ({ children, ...p }) => <pre {...p} style={{ background: t.colorSurfacePanel, border: `1px solid ${t.colorBorder}`, borderRadius: t.radiusMd, padding: t.spaceMd, margin: `${t.spaceMd} 0`, overflowX: "auto", fontSize: t.fontSizeXs, lineHeight: t.lineHeightBase }}>{children as React.ReactNode}</pre>,
-  code: ({ children, className, ...p }) => {
-    if (className) return <code {...p} className={className as string} style={{ fontFamily: t.fontMono, fontSize: "inherit", color: t.colorTextSecondary }}>{children as React.ReactNode}</code>;
-    return <code {...p} style={{ fontFamily: t.fontMono, fontSize: "0.875em", background: t.colorSurfacePanel, padding: "0.1em 0.3em", borderRadius: t.radiusSm }}>{children as React.ReactNode}</code>;
-  },
-  strong: ({ children, ...p }) => <strong {...p} style={{ fontWeight: 600, color: t.colorText }}>{children as React.ReactNode}</strong>,
-};
 
 function TaskDetailModal({
   task,
@@ -855,19 +733,11 @@ function TaskDetailModal({
   onUpdate: (taskId: string, input: Record<string, unknown>) => Promise<void>;
 }) {
   const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
-  const [editField, setEditField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-
-  function startEdit(field: string, current: string) { setEditField(field); setEditValue(current); }
-  async function saveEdit(field: string) {
-    const trimmed = editValue.trim();
-    await onUpdate(task.id, { [field]: trimmed || null });
-    setEditField(null);
-  }
-  function cancelEdit() { setEditField(null); }
+  const { editField, editValue, startEdit, saveEdit, cancelEdit, setEditValue } =
+    useInlineEdit(async (patch) => onUpdate(task.id, patch));
 
   return (
-    <ModalShell onClose={onClose} maxWidth={720} style={{ maxHeight: "85vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}>
+    <ModalShell onClose={onClose} maxWidth={720} style={{ maxHeight: "85vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column", background: t.colorSurfaceSolid }}>
       {/* Header */}
       <div style={{
         padding: `${t.spaceLg} ${t.spaceXl}`,
@@ -1007,38 +877,17 @@ function TaskDetailModal({
         <div>
           <SectionLabel>Summary</SectionLabel>
           <div style={{ marginTop: t.spaceSm }}>
-            {editField === "summary" ? (
-              <Field label="Summary" htmlFor="edit-summary">
-                <Textarea
-                  id="edit-summary"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  autoFocus
-                  rows={3}
-                  placeholder="Task summary..."
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                  onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
-                />
-                <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end", marginTop: t.spaceSm }}>
-                  <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
-                  <Button size="sm" onClick={() => saveEdit("summary")}>Save</Button>
-                </div>
-              </Field>
-            ) : task.summary ? (
-              <div onClick={() => startEdit("summary", task.summary ?? "")} style={{
-                cursor: "pointer", fontSize: t.fontSizeSm, lineHeight: t.lineHeightRelaxed,
-                color: t.colorTextMuted, overflowWrap: "break-word", wordBreak: "break-word", whiteSpace: "pre-wrap",
-              }} title="Click to edit">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{task.summary}</ReactMarkdown>
-              </div>
-            ) : (
-              <p onClick={() => startEdit("summary", "")} style={{
-                margin: 0, fontSize: t.fontSizeSm, color: `color-mix(in srgb, ${t.colorTextMuted} 50%, transparent)`,
-                fontStyle: "italic", cursor: "pointer",
-              }}>
-                No summary. Click to add.
-              </p>
-            )}
+            <TextSection
+              content={task.summary}
+              editing={editField === "summary"}
+              editValue={editValue}
+              onStartEdit={() => startEdit("summary", task.summary ?? "")}
+              onEditChange={setEditValue}
+              onSave={() => saveEdit("summary")}
+              onCancel={cancelEdit}
+              fieldLabel="Summary"
+              rows={3}
+            />
           </div>
         </div>
 
@@ -1046,38 +895,18 @@ function TaskDetailModal({
         <div>
           <SectionLabel>Context</SectionLabel>
           <div style={{ marginTop: t.spaceSm }}>
-            {editField === "context" ? (
-              <Field label="Context" htmlFor="edit-context">
-                <Textarea
-                  id="edit-context"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  autoFocus
-                  rows={5}
-                  placeholder="Background, rationale, design notes..."
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                  onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
-                />
-                <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end", marginTop: t.spaceSm }}>
-                  <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
-                  <Button size="sm" onClick={() => saveEdit("context")}>Save</Button>
-                </div>
-              </Field>
-            ) : task.context ? (
-              <div onClick={() => startEdit("context", task.context ?? "")} style={{
-                cursor: "pointer", fontSize: t.fontSizeSm, lineHeight: t.lineHeightRelaxed,
-                color: t.colorTextMuted, overflowWrap: "break-word", wordBreak: "break-word", whiteSpace: "pre-wrap",
-              }} title="Click to edit">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{task.context}</ReactMarkdown>
-              </div>
-            ) : (
-              <p onClick={() => startEdit("context", "")} style={{
-                margin: 0, fontSize: t.fontSizeSm, color: `color-mix(in srgb, ${t.colorTextMuted} 50%, transparent)`,
-                fontStyle: "italic", cursor: "pointer",
-              }}>
-                No context. Click to add.
-              </p>
-            )}
+            <TextSection
+              content={task.context}
+              editing={editField === "context"}
+              editValue={editValue}
+              onStartEdit={() => startEdit("context", task.context ?? "")}
+              onEditChange={setEditValue}
+              onSave={() => saveEdit("context")}
+              onCancel={cancelEdit}
+              fieldLabel="Context"
+              rows={5}
+              placeholder="Background, rationale, design notes..."
+            />
           </div>
         </div>
 
@@ -1085,38 +914,18 @@ function TaskDetailModal({
         <div>
           <SectionLabel>Acceptance Criteria</SectionLabel>
           <div style={{ marginTop: t.spaceSm }}>
-            {editField === "acceptance_criteria" ? (
-              <Field label="Acceptance Criteria" htmlFor="edit-ac">
-                <Textarea
-                  id="edit-ac"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  autoFocus
-                  rows={5}
-                  placeholder="What conditions must be met..."
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                  onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
-                />
-                <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end", marginTop: t.spaceSm }}>
-                  <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
-                  <Button size="sm" onClick={() => saveEdit("acceptance_criteria")}>Save</Button>
-                </div>
-              </Field>
-            ) : task.acceptance_criteria ? (
-              <div onClick={() => startEdit("acceptance_criteria", task.acceptance_criteria ?? "")} style={{
-                cursor: "pointer", fontSize: t.fontSizeSm, lineHeight: t.lineHeightRelaxed,
-                color: t.colorTextMuted, overflowWrap: "break-word", wordBreak: "break-word", whiteSpace: "pre-wrap",
-              }} title="Click to edit">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{task.acceptance_criteria}</ReactMarkdown>
-              </div>
-            ) : (
-              <p onClick={() => startEdit("acceptance_criteria", "")} style={{
-                margin: 0, fontSize: t.fontSizeSm, color: `color-mix(in srgb, ${t.colorTextMuted} 50%, transparent)`,
-                fontStyle: "italic", cursor: "pointer",
-              }}>
-                No acceptance criteria. Click to add.
-              </p>
-            )}
+            <TextSection
+              content={task.acceptance_criteria}
+              editing={editField === "acceptance_criteria"}
+              editValue={editValue}
+              onStartEdit={() => startEdit("acceptance_criteria", task.acceptance_criteria ?? "")}
+              onEditChange={setEditValue}
+              onSave={() => saveEdit("acceptance_criteria")}
+              onCancel={cancelEdit}
+              fieldLabel="Acceptance Criteria"
+              rows={5}
+              placeholder="What conditions must be met..."
+            />
           </div>
         </div>
 
@@ -1134,22 +943,6 @@ function TaskDetailModal({
       </div>
     </ModalShell>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatRelativeDate(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }
 
 // ---------------------------------------------------------------------------
@@ -1294,13 +1087,7 @@ export function TasksPage() {
   }
 
   return (
-    <div style={{
-      flex: 1, width: "100%", maxWidth: 1200, alignSelf: "center",
-      display: "flex", flexDirection: "column",
-      padding: `0 ${t.spaceXl} ${t.space2xl}`,
-      boxSizing: "border-box", overflowY: "auto",
-      scrollbarWidth: "none" as const, gap: t.spaceMd,
-    }}>
+    <PageShell maxWidth={1200} gap="md" topPadding={false}>
       {/* Dashboard header */}
       <DashboardHeader total={total} search={search} onSearchChange={handleSearchChange} />
 
@@ -1390,6 +1177,6 @@ export function TasksPage() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

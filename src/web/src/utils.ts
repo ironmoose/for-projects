@@ -1,4 +1,5 @@
-import { semantic as t } from "@4lt7ab/ui/core";
+import { semantic as t, KEYFRAMES } from "@4lt7ab/ui/core";
+import type { CSSProperties } from "react";
 
 // ---------------------------------------------------------------------------
 // Badge helpers — map domain statuses to library Badge variant/color props
@@ -71,4 +72,55 @@ export function relativeTime(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+/**
+ * Format an ISO 8601 date string as a human-friendly relative label.
+ *
+ * Returns "just now" for <1 min, relative units up to 30 days,
+ * then falls back to a locale date string.
+ */
+export function formatRelativeDate(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+/**
+ * Format an ISO 8601 date string as a short date (e.g. "Apr 14, 2026").
+ */
+export function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Animation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns inline style props for a staggered fadeInUp entrance animation.
+ *
+ * @param index  Item index in the list (controls delay).
+ * @param delayMs  Base delay per item in ms (default 30).
+ * @param maxMs  Maximum total delay cap in ms (default 300).
+ * @param duration  Animation duration in seconds (default 0.3).
+ */
+export function staggerStyle(
+  index: number,
+  { delayMs = 30, maxMs = 300, duration = 0.3 } = {},
+): CSSProperties {
+  return {
+    animation: `${KEYFRAMES.fadeInUp} ${duration}s ease both`,
+    animationDelay: `${Math.min(index * delayMs, maxMs)}ms`,
+  };
 }
