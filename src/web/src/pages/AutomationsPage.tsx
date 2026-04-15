@@ -555,16 +555,27 @@ function AutomationDetailModal({
 
   if (loading) {
     return (
-      <ModalShell title="Loading..." onClose={onClose}>
-        <Skeleton height={200} />
+      <ModalShell onClose={onClose} maxWidth={720} style={{ background: t.colorSurfaceSolid }}>
+        <div style={{ padding: t.spaceXl }}>
+          <Container width="prose">
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
+              <Skeleton height={36} width="70%" />
+              <Skeleton height={18} width="50%" />
+              <Skeleton height={1} />
+              <Skeleton height={200} />
+            </div>
+          </Container>
+        </div>
       </ModalShell>
     );
   }
 
   if (!automation) {
     return (
-      <ModalShell title="Not found" onClose={onClose}>
-        <p style={{ color: t.colorTextMuted }}>Automation not found.</p>
+      <ModalShell onClose={onClose} maxWidth={720} style={{ background: t.colorSurfaceSolid }}>
+        <div style={{ padding: t.spaceXl }}>
+          <EmptyState icon="error" message="Automation not found." />
+        </div>
       </ModalShell>
     );
   }
@@ -583,81 +594,86 @@ function AutomationDetailModal({
   }
 
   return (
-    <ModalShell title={automation.title} onClose={onClose} width={720}>
-      {/* Metadata row */}
-      <div style={{ display: "flex", gap: t.spaceSm, flexWrap: "wrap", alignItems: "center", marginBottom: t.spaceMd }}>
-        {automation.agent && (
-          <Badge size="sm" style={{ background: `color-mix(in srgb, ${t.colorInfo} 12%, transparent)`, color: t.colorInfo }}>
-            <Icon name="smart_toy" size={12} />
-            {automation.agent}
-          </Badge>
-        )}
-        {automation.category && <Badge size="sm">{automation.category}</Badge>}
-        {automation.tags.map((tag) => (
-          <TagChip key={tag} label={tag} size="sm" />
-        ))}
-        <span style={{ fontSize: t.fontSizeXs, color: t.colorTextMuted }}>
-          Updated {formatShortDate(automation.updated_at)}
-        </span>
-      </div>
+    <ModalShell onClose={onClose} maxWidth={720} style={{ maxHeight: "90vh", overflowY: "auto", background: t.colorSurfaceSolid }}>
+      <div style={{ padding: `${t.space2xl} ${t.spaceXl} ${t.spaceXl}` }}>
+        <Container width="prose">
+          {/* Title */}
+          <h2 style={{
+            margin: 0,
+            fontSize: t.fontSize2xl,
+            fontWeight: 700,
+            fontFamily: t.fontSerif,
+            color: t.colorText,
+            letterSpacing: t.letterSpacingTight,
+          }}>
+            {automation.title}
+          </h2>
 
-      {/* Summary */}
-      {automation.summary && (
-        <p style={{
-          margin: `0 0 ${t.spaceMd}`,
-          fontSize: t.fontSizeSm,
-          color: t.colorTextSecondary,
-          lineHeight: 1.6,
-        }}>
-          {automation.summary}
-        </p>
-      )}
+          {/* Metadata row */}
+          <div style={{ display: "flex", gap: t.spaceSm, flexWrap: "wrap", alignItems: "center", marginTop: t.spaceMd }}>
+            {automation.agent && (
+              <Badge size="sm" style={{ background: `color-mix(in srgb, ${t.colorInfo} 12%, transparent)`, color: t.colorInfo }}>
+                <Icon name="smart_toy" size={12} />
+                {automation.agent}
+              </Badge>
+            )}
+            {automation.category && <Badge size="sm">{automation.category}</Badge>}
+            {automation.tags.map((tag) => (
+              <TagChip key={tag} label={tag} size="sm" />
+            ))}
+            <span style={{ fontSize: t.fontSizeXs, color: t.colorTextMuted }}>
+              Updated {formatShortDate(automation.updated_at)}
+            </span>
+          </div>
 
-      {/* Prompt content */}
-      {automation.prompt ? (
-        <div style={{
-          border: `1px solid ${t.colorBorder}`,
-          borderRadius: t.radiusMd,
-          padding: t.spaceMd,
-          background: t.colorSurfaceRaised,
-          maxHeight: 400,
-          overflowY: "auto",
-          marginBottom: t.spaceMd,
-        }}>
-          <Prose>
-            <Markdown content={automation.prompt ?? ""} />
-          </Prose>
-        </div>
-      ) : (
-        <div style={{
-          padding: t.spaceXl,
-          textAlign: "center",
-          color: t.colorTextMuted,
-          fontSize: t.fontSizeSm,
-          marginBottom: t.spaceMd,
-        }}>
-          No prompt content yet.
-        </div>
-      )}
+          {/* Summary */}
+          {automation.summary && (
+            <p style={{
+              margin: `${t.spaceMd} 0 0`,
+              fontSize: t.fontSizeSm,
+              color: t.colorTextSecondary,
+              lineHeight: 1.6,
+            }}>
+              {automation.summary}
+            </p>
+          )}
 
-      {/* Action bar */}
-      <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end" }}>
-        {automation.prompt && (
-          <>
-            <Button size="sm" variant="ghost" onClick={handleCopyPrompt} aria-label="Copy prompt text to clipboard">
-              <Icon name="content_copy" size={15} />
-              Copy Prompt
+          {/* Divider */}
+          <hr style={{ border: "none", borderTop: `1px solid ${t.colorBorder}`, margin: `${t.spaceLg} 0` }} />
+
+          {/* Prompt content */}
+          {automation.prompt ? (
+            <Prose>
+              <Markdown content={automation.prompt ?? ""} />
+            </Prose>
+          ) : (
+            <p style={{
+              textAlign: "center",
+              color: t.colorTextMuted,
+              fontSize: t.fontSizeSm,
+              padding: `${t.spaceXl} 0`,
+            }}>
+              No prompt content yet.
+            </p>
+          )}
+
+          {/* Action bar */}
+          <div style={{ display: "flex", gap: t.spaceSm, justifyContent: "flex-end", marginTop: t.spaceLg, paddingTop: t.spaceMd, borderTop: `1px solid ${t.colorBorder}` }}>
+            {automation.prompt && (
+              <>
+                <Button size="sm" variant="ghost" onClick={handleCopyPrompt} aria-label="Copy prompt text to clipboard">
+                  Copy Prompt
+                </Button>
+                <Button size="sm" variant="ghost" onClick={handleCopyCli} aria-label="Copy CLI command to clipboard">
+                  Copy CLI
+                </Button>
+              </>
+            )}
+            <Button size="sm" variant="ghost" onClick={onEdit}>
+              Edit
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleCopyCli} aria-label="Copy CLI command to clipboard">
-              <Icon name="terminal" size={15} />
-              Copy CLI
-            </Button>
-          </>
-        )}
-        <Button size="sm" variant="ghost" onClick={onEdit}>
-          <Icon name="edit" size={15} />
-          Edit
-        </Button>
+          </div>
+        </Container>
       </div>
     </ModalShell>
   );
