@@ -35,6 +35,7 @@ import { Container, Prose, Markdown } from "@4lt7ab/ui/content";
 
 import { useAutomations } from "../hooks/useAutomations";
 import { useAutomation } from "../hooks/useAutomation";
+import { fetchAutomation } from "../api";
 import { TAG_NAMES, TAG_CATEGORIES } from "../types";
 import type { AutomationSummary } from "../types";
 import { PillSelect } from "../components/PillSelect";
@@ -291,11 +292,15 @@ function AutomationCardGrid({
   onSelect,
   onDelete,
   onToggleFavorite,
+  onCopyPrompt,
+  onCopyCli,
 }: {
   automations: AutomationSummary[];
   onSelect: (id: string) => void;
   onDelete: (a: AutomationSummary) => void;
   onToggleFavorite: (a: AutomationSummary) => void;
+  onCopyPrompt: (id: string) => void;
+  onCopyCli: (id: string) => void;
 }) {
   return (
     <div style={{
@@ -353,6 +358,26 @@ function AutomationCardGrid({
               )}
             </div>
             <div style={{ display: "flex", gap: 2, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+              {a.has_prompt && (
+                <>
+                  <IconButton
+                    icon="content_copy"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onCopyPrompt(a.id)}
+                    aria-label="Copy prompt text"
+                    style={{ color: t.colorTextMuted }}
+                  />
+                  <IconButton
+                    icon="terminal"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onCopyCli(a.id)}
+                    aria-label="Copy CLI command"
+                    style={{ color: t.colorTextMuted }}
+                  />
+                </>
+              )}
               <IconButton
                 icon={a.is_favorite ? "star" : "star_border"}
                 size="sm"
@@ -419,11 +444,15 @@ function AutomationListView({
   onSelect,
   onDelete,
   onToggleFavorite,
+  onCopyPrompt,
+  onCopyCli,
 }: {
   automations: AutomationSummary[];
   onSelect: (id: string) => void;
   onDelete: (a: AutomationSummary) => void;
   onToggleFavorite: (a: AutomationSummary) => void;
+  onCopyPrompt: (id: string) => void;
+  onCopyCli: (id: string) => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
@@ -463,6 +492,26 @@ function AutomationListView({
             {formatRelativeDate(a.updated_at)}
           </div>
           <div style={{ display: "flex", gap: 2, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+            {a.has_prompt && (
+              <>
+                <IconButton
+                  icon="content_copy"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onCopyPrompt(a.id)}
+                  aria-label="Copy prompt text"
+                  style={{ color: t.colorTextMuted }}
+                />
+                <IconButton
+                  icon="terminal"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onCopyCli(a.id)}
+                  aria-label="Copy CLI command"
+                  style={{ color: t.colorTextMuted }}
+                />
+              </>
+            )}
             <IconButton
               icon={a.is_favorite ? "star" : "star_border"}
               size="sm"
@@ -765,6 +814,29 @@ export function AutomationsPage() {
     }
   }, [deleteTarget, remove, selectedId, showToast]);
 
+  const handleCopyPrompt = useCallback(async (id: string) => {
+    try {
+      const full = await fetchAutomation(id);
+      if (!full.prompt) { showToast("No prompt content"); return; }
+      const ok = await copyToClipboard(full.prompt);
+      showToast(ok ? "Prompt copied" : "Failed to copy");
+    } catch {
+      showToast("Failed to fetch automation");
+    }
+  }, [showToast]);
+
+  const handleCopyCli = useCallback(async (id: string) => {
+    try {
+      const full = await fetchAutomation(id);
+      if (!full.prompt) { showToast("No prompt content"); return; }
+      const cmd = buildCliCommand(full.prompt, full.agent);
+      const ok = await copyToClipboard(cmd);
+      showToast(ok ? "CLI command copied" : "Failed to copy");
+    } catch {
+      showToast("Failed to fetch automation");
+    }
+  }, [showToast]);
+
   return (
     <PageShell topPadding={false}>
       <HeroSection
@@ -807,6 +879,8 @@ export function AutomationsPage() {
               onSelect={setSelectedId}
               onDelete={setDeleteTarget}
               onToggleFavorite={handleToggleFavorite}
+              onCopyPrompt={handleCopyPrompt}
+              onCopyCli={handleCopyCli}
             />
           ) : (
             <AutomationListView
@@ -814,6 +888,8 @@ export function AutomationsPage() {
               onSelect={setSelectedId}
               onDelete={setDeleteTarget}
               onToggleFavorite={handleToggleFavorite}
+              onCopyPrompt={handleCopyPrompt}
+              onCopyCli={handleCopyCli}
             />
           )}
 
