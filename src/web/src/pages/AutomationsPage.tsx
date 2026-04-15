@@ -661,19 +661,19 @@ function AutomationFormModal({
       submitDisabled={!title.trim() || saving}
     >
       <Field label="Title">
-        <Input value={title} onChange={setTitle} placeholder="e.g. Code review prompt" autoFocus />
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Code review prompt" autoFocus />
       </Field>
       <Field label="Summary" description="Brief description for the list view">
-        <Textarea value={summary} onChange={setSummary} placeholder="What does this automation do?" rows={2} />
+        <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="What does this automation do?" rows={2} />
       </Field>
       <Field label="Prompt" description="The full prompt content">
-        <Textarea value={prompt} onChange={setPrompt} placeholder="Enter the prompt..." rows={10} />
+        <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Enter the prompt..." rows={10} />
       </Field>
       <Field label="Agent" description="Optional --agent flag value for CLI">
-        <Input value={agent} onChange={setAgent} placeholder="e.g. code-reviewer" />
+        <Input value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="e.g. code-reviewer" />
       </Field>
       <Field label="Category">
-        <Input value={category} onChange={setCategory} placeholder="e.g. code-review, refactor, docs" />
+        <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. code-review, refactor, docs" />
       </Field>
       <Field label="Tags">
         <ChipPicker
