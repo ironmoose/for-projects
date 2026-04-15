@@ -574,7 +574,7 @@ function AutomationDetailModal({
           marginBottom: t.spaceMd,
         }}>
           <Prose>
-            <Markdown content={automation.prompt} />
+            <Markdown content={automation.prompt ?? ""} />
           </Prose>
         </div>
       ) : (
