@@ -59,10 +59,6 @@ const AUTO_STYLES_CSS = `
   .auto-card:hover .auto-card-title {
     color: ${t.colorActionPrimary};
   }
-  .auto-card:hover .auto-card-arrow {
-    opacity: 1 !important;
-    transform: translateX(0) !important;
-  }
   .auto-list-row {
     transition: background 0.1s ease;
   }
@@ -369,19 +365,6 @@ function AutomationCardGrid({
                 </p>
               )}
             </div>
-            <Icon
-              name="arrow_forward"
-              size={18}
-              className="auto-card-arrow"
-              style={{
-                color: t.colorActionPrimary,
-                opacity: 0,
-                transform: "translateX(-4px)",
-                transition: "opacity 0.2s, transform 0.2s",
-                flexShrink: 0,
-                marginTop: 4,
-              }}
-            />
           </div>
 
           {/* Metadata badges */}
