@@ -240,6 +240,8 @@ templates/   → DetailPageLayout, ListPageLayout
 pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage
 ```
 
+**`@4lt7ab/ui` is the only component source. No exceptions.** Every UI element — buttons, inputs, modals, markdown rendering, layout primitives — must come from `@4lt7ab/ui` (subpaths: `/ui`, `/core`, `/content`, `/animations`). Never hand-roll a component that the library already provides. If something is missing, add it to the library first, then consume it here.
+
 **Styling:** 100% inline styles via React `style` prop. No CSS files, no CSS modules, no Tailwind. Components read semantic tokens from the theme system. The `@4lt7ab/ui` component library is the underlying design system.
 
 **Theme system:** Powered by `@4lt7ab/ui/core` ThemeProvider. 4 custom themes (deepTeal, ember, nord, synth) defined as `ThemeDefinition` objects in `theme/lib-themes.ts`. The library injects CSS custom properties (`var(--color-text)`, etc.) on the document root. Two import paths coexist:
