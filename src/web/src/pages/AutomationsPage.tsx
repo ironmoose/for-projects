@@ -655,57 +655,65 @@ function AutomationFormModal({
   return (
     <FormModal
       title={initial ? "Edit Automation" : "New Automation"}
-      onClose={onClose}
-      onSubmit={handleSubmit}
       submitLabel={saving ? "Saving..." : initial ? "Save" : "Create"}
-      submitDisabled={!title.trim() || saving}
+      onSubmit={handleSubmit}
+      onCancel={onClose}
+      maxWidth={600}
     >
-      <Field label="Title">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Code review prompt" autoFocus />
-      </Field>
-      <Field label="Summary" description="Brief description for the list view">
-        <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="What does this automation do?" rows={2} />
-      </Field>
-      <Field label="Prompt" description="The full prompt content">
-        <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Enter the prompt..." rows={10} />
-      </Field>
-      <Field label="Agent" description="Optional --agent flag value for CLI">
-        <Input value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="e.g. code-reviewer" />
-      </Field>
-      <Field label="Category">
-        <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. code-review, refactor, docs" />
-      </Field>
-      <Field label="Tags">
-        <ChipPicker
-          items={TAG_CHIP_ITEMS}
-          selected={tags}
-          onChange={setTags}
-        />
-      </Field>
-      <Field label="Favorite">
-        <button
-          type="button"
-          onClick={() => setIsFavorite(!isFavorite)}
-          aria-pressed={isFavorite}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: t.spaceXs,
-            padding: `${t.spaceXs} ${t.spaceMd}`,
-            borderRadius: t.radiusFull,
-            border: `1px solid ${isFavorite ? t.colorWarning : t.colorBorder}`,
-            background: isFavorite ? `color-mix(in srgb, ${t.colorWarning} 8%, transparent)` : "transparent",
-            color: isFavorite ? t.colorWarning : t.colorTextMuted,
-            cursor: "pointer",
-            fontSize: t.fontSizeSm,
-            fontFamily: t.fontSans,
-            fontWeight: 600,
-          }}
-        >
+      <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
+        <Field label="Title" required>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Code review prompt" autoFocus />
+        </Field>
+
+        <Field label="Summary">
+          <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="What does this automation do?" rows={2} />
+        </Field>
+
+        <Field label="Prompt">
+          <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Enter the prompt..." rows={10} />
+        </Field>
+
+        <Field label="Agent">
+          <Input value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="e.g. code-reviewer" />
+        </Field>
+
+        <Field label="Category">
+          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. code-review, refactor, docs" />
+        </Field>
+
+        <Field label="Tags">
+          <ChipPicker
+            items={TAG_CHIP_ITEMS}
+            selected={tags}
+            onChange={setTags}
+          />
+        </Field>
+
+        <Field label="Favorite">
+          <button
+            type="button"
+            onClick={() => setIsFavorite(!isFavorite)}
+            aria-pressed={isFavorite}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: t.spaceXs,
+              padding: `${t.spaceXs} ${t.spaceMd}`,
+              borderRadius: t.radiusFull,
+              border: `1px solid ${isFavorite ? t.colorWarning : t.colorBorder}`,
+              background: isFavorite ? `color-mix(in srgb, ${t.colorWarning} 8%, transparent)` : "transparent",
+              color: isFavorite ? t.colorWarning : t.colorTextMuted,
+              cursor: "pointer",
+              fontSize: t.fontSizeSm,
+              fontFamily: t.fontSans,
+              fontWeight: 600,
+            }}
+          >
           <Icon name={isFavorite ? "star" : "star_border"} size={15} />
           {isFavorite ? "Favorited" : "Not favorited"}
         </button>
       </Field>
+      </div>
     </FormModal>
   );
 }
