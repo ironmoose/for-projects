@@ -42,18 +42,19 @@ export function PillSelect({
         aria-label={ariaLabel}
         style={{
           appearance: "none",
-          padding: `4px ${t.spaceLg} 4px ${t.spaceSm}`,
+          padding: `6px ${t.spaceXl} 6px ${t.spaceMd}`,
           borderRadius: t.radiusFull,
           border: `1px solid ${isActive ? t.colorActionPrimary : `color-mix(in srgb, ${t.colorBorder} 60%, transparent)`}`,
           background: isActive
             ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)`
             : "transparent",
           color: isActive ? t.colorActionPrimary : t.colorTextMuted,
-          fontSize: t.fontSizeXs,
+          fontSize: t.fontSizeSm,
           fontFamily: t.fontSans,
           fontWeight: 600,
           cursor: "pointer",
           outline: "none",
+          minHeight: 32,
         }}
       >
         {options.map((o) => (
@@ -64,10 +65,10 @@ export function PillSelect({
       </select>
       <Icon
         name="expand_more"
-        size={12}
+        size={14}
         style={{
           position: "absolute",
-          right: 8,
+          right: 10,
           top: "50%",
           transform: "translateY(-50%)",
           pointerEvents: "none",

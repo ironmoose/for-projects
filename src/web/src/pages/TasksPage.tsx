@@ -239,7 +239,7 @@ function CategoryDistribution({ tasks }: { tasks: TaskSummary[] }) {
           display: "inline-flex",
           alignItems: "center",
           gap: 4,
-          padding: `2px ${t.spaceSm}`,
+          padding: `4px ${t.spaceMd}`,
           borderRadius: t.radiusFull,
           background: `color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
           fontSize: t.fontSizeXs,
@@ -433,10 +433,11 @@ function FilterBar({
           onClick={onClearAll}
           style={{
             display: "flex", alignItems: "center", gap: 4,
-            padding: `4px ${t.spaceSm}`, borderRadius: t.radiusFull,
+            padding: `6px ${t.spaceMd}`, borderRadius: t.radiusFull,
             border: "none", background: "transparent",
-            color: t.colorTextMuted, fontSize: t.fontSizeXs,
+            color: t.colorTextMuted, fontSize: t.fontSizeSm,
             fontFamily: t.fontSans, fontWeight: 600, cursor: "pointer",
+            minHeight: 32,
           }}
         >
           <Icon name="close" size={12} />
@@ -1091,14 +1092,18 @@ export function TasksPage() {
       {/* Dashboard header */}
       <DashboardHeader total={total} search={search} onSearchChange={handleSearchChange} />
 
-      {/* Status distribution */}
+      {/* Summary zone — at-a-glance stats */}
       {!loading && tasks.length > 0 && (
-        <StatusDistribution tasks={tasks} total={total} />
-      )}
-
-      {/* Category distribution */}
-      {!loading && tasks.length > 0 && (
-        <CategoryDistribution tasks={tasks} />
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: t.spaceSm,
+          paddingBottom: t.spaceMd,
+          borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
+        }}>
+          <StatusDistribution tasks={tasks} total={total} />
+          <CategoryDistribution tasks={tasks} />
+        </div>
       )}
 
       {/* Filter bar */}

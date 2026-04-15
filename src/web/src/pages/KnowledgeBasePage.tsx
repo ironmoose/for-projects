@@ -343,12 +343,13 @@ function FilterPills({
             display: "flex",
             alignItems: "center",
             gap: 4,
-            padding: `4px ${t.spaceSm}`,
+            padding: `6px ${t.spaceMd}`,
             borderRadius: t.radiusFull,
             border: "none",
             background: "transparent",
             color: t.colorTextMuted,
-            fontSize: t.fontSizeXs,
+            fontSize: t.fontSizeSm,
+            minHeight: 32,
             fontFamily: t.fontSans,
             fontWeight: 600,
             cursor: "pointer",
@@ -372,18 +373,19 @@ function FilterChip({ label, icon, active, onClick }: { label: string; icon: str
         display: "inline-flex",
         alignItems: "center",
         gap: 4,
-        padding: `4px ${t.spaceSm}`,
+        padding: `6px ${t.spaceMd}`,
         borderRadius: t.radiusFull,
         border: `1px solid ${active ? t.colorActionPrimary : `color-mix(in srgb, ${t.colorBorder} 60%, transparent)`}`,
         background: active ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)` : "transparent",
         color: active ? t.colorActionPrimary : t.colorTextMuted,
-        fontSize: t.fontSizeXs,
+        fontSize: t.fontSizeSm,
         fontFamily: t.fontSans,
         fontWeight: 600,
         cursor: "pointer",
+        minHeight: 32,
       }}
     >
-      <Icon name={icon} size={13} />
+      <Icon name={icon} size={15} />
       {label}
     </button>
   );

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Increase PillSelect, FilterChip, MetaPill, and clear button hit targets for easier clicking (min-height 32px, larger padding/font)
+- Add visual zone separation between summary stats and filter/table area on TasksPage
 - Extract shared PillSelect component from TasksPage, KnowledgeBasePage, and ProjectDetailPage — deduplicate 9 inline pill-shaped filter selects into one reusable component
 - Consolidate formatRelativeDate and formatShortDate into utils.ts — remove 4 duplicate definitions across all pages
 - Extract shared MetaPill component from TasksPage and ProjectDetailPage

@@ -12,10 +12,10 @@ export function MetaPill({ children }: { children: ReactNode }) {
   return (
     <span
       style={{
-        padding: `1px ${t.spaceXs}`,
+        padding: `2px ${t.spaceSm}`,
         borderRadius: t.radiusSm,
         background: `color-mix(in srgb, ${t.colorBorder} 40%, transparent)`,
-        fontSize: "0.6rem",
+        fontSize: "0.65rem",
         fontFamily: t.fontMono,
         fontWeight: 500,
         color: t.colorTextMuted,

@@ -354,6 +354,7 @@ function ProjectCardGrid({
   taskData,
   onOpen,
   onDelete,
+  onCopyId,
 }: {
   projects: ProjectSummary[];
   taskData: TaskCountMap;
