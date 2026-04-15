@@ -1274,3 +1274,78 @@ describe("get_project_context", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Automations
+// ---------------------------------------------------------------------------
+
+describe("list_automations", () => {
+  it("returns created automations", async () => {
+    await callTool("create_automation", { items: [{ title: "MCP Auto 1", category: "review" }] });
+    const result = parseResult(await callTool("list_automations"));
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.total).toBeGreaterThanOrEqual(1);
+  });
+
+  it("filters by category", async () => {
+    const result = parseResult(await callTool("list_automations", { category: "review" }));
+    expect(result.total).toBeGreaterThanOrEqual(1);
+    for (const a of result.data) expect(a.category).toBe("review");
+  });
+
+  it("supports pagination", async () => {
+    const result = parseResult(await callTool("list_automations", { limit: 1, offset: 0 }));
+    expect(result.data).toHaveLength(1);
+  });
+});
+
+describe("get_automation", () => {
+  it("returns full automation with tags", async () => {
+    const [created] = parseResult(
+      await callTool("create_automation", { items: [{ title: "MCP Get Test", prompt: "do stuff", agent: "helper", tags: ["ui"] }] })
+    );
+    const result = parseResult(await callTool("get_automation", { id: created.id }));
+    expect(result.title).toBe("MCP Get Test");
+    expect(result.prompt).toBe("do stuff");
+    expect(result.agent).toBe("helper");
+    expect(result.tags).toContain("ui");
+  });
+
+  it("returns error for nonexistent automation", async () => {
+    const result = await callTool("get_automation", { id: "nonexistent" });
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe("create_automation", () => {
+  it("creates with all fields", async () => {
+    const [created] = parseResult(
+      await callTool("create_automation", { items: [{ title: "Full MCP", summary: "sum", prompt: "go", agent: "a", category: "c", is_favorite: true }] })
+    );
+    expect(created.title).toBe("Full MCP");
+    expect(created.summary).toBe("sum");
+    expect(created.prompt).toBe("go");
+    expect(created.agent).toBe("a");
+    expect(created.category).toBe("c");
+    expect(created.is_favorite).toBe(true);
+  });
+
+  it("rejects missing title", async () => {
+    const result = await callTool("create_automation", { items: [{ title: "" }] });
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe("update_automation", () => {
+  it("updates specified fields only", async () => {
+    const [created] = parseResult(
+      await callTool("create_automation", { items: [{ title: "MCP Update", prompt: "original" }] })
+    );
+    const [updated] = parseResult(
+      await callTool("update_automation", { items: [{ id: created.id, agent: "new-agent" }] })
+    );
+    expect(updated.agent).toBe("new-agent");
+    expect(updated.prompt).toBe("original"); // unchanged
+    expect(updated.title).toBe("MCP Update"); // unchanged
+  });
+});
+

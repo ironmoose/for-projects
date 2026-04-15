@@ -12,6 +12,7 @@ import {
   DocumentReferenceRepository,
   TaskDependencyRepository,
   ActivityLogRepository,
+  AutomationRepository,
 } from "./repositories/sqlite";
 import {
   PgProjectRepository,
@@ -21,6 +22,7 @@ import {
   PgDocumentReferenceRepository,
   PgTaskDependencyRepository,
   PgActivityLogRepository,
+  PgAutomationRepository,
 } from "./repositories/pg";
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
@@ -38,6 +40,7 @@ import type {
   IDocumentReferenceService,
   IActivityLogService,
   ISourceService,
+  IAutomationService,
   IProjectContextService,
 } from "./services";
 import { createEmbeddingService, type EmbeddingService } from "./embedding";
@@ -45,6 +48,7 @@ import { startEmbeddingPipeline } from "./embedding-pipeline";
 import { backfillEmbeddings } from "./embedding-backfill";
 import { ConnectorRegistry, GitHubConnector } from "./connectors";
 import { SourceService } from "./services/sources";
+import { AutomationService } from "./services/automations";
 
 export interface AppContext {
   db: Database | null;
@@ -57,6 +61,7 @@ export interface AppContext {
   documentService: IDocumentService;
   documentReferenceService: IDocumentReferenceService;
   activityLogService: IActivityLogService;
+  automationService: IAutomationService;
   sourceService: ISourceService;
   projectContextService: IProjectContextService;
   shutdown: () => Promise<void>;
@@ -92,6 +97,9 @@ async function bootstrapSqlite(dbPath: string | undefined, eventBus: EventBus): 
   const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo);
   const activityLogService = new ActivityLogService(activityLogRepo);
 
+  const automationRepo = new AutomationRepository(db);
+  const automationService = new AutomationService(automationRepo, tagRepo, activityLogRepo, eventBus);
+
   const connectorRegistry = new ConnectorRegistry();
   connectorRegistry.register(new GitHubConnector());
   const sourceService = new SourceService(documentRepo, tagRepo, activityLogRepo, eventBus, connectorRegistry);
@@ -101,7 +109,7 @@ async function bootstrapSqlite(dbPath: string | undefined, eventBus: EventBus): 
   const shutdown = async () => { db.close(); };
 
   console.log("[bootstrap] SQLite backend active");
-  return { db, pg: null, backend: "sqlite", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, sourceService, projectContextService, shutdown };
+  return { db, pg: null, backend: "sqlite", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, automationService, sourceService, projectContextService, shutdown };
 }
 
 async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promise<AppContext> {
@@ -146,6 +154,9 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo, embeddingService);
   const activityLogService = new ActivityLogService(activityLogRepo);
 
+  const automationRepo = new PgAutomationRepository(pg);
+  const automationService = new AutomationService(automationRepo, tagRepo, activityLogRepo, eventBus);
+
   const connectorRegistry = new ConnectorRegistry();
   connectorRegistry.register(new GitHubConnector());
   const sourceService = new SourceService(documentRepo, tagRepo, activityLogRepo, eventBus, connectorRegistry);
@@ -165,7 +176,7 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   };
 
   console.log("[bootstrap] Postgres backend active");
-  return { db: null, pg, backend: "postgres", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, sourceService, projectContextService, shutdown };
+  return { db: null, pg, backend: "postgres", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, automationService, sourceService, projectContextService, shutdown };
 }
 
 /**

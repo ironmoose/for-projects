@@ -14,12 +14,14 @@ export {
   TagRepository,
   DocumentReferenceRepository,
   TaskDependencyRepository,
+  AutomationRepository,
 } from "./repositories/sqlite";
 export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
 export { DocumentReferenceService } from "./services/document-references";
 export { TaskDependencyService } from "./services/task-dependencies";
 export { ActivityLogService } from "./services/activity-log";
+export { AutomationService } from "./services/automations";
 export { SourceService } from "./services/sources";
 export { ProjectContextService } from "./services/project-context";
 export { ConnectorRegistry, GitHubConnector } from "./connectors";

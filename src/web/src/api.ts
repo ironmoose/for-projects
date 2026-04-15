@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, SemanticSearchResult, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, SemanticSearchResult, Automation, AutomationSummary, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -257,6 +257,34 @@ export async function browseGitHubRepo(repo: string, query?: string): Promise<{ 
 export async function importDocumentBatch(inputs: { url: string; folder?: string; tags?: string[]; favorite?: boolean }[]): Promise<(Document & { tags: string[] })[]> {
   const res = await apiFetch("/api/documents/import", jsonPost({ items: inputs }));
   return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Automations API
+// ---------------------------------------------------------------------------
+
+export async function fetchAutomations(params?: { title?: string; category?: string; is_favorite?: boolean; tag?: string; limit?: number; offset?: number }): Promise<{ data: AutomationSummary[]; total: number }> {
+  const res = await apiFetch(`/api/automations${qs(params)}`);
+  return res.json();
+}
+
+export async function fetchAutomation(id: string): Promise<Automation & { tags: string[] }> {
+  const res = await apiFetch(`/api/automations/${encodeURIComponent(id)}`);
+  return res.json();
+}
+
+export async function createAutomations(inputs: Array<{ title: string; summary?: string; prompt?: string; agent?: string; category?: string; is_favorite?: boolean; tags?: string[] }>): Promise<(Automation & { tags: string[] })[]> {
+  const res = await apiFetch("/api/automations", jsonPost({ items: inputs }));
+  return res.json();
+}
+
+export async function updateAutomations(inputs: Array<{ id: string; title?: string; summary?: string | null; prompt?: string | null; agent?: string | null; category?: string | null; is_favorite?: boolean; tags?: string[] }>): Promise<(Automation & { tags: string[] })[]> {
+  const res = await apiFetch("/api/automations", jsonPatch({ items: inputs }));
+  return res.json();
+}
+
+export async function deleteAutomations(ids: string[]): Promise<void> {
+  await apiFetch("/api/automations", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
 }
 
 // ---------------------------------------------------------------------------

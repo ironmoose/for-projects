@@ -8,6 +8,8 @@ export { useActivityLog } from "./useActivityLog";
 export { useDocuments } from "./useDocuments";
 export { useHealth } from "./useHealth";
 export { useDocument } from "./useDocument";
+export { useAutomations } from "./useAutomations";
+export { useAutomation } from "./useAutomation";
 export { useReducedMotion } from "./useReducedMotion";
 export { useThrottledCallback } from "./useThrottledCallback";
 export { useVisualEvent } from "./useVisualEvent";

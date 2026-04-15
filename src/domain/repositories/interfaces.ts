@@ -6,6 +6,7 @@ import type {
   Project, ProjectSummary,
   Task, TaskSummary, GraphTaskSummary,
   Document, DocumentSummary, SemanticSearchResult,
+  Automation, AutomationSummary,
   Tag, EntityType, TagName,
   DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType,
   TaskDependency, TaskDependencyDetail, DependencyType,
@@ -50,6 +51,17 @@ export interface IDocumentRepository {
   findIdsByFolder(folder: string): Promise<string[]>;
   /** Vector similarity search. Returns null if not supported (SQLite). */
   semanticSearch?(queryEmbedding: number[], filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number; queryText?: string }): Promise<SemanticSearchResult[]>;
+}
+
+// -- Automations ------------------------------------------------------------
+
+export interface IAutomationRepository {
+  findById(id: string): Promise<Automation | null>;
+  findMany(filter?: { title?: string; category?: string; is_favorite?: boolean; tag?: string; limit?: number; offset?: number }): Promise<AutomationSummary[]>;
+  count(filter?: { title?: string; category?: string; is_favorite?: boolean; tag?: string }): Promise<number>;
+  insertMany(rows: { title: string; summary?: string | null; prompt?: string | null; agent?: string | null; category?: string | null; is_favorite: number | boolean }[]): Promise<Automation[]>;
+  updateMany(rows: { id: string; title?: string; summary?: string | null; prompt?: string | null; agent?: string | null; category?: string | null; is_favorite?: boolean }[]): Promise<Automation[]>;
+  deleteMany(ids: string[]): Promise<void>;
 }
 
 // -- Tags -------------------------------------------------------------------

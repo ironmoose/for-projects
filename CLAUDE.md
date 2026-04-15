@@ -143,13 +143,13 @@ Route handler → Service → Repository → SQLite or PostgreSQL
 ```
 
 Single process, single port (default 3000):
-- `/api/*` — REST API (projects, tasks, documents, activity-log, health)
-- `/mcp` — MCP endpoint (14 tools: create/read/update/search for projects, tasks, documents; dependency graph)
+- `/api/*` — REST API (projects, tasks, documents, automations, activity-log, health)
+- `/mcp` — MCP endpoint (18 tools: create/read/update/search for projects, tasks, documents, automations; dependency graph)
 - `/*` — static web assets + SPA fallback
 
 ### Data model
 
-Core tables: `projects`, `tasks`, `document_references`, `activity_log`.
+Core tables: `projects`, `tasks`, `automations`, `document_references`, `activity_log`.
 
 **Projects:** `id`, `title`, `summary`, `created_at`, `updated_at`
 
@@ -158,6 +158,8 @@ Core tables: `projects`, `tasks`, `document_references`, `activity_log`.
 **document_references:** `entity_type`, `entity_id`, `document_id`, `type` — composite PK on all four columns. Polymorphic (no FK on `entity_id`); FK CASCADE on `document_id`. Type is one of: goal, plan, requirements, design, reference, note. Same document can be attached to the same entity with different types. Multiple documents can share the same type on one entity.
 
 **task_dependencies:** `source_task_id`, `target_task_id`, `dependency_type`, `created_at` — supports `blocks` and `relates_to` edge types. Edges are informational only — they do not enforce `is_blocked`, which is a user-managed field on tasks.
+
+**automations:** `id`, `title`, `summary`, `prompt`, `agent`, `category`, `is_favorite`, `created_at`, `updated_at` — saved prompts with metadata. `prompt` is the big content field (equivalent to documents.content). `agent` hints the `--agent` CLI flag. Tags via polymorphic `entity_tags` (entity_type = 'automation'). Migration 030.
 
 Knowledge base tables (migration 009+):
 - `documents` — id, title, summary, content, folder, favorite, source_url, source_type, source_fetched_at, created_at, updated_at (top-level entity). `source_url` (TEXT nullable) is the original external URL; `source_type` (TEXT nullable) identifies the connector (e.g., `'github'`); `source_fetched_at` (TEXT nullable, ISO 8601 UTC) records when content was last fetched.
@@ -184,6 +186,11 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 - `POST /api/documents/:id/refresh` — re-fetch content from the document's original source
 - `GET /api/documents/search?q=...` — semantic vector search (Postgres + embeddings only); additional filters: `tag`, `folder`, `favorite`, `limit`
 - `GET /api/sources/github/tree?repo=owner/repo&q=filter` — browse files in a GitHub repository
+- `POST /api/automations` — `{items: [{title, summary?, prompt?, agent?, category?, is_favorite?, tags?}]}` batch create
+- `PATCH /api/automations` — `{items: [{id, title?, summary?, prompt?, agent?, category?, is_favorite?, tags?}]}` batch update
+- `GET /api/automations` — list with pagination; filters: `title`, `category`, `is_favorite`, `tag`
+- `GET /api/automations/:id` — full automation with tags
+- `DELETE /api/automations` — `{ids: [...]}` batch delete
 
 The `documents` field on project/task endpoints uses merge-patch semantics:
 ```json
@@ -201,11 +208,12 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 
 ### MCP tools
 
-14 tools total (no delete tools — deletion is REST-only):
+18 tools total (no delete tools — deletion is REST-only):
 - **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`
 - **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`
 - **Dependencies:** `get_dependency_graph` (returns tasks and edges only; no blocker computation)
 - **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`, `search_documents`
+- **Automations:** `list_automations`, `get_automation`, `create_automation`, `update_automation`
 
 `search_documents` performs semantic vector search (Postgres + embeddings only). Returns documents ranked by hybrid similarity (vector + keyword boost). Parameters: `query` (required), `tag`, `folder`, `favorite`, `limit`.
 

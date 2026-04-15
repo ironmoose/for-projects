@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Add Automations feature — saved prompts with title, summary, prompt content, agent string, category, tags, and favorites; full CRUD via REST API, 4 MCP tools, and a new frontend page with card/list views, prompt reader, and copy-to-clipboard (CLI command or raw prompt)
+
 ## [0.1.10] - 2026-04-14
 
 - Increase PillSelect, FilterChip, MetaPill, and clear button hit targets for easier clicking (min-height 32px, larger padding/font)

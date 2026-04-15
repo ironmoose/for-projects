@@ -23,11 +23,13 @@ import { KnowledgeBasePage } from "./pages/KnowledgeBasePage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { TasksPage } from "./pages/TasksPage";
+import { AutomationsPage } from "./pages/AutomationsPage";
 
 const navItems: NavItem[] = [
   { label: "Projects", path: "/" },
   { label: "Tasks", path: "/tasks" },
   { label: "Knowledge Base", path: "/kb" },
+  { label: "Automations", path: "/automations" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -44,6 +46,8 @@ export function App() {
     ? "/kb"
     : path.startsWith("/tasks")
     ? "/tasks"
+    : path.startsWith("/automations")
+    ? "/automations"
     : "/";
 
   const eventCtx = useMemo(() => ({ subscribeEvents, connected }), [subscribeEvents, connected]);
@@ -63,6 +67,9 @@ export function App() {
     }
     if (path.startsWith("/kb")) {
       return <KnowledgeBasePage />;
+    }
+    if (path.startsWith("/automations")) {
+      return <AutomationsPage />;
     }
     if (path.startsWith("/projects/")) {
       const projectId = path.replace("/projects/", "");
@@ -174,6 +181,7 @@ function GlobalShortcuts({ navigate }: { navigate: (path: string) => void }) {
   useShortcut("g p", "Go to projects", () => navigate("/"), "Navigation");
   useShortcut("g t", "Go to tasks", () => navigate("/tasks"), "Navigation");
   useShortcut("g k", "Go to knowledge base", () => navigate("/kb"), "Navigation");
+  useShortcut("g a", "Go to automations", () => navigate("/automations"), "Navigation");
 
   if (!showHelp) return null;
 
