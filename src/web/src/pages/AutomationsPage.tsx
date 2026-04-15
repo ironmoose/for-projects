@@ -49,15 +49,19 @@ import { formatRelativeDate, formatShortDate, staggerStyle } from "../utils";
 const AUTO_STYLES_ID = "automations-page-styles";
 const AUTO_STYLES_CSS = `
   .auto-card {
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .auto-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     border-color: ${t.colorBorderFocused};
     box-shadow: ${t.shadowMd};
   }
   .auto-card:hover .auto-card-title {
     color: ${t.colorActionPrimary};
+  }
+  .auto-card:hover .auto-card-arrow {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
   }
   .auto-list-row {
     transition: background 0.1s ease;
@@ -319,82 +323,65 @@ function AutomationCardGrid({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: t.spaceSm,
-            padding: t.spaceMd,
-            borderRadius: t.radiusMd,
+            gap: t.spaceMd,
+            padding: t.spaceLg,
+            borderRadius: t.radiusLg,
             border: `1px solid ${t.colorBorder}`,
-            background: t.colorSurface,
+            background: t.colorSurfaceSolid,
+            boxShadow: t.shadowSm,
             cursor: "pointer",
-            position: "relative",
-            ...staggerStyle(i),
+            ...staggerStyle(i, { delayMs: 40 }),
           }}
         >
-          {/* Header: title + actions */}
+          {/* Header: title + favorite indicator */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceSm }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="auto-card-title" style={{
-                fontSize: t.fontSizeMd,
-                fontWeight: 600,
-                color: t.colorText,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}>
-                {a.title}
-              </div>
-              {a.summary && (
-                <div style={{
-                  fontSize: t.fontSizeXs,
-                  color: t.colorTextSecondary,
-                  marginTop: 2,
+              <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
+                <h3 className="auto-card-title" style={{
+                  margin: 0,
+                  fontSize: t.fontSizeLg,
+                  fontWeight: 700,
+                  fontFamily: t.fontSans,
+                  color: t.colorText,
+                  transition: "color 0.15s",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}>
+                  {a.title}
+                </h3>
+                {a.is_favorite && (
+                  <Icon name="star" size={14} style={{ color: t.colorWarning, flexShrink: 0 }} />
+                )}
+              </div>
+              {a.summary && (
+                <p style={{
+                  margin: `${t.spaceXs} 0 0`,
+                  fontSize: t.fontSizeXs,
+                  color: t.colorTextMuted,
+                  lineHeight: t.lineHeightRelaxed,
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
                 }}>
                   {a.summary}
-                </div>
+                </p>
               )}
             </div>
-            <div style={{ display: "flex", gap: 2, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-              {a.has_prompt && (
-                <>
-                  <IconButton
-                    icon="content_copy"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onCopyPrompt(a.id)}
-                    aria-label="Copy prompt text"
-                    style={{ color: t.colorTextMuted }}
-                  />
-                  <IconButton
-                    icon="terminal"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onCopyCli(a.id)}
-                    aria-label="Copy CLI command"
-                    style={{ color: t.colorTextMuted }}
-                  />
-                </>
-              )}
-              <IconButton
-                icon={a.is_favorite ? "star" : "star_border"}
-                size="sm"
-                variant="ghost"
-                onClick={() => onToggleFavorite(a)}
-                aria-label={a.is_favorite ? "Remove from favorites" : "Add to favorites"}
-                style={{ color: a.is_favorite ? t.colorWarning : t.colorTextMuted }}
-              />
-              <IconButton
-                icon="delete"
-                size="sm"
-                variant="ghost"
-                onClick={() => onDelete(a)}
-                aria-label="Delete automation"
-                style={{ color: t.colorTextMuted }}
-              />
-            </div>
+            <Icon
+              name="arrow_forward"
+              size={18}
+              className="auto-card-arrow"
+              style={{
+                color: t.colorActionPrimary,
+                opacity: 0,
+                transform: "translateX(-4px)",
+                transition: "opacity 0.2s, transform 0.2s",
+                flexShrink: 0,
+                marginTop: 4,
+              }}
+            />
           </div>
 
           {/* Metadata badges */}
@@ -414,20 +401,52 @@ function AutomationCardGrid({
                 prompt
               </Badge>
             )}
+            {a.tags.map((tag) => (
+              <TagChip key={tag} label={tag} size="sm" />
+            ))}
           </div>
 
-          {/* Tags */}
-          {a.tags.length > 0 && (
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {a.tags.map((tag) => (
-                <TagChip key={tag} label={tag} size="sm" />
-              ))}
+          {/* Footer: timestamp + actions */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "auto",
+            fontSize: "0.65rem",
+            fontFamily: t.fontMono,
+            color: `color-mix(in srgb, ${t.colorTextMuted} 70%, transparent)`,
+          }}>
+            <span>{formatRelativeDate(a.updated_at)}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
+              {a.has_prompt && (
+                <>
+                  <IconButton
+                    icon="content_copy"
+                    size={14}
+                    aria-label="Copy prompt text"
+                    onClick={(e) => { e.stopPropagation(); onCopyPrompt(a.id); }}
+                  />
+                  <IconButton
+                    icon="terminal"
+                    size={14}
+                    aria-label="Copy CLI command"
+                    onClick={(e) => { e.stopPropagation(); onCopyCli(a.id); }}
+                  />
+                </>
+              )}
+              <IconButton
+                icon={a.is_favorite ? "star" : "star_border"}
+                size={14}
+                aria-label={a.is_favorite ? "Remove from favorites" : "Add to favorites"}
+                onClick={(e) => { e.stopPropagation(); onToggleFavorite(a); }}
+              />
+              <IconButton
+                icon="delete"
+                size={14}
+                aria-label={`Delete ${a.title}`}
+                onClick={(e) => { e.stopPropagation(); onDelete(a); }}
+              />
             </div>
-          )}
-
-          {/* Footer */}
-          <div style={{ fontSize: t.fontSizeXs, color: t.colorTextMuted, marginTop: "auto" }}>
-            {formatRelativeDate(a.updated_at)}
           </div>
         </div>
       ))}
