@@ -785,9 +785,11 @@ export function AutomationsPage() {
       ) : automations.length === 0 ? (
         <EmptyState
           icon="smart_toy"
-          title={search || tag || favorite ? "No matches" : "No automations yet"}
-          description={search || tag || favorite ? "Try adjusting your filters." : "Create your first automation to save a reusable prompt."}
-          action={!search && !tag && !favorite ? { label: "Create Automation", onClick: () => setShowCreate(true) } : undefined}
+          message={
+            search || tag || favorite
+              ? "Nothing matches those filters. Try broadening your search."
+              : "No automations yet. Save your first prompt to get started."
+          }
         />
       ) : (
         <>
