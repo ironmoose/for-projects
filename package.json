@@ -1,6 +1,6 @@
 {
   "name": "@x4lt7ab/tab-for-projects",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
   "bin": {
     "tab-for-projects": "./src/index.ts"

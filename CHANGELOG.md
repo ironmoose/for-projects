@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-04-14
+
 - Increase PillSelect, FilterChip, MetaPill, and clear button hit targets for easier clicking (min-height 32px, larger padding/font)
 - Add visual zone separation between summary stats and filter/table area on TasksPage
 - Extract shared PillSelect component from TasksPage, KnowledgeBasePage, and ProjectDetailPage — deduplicate 9 inline pill-shaped filter selects into one reusable component
