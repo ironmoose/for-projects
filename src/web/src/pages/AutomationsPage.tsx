@@ -307,24 +307,24 @@ function AutomationCardGrid({
   return (
     <Grid minColumnWidth={320} gap="md">
       {automations.map((a, i) => (
-        <Surface
+        <div
           key={a.id}
-          className="auto-card"
           role="button"
           tabIndex={0}
           onClick={() => onSelect(a.id)}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(a.id); } }}
-          padding="lg"
-          border
-          shadow="sm"
           style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: t.spaceMd,
             cursor: "pointer",
+            borderRadius: t.radiusLg,
             ...staggerStyle(i, { delayMs: 40 }),
           }}
         >
+        <Surface
+          padding="lg"
+          border
+          shadow="sm"
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
           {/* Header: title + favorite indicator */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceSm }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -366,16 +366,16 @@ function AutomationCardGrid({
           {/* Metadata badges */}
           <div style={{ display: "flex", gap: t.spaceXs, flexWrap: "wrap", alignItems: "center" }}>
             {a.agent && (
-              <Badge size="sm" style={{ background: `color-mix(in srgb, ${t.colorInfo} 12%, transparent)`, color: t.colorInfo }}>
+              <Badge variant="info" size="xs">
                 <Icon name="smart_toy" size={11} />
                 {a.agent}
               </Badge>
             )}
             {a.category && (
-              <Badge size="sm">{a.category}</Badge>
+              <Badge size="xs">{a.category}</Badge>
             )}
             {a.has_prompt && (
-              <Badge size="sm" style={{ background: `color-mix(in srgb, ${t.colorSuccess} 12%, transparent)`, color: t.colorSuccess }}>
+              <Badge variant="success" size="xs">
                 <Icon name="code" size={11} />
                 prompt
               </Badge>
@@ -427,7 +427,9 @@ function AutomationCardGrid({
               />
             </div>
           </div>
+          </div>
         </Surface>
+        </div>
       ))}
     </Grid>
   );
@@ -483,8 +485,8 @@ function AutomationListView({
             )}
           </div>
           <div style={{ display: "flex", gap: t.spaceXs, alignItems: "center", flexShrink: 0 }}>
-            {a.agent && <Badge size="sm"><Icon name="smart_toy" size={11} /> {a.agent}</Badge>}
-            {a.category && <Badge size="sm">{a.category}</Badge>}
+            {a.agent && <Badge variant="info" size="xs"><Icon name="smart_toy" size={11} /> {a.agent}</Badge>}
+            {a.category && <Badge size="xs">{a.category}</Badge>}
           </div>
           <div style={{ fontSize: t.fontSizeXs, color: t.colorTextMuted, flexShrink: 0, width: 60, textAlign: "right" }}>
             {formatRelativeDate(a.updated_at)}
@@ -551,7 +553,7 @@ function AutomationDetailModal({
 
   if (loading) {
     return (
-      <ModalShell onClose={onClose} maxWidth={720} style={{ background: t.colorSurfaceSolid }}>
+      <ModalShell onClose={onClose} maxWidth={720}>
         <div style={{ padding: t.spaceXl }}>
           <Container width="prose">
             <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
@@ -568,7 +570,7 @@ function AutomationDetailModal({
 
   if (!automation) {
     return (
-      <ModalShell onClose={onClose} maxWidth={720} style={{ background: t.colorSurfaceSolid }}>
+      <ModalShell onClose={onClose} maxWidth={720}>
         <div style={{ padding: t.spaceXl }}>
           <EmptyState icon="error" message="Automation not found." />
         </div>
@@ -590,7 +592,7 @@ function AutomationDetailModal({
   }
 
   return (
-    <ModalShell onClose={onClose} maxWidth={720} style={{ maxHeight: "90vh", overflowY: "auto", background: t.colorSurfaceSolid }}>
+    <ModalShell onClose={onClose} maxWidth={720}>
       <div style={{ padding: `${t.space2xl} ${t.spaceXl} ${t.spaceXl}` }}>
         <Container width="prose">
           {/* Title */}
@@ -608,12 +610,12 @@ function AutomationDetailModal({
           {/* Metadata row */}
           <div style={{ display: "flex", gap: t.spaceSm, flexWrap: "wrap", alignItems: "center", marginTop: t.spaceMd }}>
             {automation.agent && (
-              <Badge size="sm" style={{ background: `color-mix(in srgb, ${t.colorInfo} 12%, transparent)`, color: t.colorInfo }}>
+              <Badge variant="info" size="xs">
                 <Icon name="smart_toy" size={12} />
                 {automation.agent}
               </Badge>
             )}
-            {automation.category && <Badge size="sm">{automation.category}</Badge>}
+            {automation.category && <Badge size="xs">{automation.category}</Badge>}
             {automation.tags.map((tag) => (
               <TagChip key={tag} label={tag} size="sm" />
             ))}

@@ -793,7 +793,7 @@ function DocumentReader({ documentId, onClose }: { documentId: string; onClose: 
   }, [doc]);
 
   return (
-    <ModalShell onClose={onClose} maxWidth={800} style={{ maxHeight: "90vh", overflowY: "auto", background: t.colorSurfaceSolid }}>
+    <ModalShell onClose={onClose} maxWidth={800}>
       {loading ? (
         <div style={{ padding: t.spaceXl }}>
           <Container width="prose">

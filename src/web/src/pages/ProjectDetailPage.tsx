@@ -60,8 +60,8 @@ import { PillSelect } from "../components/PillSelect";
 import { formatRelativeDate, staggerStyle } from "../utils";
 import { MetaPill } from "../components/MetaPill";
 import { useInlineEdit } from "../hooks/useInlineEdit";
-import { TextSection } from "../components/TextSection";
-import { STATUS_COLORS, STATUS_LABELS, CATEGORY_ICONS } from "../constants/task";
+import { TextSection } from "@4lt7ab/ui/content";
+import { STATUS_VARIANTS, STATUS_CSS_COLORS, STATUS_LABELS, CATEGORY_ICONS } from "../constants/task";
 import { PageShell } from "../components/PageShell";
 import { TaskStatusSelect } from "../components/TaskStatusSelect";
 
@@ -77,7 +77,7 @@ const STYLES_CSS = `
 `;
 
 // ---------------------------------------------------------------------------
-// Constants (STATUS_COLORS, STATUS_LABELS, CATEGORY_ICONS from ../constants/task)
+// Constants (STATUS_CSS_COLORS, STATUS_LABELS, CATEGORY_ICONS from ../constants/task)
 // ---------------------------------------------------------------------------
 
 const TABLE_COLUMNS = 7; // status, title, category, effort, impact, updated, actions
@@ -95,14 +95,14 @@ const TABLE_COLUMNS = 7; // status, title, category, effort, impact, updated, ac
 interface StatCardDef {
   label: string;
   statusKey: string;
-  color: string;
+  color: "muted" | "warning" | "success" | "error";
 }
 
 const STAT_CARD_DEFS: StatCardDef[] = [
-  { label: "To Do", statusKey: "todo", color: t.colorTextMuted },
-  { label: "In Progress", statusKey: "in_progress", color: t.colorWarning },
-  { label: "Done", statusKey: "done", color: t.colorSuccess },
-  { label: "Blocked", statusKey: "blocked", color: t.colorError },
+  { label: "To Do", statusKey: "todo", color: "muted" },
+  { label: "In Progress", statusKey: "in_progress", color: "warning" },
+  { label: "Done", statusKey: "done", color: "success" },
+  { label: "Blocked", statusKey: "blocked", color: "error" },
 ];
 
 function StatusStatCards({
@@ -120,15 +120,14 @@ function StatusStatCards({
         if (loading) return <Skeleton key={def.statusKey} height={64} />;
         const value = def.statusKey === "blocked" ? blockedCount : (statusCounts[def.statusKey] ?? 0);
         return (
-          <StatCard
-            key={def.statusKey}
-            color={def.color}
-            value={value}
-            label={def.label}
-            iconSize={32}
-            className="pd-stat-card"
-            style={staggerStyle(i, { delayMs: 50, duration: 0.25 })}
-          />
+          <div key={def.statusKey} style={staggerStyle(i, { delayMs: 50, duration: 0.25 })}>
+            <StatCard
+              color={def.color}
+              value={value}
+              label={def.label}
+              iconSize={32}
+            />
+          </div>
         );
       })}
     </Grid>
@@ -228,10 +227,10 @@ function ProjectHeader({
           <div style={{ flex: 1 }}>
             <ProgressBar
               segments={[
-                { value: done, color: t.colorSuccess, label: "done" },
-                { value: inProgress, color: t.colorWarning, label: "in progress" },
-                { value: todo, color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)`, label: "to do" },
-                { value: (statusCounts["archived"] ?? 0), color: `color-mix(in srgb, ${t.colorTextMuted} 20%, transparent)`, label: "archived" },
+                { value: done, color: "success" as const, label: "done" },
+                { value: inProgress, color: "warning" as const, label: "in progress" },
+                { value: todo, color: "muted" as const, label: "to do" },
+                { value: (statusCounts["archived"] ?? 0), color: "muted" as const, label: "archived" },
               ]}
               height={4}
               aria-label={`${pct}% complete`}
@@ -368,7 +367,7 @@ function TaskTableView({
           </TableEmptyRow>
         ) : (
           tasks.map((task, i) => {
-            const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
+            const statusColor = STATUS_CSS_COLORS[task.status] ?? t.colorTextMuted;
             return (
               <TableRow
                 key={task.id}
@@ -479,7 +478,7 @@ function TaskDetailModal({
   onClose: () => void;
   onUpdate: (taskId: string, input: Record<string, unknown>) => Promise<void>;
 }) {
-  const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
+  const statusColor = STATUS_CSS_COLORS[task.status] ?? t.colorTextMuted;
   const { editField, editValue, startEdit, saveEdit, cancelEdit, setEditValue } =
     useInlineEdit(async (patch) => onUpdate(task.id, patch));
 
@@ -527,7 +526,7 @@ function TaskDetailModal({
   }, [task]);
 
   return (
-    <ModalShell onClose={onClose} maxWidth={680} style={{ maxHeight: "85vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column", background: t.colorSurfaceSolid }}>
+    <ModalShell onClose={onClose} maxWidth={680}>
       {/* Header */}
       <div style={{
         padding: `${t.spaceLg} ${t.spaceXl}`,
@@ -535,7 +534,9 @@ function TaskDetailModal({
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceSm }}>
-          <StatusDot color={statusColor} size={10} animate={task.status === "in_progress" ? "pulse" : undefined} style={{ marginTop: 8 }} />
+          <div style={{ marginTop: 8 }}>
+            <StatusDot variant={STATUS_VARIANTS[task.status] ?? "muted"} size="lg" animate={task.status === "in_progress" ? "pulse" : "none"} />
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {editField === "title" ? (
               <Input
@@ -544,7 +545,6 @@ function TaskDetailModal({
                 onKeyDown={(e) => { if (e.key === "Enter") saveEdit("title"); if (e.key === "Escape") cancelEdit(); }}
                 onBlur={() => saveEdit("title")}
                 autoFocus
-                style={{ fontSize: t.fontSizeLg, fontWeight: 700, fontFamily: t.fontSerif }}
               />
             ) : (
               <h2
@@ -946,7 +946,7 @@ export function ProjectDetailPage({
           <Icon name="checklist" size={14} />
           Tasks
           {total > 0 && (
-            <Badge variant="muted" style={{ marginLeft: t.spaceXs }}>{total}</Badge>
+            <span style={{ marginLeft: t.spaceXs }}><Badge variant="default">{total}</Badge></span>
           )}
         </span>
       </SectionLabel>

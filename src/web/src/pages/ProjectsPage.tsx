@@ -136,7 +136,7 @@ interface StatCardData {
   icon: string;
   value: number | string;
   label: string;
-  color: string;
+  color: "primary" | "info" | "success" | "warning";
 }
 
 function StatCards({
@@ -151,25 +151,25 @@ function StatCards({
       icon: "rocket_launch",
       value: stats.totalProjects,
       label: "Projects",
-      color: t.colorActionPrimary,
+      color: "primary",
     },
     {
       icon: "checklist",
       value: stats.totalTasks,
       label: "Total Tasks",
-      color: t.colorInfo,
+      color: "info",
     },
     {
       icon: "pie_chart",
       value: `${stats.completionRate}%`,
       label: "Completion",
-      color: t.colorSuccess,
+      color: "success",
     },
     {
       icon: "play_arrow",
       value: stats.activeTasks,
       label: "Active",
-      color: t.colorWarning,
+      color: "warning",
     },
   ];
 
@@ -179,14 +179,14 @@ function StatCards({
         loading ? (
           <Skeleton key={i} height={96} />
         ) : (
-          <StatCard
-            key={card.label}
-            icon={card.icon}
-            color={card.color}
-            value={card.value}
-            label={card.label}
-            style={staggerStyle(i, { delayMs: 60 })}
-          />
+          <div key={card.label} style={staggerStyle(i, { delayMs: 60 })}>
+            <StatCard
+              icon={card.icon}
+              color={card.color}
+              value={card.value}
+              label={card.label}
+            />
+          </div>
         ),
       )}
     </Grid>
@@ -319,9 +319,8 @@ function ProjectCardGrid({
         if (project.has_requirements) docHints.push("Requirements");
 
         return (
-          <Surface
+          <div
             key={project.id}
-            className="proj-card"
             role="button"
             tabIndex={0}
             onClick={() => onOpen(project.id)}
@@ -331,17 +330,18 @@ function ProjectCardGrid({
                 onOpen(project.id);
               }
             }}
-            padding="lg"
-            border
-            shadow="sm"
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: t.spaceMd,
               cursor: "pointer",
+              borderRadius: t.radiusLg,
               ...staggerStyle(i, { delayMs: 40 }),
             }}
           >
+          <Surface
+            padding="lg"
+            border
+            shadow="sm"
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
             {/* Header: title + recent indicator + arrow */}
             <div
               style={{
@@ -435,22 +435,22 @@ function ProjectCardGrid({
                   segments={[
                     {
                       value: counts["done"] ?? 0,
-                      color: t.colorSuccess,
+                      color: "success",
                       label: "done",
                     },
                     {
                       value: counts["in_progress"] ?? 0,
-                      color: t.colorWarning,
+                      color: "warning",
                       label: "in progress",
                     },
                     {
                       value: counts["todo"] ?? 0,
-                      color: `color-mix(in srgb, ${t.colorTextMuted} 40%, transparent)`,
+                      color: "muted",
                       label: "todo",
                     },
                     {
                       value: counts["archived"] ?? 0,
-                      color: `color-mix(in srgb, ${t.colorTextMuted} 20%, transparent)`,
+                      color: "muted",
                       label: "archived",
                     },
                   ]}
@@ -546,7 +546,9 @@ function ProjectCardGrid({
                 />
               </div>
             </div>
+            </div>
           </Surface>
+          </div>
         );
       })}
     </Grid>

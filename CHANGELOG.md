@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Migrate to @4lt7ab/ui v0.2.26 — replace `style`/`className` escape hatches with semantic prop APIs across all pages
+- Replace StatusDot `color`/`size` with `variant`/size token; replace StatCard and ProgressBar color tokens with `SemanticColor` union
+- Replace Badge `style` overrides with `variant` props; change `size="sm"` to `size="xs"`
+- Remove ModalShell, Card, Input, Surface `style`/`className` props; wrap interactive Surfaces in div for click handling
+- Delete local TextSection component — use library version from `@4lt7ab/ui/content`
+
 ## [0.1.12] - 2026-04-16
 
 ## [0.1.11] - 2026-04-15

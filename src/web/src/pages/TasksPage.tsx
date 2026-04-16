@@ -57,8 +57,8 @@ import { PillSelect } from "../components/PillSelect";
 import { formatRelativeDate, staggerStyle } from "../utils";
 import { MetaPill } from "../components/MetaPill";
 import { useInlineEdit } from "../hooks/useInlineEdit";
-import { TextSection } from "../components/TextSection";
-import { STATUS_COLORS, STATUS_LABELS, CATEGORY_ICONS } from "../constants/task";
+import { TextSection } from "@4lt7ab/ui/content";
+import { STATUS_VARIANTS, STATUS_CSS_COLORS, STATUS_LABELS, CATEGORY_ICONS } from "../constants/task";
 import { PageShell } from "../components/PageShell";
 import { TaskStatusSelect } from "../components/TaskStatusSelect";
 
@@ -90,7 +90,7 @@ const STYLES_CSS = `
 
 const PAGE_SIZE = 25;
 
-// STATUS_COLORS, STATUS_LABELS, CATEGORY_ICONS imported from ../constants/task
+// STATUS_CSS_COLORS, STATUS_LABELS, CATEGORY_ICONS imported from ../constants/task
 
 // ---------------------------------------------------------------------------
 // Filter state
@@ -133,11 +133,11 @@ function StatusDistribution({
         const count = counts[status] ?? 0;
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
         return (
-          <Card key={status} variant="flat" style={{ padding: t.spaceMd }}>
+          <Card key={status} variant="flat" padding="md">
             <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, marginBottom: t.spaceXs }}>
               <StatusDot
-                color={STATUS_COLORS[status]}
-                size={8}
+                variant={STATUS_VARIANTS[status] ?? "muted"}
+                size="sm"
                 animate={status === "in_progress" && count > 0 ? "pulse" : "none"}
               />
               <span style={{
@@ -173,10 +173,8 @@ function StatusDistribution({
       })}
 
       {/* Blocked indicator card */}
-      <Card variant="flat" style={{
-        padding: t.spaceMd,
-        borderLeft: blockedCount > 0 ? `3px solid ${t.colorError}` : undefined,
-      }}>
+      <div style={{ borderLeft: blockedCount > 0 ? `3px solid ${t.colorError}` : undefined }}>
+      <Card variant="flat" padding="md">
         <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs, marginBottom: t.spaceXs }}>
           <Icon name="block" size={12} style={{ color: blockedCount > 0 ? t.colorError : t.colorTextMuted }} />
           <span style={{
@@ -199,6 +197,7 @@ function StatusDistribution({
           {blockedCount}
         </span>
       </Card>
+      </div>
     </Grid>
   );
 }
@@ -487,7 +486,6 @@ function TaskTableView({
           </TableEmptyRow>
         ) : (
           tasks.map((task, i) => {
-            const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
             const projectName = projectMap.get(task.project_id);
             return (
               <TableRow
@@ -614,29 +612,29 @@ function TaskCardGrid({
   return (
     <Grid minColumnWidth={300} gap="md">
       {tasks.map((task, i) => {
-        const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
+        const statusColor = STATUS_CSS_COLORS[task.status] ?? t.colorTextMuted;
         const projectName = projectMap.get(task.project_id);
         return (
-          <Surface
+          <div
             key={task.id}
-            className="tp-card"
             role="button"
             tabIndex={0}
             onClick={() => onSelect(task.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(task.id); } }}
+            style={{
+              cursor: "pointer",
+              overflow: "hidden",
+              borderLeft: `3px solid color-mix(in srgb, ${statusColor} 60%, transparent)`,
+              borderRadius: t.radiusLg,
+              ...staggerStyle(i, { delayMs: 25 }),
+            }}
+          >
+          <Surface
             padding="md"
             border
             shadow="sm"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: t.spaceSm,
-              cursor: "pointer",
-              overflow: "hidden",
-              ...staggerStyle(i, { delayMs: 25 }),
-              borderLeft: `3px solid color-mix(in srgb, ${statusColor} 60%, transparent)`,
-            }}
           >
+            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
             {/* Header: status + actions */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <TaskStatusSelect
@@ -702,7 +700,9 @@ function TaskCardGrid({
               ) : <span />}
               <span>{formatRelativeDate(task.updated_at)}</span>
             </div>
+            </div>
           </Surface>
+          </div>
         );
       })}
     </Grid>
@@ -726,12 +726,12 @@ function TaskDetailModal({
   onClose: () => void;
   onUpdate: (taskId: string, input: Record<string, unknown>) => Promise<void>;
 }) {
-  const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
+  const statusColor = STATUS_CSS_COLORS[task.status] ?? t.colorTextMuted;
   const { editField, editValue, startEdit, saveEdit, cancelEdit, setEditValue } =
     useInlineEdit(async (patch) => onUpdate(task.id, patch));
 
   return (
-    <ModalShell onClose={onClose} maxWidth={720} style={{ maxHeight: "85vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column", background: t.colorSurfaceSolid }}>
+    <ModalShell onClose={onClose} maxWidth={720}>
       {/* Header */}
       <div style={{
         padding: `${t.spaceLg} ${t.spaceXl}`,
@@ -739,12 +739,13 @@ function TaskDetailModal({
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceSm }}>
-          <StatusDot
-            color={statusColor}
-            size={10}
-            animate={task.status === "in_progress" ? "pulse" : "none"}
-            style={{ marginTop: 8 }}
-          />
+          <div style={{ marginTop: 8 }}>
+            <StatusDot
+              variant={STATUS_VARIANTS[task.status] ?? "muted"}
+              size="lg"
+              animate={task.status === "in_progress" ? "pulse" : "none"}
+            />
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {editField === "title" ? (
               <Input value={editValue} onChange={(e) => setEditValue(e.target.value)}
@@ -785,7 +786,7 @@ function TaskDetailModal({
                 label: "Status",
                 value: (
                   <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
-                    <StatusDot color={statusColor} size={8} animate={task.status === "in_progress" ? "pulse" : "none"} />
+                    <StatusDot variant={STATUS_VARIANTS[task.status] ?? "muted"} size="sm" animate={task.status === "in_progress" ? "pulse" : "none"} />
                     <select
                       value={task.status}
                       onChange={(e) => onUpdate(task.id, { status: e.target.value })}

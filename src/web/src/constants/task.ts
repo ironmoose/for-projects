@@ -6,9 +6,18 @@
  */
 
 import { semantic as t } from "@4lt7ab/ui/core";
+import type { StatusDotVariant } from "@4lt7ab/ui/ui";
 
-/** Status → theme color token for StatusDot, text, and borders. */
-export const STATUS_COLORS: Record<string, string> = {
+/** Status → StatusDot variant for semantic color rendering. */
+export const STATUS_VARIANTS: Record<string, StatusDotVariant> = {
+  todo: "muted",
+  in_progress: "warning",
+  done: "success",
+  archived: "default",
+};
+
+/** Status → CSS color token for native elements (selects, borders). */
+export const STATUS_CSS_COLORS: Record<string, string> = {
   todo: t.colorTextMuted,
   in_progress: t.colorWarning,
   done: t.colorSuccess,

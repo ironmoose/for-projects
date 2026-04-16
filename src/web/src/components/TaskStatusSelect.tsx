@@ -8,7 +8,7 @@
 import { semantic as t } from "@4lt7ab/ui/core";
 import { Badge, StatusDot } from "@4lt7ab/ui/ui";
 
-import { STATUS_COLORS, STATUS_LABELS } from "../constants/task";
+import { STATUS_VARIANTS, STATUS_CSS_COLORS, STATUS_LABELS } from "../constants/task";
 import { TASK_STATUSES } from "../types";
 import type { TaskStatus } from "../types";
 
@@ -25,13 +25,14 @@ export function TaskStatusSelect({
   isBlocked,
   onChange,
 }: TaskStatusSelectProps) {
-  const color = STATUS_COLORS[status] ?? t.colorTextMuted;
+  const variant = STATUS_VARIANTS[status] ?? "muted";
+  const selectColor = STATUS_CSS_COLORS[status] ?? t.colorTextMuted;
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: t.spaceXs }}>
       <StatusDot
-        color={color}
-        size={8}
+        variant={variant}
+        size="sm"
         animate={status === "in_progress" ? "pulse" : "none"}
       />
       <select
@@ -46,7 +47,7 @@ export function TaskStatusSelect({
           appearance: "none",
           border: "none",
           background: "transparent",
-          color,
+          color: selectColor,
           fontSize: "0.6rem",
           fontFamily: t.fontMono,
           fontWeight: 700,
