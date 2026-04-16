@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-04-16
+
 ## [0.1.11] - 2026-04-15
 
 - Add Automations feature — saved prompts with title, summary, prompt content, agent string, category, tags, and favorites; full CRUD via REST API, 4 MCP tools, and a new frontend page with card/list views, prompt reader, and copy-to-clipboard (CLI command or raw prompt)
