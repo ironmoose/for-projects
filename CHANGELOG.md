@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- Fix KB document modal opacity and scroll on synth theme — wrap children in solid-background scrollable div (restores behavior lost when ModalShell `style` prop was removed in v0.2.26 migration)
+- Fix modal opacity and scroll on synth theme — extract `SolidModalBody` helper and apply to KB, automations, task detail, and project task detail modals (restores behavior lost when ModalShell `style` prop was removed in v0.2.26 migration)
 
 ## [0.1.13] - 2026-04-16
 

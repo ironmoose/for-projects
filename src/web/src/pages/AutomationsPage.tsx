@@ -42,6 +42,7 @@ import { TAG_NAMES, TAG_CATEGORIES } from "../types";
 import type { AutomationSummary } from "../types";
 import { PillSelect } from "../components/PillSelect";
 import { PageShell } from "../components/PageShell";
+import { SolidModalBody } from "../components/SolidModalBody";
 import { formatRelativeDate, formatShortDate, staggerStyle } from "../utils";
 
 // ---------------------------------------------------------------------------
@@ -554,16 +555,18 @@ function AutomationDetailModal({
   if (loading) {
     return (
       <ModalShell onClose={onClose} maxWidth={720}>
-        <div style={{ padding: t.spaceXl }}>
-          <Container width="prose">
-            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
-              <Skeleton height={36} width="70%" />
-              <Skeleton height={18} width="50%" />
-              <Skeleton height={1} />
-              <Skeleton height={200} />
-            </div>
-          </Container>
-        </div>
+        <SolidModalBody>
+          <div style={{ padding: t.spaceXl }}>
+            <Container width="prose">
+              <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
+                <Skeleton height={36} width="70%" />
+                <Skeleton height={18} width="50%" />
+                <Skeleton height={1} />
+                <Skeleton height={200} />
+              </div>
+            </Container>
+          </div>
+        </SolidModalBody>
       </ModalShell>
     );
   }
@@ -571,9 +574,11 @@ function AutomationDetailModal({
   if (!automation) {
     return (
       <ModalShell onClose={onClose} maxWidth={720}>
-        <div style={{ padding: t.spaceXl }}>
-          <EmptyState icon="error" message="Automation not found." />
-        </div>
+        <SolidModalBody>
+          <div style={{ padding: t.spaceXl }}>
+            <EmptyState icon="error" message="Automation not found." />
+          </div>
+        </SolidModalBody>
       </ModalShell>
     );
   }
@@ -593,6 +598,7 @@ function AutomationDetailModal({
 
   return (
     <ModalShell onClose={onClose} maxWidth={720}>
+      <SolidModalBody>
       <div style={{ padding: `${t.space2xl} ${t.spaceXl} ${t.spaceXl}` }}>
         <Container width="prose">
           {/* Title */}
@@ -673,6 +679,7 @@ function AutomationDetailModal({
           </div>
         </Container>
       </div>
+      </SolidModalBody>
     </ModalShell>
   );
 }

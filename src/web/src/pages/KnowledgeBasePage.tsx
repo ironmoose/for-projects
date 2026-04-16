@@ -44,6 +44,7 @@ import { TAG_NAMES, TAG_CATEGORIES } from "../types";
 import type { DocumentSummary } from "../types";
 import { PillSelect } from "../components/PillSelect";
 import { PageShell } from "../components/PageShell";
+import { SolidModalBody } from "../components/SolidModalBody";
 import { formatRelativeDate, formatShortDate, staggerStyle } from "../utils";
 
 // ---------------------------------------------------------------------------
@@ -794,17 +795,7 @@ function DocumentReader({ documentId, onClose }: { documentId: string; onClose: 
 
   return (
     <ModalShell onClose={onClose} maxWidth={800}>
-      <div style={{
-        // Fill the ModalShell panel (ModalShell sets its own padding: spaceXl).
-        margin: `calc(-1 * ${t.spaceXl})`,
-        // Force an opaque surface — synth theme's colorSurface is transparent,
-        // which makes the modal unreadable over the canvas background.
-        background: t.colorSurfaceSolid,
-        borderRadius: t.radiusLg,
-        // Keep the modal scrollable at all viewport heights.
-        maxHeight: "85vh",
-        overflowY: "auto",
-      }}>
+      <SolidModalBody>
       {loading ? (
         <div style={{ padding: t.spaceXl }}>
           <Container width="prose">
@@ -896,7 +887,7 @@ function DocumentReader({ documentId, onClose }: { documentId: string; onClose: 
           </Container>
         </div>
       ) : null}
-      </div>
+      </SolidModalBody>
     </ModalShell>
   );
 }

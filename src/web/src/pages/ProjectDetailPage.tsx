@@ -63,6 +63,7 @@ import { useInlineEdit } from "../hooks/useInlineEdit";
 import { TextSection } from "@4lt7ab/ui/content";
 import { STATUS_VARIANTS, STATUS_CSS_COLORS, STATUS_LABELS, CATEGORY_ICONS } from "../constants/task";
 import { PageShell } from "../components/PageShell";
+import { SolidModalBody } from "../components/SolidModalBody";
 import { TaskStatusSelect } from "../components/TaskStatusSelect";
 
 // ---------------------------------------------------------------------------
@@ -527,6 +528,7 @@ function TaskDetailModal({
 
   return (
     <ModalShell onClose={onClose} maxWidth={680}>
+      <SolidModalBody layout="pinned">
       {/* Header */}
       <div style={{
         padding: `${t.spaceLg} ${t.spaceXl}`,
@@ -661,6 +663,7 @@ function TaskDetailModal({
         <SectionLabel>Details</SectionLabel>
         <MetadataTable items={metadataItems} />
       </div>
+      </SolidModalBody>
     </ModalShell>
   );
 }
