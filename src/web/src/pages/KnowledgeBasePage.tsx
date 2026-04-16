@@ -606,6 +606,7 @@ function DocumentList({
       borderRadius: t.radiusMd,
       border: `1px solid ${t.colorBorder}`,
       overflow: "hidden",
+      flexShrink: 0,
     }}>
       {documents.map((doc, i) => {
         const accent = folderAccentColor(doc.folder);

@@ -351,7 +351,7 @@ function TaskTableView({
   onDelete: (task: TaskSummary) => void;
 }) {
   return (
-    <Table variant="default" density="sm" style={{ background: t.colorSurfaceSolid }}>
+    <Table variant="default" density="sm" style={{ background: t.colorSurfaceSolid, flexShrink: 0 }}>
       <TableHeader>
         <TableHeaderCell width={130}>Status</TableHeaderCell>
         <TableHeaderCell>Title</TableHeaderCell>
