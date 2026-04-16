@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Fix KB document modal opacity and scroll on synth theme — wrap children in solid-background scrollable div (restores behavior lost when ModalShell `style` prop was removed in v0.2.26 migration)
+
 ## [0.1.13] - 2026-04-16
 
 - Migrate to @4lt7ab/ui v0.2.26 — replace `style`/`className` escape hatches with semantic prop APIs across all pages
