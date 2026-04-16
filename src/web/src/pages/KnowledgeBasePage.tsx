@@ -32,6 +32,7 @@ import {
   MetadataTable,
   ChipPicker,
   Combobox,
+  Grid,
   useToast,
 } from "@4lt7ab/ui/ui";
 import { Container, Prose, Markdown } from "@4lt7ab/ui/content";
@@ -407,11 +408,7 @@ function DocumentCardGrid({
   onToggleFavorite: (doc: DocumentSummary) => void;
 }) {
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-      gap: t.spaceMd,
-    }}>
+    <Grid minColumnWidth={280} gap="md">
       {documents.map((doc, i) => {
         const accent = folderAccentColor(doc.folder);
         return (
@@ -582,7 +579,7 @@ function DocumentCardGrid({
           </div>
         );
       })}
-    </div>
+    </Grid>
   );
 }
 
@@ -1144,11 +1141,11 @@ export function KnowledgeBasePage() {
       {/* Content */}
       {loading ? (
         viewMode === "cards" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: t.spaceMd }}>
+          <Grid minColumnWidth={280} gap="md">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} height={140} />
             ))}
-          </div>
+          </Grid>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {Array.from({ length: 8 }).map((_, i) => (

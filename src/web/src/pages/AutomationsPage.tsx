@@ -29,6 +29,8 @@ import {
   SegmentedControl,
   SectionLabel,
   ChipPicker,
+  Grid,
+  Surface,
   useToast,
 } from "@4lt7ab/ui/ui";
 import { Container, Prose, Markdown } from "@4lt7ab/ui/content";
@@ -303,28 +305,22 @@ function AutomationCardGrid({
   onCopyCli: (id: string) => void;
 }) {
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-      gap: t.spaceMd,
-    }}>
+    <Grid minColumnWidth={320} gap="md">
       {automations.map((a, i) => (
-        <div
+        <Surface
           key={a.id}
           className="auto-card"
           role="button"
           tabIndex={0}
           onClick={() => onSelect(a.id)}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(a.id); } }}
+          padding="lg"
+          border
+          shadow="sm"
           style={{
             display: "flex",
             flexDirection: "column",
             gap: t.spaceMd,
-            padding: t.spaceLg,
-            borderRadius: t.radiusLg,
-            border: `1px solid ${t.colorBorder}`,
-            background: t.colorSurfaceSolid,
-            boxShadow: t.shadowSm,
             cursor: "pointer",
             ...staggerStyle(i, { delayMs: 40 }),
           }}
@@ -431,9 +427,9 @@ function AutomationCardGrid({
               />
             </div>
           </div>
-        </div>
+        </Surface>
       ))}
-    </div>
+    </Grid>
   );
 }
 

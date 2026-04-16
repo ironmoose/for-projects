@@ -13,7 +13,6 @@ import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import {
   Badge,
   Button,
-  Card,
   IconButton,
   Icon,
   ProgressBar,
@@ -26,6 +25,9 @@ import {
   Skeleton,
   EmptyState,
   SectionLabel,
+  StatCard,
+  Grid,
+  Surface,
   useToast,
 } from "@4lt7ab/ui/ui";
 
@@ -172,81 +174,22 @@ function StatCards({
   ];
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        gap: t.spaceMd,
-      }}
-    >
+    <Grid minColumnWidth={180} gap="md">
       {cards.map((card, i) =>
         loading ? (
           <Skeleton key={i} height={96} />
         ) : (
-          <Card
+          <StatCard
             key={card.label}
-            variant="flat"
-            padding="md"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: t.spaceMd,
-              ...staggerStyle(i, { delayMs: 60 }),
-            }}
-          >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: t.radiusMd,
-                background: `color-mix(in srgb, ${card.color} 10%, transparent)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Icon
-                name={card.icon}
-                size={20}
-                style={{ color: card.color }}
-              />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                minWidth: 0,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: t.fontSizeXl,
-                  fontWeight: 700,
-                  fontFamily: t.fontMono,
-                  color: t.colorText,
-                  lineHeight: 1,
-                }}
-              >
-                {card.value}
-              </span>
-              <span
-                style={{
-                  fontSize: t.fontSizeXs,
-                  color: t.colorTextMuted,
-                  fontFamily: t.fontMono,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {card.label}
-              </span>
-            </div>
-          </Card>
+            icon={card.icon}
+            color={card.color}
+            value={card.value}
+            label={card.label}
+            style={staggerStyle(i, { delayMs: 60 })}
+          />
         ),
       )}
-    </div>
+    </Grid>
   );
 }
 
@@ -363,13 +306,7 @@ function ProjectCardGrid({
   onCopyId: (id: string) => void;
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-        gap: t.spaceMd,
-      }}
-    >
+    <Grid minColumnWidth={340} gap="md">
       {projects.map((project, i) => {
         const data = taskData[project.id];
         const total = data?.total ?? 0;
@@ -382,7 +319,7 @@ function ProjectCardGrid({
         if (project.has_requirements) docHints.push("Requirements");
 
         return (
-          <div
+          <Surface
             key={project.id}
             className="proj-card"
             role="button"
@@ -394,15 +331,13 @@ function ProjectCardGrid({
                 onOpen(project.id);
               }
             }}
+            padding="lg"
+            border
+            shadow="sm"
             style={{
               display: "flex",
               flexDirection: "column",
               gap: t.spaceMd,
-              padding: t.spaceLg,
-              borderRadius: t.radiusLg,
-              border: `1px solid ${t.colorBorder}`,
-              background: t.colorSurfaceSolid,
-              boxShadow: t.shadowSm,
               cursor: "pointer",
               ...staggerStyle(i, { delayMs: 40 }),
             }}
@@ -611,10 +546,10 @@ function ProjectCardGrid({
                 />
               </div>
             </div>
-          </div>
+          </Surface>
         );
       })}
-    </div>
+    </Grid>
   );
 }
 
@@ -761,17 +696,11 @@ export function ProjectsPage({
       <SectionLabel>Your Projects</SectionLabel>
 
       {loading ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-            gap: t.spaceMd,
-          }}
-        >
+        <Grid minColumnWidth={340} gap="md">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} height={200} />
           ))}
-        </div>
+        </Grid>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={search ? "search_off" : "work"}

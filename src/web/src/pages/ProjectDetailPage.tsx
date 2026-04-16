@@ -40,6 +40,9 @@ import {
   EmptyState,
   SectionLabel,
   MetadataTable,
+  Grid,
+  StatCard,
+  TabStrip,
   useToast,
 } from "@4lt7ab/ui/ui";
 import { Markdown } from "@4lt7ab/ui/content";
@@ -112,53 +115,23 @@ function StatusStatCards({
   loading: boolean;
 }) {
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-      gap: t.spaceSm,
-    }}>
+    <Grid minColumnWidth={140} gap="sm">
       {STAT_CARD_DEFS.map((def, i) => {
         if (loading) return <Skeleton key={def.statusKey} height={64} />;
         const value = def.statusKey === "blocked" ? blockedCount : (statusCounts[def.statusKey] ?? 0);
         return (
-          <Card
+          <StatCard
             key={def.statusKey}
-            variant="flat"
-            padding="sm"
+            color={def.color}
+            value={value}
+            label={def.label}
+            iconSize={32}
             className="pd-stat-card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: t.spaceSm,
-              ...staggerStyle(i, { delayMs: 50, duration: 0.25 }),
-            }}
-          >
-            <StatusDot color={def.color} size={10} />
-            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-              <span style={{
-                fontSize: t.fontSizeLg,
-                fontWeight: 700,
-                fontFamily: t.fontMono,
-                color: t.colorText,
-                lineHeight: 1,
-              }}>
-                {value}
-              </span>
-              <span style={{
-                fontSize: "0.6rem",
-                fontWeight: 600,
-                color: t.colorTextMuted,
-                textTransform: "uppercase",
-                letterSpacing: t.letterSpacingWide,
-                marginTop: 2,
-              }}>
-                {def.label}
-              </span>
-            </div>
-          </Card>
+            style={staggerStyle(i, { delayMs: 50, duration: 0.25 })}
+          />
         );
       })}
-    </div>
+    </Grid>
   );
 }
 
@@ -281,51 +254,13 @@ function ProjectHeader({
       {/* Briefing panels — collapsible tabs for summary/context/requirements */}
       {panels.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          {/* Tab strip */}
-          <div style={{ display: "flex", gap: 2 }}>
-            {panels.map((panel) => {
-              const isExpanded = expandedPanel === panel.key;
-              return (
-                <button
-                  key={panel.key}
-                  onClick={() => setExpandedPanel(isExpanded ? null : panel.key)}
-                  aria-expanded={isExpanded}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    padding: `${t.spaceXs} ${t.spaceMd}`,
-                    border: "none",
-                    borderRadius: `${t.radiusMd} ${t.radiusMd} 0 0`,
-                    background: isExpanded
-                      ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)`
-                      : "transparent",
-                    color: isExpanded ? t.colorActionPrimary : t.colorTextMuted,
-                    fontSize: t.fontSizeXs,
-                    fontFamily: t.fontSans,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    borderBottom: isExpanded
-                      ? `2px solid ${t.colorActionPrimary}`
-                      : `2px solid transparent`,
-                  }}
-                >
-                  <Icon name={panel.icon} size={13} />
-                  {panel.label}
-                  <Icon
-                    name="expand_more"
-                    size={12}
-                    style={{
-                      transform: isExpanded ? "rotate(180deg)" : "rotate(0)",
-                      transition: "transform 0.2s",
-                      opacity: 0.6,
-                    }}
-                  />
-                </button>
-              );
-            })}
-          </div>
+          <TabStrip
+            tabs={panels.map((p) => ({ key: p.key, label: p.label, icon: p.icon }))}
+            activeKey={expandedPanel}
+            onChange={setExpandedPanel}
+            allowDeselect
+            size="sm"
+          />
 
           {/* Expanded content */}
           {expandedPanel && (() => {

@@ -34,6 +34,9 @@ import {
   SectionLabel,
   MetadataTable,
   EmptyState,
+  Grid,
+  Divider,
+  Surface,
   useToast,
 } from "@4lt7ab/ui/ui";
 
@@ -125,11 +128,7 @@ function StatusDistribution({
   const blockedCount = useMemo(() => tasks.filter((t) => t.is_blocked).length, [tasks]);
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-      gap: t.spaceSm,
-    }}>
+    <Grid minColumnWidth={140} gap="sm">
       {TASK_STATUSES.map((status) => {
         const count = counts[status] ?? 0;
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -200,7 +199,7 @@ function StatusDistribution({
           {blockedCount}
         </span>
       </Card>
-    </div>
+    </Grid>
   );
 }
 
@@ -356,7 +355,7 @@ function FilterBar({
         onChange={(v) => onViewModeChange(v as "list" | "cards")}
       />
 
-      <div style={{ width: 1, height: 20, background: `color-mix(in srgb, ${t.colorBorder} 50%, transparent)`, flexShrink: 0 }} />
+      <Divider orientation="vertical" length={20} />
 
       <PillSelect
         value={filters.status ?? ""}
@@ -613,31 +612,25 @@ function TaskCardGrid({
   onDelete: (task: TaskSummary) => void;
 }) {
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-      gap: t.spaceMd,
-    }}>
+    <Grid minColumnWidth={300} gap="md">
       {tasks.map((task, i) => {
         const statusColor = STATUS_COLORS[task.status] ?? t.colorTextMuted;
         const projectName = projectMap.get(task.project_id);
         return (
-          <div
+          <Surface
             key={task.id}
             className="tp-card"
             role="button"
             tabIndex={0}
             onClick={() => onSelect(task.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(task.id); } }}
+            padding="md"
+            border
+            shadow="sm"
             style={{
               display: "flex",
               flexDirection: "column",
               gap: t.spaceSm,
-              padding: t.spaceMd,
-              borderRadius: t.radiusLg,
-              border: `1px solid ${t.colorBorder}`,
-              background: t.colorSurfaceSolid,
-              boxShadow: t.shadowSm,
               cursor: "pointer",
               overflow: "hidden",
               ...staggerStyle(i, { delayMs: 25 }),
@@ -709,10 +702,10 @@ function TaskCardGrid({
               ) : <span />}
               <span>{formatRelativeDate(task.updated_at)}</span>
             </div>
-          </div>
+          </Surface>
         );
       })}
-    </div>
+    </Grid>
   );
 }
 
@@ -1121,9 +1114,9 @@ export function TasksPage() {
       {/* Content */}
       {loading ? (
         viewMode === "cards" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: t.spaceMd }}>
+          <Grid minColumnWidth={300} gap="md">
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={140} />)}
-          </div>
+          </Grid>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)}
