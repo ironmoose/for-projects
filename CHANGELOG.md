@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-04-16
+
 - Migrate to @4lt7ab/ui v0.2.26 — replace `style`/`className` escape hatches with semantic prop APIs across all pages
 - Replace StatusDot `color`/`size` with `variant`/size token; replace StatCard and ProgressBar color tokens with `SemanticColor` union
 - Replace Badge `style` overrides with `variant` props; change `size="sm"` to `size="xs"`
