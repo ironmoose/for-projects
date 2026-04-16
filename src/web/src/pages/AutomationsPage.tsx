@@ -644,7 +644,7 @@ function AutomationDetailModal({
           {/* Prompt content */}
           {automation.prompt ? (
             <Prose>
-              <Markdown content={automation.prompt ?? ""} />
+              <Markdown>{automation.prompt ?? ""}</Markdown>
             </Prose>
           ) : (
             <p style={{
