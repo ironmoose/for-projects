@@ -1763,4 +1763,83 @@ describe("Semantic Search (pgvector)", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Embedding leakage (regression)
+// ---------------------------------------------------------------------------
+//
+// The `embedding` column on projects, tasks, and documents is internal — it
+// powers semantic search and must never reach API or MCP clients. These tests
+// guard against `SELECT *` (or any other path) accidentally exposing the vector.
+describe("Embedding column is not exposed", () => {
+  it("PgDocumentRepository.findById does not return embedding field", async () => {
+    const sql = ctx.pg!;
+    const { PgDocumentRepository } = await import("./repositories/pg/documents");
+    const repo = new PgDocumentRepository(sql);
+
+    const [doc] = await ctx.documentService.create([{ title: "Leak Test Doc" }]);
+    const fakeVec = new Array(768).fill(0.3);
+    await sql`UPDATE documents SET embedding = ${`[${fakeVec.join(",")}]`}::vector WHERE id = ${doc.id}`;
+
+    const row = await repo.findById(doc.id);
+    expect(row).toBeTruthy();
+    expect(row).not.toHaveProperty("embedding");
+  });
+
+  it("PgProjectRepository.findById and findMany do not return embedding", async () => {
+    const sql = ctx.pg!;
+    const { PgProjectRepository } = await import("./repositories/pg/projects");
+    const repo = new PgProjectRepository(sql);
+
+    const [project] = await ctx.projectService.create([{ title: "Leak Test Project" }]);
+    const fakeVec = new Array(768).fill(0.4);
+    await sql`UPDATE projects SET embedding = ${`[${fakeVec.join(",")}]`}::vector WHERE id = ${project.id}`;
+
+    const byId = await repo.findById(project.id);
+    expect(byId).toBeTruthy();
+    expect(byId).not.toHaveProperty("embedding");
+
+    // findMany with a high limit so accumulated test data doesn't push our
+    // record past the default page size.
+    const many = await repo.findMany({ limit: 1000 });
+    const match = many.find((p) => p.id === project.id);
+    expect(match).toBeTruthy();
+    expect(match).not.toHaveProperty("embedding");
+  });
+
+  it("PgTaskRepository.findById and findMany do not return embedding", async () => {
+    const sql = ctx.pg!;
+    const { PgTaskRepository } = await import("./repositories/pg/tasks");
+    const repo = new PgTaskRepository(sql);
+
+    const [project] = await ctx.projectService.create([{ title: "Leak Test Parent" }]);
+    const [task] = await ctx.taskService.create([{ project_id: project.id, title: "Leak Test Task" }]);
+    const fakeVec = new Array(768).fill(0.5);
+    await sql`UPDATE tasks SET embedding = ${`[${fakeVec.join(",")}]`}::vector WHERE id = ${task.id}`;
+
+    const byId = await repo.findById(task.id);
+    expect(byId).toBeTruthy();
+    expect(byId).not.toHaveProperty("embedding");
+
+    // findMany with a high limit so accumulated test data doesn't push our
+    // record past the default page size.
+    const many = await repo.findMany({ limit: 1000 });
+    const match = many.find((t) => t.id === task.id);
+    expect(match).toBeTruthy();
+    expect(match).not.toHaveProperty("embedding");
+  });
+
+  it("document get() service response does not contain embedding", async () => {
+    const sql = ctx.pg!;
+    const [doc] = await ctx.documentService.create([{ title: "Service Leak Test" }]);
+    const fakeVec = new Array(768).fill(0.6);
+    await sql`UPDATE documents SET embedding = ${`[${fakeVec.join(",")}]`}::vector WHERE id = ${doc.id}`;
+
+    const result = await ctx.documentService.get(doc.id);
+    expect(result).not.toHaveProperty("embedding");
+    // Serializing through JSON is what the API and MCP do — guard that too.
+    const serialized = JSON.parse(JSON.stringify(result));
+    expect(serialized).not.toHaveProperty("embedding");
+  });
+});
+
 }); // end describe.skipIf

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Stop leaking `embedding` vectors through API and MCP — Postgres repos (`PgDocumentRepository`, `PgProjectRepository`, `PgTaskRepository`) now use explicit column lists in `findById`/`findMany` instead of `SELECT *`, so the internal `vector(768)` column stays server-side
+
 ## [0.1.14] - 2026-04-16
 
 - Fix modal opacity and scroll on synth theme — extract `SolidModalBody` helper and apply to KB, automations, task detail, and project task detail modals (restores behavior lost when ModalShell `style` prop was removed in v0.2.26 migration)

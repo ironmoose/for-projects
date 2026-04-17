@@ -30,7 +30,15 @@ export class PgTaskRepository {
   }
 
   async findById(id: string): Promise<Task | null> {
-    const rows = await this.sql<Task[]>`SELECT * FROM tasks WHERE id = ${id}`;
+    // Explicit column list — never `SELECT *`. The `embedding` column is internal
+    // (vector(768) used only for semantic search) and must never leak into API
+    // or MCP responses.
+    const rows = await this.sql<Task[]>`
+      SELECT id, project_id, title, summary, context, acceptance_criteria,
+        group_key, status, effort, impact, category, is_blocked,
+        created_at, updated_at
+      FROM tasks WHERE id = ${id}
+    `;
     return rows[0] ?? null;
   }
 
@@ -38,7 +46,10 @@ export class PgTaskRepository {
     const limit = filter?.limit ?? 50;
     const offset = filter?.offset ?? 0;
     return this.sql<Task[]>`
-      SELECT * FROM tasks ${this.where(filter)}
+      SELECT id, project_id, title, summary, context, acceptance_criteria,
+        group_key, status, effort, impact, category, is_blocked,
+        created_at, updated_at
+      FROM tasks ${this.where(filter)}
       ORDER BY created_at ASC LIMIT ${limit} OFFSET ${offset}
     `;
   }

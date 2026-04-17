@@ -11,7 +11,14 @@ export class PgDocumentRepository {
   constructor(private sql: Sql) {}
 
   async findById(id: string): Promise<Document | null> {
-    const rows = await this.sql<Document[]>`SELECT * FROM documents WHERE id = ${id}`;
+    // Explicit column list — never `SELECT *`. The `embedding` column is internal
+    // (vector(768) used only for semantic search) and must never leak into API
+    // or MCP responses.
+    const rows = await this.sql<Document[]>`
+      SELECT id, title, summary, content, folder, favorite,
+        source_url, source_type, source_fetched_at, created_at, updated_at
+      FROM documents WHERE id = ${id}
+    `;
     return rows[0] ?? null;
   }
 
