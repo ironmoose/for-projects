@@ -12,7 +12,13 @@ import {
 import type { NavItem } from "@4lt7ab/ui/ui";
 import { semantic as t, useInjectStyles } from "@4lt7ab/ui/core";
 import { useRealtimeEvents } from "./useRealtimeEvents";
-import { useHashRoute, useEventFanOut, EventSubscriptionContext } from "./hooks";
+import {
+  useHashRoute,
+  useEventFanOut,
+  EventSubscriptionContext,
+  useWindowWidth,
+  SMALL_BREAKPOINT,
+} from "./hooks";
 import {
   useKeyboardShortcutManager,
   useShortcut,
@@ -32,6 +38,16 @@ const navItems: NavItem[] = [
   { label: "Automations", path: "/automations" },
 ];
 
+// Shorter labels used below SMALL_BREAKPOINT so the TopBar content fits without
+// wrapping or horizontal scroll on phone-width viewports. Visible text remains
+// the accessible name — no aria-label handling needed.
+const compactNavItems: NavItem[] = [
+  { label: "Proj", path: "/" },
+  { label: "Tasks", path: "/tasks" },
+  { label: "KB", path: "/kb" },
+  { label: "Auto", path: "/automations" },
+];
+
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
@@ -41,6 +57,8 @@ export function App() {
   const { onEvent, subscribeEvents } = useEventFanOut();
   const { connected } = useRealtimeEvents(onEvent);
   const shortcutManager = useKeyboardShortcutManager();
+  const windowWidth = useWindowWidth();
+  const isSmallViewport = windowWidth < SMALL_BREAKPOINT;
 
   const activePath = path.startsWith("/kb")
     ? "/kb"
@@ -124,8 +142,8 @@ export function App() {
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: t.fontSans, color: t.colorText }}>
           <TopBar
             title="Tab"
-            trailing={<TrailingIndicators connected={connected} />}
-            items={navItems}
+            trailing={<TrailingIndicators connected={connected} compact={isSmallViewport} />}
+            items={isSmallViewport ? compactNavItems : navItems}
             activePath={activePath}
             onNavigate={navigate}
           />
@@ -226,10 +244,12 @@ function ConnectionStatusDot({ connected }: { connected: boolean }) {
   );
 }
 
-function TrailingIndicators({ connected }: { connected: boolean }) {
+function TrailingIndicators({ connected, compact = false }: { connected: boolean; compact?: boolean }) {
+  // On small viewports ThemePicker is hidden to free space for the nav.
+  // ConnectionStatusDot is the load-bearing indicator and always stays visible.
   return (
     <div style={{ display: "flex", alignItems: "center", gap: t.spaceSm }}>
-      <ThemePicker variant="compact" />
+      {!compact && <ThemePicker variant="compact" />}
       <ConnectionStatusDot connected={connected} />
     </div>
   );
