@@ -620,6 +620,7 @@ function TaskCardGrid({
             key={task.id}
             role="button"
             tabIndex={0}
+            aria-label={`Open ${task.title}`}
             onClick={() => onSelect(task.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(task.id); } }}
             style={{

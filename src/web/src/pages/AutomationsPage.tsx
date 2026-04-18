@@ -312,6 +312,7 @@ function AutomationCardGrid({
           key={a.id}
           role="button"
           tabIndex={0}
+          aria-label={`Open ${a.title}`}
           onClick={() => onSelect(a.id)}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(a.id); } }}
           style={{
@@ -463,6 +464,7 @@ function AutomationListView({
           className="auto-list-row"
           role="button"
           tabIndex={0}
+          aria-label={`Open ${a.title}`}
           onClick={() => onSelect(a.id)}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(a.id); } }}
           style={{

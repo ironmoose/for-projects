@@ -405,6 +405,7 @@ function DocumentCardGrid({
             className="kb-card"
             role="button"
             tabIndex={0}
+            aria-label={`Open ${doc.title}`}
             onClick={() => onSelect(doc.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(doc.id); } }}
             style={{
@@ -604,6 +605,7 @@ function DocumentList({
             className="kb-list-row"
             role="button"
             tabIndex={0}
+            aria-label={`Open ${doc.title}`}
             onClick={() => onSelect(doc.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(doc.id); } }}
             style={{

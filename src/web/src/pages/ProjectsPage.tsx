@@ -323,6 +323,7 @@ function ProjectCardGrid({
             key={project.id}
             role="button"
             tabIndex={0}
+            aria-label={`Open ${project.title}`}
             onClick={() => onOpen(project.id)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
