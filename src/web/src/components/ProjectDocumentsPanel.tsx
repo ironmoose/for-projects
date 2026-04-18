@@ -720,34 +720,75 @@ function AttachDocumentModal({
           <IconButton icon="close" size={18} onClick={onClose} aria-label="Close" />
         </div>
 
-        {/* Body */}
+        {/* Body — search + type picker pinned at top; list scrolls below. */}
         <div
           style={{
             flex: 1,
-            overflowY: "auto",
             padding: t.spaceXl,
             display: "flex",
             flexDirection: "column",
             gap: t.spaceMd,
             minWidth: 0,
+            minHeight: 0,
           }}
         >
-          <SearchInput
-            value={search}
-            onSearch={setSearch}
-            placeholder="Search knowledgebase..."
-            debounceMs={200}
-            aria-label="Search knowledgebase"
-          />
+          {/* Pinned controls row: search (grows) + reference-type picker (fixed width). */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: t.spaceSm,
+              flexShrink: 0,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: "1 1 240px", minWidth: 160 }}>
+              <SearchInput
+                value={search}
+                onSearch={setSearch}
+                placeholder="Search knowledgebase..."
+                debounceMs={200}
+                aria-label="Search knowledgebase"
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 180 }}>
+              <label
+                htmlFor="attach-doc-type"
+                style={{
+                  fontSize: "0.65rem",
+                  fontFamily: t.fontMono,
+                  color: t.colorTextMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: t.letterSpacingWide,
+                }}
+              >
+                Reference type
+              </label>
+              <Select
+                id="attach-doc-type"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as DocumentReferenceType)}
+              >
+                {DOCUMENT_REFERENCE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {REFERENCE_TYPE_META[type].label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
 
           <div
             role="listbox"
             aria-label="Knowledgebase documents"
             style={{
+              flex: 1,
+              overflowY: "auto",
               display: "flex",
               flexDirection: "column",
               gap: t.spaceXs,
-              minHeight: 120,
+              minHeight: 160,
             }}
           >
             {loading ? (
@@ -843,33 +884,6 @@ function AttachDocumentModal({
                 );
               })
             )}
-          </div>
-
-          {/* Reference-type picker */}
-          <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
-            <label
-              htmlFor="attach-doc-type"
-              style={{
-                fontSize: t.fontSizeXs,
-                fontFamily: t.fontMono,
-                color: t.colorTextMuted,
-                textTransform: "uppercase",
-                letterSpacing: t.letterSpacingWide,
-              }}
-            >
-              Reference type
-            </label>
-            <Select
-              id="attach-doc-type"
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value as DocumentReferenceType)}
-            >
-              {DOCUMENT_REFERENCE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {REFERENCE_TYPE_META[type].label}
-                </option>
-              ))}
-            </Select>
           </div>
         </div>
 

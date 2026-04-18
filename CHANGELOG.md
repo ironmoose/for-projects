@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Fix attach-document modal layout — the reference-type `Select` used to stretch full-width under a `minHeight`-padded list, floating in awkward dead space. Now search and type picker share a pinned row at the top, the list gets its own scroll region below, and the body no longer grows disproportionately with short result sets.
+
 ## [0.1.15] - 2026-04-17
 
 - Add keyboard flip-through to `DocumentReader` — `← / → / j / k` cycle through the project-docs panel's filtered list with wrap-around; header shows `i / N` plus prev/next IconButtons; inert when opened without a neighbor list (KB reader unchanged)
