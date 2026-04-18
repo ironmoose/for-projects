@@ -171,6 +171,23 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
     return byType;
   }, [filteredRefs]);
 
+  // Ordered unique document IDs in render order — used by the reader for
+  // keyboard flip-through. A single doc referenced under multiple types
+  // appears once (in its first section).
+  const neighborIdOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const order: string[] = [];
+    for (const type of DOCUMENT_REFERENCE_TYPES) {
+      for (const ref of grouped[type]) {
+        if (!seen.has(ref.document_id)) {
+          seen.add(ref.document_id);
+          order.push(ref.document_id);
+        }
+      }
+    }
+    return order;
+  }, [grouped]);
+
   const activeFilterCount = [
     typeFilter ? 1 : 0,
     titleSearch.trim() ? 1 : 0,
@@ -299,6 +316,8 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
         <DocumentReader
           documentId={openDocId}
           onClose={() => setOpenDocId(null)}
+          neighborIds={neighborIdOrder}
+          onNavigate={(id) => setOpenDocId(id)}
         />
       )}
         </>

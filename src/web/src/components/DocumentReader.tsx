@@ -9,11 +9,12 @@
  * KnowledgeBasePage and ProjectDocumentsPanel can reuse it.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { semantic as t } from "@4lt7ab/ui/core";
 import {
   Icon,
+  IconButton,
   TagChip,
   EmptyState,
   ModalShell,
@@ -44,11 +45,61 @@ export function folderAccentColor(folder: string | null): string {
 export function DocumentReader({
   documentId,
   onClose,
+  neighborIds,
+  onNavigate,
 }: {
   documentId: string;
   onClose: () => void;
+  /**
+   * Ordered list of document IDs the reader can flip through with ← / → / j / k.
+   * When provided together with `onNavigate`, the reader becomes a pager; the
+   * header shows an `i / N` indicator and wraps around at the ends. Leave
+   * `neighborIds` unset (or empty) to use the reader as a single-doc modal.
+   */
+  neighborIds?: string[];
+  onNavigate?: (nextDocumentId: string) => void;
 }) {
   const { document: doc, loading, notFound } = useDocument(documentId);
+
+  // Index of the current doc within the neighbor list (1-indexed for display).
+  const neighborCount = neighborIds?.length ?? 0;
+  const currentIndex = neighborIds ? neighborIds.indexOf(documentId) : -1;
+  const canNavigate = !!onNavigate && neighborCount > 1 && currentIndex >= 0;
+
+  useEffect(() => {
+    if (!canNavigate || !onNavigate || !neighborIds) return;
+
+    function isTextEntryFocused(): boolean {
+      const el = window.document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (el.isContentEditable) return true;
+      return false;
+    }
+
+    function handler(e: KeyboardEvent) {
+      // Never steal keystrokes from form controls.
+      if (isTextEntryFocused()) return;
+      // Modifiers mean the user is doing something else (copy/paste, devtools).
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      let delta = 0;
+      if (e.key === "ArrowRight" || e.key === "j") delta = 1;
+      else if (e.key === "ArrowLeft" || e.key === "k") delta = -1;
+      else return;
+
+      e.preventDefault();
+      if (!neighborIds || neighborIds.length === 0) return;
+      const idx = neighborIds.indexOf(documentId);
+      if (idx < 0) return;
+      const nextIdx = (idx + delta + neighborIds.length) % neighborIds.length;
+      onNavigate?.(neighborIds[nextIdx]);
+    }
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canNavigate, documentId, neighborIds, onNavigate]);
 
   const metadataItems = useMemo(() => {
     if (!doc) return [];
@@ -126,6 +177,45 @@ export function DocumentReader({
         ) : doc ? (
           <div style={{ padding: `${t.space2xl} 0 ${t.spaceXl}` }}>
             <Container width="prose">
+              {canNavigate && neighborIds && onNavigate && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: t.spaceXs,
+                    marginBottom: t.spaceMd,
+                    color: t.colorTextMuted,
+                    fontSize: t.fontSizeXs,
+                    fontFamily: t.fontMono,
+                  }}
+                  aria-label="Document navigation"
+                >
+                  <IconButton
+                    icon="chevron_left"
+                    size={18}
+                    aria-label="Previous document"
+                    onClick={() => {
+                      const nextIdx = (currentIndex - 1 + neighborCount) % neighborCount;
+                      onNavigate(neighborIds[nextIdx]);
+                    }}
+                  />
+                  <span aria-live="polite">
+                    {currentIndex + 1} / {neighborCount}
+                  </span>
+                  <IconButton
+                    icon="chevron_right"
+                    size={18}
+                    aria-label="Next document"
+                    onClick={() => {
+                      const nextIdx = (currentIndex + 1) % neighborCount;
+                      onNavigate(neighborIds[nextIdx]);
+                    }}
+                  />
+                  <span style={{ marginLeft: t.spaceXs, opacity: 0.7 }}>
+                    ← / → or j / k
+                  </span>
+                </div>
+              )}
               <header style={{ marginBottom: t.spaceLg }}>
                 <h1 style={{
                   margin: 0,
