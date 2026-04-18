@@ -369,7 +369,10 @@ export function ProjectDetailPage({
           deleteTask={deleteTask}
         />
       ) : (
-        <ProjectDocumentsPanel references={project.documents ?? []} />
+        <ProjectDocumentsPanel
+          projectId={projectId}
+          references={project.documents ?? []}
+        />
       )}
     </PageShell>
   );

@@ -1,13 +1,16 @@
 /**
  * ProjectDocumentsPanel — documents linked to a project, grouped by reference type.
  *
- * Source: `DocumentReferenceDetail[]` from `useProject().project.documents`.
- * Each non-empty reference type gets a SectionLabel + Grid of compact cards.
- * A single document that appears under multiple types renders in each section.
+ * Source: `DocumentReferenceDetail[]` from `useProject().project.documents` is
+ * the authoritative list of *which* docs are linked and under *what* reference
+ * type. To support tag/folder/favorite filtering we also fetch the matching
+ * `DocumentSummary[]` via `useDocuments({ project_id })` and merge the two by
+ * `document_id`. A single doc referenced under multiple types appears once per
+ * section it belongs to.
  *
- * Clicking / pressing Enter / Space on a card opens the shared `DocumentReader`
- * modal for that document. No filtering, search, or writes — those land in
- * follow-up tasks (count badge, filters, chips, attach, detach, flip-through).
+ * The filter row (title search / tag / folder / favorite / clear-all) filters
+ * the merged list client-side before grouping — small to mid projects never
+ * need server round-trips. Empty groups stay hidden after filtering.
  *
  * UI dependencies: @4lt7ab/ui only. Inline styles via semantic tokens.
  */
@@ -20,11 +23,19 @@ import {
   EmptyState,
   SectionLabel,
   Badge,
+  SearchInput,
 } from "@4lt7ab/ui/ui";
 
-import type { DocumentReferenceDetail, DocumentReferenceType } from "../types";
-import { DOCUMENT_REFERENCE_TYPES } from "../types";
+import type {
+  DocumentReferenceDetail,
+  DocumentReferenceType,
+  DocumentSummary,
+  TagName,
+} from "../types";
+import { DOCUMENT_REFERENCE_TYPES, TAG_NAMES } from "../types";
+import { useDocuments } from "../hooks/useDocuments";
 import { DocumentReader } from "./DocumentReader";
+import { PillSelect } from "./PillSelect";
 
 // ---------------------------------------------------------------------------
 // Section metadata — icon + human label per reference type
@@ -47,11 +58,28 @@ const REFERENCE_TYPE_META: Record<DocumentReferenceType, ReferenceTypeMeta> = {
 };
 
 // ---------------------------------------------------------------------------
+// Enriched reference — reference metadata + DocumentSummary fields merged in
+// ---------------------------------------------------------------------------
+
+interface EnrichedReference {
+  document_id: string;
+  type: DocumentReferenceType;
+  title: string;
+  summary: string | null;
+  favorite: boolean;
+  /** Filled in from DocumentSummary when available; null when the summary hasn't loaded. */
+  tags: TagName[];
+  folder: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 export interface ProjectDocumentsPanelProps {
-  /** Raw reference list from `get_project`. */
+  /** Project whose linked documents we're rendering. */
+  projectId: string;
+  /** Reference list from `project.documents` (source of truth for types). */
   references: DocumentReferenceDetail[];
 }
 
@@ -59,24 +87,91 @@ export interface ProjectDocumentsPanelProps {
 // Panel
 // ---------------------------------------------------------------------------
 
-export function ProjectDocumentsPanel({ references }: ProjectDocumentsPanelProps) {
+export function ProjectDocumentsPanel({ projectId, references }: ProjectDocumentsPanelProps) {
+  // Fetch the matching DocumentSummary rows so we have tags/folder/favorite
+  // available for filtering. Cap page size high so one round-trip covers the
+  // whole project (the task spec caps at ~few hundred linked docs per project).
+  const { documents: enrichedDocs } = useDocuments({ project_id: projectId }, { pageSize: 200 });
+
+  // Filter state — all four compose with each other.
+  const [titleSearch, setTitleSearch] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [folderFilter, setFolderFilter] = useState("");
+  const [favoriteFilter, setFavoriteFilter] = useState(false);
+
   const [openDocId, setOpenDocId] = useState<string | null>(null);
 
-  // Group references by type in the canonical order so empty groups stay hidden
-  // but filled ones always render in the same sequence.
+  // Merge references with DocumentSummary rows. Reference list is the source
+  // of truth; DocumentSummary only contributes filter fields. When the summary
+  // hasn't arrived yet, tags/folder fall back to [] / null so filters still
+  // evaluate safely (a folder filter just won't match).
+  const enrichedRefs: EnrichedReference[] = useMemo(() => {
+    const byId = new Map<string, DocumentSummary>();
+    for (const doc of enrichedDocs) byId.set(doc.id, doc);
+    return references.map((ref) => {
+      const summary = byId.get(ref.document_id);
+      return {
+        document_id: ref.document_id,
+        type: ref.type,
+        title: ref.title,
+        summary: ref.summary,
+        favorite: ref.favorite,
+        tags: summary?.tags ?? [],
+        folder: summary?.folder ?? null,
+      };
+    });
+  }, [references, enrichedDocs]);
+
+  // Folder options derived from what's actually linked.
+  const folderOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of enrichedRefs) {
+      if (e.folder) set.add(e.folder);
+    }
+    return Array.from(set).sort();
+  }, [enrichedRefs]);
+
+  // Apply filters. Title is case-insensitive substring over title OR summary.
+  const filteredRefs = useMemo(() => {
+    const needle = titleSearch.trim().toLowerCase();
+    return enrichedRefs.filter((e) => {
+      if (needle) {
+        const hay = `${e.title} ${e.summary ?? ""}`.toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      if (tagFilter && !e.tags.includes(tagFilter as TagName)) return false;
+      if (folderFilter && e.folder !== folderFilter) return false;
+      if (favoriteFilter && !e.favorite) return false;
+      return true;
+    });
+  }, [enrichedRefs, titleSearch, tagFilter, folderFilter, favoriteFilter]);
+
+  // Group filtered results by reference type in canonical order.
   const grouped = useMemo(() => {
-    const byType: Record<DocumentReferenceType, DocumentReferenceDetail[]> = {
+    const byType: Record<DocumentReferenceType, EnrichedReference[]> = {
       goal: [], plan: [], requirements: [], design: [], reference: [], note: [],
     };
-    for (const ref of references) {
-      byType[ref.type].push(ref);
-    }
+    for (const e of filteredRefs) byType[e.type].push(e);
     return byType;
-  }, [references]);
+  }, [filteredRefs]);
 
-  const hasAny = references.length > 0;
+  const activeFilterCount = [
+    titleSearch.trim() ? 1 : 0,
+    tagFilter ? 1 : 0,
+    folderFilter ? 1 : 0,
+    favoriteFilter ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
 
-  if (!hasAny) {
+  function clearAllFilters() {
+    setTitleSearch("");
+    setTagFilter("");
+    setFolderFilter("");
+    setFavoriteFilter(false);
+  }
+
+  // --- Empty states ---------------------------------------------------------
+
+  if (references.length === 0) {
     return (
       <EmptyState
         icon="menu_book"
@@ -85,41 +180,64 @@ export function ProjectDocumentsPanel({ references }: ProjectDocumentsPanelProps
     );
   }
 
+  const hasMatches = filteredRefs.length > 0;
+
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", gap: t.spaceLg }}>
-        {DOCUMENT_REFERENCE_TYPES.map((type) => {
-          const items = grouped[type];
-          if (items.length === 0) return null;
-          const meta = REFERENCE_TYPE_META[type];
-          return (
-            <section
-              key={type}
-              aria-labelledby={`project-docs-section-${type}`}
-              style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}
-            >
-              <div id={`project-docs-section-${type}`}>
-                <SectionLabel>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceXs }}>
-                    <Icon name={meta.icon} size={14} />
-                    {meta.label}
-                    <Badge variant="default">{items.length}</Badge>
-                  </span>
-                </SectionLabel>
-              </div>
-              <Grid minColumnWidth={260} gap="sm">
-                {items.map((ref) => (
-                  <DocumentReferenceCard
-                    key={`${ref.document_id}:${ref.type}`}
-                    reference={ref}
-                    onOpen={() => setOpenDocId(ref.document_id)}
-                  />
-                ))}
-              </Grid>
-            </section>
-          );
-        })}
-      </div>
+      <ProjectDocumentsFilters
+        titleSearch={titleSearch}
+        onTitleChange={setTitleSearch}
+        tag={tagFilter}
+        onTagChange={setTagFilter}
+        folder={folderFilter}
+        onFolderChange={setFolderFilter}
+        folderOptions={folderOptions}
+        favorite={favoriteFilter}
+        onFavoriteChange={setFavoriteFilter}
+        activeCount={activeFilterCount}
+        onClearAll={clearAllFilters}
+      />
+
+      {!hasMatches ? (
+        <EmptyState
+          icon="search_off"
+          message="No linked documents match these filters."
+        />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: t.spaceLg }}>
+          {DOCUMENT_REFERENCE_TYPES.map((type) => {
+            const items = grouped[type];
+            if (items.length === 0) return null;
+            const meta = REFERENCE_TYPE_META[type];
+            return (
+              <section
+                key={type}
+                aria-labelledby={`project-docs-section-${type}`}
+                style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}
+              >
+                <div id={`project-docs-section-${type}`}>
+                  <SectionLabel>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceXs }}>
+                      <Icon name={meta.icon} size={14} />
+                      {meta.label}
+                      <Badge variant="default">{items.length}</Badge>
+                    </span>
+                  </SectionLabel>
+                </div>
+                <Grid minColumnWidth={260} gap="sm">
+                  {items.map((ref) => (
+                    <DocumentReferenceCard
+                      key={`${ref.document_id}:${ref.type}`}
+                      reference={ref}
+                      onOpen={() => setOpenDocId(ref.document_id)}
+                    />
+                  ))}
+                </Grid>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {openDocId && (
         <DocumentReader
@@ -132,6 +250,144 @@ export function ProjectDocumentsPanel({ references }: ProjectDocumentsPanelProps
 }
 
 // ---------------------------------------------------------------------------
+// Filter row
+// ---------------------------------------------------------------------------
+
+function ProjectDocumentsFilters({
+  titleSearch,
+  onTitleChange,
+  tag,
+  onTagChange,
+  folder,
+  onFolderChange,
+  folderOptions,
+  favorite,
+  onFavoriteChange,
+  activeCount,
+  onClearAll,
+}: {
+  titleSearch: string;
+  onTitleChange: (v: string) => void;
+  tag: string;
+  onTagChange: (v: string) => void;
+  folder: string;
+  onFolderChange: (v: string) => void;
+  folderOptions: string[];
+  favorite: boolean;
+  onFavoriteChange: (v: boolean) => void;
+  activeCount: number;
+  onClearAll: () => void;
+}) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: t.spaceSm,
+      flexWrap: "wrap",
+    }}>
+      <div style={{ flex: "1 1 200px", minWidth: 160 }}>
+        <SearchInput
+          value={titleSearch}
+          onSearch={onTitleChange}
+          placeholder="Search linked documents..."
+          debounceMs={200}
+          aria-label="Search linked documents"
+        />
+      </div>
+
+      <FilterChipButton
+        label="Favorites"
+        icon="star"
+        active={favorite}
+        onClick={() => onFavoriteChange(!favorite)}
+      />
+
+      <PillSelect
+        value={tag}
+        options={[{ value: "", label: "Tag" }, ...TAG_NAMES.map((n) => ({ value: n, label: n }))]}
+        onChange={onTagChange}
+        ariaLabel="Filter by tag"
+      />
+
+      {folderOptions.length > 0 && (
+        <PillSelect
+          value={folder}
+          options={[{ value: "", label: "Folder" }, ...folderOptions.map((f) => ({ value: f, label: f }))]}
+          onChange={onFolderChange}
+          ariaLabel="Filter by folder"
+        />
+      )}
+
+      {activeCount > 0 && (
+        <button
+          type="button"
+          onClick={onClearAll}
+          aria-label={`Clear ${activeCount} active filter${activeCount === 1 ? "" : "s"}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: `6px ${t.spaceMd}`,
+            borderRadius: t.radiusFull,
+            border: "none",
+            background: "transparent",
+            color: t.colorTextMuted,
+            fontSize: t.fontSizeSm,
+            minHeight: 32,
+            fontFamily: t.fontSans,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          <Icon name="close" size={12} />
+          Clear ({activeCount})
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FilterChipButton({
+  label,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  icon: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={label}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: `6px ${t.spaceMd}`,
+        minHeight: 32,
+        borderRadius: t.radiusFull,
+        border: `1px solid ${active ? t.colorActionPrimary : `color-mix(in srgb, ${t.colorBorder} 60%, transparent)`}`,
+        background: active ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)` : "transparent",
+        color: active ? t.colorActionPrimary : t.colorTextMuted,
+        fontSize: t.fontSizeSm,
+        fontFamily: t.fontSans,
+        fontWeight: 600,
+        cursor: "pointer",
+        transition: "all 0.15s",
+      }}
+    >
+      <Icon name={icon} size={12} />
+      {label}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Document reference card
 // ---------------------------------------------------------------------------
 
@@ -139,7 +395,7 @@ function DocumentReferenceCard({
   reference,
   onOpen,
 }: {
-  reference: DocumentReferenceDetail;
+  reference: EnrichedReference;
   onOpen: () => void;
 }) {
   const meta = REFERENCE_TYPE_META[reference.type];
