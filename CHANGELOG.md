@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-17
+
 - **Breaking:** collapse `document_references` into a simple `project_documents` many-to-many — drop the reference-type concept (`goal` / `plan` / `requirements` / `design` / `reference` / `note`) and the polymorphic `entity_type` / `entity_id` columns. Migration 031 (sqlite) and pg/006 migrate the rows; task-side references were already stripped in migration 025.
 - **Breaking:** the `documents` merge-patch on `POST` / `PATCH /api/projects` now takes `{doc_id: true | null}` instead of `{doc_id: [{type}] | null}`. Array values return 400.
 - **Breaking:** tasks no longer accept a `documents` field on `create_task` / `update_task` (MCP + REST).
