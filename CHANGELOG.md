@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Add Attach-Document modal to `ProjectDocumentsPanel` — searchable picker over the KB (excluding already-linked docs), reference-type select, submit patches the project and the new card appears in the right section on the next event tick
 - Add `a11y-pass.test.ts` — static accessibility guardrails (IconButton/`role="button"` need `aria-label`; `role="button"`/`tabIndex={0}` need `onKeyDown`); add missing `aria-label` to project / document / automation / task cards surfaced by the new suite
 - Add reference-type filter chips (Goals / Plans / Requirements / Design / References / Notes) to `ProjectDocumentsPanel`; single-select, clicking the active chip clears it, composes with the title / tag / folder / favorite filters and the clear-all button
 - Add title / tag / folder / favorite filters (with clear-all) to `ProjectDocumentsPanel`; filters compose client-side and matches flow back into the grouped sections

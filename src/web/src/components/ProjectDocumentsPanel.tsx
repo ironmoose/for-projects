@@ -23,7 +23,13 @@ import {
   EmptyState,
   SectionLabel,
   Badge,
+  Button,
   SearchInput,
+  Select,
+  ModalShell,
+  IconButton,
+  Skeleton,
+  useToast,
 } from "@4lt7ab/ui/ui";
 
 import type {
@@ -34,8 +40,10 @@ import type {
 } from "../types";
 import { DOCUMENT_REFERENCE_TYPES, TAG_NAMES } from "../types";
 import { useDocuments } from "../hooks/useDocuments";
+import { ApiError, updateProjects } from "../api";
 import { DocumentReader } from "./DocumentReader";
 import { PillSelect } from "./PillSelect";
+import { SolidModalBody } from "./SolidModalBody";
 
 // ---------------------------------------------------------------------------
 // Section metadata — icon + human label per reference type
@@ -101,6 +109,7 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
   const [typeFilter, setTypeFilter] = useState<DocumentReferenceType | null>(null);
 
   const [openDocId, setOpenDocId] = useState<string | null>(null);
+  const [showAttach, setShowAttach] = useState(false);
 
   // Merge references with DocumentSummary rows. Reference list is the source
   // of truth; DocumentSummary only contributes filter fields. When the summary
@@ -174,22 +183,36 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
     setFavoriteFilter(false);
   }
 
-  // --- Empty states ---------------------------------------------------------
-
-  if (references.length === 0) {
-    return (
-      <EmptyState
-        icon="menu_book"
-        message="No documents linked yet. Attach one from your knowledgebase to get started."
-      />
-    );
-  }
-
   const hasMatches = filteredRefs.length > 0;
+  const linkedIds = useMemo(() => new Set(references.map((r) => r.document_id)), [references]);
+
+  // The Attach button is always visible — the empty state calls it out too
+  // so a project with zero linked docs can get its first reference.
+  const attachButton = (
+    <Button
+      size="sm"
+      variant="secondary"
+      onClick={() => setShowAttach(true)}
+    >
+      <Icon name="link" size={15} />
+      Attach Document
+    </Button>
+  );
 
   return (
     <>
-      <ProjectDocumentsFilters
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        {attachButton}
+      </div>
+
+      {references.length === 0 ? (
+        <EmptyState
+          icon="menu_book"
+          message="No documents linked yet. Attach one from your knowledgebase to get started."
+        />
+      ) : (
+        <>
+          <ProjectDocumentsFilters
         titleSearch={titleSearch}
         onTitleChange={setTitleSearch}
         tag={tagFilter}
@@ -250,6 +273,16 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
         <DocumentReader
           documentId={openDocId}
           onClose={() => setOpenDocId(null)}
+        />
+      )}
+        </>
+      )}
+
+      {showAttach && (
+        <AttachDocumentModal
+          projectId={projectId}
+          excludeDocIds={linkedIds}
+          onClose={() => setShowAttach(false)}
         />
       )}
     </>
@@ -538,5 +571,264 @@ function DocumentReferenceCard({
         <Badge variant="default">{meta.label.toLowerCase()}</Badge>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Attach-document modal
+// ---------------------------------------------------------------------------
+
+function AttachDocumentModal({
+  projectId,
+  excludeDocIds,
+  onClose,
+}: {
+  projectId: string;
+  excludeDocIds: Set<string>;
+  onClose: () => void;
+}) {
+  const { showToast } = useToast();
+  const [search, setSearch] = useState("");
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<DocumentReferenceType>("reference");
+  const [submitting, setSubmitting] = useState(false);
+
+  const { documents, loading } = useDocuments(
+    { title: search.trim() || undefined },
+    { pageSize: 20 },
+  );
+
+  // Exclude anything already linked to this project.
+  const candidateDocs = useMemo(
+    () => documents.filter((d) => !excludeDocIds.has(d.id)),
+    [documents, excludeDocIds],
+  );
+
+  async function handleSubmit() {
+    if (!selectedDocId || submitting) return;
+    setSubmitting(true);
+    try {
+      await updateProjects([
+        {
+          id: projectId,
+          documents: { [selectedDocId]: [{ type: selectedType }] },
+        },
+      ]);
+      showToast("Document attached", "success");
+      onClose();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to attach document");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <ModalShell onClose={onClose} maxWidth={560}>
+      <SolidModalBody layout="pinned">
+        {/* Header */}
+        <div
+          style={{
+            padding: `${t.spaceLg} ${t.spaceXl}`,
+            borderBottom: `1px solid color-mix(in srgb, ${t.colorBorder} 30%, transparent)`,
+            display: "flex",
+            alignItems: "center",
+            gap: t.spaceSm,
+            flexShrink: 0,
+          }}
+        >
+          <Icon name="link" size={18} />
+          <h2
+            style={{
+              flex: 1,
+              margin: 0,
+              fontSize: t.fontSizeLg,
+              fontWeight: 700,
+              fontFamily: t.fontSerif,
+              color: t.colorText,
+            }}
+          >
+            Attach Document
+          </h2>
+          <IconButton icon="close" size={18} onClick={onClose} aria-label="Close" />
+        </div>
+
+        {/* Body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: t.spaceXl,
+            display: "flex",
+            flexDirection: "column",
+            gap: t.spaceMd,
+            minWidth: 0,
+          }}
+        >
+          <SearchInput
+            value={search}
+            onSearch={setSearch}
+            placeholder="Search knowledgebase..."
+            debounceMs={200}
+            aria-label="Search knowledgebase"
+          />
+
+          <div
+            role="listbox"
+            aria-label="Knowledgebase documents"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: t.spaceXs,
+              minHeight: 120,
+            }}
+          >
+            {loading ? (
+              <>
+                <Skeleton height={40} />
+                <Skeleton height={40} />
+                <Skeleton height={40} />
+              </>
+            ) : candidateDocs.length === 0 ? (
+              <EmptyState
+                icon="search_off"
+                message={
+                  search.trim()
+                    ? "No unlinked documents match that search."
+                    : "No unlinked documents available."
+                }
+              />
+            ) : (
+              candidateDocs.map((doc) => {
+                const selected = selectedDocId === doc.id;
+                return (
+                  <div
+                    key={doc.id}
+                    role="option"
+                    aria-selected={selected}
+                    tabIndex={0}
+                    aria-label={`Select ${doc.title}`}
+                    onClick={() => setSelectedDocId(doc.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedDocId(doc.id);
+                      }
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: t.spaceSm,
+                      padding: `${t.spaceSm} ${t.spaceMd}`,
+                      borderRadius: t.radiusMd,
+                      border: `1px solid ${selected ? t.colorActionPrimary : t.colorBorder}`,
+                      background: selected
+                        ? `color-mix(in srgb, ${t.colorActionPrimary} 8%, transparent)`
+                        : t.colorSurfaceSolid,
+                      cursor: "pointer",
+                      minWidth: 0,
+                    }}
+                  >
+                    <Icon
+                      name={selected ? "radio_button_checked" : "radio_button_unchecked"}
+                      size={16}
+                      style={{
+                        color: selected ? t.colorActionPrimary : t.colorTextMuted,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: t.fontSizeSm,
+                          fontWeight: 600,
+                          color: t.colorText,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {doc.title}
+                      </div>
+                      {doc.summary && (
+                        <div
+                          style={{
+                            fontSize: t.fontSizeXs,
+                            color: t.colorTextMuted,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {doc.summary}
+                        </div>
+                      )}
+                    </div>
+                    {doc.favorite && (
+                      <Icon
+                        name="star"
+                        size={14}
+                        style={{ color: t.colorWarning, flexShrink: 0 }}
+                        aria-label="Favorite"
+                      />
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Reference-type picker */}
+          <div style={{ display: "flex", flexDirection: "column", gap: t.spaceXs }}>
+            <label
+              htmlFor="attach-doc-type"
+              style={{
+                fontSize: t.fontSizeXs,
+                fontFamily: t.fontMono,
+                color: t.colorTextMuted,
+                textTransform: "uppercase",
+                letterSpacing: t.letterSpacingWide,
+              }}
+            >
+              Reference type
+            </label>
+            <Select
+              id="attach-doc-type"
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value as DocumentReferenceType)}
+            >
+              {DOCUMENT_REFERENCE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {REFERENCE_TYPE_META[type].label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            padding: `${t.spaceMd} ${t.spaceXl}`,
+            borderTop: `1px solid color-mix(in srgb, ${t.colorBorder} 30%, transparent)`,
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: t.spaceSm,
+            flexShrink: 0,
+          }}
+        >
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!selectedDocId || submitting}
+          >
+            {submitting ? "Attaching..." : "Attach"}
+          </Button>
+        </div>
+      </SolidModalBody>
+    </ModalShell>
   );
 }
