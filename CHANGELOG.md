@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-04-17
+
 - Add keyboard flip-through to `DocumentReader` — `← / → / j / k` cycle through the project-docs panel's filtered list with wrap-around; header shows `i / N` plus prev/next IconButtons; inert when opened without a neighbor list (KB reader unchanged)
 - Add per-card unlink IconButton to `ProjectDocumentsPanel`; confirms via `ConfirmDialog` then removes all references between that doc and this project (doc stays in the KB)
 - Add Attach-Document modal to `ProjectDocumentsPanel` — searchable picker over the KB (excluding already-linked docs), reference-type select, submit patches the project and the new card appears in the right section on the next event tick
