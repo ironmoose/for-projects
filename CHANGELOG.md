@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Show linked-doc count on the Documents segment label (e.g. `Documents · 2`); hidden when zero
 - Build `ProjectDocumentsPanel` — linked docs grouped by reference type, cards open the shared `DocumentReader`
 - Extract `DocumentReader` and `folderAccentColor` from KnowledgeBasePage into `components/DocumentReader.tsx` for reuse
 - Add Tasks/Documents segmented nav to ProjectDetailPage and extract task UI into `ProjectTasksPanel`

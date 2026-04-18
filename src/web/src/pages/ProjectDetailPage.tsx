@@ -239,11 +239,6 @@ function ProjectHeader({
 
 type ProjectTab = "tasks" | "documents";
 
-const PROJECT_TABS: { value: ProjectTab; label: string; icon: string }[] = [
-  { value: "tasks", label: "Tasks", icon: "checklist" },
-  { value: "documents", label: "Documents", icon: "description" },
-];
-
 export function ProjectDetailPage({
   projectId,
   onBack,
@@ -313,6 +308,18 @@ export function ProjectDetailPage({
 
   if (!project) return null;
 
+  // Derived labels for the segmented control — count only shown for Documents
+  // since Tasks already has a full status-card breakdown in the header.
+  const documentCount = project.documents?.length ?? 0;
+  const projectTabs: { value: ProjectTab; label: string; icon: string }[] = [
+    { value: "tasks", label: "Tasks", icon: "checklist" },
+    {
+      value: "documents",
+      label: documentCount > 0 ? `Documents · ${documentCount}` : "Documents",
+      icon: "description",
+    },
+  ];
+
   return (
     <PageShell maxWidth={960}>
       <ProjectHeader
@@ -336,7 +343,7 @@ export function ProjectDetailPage({
       >
         <SegmentedControl
           size="sm"
-          segments={PROJECT_TABS}
+          segments={projectTabs}
           value={activeTab}
           onChange={(v) => setActiveTab(v as ProjectTab)}
         />
