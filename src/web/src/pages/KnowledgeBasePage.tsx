@@ -38,14 +38,14 @@ import {
 import { Container, Prose, Markdown } from "@4lt7ab/ui/content";
 
 import { useDocuments } from "../hooks/useDocuments";
-import { useDocument } from "../hooks/useDocument";
 import { ApiError, importDocument } from "../api";
 import { TAG_NAMES, TAG_CATEGORIES } from "../types";
 import type { DocumentSummary } from "../types";
 import { PillSelect } from "../components/PillSelect";
 import { PageShell } from "../components/PageShell";
 import { SolidModalBody } from "../components/SolidModalBody";
-import { formatRelativeDate, formatShortDate, staggerStyle } from "../utils";
+import { DocumentReader, folderAccentColor } from "../components/DocumentReader";
+import { formatRelativeDate, staggerStyle } from "../utils";
 
 // ---------------------------------------------------------------------------
 // Injected styles — hover effects, stagger animations, scrollbar hiding
@@ -92,20 +92,7 @@ const KB_STYLES_CSS = `
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Deterministic accent color per folder so cards cluster visually. */
-function folderAccentColor(folder: string | null): string {
-  if (!folder) return t.colorBorder;
-  const accents = [
-    t.colorActionPrimary,
-    t.colorInfo,
-    t.colorSuccess,
-    t.colorWarning,
-    t.colorError,
-  ];
-  let hash = 0;
-  for (let i = 0; i < folder.length; i++) hash = ((hash << 5) - hash + folder.charCodeAt(i)) | 0;
-  return accents[Math.abs(hash) % accents.length];
-}
+// folderAccentColor lives in ../components/DocumentReader; import it above.
 
 /** Build ChipPicker items from TAG_CATEGORIES. */
 const TAG_CHIP_ITEMS = Object.entries(TAG_CATEGORIES).flatMap(([category, tags]) =>
@@ -730,167 +717,7 @@ function DocumentList({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Document reader modal — the library reading experience
-// ---------------------------------------------------------------------------
-
-function DocumentReader({ documentId, onClose }: { documentId: string; onClose: () => void }) {
-  const { document: doc, loading, notFound } = useDocument(documentId);
-
-  // Build metadata rows for MetadataTable
-  const metadataItems = useMemo(() => {
-    if (!doc) return [];
-    const items: Array<{ label: string; value: React.ReactNode }> = [];
-
-    if (doc.folder) {
-      const accent = folderAccentColor(doc.folder);
-      items.push({
-        label: "Folder",
-        value: (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: t.spaceXs }}>
-            <Icon name="folder" size={14} style={{ color: accent }} />
-            {doc.folder}
-          </span>
-        ),
-      });
-    }
-
-    if (doc.tags.length > 0) {
-      items.push({
-        label: "Tags",
-        value: (
-          <span style={{ display: "inline-flex", gap: t.spaceXs, flexWrap: "wrap" }}>
-            {doc.tags.map((tag) => <TagChip key={tag} name={tag} />)}
-          </span>
-        ),
-      });
-    }
-
-    if (doc.source_url) {
-      items.push({
-        label: "Source",
-        value: (
-          <a
-            href={doc.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: t.colorTextLink,
-              textDecoration: "none",
-              fontSize: t.fontSizeSm,
-              wordBreak: "break-all",
-            }}
-          >
-            {doc.source_url}
-          </a>
-        ),
-      });
-    }
-
-    items.push({ label: "Created", value: formatShortDate(doc.created_at) });
-    items.push({ label: "Updated", value: formatShortDate(doc.updated_at) });
-
-    return items;
-  }, [doc]);
-
-  return (
-    <ModalShell onClose={onClose} maxWidth={800}>
-      <SolidModalBody>
-      {loading ? (
-        <div style={{ padding: t.spaceXl }}>
-          <Container width="prose">
-            <div style={{ display: "flex", flexDirection: "column", gap: t.spaceMd }}>
-              <Skeleton height={36} width="70%" />
-              <Skeleton height={18} width="50%" />
-              <Skeleton height={1} />
-              <Skeleton height={300} />
-            </div>
-          </Container>
-        </div>
-      ) : notFound ? (
-        <div style={{ padding: t.spaceXl }}>
-          <EmptyState icon="error" message="Document not found." />
-        </div>
-      ) : doc ? (
-        <div style={{ padding: `${t.space2xl} 0 ${t.spaceXl}` }}>
-          <Container width="prose">
-            {/* Header — serif title, summary, metadata */}
-            <header style={{ marginBottom: t.spaceLg }}>
-              {/* Title */}
-              <h1 style={{
-                margin: 0,
-                fontSize: "clamp(1.5rem, 4vw, 2rem)",
-                fontWeight: 600,
-                fontFamily: t.fontSerif,
-                color: t.colorText,
-                lineHeight: 1.25,
-                letterSpacing: t.letterSpacingTight,
-              }}>
-                {doc.title}
-              </h1>
-
-              {/* Summary */}
-              {doc.summary && (
-                <p style={{
-                  margin: `${t.spaceMd} 0 0`,
-                  fontSize: t.fontSizeLg,
-                  fontFamily: t.fontSans,
-                  color: t.colorTextSecondary,
-                  lineHeight: t.lineHeightRelaxed,
-                }}>
-                  {doc.summary}
-                </p>
-              )}
-
-              {/* Favorite badge */}
-              {doc.favorite && (
-                <div style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: t.spaceXs,
-                  marginTop: t.spaceMd,
-                }}>
-                  <Icon name="star" size={16} style={{ color: t.colorWarning }} />
-                  <span style={{
-                    fontSize: t.fontSizeXs,
-                    fontWeight: 600,
-                    color: t.colorWarning,
-                    textTransform: "uppercase",
-                    letterSpacing: t.letterSpacingWide,
-                  }}>
-                    Favorite
-                  </span>
-                </div>
-              )}
-
-              {/* Metadata table */}
-              {metadataItems.length > 0 && (
-                <div style={{ marginTop: t.spaceLg }}>
-                  <MetadataTable items={metadataItems} />
-                </div>
-              )}
-            </header>
-
-            {/* Divider */}
-            <hr style={{
-              border: "none",
-              borderTop: `1px solid ${t.colorBorder}`,
-              margin: `${t.spaceLg} 0`,
-            }} />
-
-            {/* Content — the star of the show */}
-            {doc.content ? (
-              <Markdown>{doc.content}</Markdown>
-            ) : (
-              <EmptyState icon="article" message="This document has no content yet." variant="card" />
-            )}
-          </Container>
-        </div>
-      ) : null}
-      </SolidModalBody>
-    </ModalShell>
-  );
-}
+// DocumentReader lives in ../components/DocumentReader; imported at the top.
 
 // ---------------------------------------------------------------------------
 // Create document form

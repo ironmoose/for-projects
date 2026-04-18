@@ -31,6 +31,7 @@ import { fetchTaskStatusCounts } from "../api";
 import { staggerStyle } from "../utils";
 import { PageShell } from "../components/PageShell";
 import { ProjectTasksPanel } from "../components/ProjectTasksPanel";
+import { ProjectDocumentsPanel } from "../components/ProjectDocumentsPanel";
 
 // ---------------------------------------------------------------------------
 // Injected styles
@@ -233,19 +234,6 @@ function ProjectHeader({
 }
 
 // ---------------------------------------------------------------------------
-// Documents placeholder (filled in by task #2)
-// ---------------------------------------------------------------------------
-
-function ProjectDocumentsPanelPlaceholder() {
-  return (
-    <EmptyState
-      icon="description"
-      message="Linked documents will show up here. Attach a doc from your knowledgebase to get started."
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
 // ProjectDetailPage
 // ---------------------------------------------------------------------------
 
@@ -374,7 +362,7 @@ export function ProjectDetailPage({
           deleteTask={deleteTask}
         />
       ) : (
-        <ProjectDocumentsPanelPlaceholder />
+        <ProjectDocumentsPanel references={project.documents ?? []} />
       )}
     </PageShell>
   );

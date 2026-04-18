@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Build `ProjectDocumentsPanel` — linked docs grouped by reference type, cards open the shared `DocumentReader`
+- Extract `DocumentReader` and `folderAccentColor` from KnowledgeBasePage into `components/DocumentReader.tsx` for reuse
 - Add Tasks/Documents segmented nav to ProjectDetailPage and extract task UI into `ProjectTasksPanel`
 - Shrink TopBar nav content on small screens — below `SMALL_BREAKPOINT` (768px) nav labels switch to short forms (Proj/Tasks/KB/Auto) and the ThemePicker is hidden so the title and connection-status indicator fit without overflow at 375px and 640px
 - Stop leaking `embedding` vectors through API and MCP — Postgres repos (`PgDocumentRepository`, `PgProjectRepository`, `PgTaskRepository`) now use explicit column lists in `findById`/`findMany` instead of `SELECT *`, so the internal `vector(768)` column stays server-side
