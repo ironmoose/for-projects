@@ -1,6 +1,6 @@
-import { type Project, type ProjectSummary, type DocumentReferenceDetail, type DocumentReferenceSummary } from "../entities";
+import { type Project, type ProjectSummary, type ProjectDocumentDetail } from "../entities";
 import type { CreateProjectInput, UpdateProjectInput } from "../inputs";
-import type { IProjectService, IDocumentReferenceService, Paginated } from "../services";
+import type { IProjectService, IProjectDocumentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { IProjectRepository, IActivityLogRepository } from "../repositories/interfaces";
 import type { EventBus } from "../events";
@@ -10,7 +10,7 @@ export class ProjectService implements IProjectService {
     private repo: IProjectRepository,
     private activityLog: IActivityLogRepository,
     private eventBus: EventBus,
-    private docRefService: IDocumentReferenceService,
+    private projectDocService: IProjectDocumentService,
   ) {}
 
   async list(filter?: { id?: string; title?: string; limit?: number; offset?: number }): Promise<Paginated<ProjectSummary>> {
@@ -20,14 +20,14 @@ export class ProjectService implements IProjectService {
     };
   }
 
-  async get(id: string): Promise<Project & { documents: DocumentReferenceDetail[] }> {
+  async get(id: string): Promise<Project & { documents: ProjectDocumentDetail[] }> {
     const project = await this.repo.findById(id);
     if (!project) throw new ServiceError("project not found", 404);
-    const documents = await this.docRefService.findByEntity("project", id);
+    const documents = await this.projectDocService.findByProject(id);
     return { ...project, documents };
   }
 
-  async create(inputs: CreateProjectInput[]): Promise<(Project & { documents: DocumentReferenceSummary[] })[]> {
+  async create(inputs: CreateProjectInput[]): Promise<(Project & { documents: ProjectDocumentDetail[] })[]> {
     // Validate all inputs before any writes
     for (const input of inputs) {
       if (!input.title?.trim()) {
@@ -45,9 +45,8 @@ export class ProjectService implements IProjectService {
       if (input.requirements !== undefined && input.requirements.length > 100_000) {
         throw new ServiceError("requirements must be 100,000 characters or fewer", 400);
       }
-      // Pre-validate document references so we fail before creating the entity
       if (input.documents) {
-        await this.docRefService.validateMergePatch(input.documents);
+        await this.projectDocService.validateMergePatch(input.documents);
       }
     }
 
@@ -60,11 +59,10 @@ export class ProjectService implements IProjectService {
 
     const projects = await this.repo.insertMany(rows);
 
-    // Create document references for each project
     for (let i = 0; i < projects.length; i++) {
       const input = inputs[i];
       if (input.documents) {
-        await this.docRefService.applyMergePatch("project", projects[i].id, input.documents);
+        await this.projectDocService.applyMergePatch(projects[i].id, input.documents);
       }
     }
 
@@ -78,10 +76,9 @@ export class ProjectService implements IProjectService {
     }
     this.eventBus.emit({ type: "created", entity_type: "project", ids: projects.map((p) => p.id) });
 
-    // Return projects with their document references
-    const results: (Project & { documents: DocumentReferenceSummary[] })[] = [];
+    const results: (Project & { documents: ProjectDocumentDetail[] })[] = [];
     for (const p of projects) {
-      results.push({ ...p, documents: await this.docRefService.getReferencesForEntity("project", p.id) });
+      results.push({ ...p, documents: await this.projectDocService.findByProject(p.id) });
     }
     return results;
   }
@@ -107,16 +104,14 @@ export class ProjectService implements IProjectService {
       if (!existing) throw new ServiceError(`project not found: ${input.id}`, 404);
     }
 
-    // Strip documents from repo input
     const repoInputs = inputs.map(({ documents, ...rest }) => rest);
     const projects = await this.repo.updateMany(repoInputs);
 
     this.eventBus.beginBatch();
     try {
-      // Process document references merge-patch
       for (const input of inputs) {
         if (input.documents) {
-          await this.docRefService.applyMergePatch("project", input.id, input.documents);
+          await this.projectDocService.applyMergePatch(input.id, input.documents);
         }
       }
 
@@ -141,7 +136,7 @@ export class ProjectService implements IProjectService {
 
   async remove(ids: string[]): Promise<void> {
     for (const id of ids) {
-      await this.docRefService.removeAllForEntity("project", id);
+      await this.projectDocService.removeAllForProject(id);
     }
     await this.repo.deleteMany(ids);
     for (const id of ids) {

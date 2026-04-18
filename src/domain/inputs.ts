@@ -1,12 +1,15 @@
-import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType, DocumentReferenceType } from './entities';
+import type { TaskStatus, EffortLevel, ImpactLevel, TaskCategory, TagName, DependencyType } from './entities';
 
 /**
- * Merge-patch for document references on an entity.
- * - Key present with array of {type} objects: replaces all reference types for that document
- * - Key present with null: removes all references to that document
- * - Key absent: no change
+ * Merge-patch for a project's linked documents.
+ * - Key present with `true`: link the document (no-op if already linked).
+ * - Key present with `null`: unlink the document.
+ * - Key absent: no change.
+ *
+ * Tasks do not hold document links (migration 025 stripped them, migration 031
+ * dropped the underlying table).
  */
-export type DocumentsMergePatch = Record<string, { type: DocumentReferenceType }[] | null>;
+export type DocumentsMergePatch = Record<string, true | null>;
 
 export interface CreateDocumentInput {
   title: string;
@@ -39,7 +42,7 @@ export interface CreateProjectInput {
   summary?: string;
   context?: string;
   requirements?: string;
-  /** Merge-patch for document references on create. Key = document_id. Array = types for that doc. null values are silently ignored (no existing refs to remove). */
+  /** Merge-patch for project documents on create. Key = document_id; `true` = link, `null` = unlink (no-op on create). */
   documents?: DocumentsMergePatch;
 }
 
@@ -49,7 +52,7 @@ export interface UpdateProjectInput {
   summary?: string | null;
   context?: string | null;
   requirements?: string | null;
-  /** Merge-patch for document references. Key = document_id. Array = replace types for that doc. null = remove all refs. Absent key = untouched. */
+  /** Merge-patch for project documents. Key = document_id; `true` = link, `null` = unlink. Absent key = untouched. */
   documents?: DocumentsMergePatch;
 }
 
@@ -64,8 +67,6 @@ export interface CreateTaskInput {
   effort?: EffortLevel;
   impact?: ImpactLevel;
   category?: TaskCategory;
-  /** Merge-patch for document references on create. Key = document_id. Array = types for that doc. null values are silently ignored (no existing refs to remove). */
-  documents?: DocumentsMergePatch;
 }
 
 export interface UpdateTaskInput {
@@ -82,8 +83,6 @@ export interface UpdateTaskInput {
   is_blocked?: boolean;
   add_dependencies?: { task_id: string; type: DependencyType }[];
   remove_dependencies?: { task_id: string }[];
-  /** Merge-patch for document references. Key = document_id. Array = replace types for that doc. null = remove all refs. Absent key = untouched. */
-  documents?: DocumentsMergePatch;
 }
 
 export interface CreateAutomationInput {

@@ -1,6 +1,6 @@
 import type { Sql, Fragment } from "postgres";
 import { ulid } from "ulid";
-import type { Document, DocumentSummary, SemanticSearchResult, DocumentReferenceType } from "../../entities";
+import type { Document, DocumentSummary, SemanticSearchResult } from "../../entities";
 
 type DocumentFilter = {
   search?: string; title?: string; tag?: string; favorite?: boolean;
@@ -178,22 +178,6 @@ export class PgDocumentRepository {
 
     if (docs.length === 0) return [];
 
-    // Batch-fetch references for all matched documents
-    const docIds = docs.map((d) => d.id);
-    const refs = await this.sql<{ document_id: string; entity_type: string; entity_id: string; type: DocumentReferenceType }[]>`
-      SELECT document_id, entity_type, entity_id, type
-      FROM document_references
-      WHERE document_id IN ${this.sql(docIds)}
-      ORDER BY entity_type, entity_id
-    `;
-
-    const refMap = new Map<string, { entity_type: string; entity_id: string; type: DocumentReferenceType }[]>();
-    for (const ref of refs) {
-      let list = refMap.get(ref.document_id);
-      if (!list) { list = []; refMap.set(ref.document_id, list); }
-      list.push({ entity_type: ref.entity_type, entity_id: ref.entity_id, type: ref.type });
-    }
-
     return docs.map((d) => ({
       document_id: d.id,
       title: d.title,
@@ -206,7 +190,6 @@ export class PgDocumentRepository {
       created_at: d.created_at,
       updated_at: d.updated_at,
       similarity: Number(d.similarity),
-      references: refMap.get(d.id) ?? [],
     }));
   }
 

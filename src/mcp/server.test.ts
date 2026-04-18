@@ -800,34 +800,34 @@ describe("batch create_document with distinct tag sets", () => {
 // Extended update_project (document attach/detach)
 // ---------------------------------------------------------------------------
 
-describe("update_project with document references merge-patch", () => {
-  it("documents merge-patch attaches documents, verify via get_project", async () => {
+describe("update_project with documents merge-patch", () => {
+  it("attaches a document via `true` and verifies it on get_project", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Attach Proj" }] }));
     const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Attachable Doc" }] }));
 
     await callTool("update_project", {
-      items: [{ id: proj.id, documents: { [doc.id]: [{ type: "reference" }] } }],
+      items: [{ id: proj.id, documents: { [doc.id]: true } }],
     });
 
     const project = parseResult(await callTool("get_project", { id: proj.id }));
     expect(project.documents).toBeTruthy();
     expect(project.documents.length).toBeGreaterThanOrEqual(1);
     expect(project.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
+    // Response shape — no reference-type field.
+    expect(project.documents[0].type).toBeUndefined();
   });
 
-  it("documents merge-patch with null removes documents, verify via get_project", async () => {
+  it("unlinks a document via null", async () => {
     const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Doc Detach Proj" }] }));
     const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Detachable Doc" }] }));
 
     await callTool("update_project", {
-      items: [{ id: proj.id, documents: { [doc.id]: [{ type: "design" }] } }],
+      items: [{ id: proj.id, documents: { [doc.id]: true } }],
     });
 
-    // Verify attached
     let project = parseResult(await callTool("get_project", { id: proj.id }));
     expect(project.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
 
-    // Detach via null
     await callTool("update_project", {
       items: [{ id: proj.id, documents: { [doc.id]: null } }],
     });
@@ -837,77 +837,38 @@ describe("update_project with document references merge-patch", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Task document references merge-patch via MCP
-// ---------------------------------------------------------------------------
-
-describe("create_task with documents merge-patch", () => {
-  it("creates task with document references attached", async () => {
-    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task Doc Create Proj" }] }));
-    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Task Doc Create Doc" }] }));
-
+// Tasks no longer hold document links (migration 025/031). Zod's default
+// non-strict mode means a stray `documents` key is silently dropped rather
+// than rejected — as long as the task still creates/updates cleanly and the
+// response carries no documents field, we're good.
+describe("task MCP tools ignore documents field", () => {
+  it("create_task succeeds when an unknown `documents` field is present", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task No-Docs Proj" }] }));
     const result = await callTool("create_task", {
       items: [{
         project_id: proj.id,
-        title: "Task with docs via MCP",
-        documents: { [doc.id]: [{ type: "goal" }, { type: "plan" }] },
+        title: "Task ignoring docs",
+        documents: { "some-id": true },
       }],
     });
     expect(result.isError).toBeUndefined();
     const [task] = parseResult(result);
     expect(task.id).toBeTruthy();
-
-    // Verify via get_task
     const fetched = parseResult(await callTool("get_task", { id: task.id }));
-    expect(fetched.documents).toBeArray();
-    expect(fetched.documents.length).toBe(2);
-    const types = fetched.documents.map((d: { type: string }) => d.type).sort();
-    expect(types).toEqual(["goal", "plan"]);
-    expect(fetched.documents.every((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
-  });
-});
-
-describe("update_task with documents merge-patch", () => {
-  it("attaches documents to task via update_task, verify via get_task", async () => {
-    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task Doc Update Proj" }] }));
-    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Task Doc Update Doc" }] }));
-    const [task] = parseResult(await callTool("create_task", {
-      items: [{ project_id: proj.id, title: "Task to attach docs" }],
-    }));
-
-    await callTool("update_task", {
-      items: [{ id: task.id, documents: { [doc.id]: [{ type: "design" }, { type: "reference" }] } }],
-    });
-
-    const fetched = parseResult(await callTool("get_task", { id: task.id }));
-    expect(fetched.documents).toBeArray();
-    expect(fetched.documents.length).toBe(2);
-    const types = fetched.documents.map((d: { type: string }) => d.type).sort();
-    expect(types).toEqual(["design", "reference"]);
+    expect(fetched.documents).toBeUndefined();
   });
 
-  it("documents merge-patch with null removes documents from task", async () => {
-    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task Doc Detach Proj" }] }));
-    const [doc] = parseResult(await callTool("create_document", { items: [{ title: "Task Doc Detach Doc" }] }));
+  it("update_task succeeds when an unknown `documents` field is present", async () => {
+    const [proj] = parseResult(await callTool("create_project", { items: [{ title: "Task No-Docs Proj 2" }] }));
     const [task] = parseResult(await callTool("create_task", {
-      items: [{
-        project_id: proj.id,
-        title: "Task to detach docs",
-        documents: { [doc.id]: [{ type: "requirements" }] },
-      }],
+      items: [{ project_id: proj.id, title: "Task ignoring doc update" }],
     }));
-
-    // Verify attached
-    let fetched = parseResult(await callTool("get_task", { id: task.id }));
-    expect(fetched.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
-
-    // Detach via null
-    await callTool("update_task", {
-      items: [{ id: task.id, documents: { [doc.id]: null } }],
+    const result = await callTool("update_task", {
+      items: [{ id: task.id, documents: { "some-id": null } }],
     });
-
-    fetched = parseResult(await callTool("get_task", { id: task.id }));
-    expect(fetched.documents.every((d: { document_id: string }) => d.document_id !== doc.id)).toBe(true);
+    expect(result.isError).toBeUndefined();
+    const fetched = parseResult(await callTool("get_task", { id: task.id }));
+    expect(fetched.documents).toBeUndefined();
   });
 });
 

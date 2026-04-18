@@ -19,14 +19,21 @@
  *   migration does not create duplicates.
  */
 
-import type { DocumentReferenceType } from '../entities';
+/**
+ * Reference types that historical migrations 021/022 attached to the then-
+ * polymorphic `document_references` table. Migration 031 subsequently dropped
+ * the reference-type concept entirely, so these values only appear in the
+ * migration history. Kept as a local string union so those older .ts
+ * migrations still typecheck without pulling from entities.
+ */
+type MigrationReferenceType = 'goal' | 'plan' | 'requirements' | 'design' | 'reference' | 'note';
 
 // ---------------------------------------------------------------------------
 // Field-to-reference-type mapping
 // ---------------------------------------------------------------------------
 
 /**
- * Maps old text-blob column names to their DocumentReferenceType.
+ * Maps old text-blob column names to their historical reference type.
  *
  * Project columns: goal, requirements, design
  * Task columns:    plan, description, implementation, acceptance_criteria
@@ -41,14 +48,14 @@ export const FIELD_TO_REFERENCE_TYPE = {
   description: 'note',
   implementation: 'reference',
   acceptance_criteria: 'requirements',
-} as const satisfies Record<string, DocumentReferenceType>;
+} as const satisfies Record<string, MigrationReferenceType>;
 
 // ---------------------------------------------------------------------------
 // Display names for document titles
 // ---------------------------------------------------------------------------
 
 /** Human-readable names for each reference type, used in generated titles. */
-export const TYPE_DISPLAY_NAMES: Record<DocumentReferenceType, string> = {
+export const TYPE_DISPLAY_NAMES: Record<MigrationReferenceType, string> = {
   goal: 'Goal',
   plan: 'Plan',
   requirements: 'Requirements',
@@ -56,6 +63,8 @@ export const TYPE_DISPLAY_NAMES: Record<DocumentReferenceType, string> = {
   reference: 'Reference',
   note: 'Note',
 };
+
+export type { MigrationReferenceType as DocumentReferenceType };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -82,7 +91,7 @@ export function shouldMigrate(value: string | null): boolean {
  */
 export function generateDocumentTitle(
   entityTitle: string,
-  referenceType: DocumentReferenceType,
+  referenceType: MigrationReferenceType,
 ): string {
   return `${entityTitle} — ${TYPE_DISPLAY_NAMES[referenceType]}`;
 }

@@ -76,7 +76,7 @@ console.log("\nTables:", tableNames.join(", "));
 
 const expected = [
   "projects", "tasks", "documents", "tags", "entity_tags",
-  "document_references", "task_dependencies", "activity_log", "schema_migrations",
+  "project_documents", "task_dependencies", "activity_log", "schema_migrations",
 ];
 const missing = expected.filter((t) => !tableNames.includes(t));
 if (missing.length > 0) {

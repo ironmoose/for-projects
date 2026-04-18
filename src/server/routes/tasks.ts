@@ -5,7 +5,6 @@ import type {
   CreateTaskInput,
   UpdateTaskInput,
 } from "../../domain";
-import { validateDocumentsMergePatch } from "./validation";
 
 export function taskRoutes(service: ITaskService, depService?: ITaskDependencyService): Hono {
   const app = new Hono();
@@ -42,12 +41,6 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
   app.post("/", async (c) => {
     const body = await c.req.json<{ items: CreateTaskInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    for (let i = 0; i < body.items.length; i++) {
-      const item = body.items[i];
-      if (item.documents !== undefined) {
-        item.documents = validateDocumentsMergePatch(item.documents, i);
-      }
-    }
     const tasks = await service.create(body.items);
     return c.json(tasks, 201);
   });
@@ -74,12 +67,6 @@ export function taskRoutes(service: ITaskService, depService?: ITaskDependencySe
   app.patch("/", async (c) => {
     const body = await c.req.json<{ items: UpdateTaskInput[] }>();
     if (!Array.isArray(body.items)) return c.json({ error: "items array is required" }, 400);
-    for (let i = 0; i < body.items.length; i++) {
-      const item = body.items[i];
-      if (item.documents !== undefined) {
-        item.documents = validateDocumentsMergePatch(item.documents, i);
-      }
-    }
     const tasks = await service.update(body.items);
     return c.json(tasks);
   });

@@ -2,7 +2,13 @@
 
 ## [Unreleased]
 
-- Fix attach-document modal layout — the reference-type `Select` used to stretch full-width under a `minHeight`-padded list, floating in awkward dead space. The search now owns the top row; the list scrolls below; the type picker moved to the footer as `ATTACH AS [type]` next to Cancel/Attach so it's unambiguous it's the link-type-on-submit, not a list filter.
+- **Breaking:** collapse `document_references` into a simple `project_documents` many-to-many — drop the reference-type concept (`goal` / `plan` / `requirements` / `design` / `reference` / `note`) and the polymorphic `entity_type` / `entity_id` columns. Migration 031 (sqlite) and pg/006 migrate the rows; task-side references were already stripped in migration 025.
+- **Breaking:** the `documents` merge-patch on `POST` / `PATCH /api/projects` now takes `{doc_id: true | null}` instead of `{doc_id: [{type}] | null}`. Array values return 400.
+- **Breaking:** tasks no longer accept a `documents` field on `create_task` / `update_task` (MCP + REST).
+- **Breaking:** `GET /api/documents` drops the `entity_type` + `entity_id` filter pair in favor of `project_id`.
+- Rename `DocumentReference*` types to `ProjectDocument*`; drop `DOCUMENT_REFERENCE_TYPES` and `DocumentReferenceType` from public exports.
+- Flatten `ProjectDocumentsPanel` to a single list (no grouped sections, no reference-type filter chips, no per-card type badge, no "Attach as" picker). Keeps search / tag / folder / favorite filters plus attach / detach / keyboard flip-through.
+- Fix attach-document modal layout — the reference-type `Select` used to stretch full-width under a `minHeight`-padded list, floating in awkward dead space. The search now owns the top row; the list scrolls below; the type picker moved to the footer as `ATTACH AS [type]` next to Cancel/Attach so it's unambiguous it's the link-type-on-submit, not a list filter. (Superseded — the Select is gone entirely now.)
 
 ## [0.1.15] - 2026-04-17
 

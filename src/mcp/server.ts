@@ -8,8 +8,6 @@ import {
   IMPACT_LEVELS,
   TASK_CATEGORIES,
   DEPENDENCY_TYPES,
-  DOCUMENT_REFERENCE_TYPES,
-  ENTITY_TYPES,
   TAG_NAMES,
   type IProjectService,
   type ITaskService,
@@ -51,17 +49,14 @@ async function handle<T>(fn: () => T | Promise<T>) {
 
 /**
  * Zod schema for the documents merge-patch field used in project tools.
- * Keys are document IDs. Array value replaces reference types for that document.
- * null removes all references to that document. Absent keys are untouched.
+ * Keys are document IDs. `true` links the document; `null` unlinks it.
+ * Absent keys are untouched.
  */
 const documentsMergePatchSchema = z.record(
   z.string().max(26),
-  z.union([
-    z.array(z.object({ type: z.enum([...DOCUMENT_REFERENCE_TYPES]) })),
-    z.null(),
-  ]),
+  z.union([z.literal(true), z.null()]),
 ).optional().describe(
-  'Merge-patch for document references. Keys are document IDs. Array value sets reference types for that document (valid types: goal, plan, requirements, design, reference, note). null removes all references to that document. Absent keys are untouched.'
+  "Merge-patch for a project's linked documents. Keys are document IDs. `true` links the document (no-op if already linked); `null` unlinks it. Absent keys are untouched."
 );
 
 /** Create an McpServer with all tools registered. */
@@ -91,7 +86,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_project",
     {
-      description: "Retrieve a single project by ID. Returns title, summary, context, requirements, timestamps, and a `documents` array of linked references (document_id, type, title, summary, favorite).",
+      description: "Retrieve a single project by ID. Returns title, summary, context, requirements, timestamps, and a `documents` array of linked documents (document_id, title, summary, favorite).",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => projectService.get(id))
@@ -120,7 +115,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "get_task",
     {
-      description: "Retrieve a single task by ID with all fields including context, acceptance_criteria, is_blocked, and a `references` array of linked documents.",
+      description: "Retrieve a single task by ID with all fields including context, acceptance_criteria, and is_blocked.",
       inputSchema: { id: z.string().max(26) },
     },
     ({ id }) => handle(() => taskService.get(id))
@@ -181,7 +176,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           effort: z.enum([...EFFORT_LEVELS]).optional(),
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
-          documents: documentsMergePatchSchema,
         })),
       },
     },
@@ -191,7 +185,7 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "update_task",
     {
-      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use add_dependencies/remove_dependencies to manage edges (task_id + type 'blocks' or 'relates_to'). The current task is the target. Use documents merge-patch to manage references. Set is_blocked directly as a boolean.",
+      description: "Update tasks by ID. Pass an `items` array with required id. Only provided fields are changed. Use add_dependencies/remove_dependencies to manage edges (task_id + type 'blocks' or 'relates_to'). The current task is the target. Set is_blocked directly as a boolean.",
       inputSchema: {
         items: z.array(z.object({
           id: z.string().max(26),
@@ -205,7 +199,6 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
           impact: z.enum([...IMPACT_LEVELS]).optional(),
           category: z.enum([...TASK_CATEGORIES]).optional(),
           is_blocked: z.boolean().optional(),
-          documents: documentsMergePatchSchema,
           add_dependencies: z.array(z.object({
             task_id: z.string().max(26),
             type: z.enum([...DEPENDENCY_TYPES]),
@@ -254,20 +247,19 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
   server.registerTool(
     "list_documents",
     {
-      description: "List document summaries with tags. Filterable by tag, title, search (title+summary, case-insensitive), entity_type+entity_id, folder, or favorite. Returns { data, total } with document summaries (id, title, summary, has_content, favorite, tags, timestamps).",
+      description: "List document summaries with tags. Filterable by tag, title, search (title+summary, case-insensitive), project_id, folder, or favorite. Returns { data, total } with document summaries (id, title, summary, has_content, favorite, tags, timestamps).",
       inputSchema: {
         search: z.string().max(500).optional(),
         tag: z.string().max(50).optional(),
         title: z.string().max(255).optional(),
         folder: z.string().max(64).optional().describe("Filter by folder name (exact match)."),
-        entity_type: z.enum([...ENTITY_TYPES]).optional().describe("Filter documents linked to this entity type. Requires entity_id."),
-        entity_id: z.string().max(26).optional().describe("Filter documents linked to this entity ID. Requires entity_type."),
+        project_id: z.string().max(26).optional().describe("Filter to documents linked to this project."),
         favorite: z.boolean().optional(),
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
       },
     },
-    ({ search, tag, title, folder, entity_type, entity_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, folder, entity_type, entity_id, favorite, limit, offset }))
+    ({ search, tag, title, folder, project_id, favorite, limit, offset }) => handle(() => documentService.list({ search, tag, title, folder, project_id, favorite, limit, offset }))
   );
 
   server.registerTool(

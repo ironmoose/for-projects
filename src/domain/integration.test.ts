@@ -548,7 +548,7 @@ describe("Document CRUD", () => {
 
     // Link to a project to verify cascade on that side too
     const [project] = await ctx.projectService.create([{ title: "Tag Cleanup Project" }]);
-    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: true } }]);
 
     await ctx.documentService.remove([doc.id]);
 
@@ -560,14 +560,14 @@ describe("Document CRUD", () => {
     expect(projectAfter.documents.some((d) => d.document_id === doc.id)).toBe(false);
   });
 
-  it("lists documents filtered by entity_type and entity_id", async () => {
+  it("lists documents filtered by project_id", async () => {
     const [project] = await ctx.projectService.create([{ title: "Doc Filter Project" }]);
     const [linkedDoc] = await ctx.documentService.create([{ title: "Linked Doc for Filter" }]);
     const [unlinkedDoc] = await ctx.documentService.create([{ title: "Unlinked Doc for Filter" }]);
 
-    await ctx.projectService.update([{ id: project.id, documents: { [linkedDoc.id]: [{ type: "reference" }] } }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [linkedDoc.id]: true } }]);
 
-    const result = await ctx.documentService.list({ entity_type: "project", entity_id: project.id });
+    const result = await ctx.documentService.list({ project_id: project.id });
     expect(result.data.length).toBeGreaterThanOrEqual(1);
     expect(result.data.some((d) => d.id === linkedDoc.id)).toBe(true);
     expect(result.data.some((d) => d.id === unlinkedDoc.id)).toBe(false);
@@ -784,7 +784,7 @@ describe("Project-Document Linking", () => {
 
     await ctx.projectService.update([{
       id: project.id,
-      documents: { [doc.id]: [{ type: "reference" }] },
+      documents: { [doc.id]: true },
     }]);
 
     const fetched = await ctx.projectService.get(project.id);
@@ -796,7 +796,7 @@ describe("Project-Document Linking", () => {
     const [project] = await ctx.projectService.create([{ title: "Detach Project" }]);
     const [doc] = await ctx.documentService.create([{ title: "Detach Doc" }]);
 
-    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "design" }] } }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: true } }]);
     const before = await ctx.projectService.get(project.id);
     expect(before.documents.some((d) => d.document_id === doc.id)).toBe(true);
 
@@ -810,48 +810,48 @@ describe("Project-Document Linking", () => {
 
     await expect(ctx.projectService.update([{
         id: project.id,
-        documents: { "nonexistent-doc-id": [{ type: "reference" }] },
+        documents: { "nonexistent-doc-id": true },
       }])).rejects.toThrow(ServiceError);
   });
 
-  it("idempotent re-attach does not error", async () => {
+  it("idempotent re-attach does not error or duplicate", async () => {
     const [project] = await ctx.projectService.create([{ title: "Idempotent Project" }]);
     const [doc] = await ctx.documentService.create([{ title: "Idempotent Doc" }]);
 
-    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: true } }]);
     // Second attach should not throw
-    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: true } }]);
 
     const fetched = await ctx.projectService.get(project.id);
-    // Should still appear exactly once for this type
+    // PK on (project_id, document_id) guarantees exactly one row.
     const matches = fetched.documents.filter((d) => d.document_id === doc.id);
     expect(matches.length).toBe(1);
   });
 
-  it("project GET includes document reference summaries", async () => {
+  it("project GET returns enriched link details (no content)", async () => {
     const [project] = await ctx.projectService.create([{ title: "Summary Project" }]);
     const [doc] = await ctx.documentService.create([{
       title: "Summary Doc",
       content: "This should not appear",
     }]);
 
-    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: true } }]);
 
     const fetched = await ctx.projectService.get(project.id);
     const linked = fetched.documents.find((d) => d.document_id === doc.id);
     expect(linked).toBeTruthy();
     expect(linked!.title).toBe("Summary Doc");
     expect(linked!.document_id).toBe(doc.id);
-    expect(linked!.type).toBe("reference");
-    // DocumentReferenceSummary should not include content field
+    // ProjectDocumentDetail exposes only document_id / title / summary / favorite.
     expect((linked as any).content).toBeUndefined();
+    expect((linked as any).type).toBeUndefined();
   });
 
-  it("cascade on document delete removes reference rows", async () => {
+  it("cascade on document delete removes link rows", async () => {
     const [project] = await ctx.projectService.create([{ title: "Cascade Project" }]);
     const [doc] = await ctx.documentService.create([{ title: "Cascade Doc" }]);
 
-    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }]);
+    await ctx.projectService.update([{ id: project.id, documents: { [doc.id]: true } }]);
     const before = await ctx.projectService.get(project.id);
     expect(before.documents.some((d) => d.document_id === doc.id)).toBe(true);
 
@@ -869,8 +869,8 @@ describe("Project-Document Linking", () => {
     await ctx.projectService.update([{
       id: project.id,
       documents: {
-        [docA.id]: [{ type: "design" }],
-        [docB.id]: [{ type: "reference" }],
+        [docA.id]: true,
+        [docB.id]: true,
       },
     }]);
 
@@ -889,130 +889,6 @@ describe("Project-Document Linking", () => {
         id: project.id,
         documents: { [doc.id]: null },
       }]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Task-Document Merge-Patch (via service)
-// ---------------------------------------------------------------------------
-
-describe("Task-Document Merge-Patch via service", () => {
-  let projectId: string;
-
-  beforeAll(async () => {
-    const [project] = await ctx.projectService.create([{ title: "Task Doc MP Project" }]);
-    projectId = project.id;
-  });
-
-  it("task create with documents produces correct references", async () => {
-    const [doc] = await ctx.documentService.create([{ title: "Task Create Doc" }]);
-    const [task] = await ctx.taskService.create([{
-      project_id: projectId,
-      title: "Task with docs on create",
-      documents: { [doc.id]: [{ type: "goal" }, { type: "plan" }] },
-    }]);
-
-    const fetched = await ctx.taskService.get(task.id);
-    expect(fetched.documents).toHaveLength(2);
-    const types = fetched.documents.map((d) => d.type).sort();
-    expect(types).toEqual(["goal", "plan"]);
-    expect(fetched.documents.every((d) => d.document_id === doc.id)).toBe(true);
-  });
-
-  it("task update with documents replaces reference types", async () => {
-    const [doc] = await ctx.documentService.create([{ title: "Task Replace Doc" }]);
-    const [task] = await ctx.taskService.create([{
-      project_id: projectId,
-      title: "Task to replace refs",
-      documents: { [doc.id]: [{ type: "goal" }] },
-    }]);
-
-    // Verify initial
-    let fetched = await ctx.taskService.get(task.id);
-    expect(fetched.documents).toHaveLength(1);
-    expect(fetched.documents[0].type).toBe("goal");
-
-    // Replace with different types
-    await ctx.taskService.update([{
-      id: task.id,
-      documents: { [doc.id]: [{ type: "design" }, { type: "reference" }] },
-    }]);
-
-    fetched = await ctx.taskService.get(task.id);
-    expect(fetched.documents).toHaveLength(2);
-    const types = fetched.documents.map((d) => d.type).sort();
-    expect(types).toEqual(["design", "reference"]);
-  });
-
-  it("task update with null removes references", async () => {
-    const [doc] = await ctx.documentService.create([{ title: "Task Null Doc" }]);
-    const [task] = await ctx.taskService.create([{
-      project_id: projectId,
-      title: "Task to null refs",
-      documents: { [doc.id]: [{ type: "plan" }] },
-    }]);
-
-    // Verify initial
-    let fetched = await ctx.taskService.get(task.id);
-    expect(fetched.documents).toHaveLength(1);
-
-    // Remove via null
-    await ctx.taskService.update([{
-      id: task.id,
-      documents: { [doc.id]: null },
-    }]);
-
-    fetched = await ctx.taskService.get(task.id);
-    expect(fetched.documents).toHaveLength(0);
-  });
-
-  it("task update with absent key preserves existing references", async () => {
-    const [doc1] = await ctx.documentService.create([{ title: "Task Absent Doc 1" }]);
-    const [doc2] = await ctx.documentService.create([{ title: "Task Absent Doc 2" }]);
-    const [task] = await ctx.taskService.create([{
-      project_id: projectId,
-      title: "Task with two docs",
-      documents: {
-        [doc1.id]: [{ type: "goal" }],
-        [doc2.id]: [{ type: "plan" }],
-      },
-    }]);
-
-    // Update only doc2; doc1 should be untouched
-    await ctx.taskService.update([{
-      id: task.id,
-      documents: { [doc2.id]: [{ type: "note" }] },
-    }]);
-
-    const fetched = await ctx.taskService.get(task.id);
-    expect(fetched.documents).toHaveLength(2);
-    const doc1Ref = fetched.documents.find((d) => d.document_id === doc1.id);
-    const doc2Ref = fetched.documents.find((d) => d.document_id === doc2.id);
-    expect(doc1Ref?.type).toBe("goal"); // untouched
-    expect(doc2Ref?.type).toBe("note"); // updated
-  });
-
-  it("task delete removes all document references", async () => {
-    const [doc] = await ctx.documentService.create([{ title: "Task Delete Doc" }]);
-    const [task] = await ctx.taskService.create([{
-      project_id: projectId,
-      title: "Task to delete with refs",
-      documents: { [doc.id]: [{ type: "requirements" }, { type: "design" }] },
-    }]);
-
-    // Verify references exist
-    const fetched = await ctx.taskService.get(task.id);
-    expect(fetched.documents).toHaveLength(2);
-
-    // Delete the task
-    await ctx.taskService.remove([task.id]);
-
-    // Task is gone
-    await expect(ctx.taskService.get(task.id)).rejects.toThrow(ServiceError);
-
-    // Document still exists (not cascaded)
-    const doc2 = await ctx.documentService.get(doc.id);
-    expect(doc2.title).toBe("Task Delete Doc");
   });
 });
 

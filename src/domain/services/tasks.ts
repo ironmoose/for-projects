@@ -1,6 +1,6 @@
-import { type Task, type TaskSummary, type GraphTaskSummary, type DocumentReferenceSummary, type DocumentReferenceDetail, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
+import { type Task, type TaskSummary, type GraphTaskSummary, TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../entities";
 import type { CreateTaskInput, UpdateTaskInput } from "../inputs";
-import type { ITaskService, ITaskDependencyService, IDocumentReferenceService, Paginated } from "../services";
+import type { ITaskService, ITaskDependencyService, Paginated } from "../services";
 import { ServiceError } from "../errors";
 import type { ITaskRepository, IProjectRepository, IActivityLogRepository } from "../repositories/interfaces";
 import type { EventBus } from "../events";
@@ -12,7 +12,6 @@ export class TaskService implements ITaskService {
     private activityLog: IActivityLogRepository,
     private eventBus: EventBus,
     private depService?: ITaskDependencyService,
-    private docRefService?: IDocumentReferenceService,
   ) {}
 
 
@@ -26,15 +25,13 @@ export class TaskService implements ITaskService {
     return await this.taskRepo.findGraphSummaries(projectId, status);
   }
 
-  async get(id: string): Promise<Task & { documents: DocumentReferenceDetail[] }> {
+  async get(id: string): Promise<Task> {
     const task = await this.taskRepo.findById(id);
     if (!task) throw new ServiceError("task not found", 404);
-    const documents = this.docRefService ? await this.docRefService.findByEntity("task", id) : [];
-    return { ...task, documents };
+    return task;
   }
 
-  async create(inputs: CreateTaskInput[]): Promise<(Task & { documents: DocumentReferenceSummary[] })[]> {
-    // Validate all inputs before any writes
+  async create(inputs: CreateTaskInput[]): Promise<Task[]> {
     for (const input of inputs) {
       const project = await this.projectRepo.findById(input.project_id);
       if (!project) {
@@ -70,10 +67,6 @@ export class TaskService implements ITaskService {
       if (input.category !== undefined && !(TASK_CATEGORIES as readonly string[]).includes(input.category)) {
         throw new ServiceError(`category must be one of: ${(TASK_CATEGORIES as readonly string[]).join(", ")}`, 400);
       }
-      // Pre-validate document references so we fail before creating the entity
-      if (input.documents && this.docRefService) {
-        await this.docRefService.validateMergePatch(input.documents);
-      }
     }
 
     const rows = inputs.map((input) => ({
@@ -91,14 +84,6 @@ export class TaskService implements ITaskService {
 
     const tasks = await this.taskRepo.insertMany(rows);
 
-    // Create document references for each task
-    for (let i = 0; i < tasks.length; i++) {
-      const input = inputs[i];
-      if (input.documents && this.docRefService) {
-        await this.docRefService.applyMergePatch("task", tasks[i].id, input.documents);
-      }
-    }
-
     for (const t of tasks) {
       await this.activityLog.insert({
         entity_type: "task",
@@ -109,13 +94,7 @@ export class TaskService implements ITaskService {
     }
     this.eventBus.emit({ type: "created", entity_type: "task", ids: tasks.map((t) => t.id) });
 
-    // Return tasks with their document references
-    const results: (Task & { documents: DocumentReferenceSummary[] })[] = [];
-    for (const t of tasks) {
-      const docs = this.docRefService ? await this.docRefService.getReferencesForEntity("task", t.id) : [];
-      results.push({ ...t, documents: docs });
-    }
-    return results;
+    return tasks;
   }
 
   async update(inputs: UpdateTaskInput[]): Promise<Task[]> {
@@ -156,13 +135,12 @@ export class TaskService implements ITaskService {
       taskCache.set(input.id, existing);
     }
 
-    // Strip dependency arrays and documents from repo input
-    const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, documents, ...rest }) => rest);
+    // Strip dependency arrays from repo input — they're handled below.
+    const repoInputs = inputs.map(({ add_dependencies, remove_dependencies, ...rest }) => rest);
     const tasks = await this.taskRepo.updateMany(repoInputs);
 
     this.eventBus.beginBatch();
     try {
-      // Process dependency operations
       if (this.depService) {
         for (const input of inputs) {
           const existing = taskCache.get(input.id)!;
@@ -189,25 +167,15 @@ export class TaskService implements ITaskService {
         }
       }
 
-      // Process document reference merge-patch
-      if (this.docRefService) {
-        for (const input of inputs) {
-          if (input.documents) {
-            await this.docRefService.applyMergePatch("task", input.id, input.documents);
-          }
-        }
-      }
-
       const inputById = new Map(inputs.map(i => [i.id, i]));
       for (const t of tasks) {
         const input = inputById.get(t.id);
-        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies" && k !== "documents");
+        const fields = Object.keys(input ?? {}).filter((k) => k !== "id" && k !== "add_dependencies" && k !== "remove_dependencies");
         const added = input?.add_dependencies?.length ?? 0;
         const removed = input?.remove_dependencies?.length ?? 0;
         const summaryObj: Record<string, unknown> = { fields };
         if (added > 0) summaryObj.added_dependencies = added;
         if (removed > 0) summaryObj.removed_dependencies = removed;
-        if (input?.documents) summaryObj.documents_changed = Object.keys(input.documents).length;
         await this.activityLog.insert({
           entity_type: "task",
           entity_id: t.id,
@@ -235,9 +203,6 @@ export class TaskService implements ITaskService {
   }
 
   async remove(ids: string[]): Promise<void> {
-    for (const id of ids) {
-      if (this.docRefService) await this.docRefService.removeAllForEntity("task", id);
-    }
     await this.taskRepo.deleteMany(ids);
     for (const id of ids) {
       await this.activityLog.insert({

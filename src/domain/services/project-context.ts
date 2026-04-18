@@ -155,7 +155,7 @@ export class ProjectContextService implements IProjectContextService {
     ] = await Promise.all([
       this.taskService.list({ project_id, limit: 200 }),
       this.taskDependencyService.getGraph(project_id),
-      this.documentService.list({ entity_type: "project", entity_id: project_id, limit: 50 }),
+      this.documentService.list({ project_id, limit: 50 }),
       this.activityLogService.list({ entity_type: "project", entity_id: project_id, limit: 50 }),
       this.documentService.list({ favorite: true, limit: 20 }),
     ]);

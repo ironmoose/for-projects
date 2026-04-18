@@ -9,7 +9,7 @@ import {
   TaskRepository,
   DocumentRepository,
   TagRepository,
-  DocumentReferenceRepository,
+  ProjectDocumentRepository,
   TaskDependencyRepository,
   ActivityLogRepository,
   AutomationRepository,
@@ -19,7 +19,7 @@ import {
   PgTaskRepository,
   PgDocumentRepository,
   PgTagRepository,
-  PgDocumentReferenceRepository,
+  PgProjectDocumentRepository,
   PgTaskDependencyRepository,
   PgActivityLogRepository,
   PgAutomationRepository,
@@ -27,7 +27,7 @@ import {
 import { ProjectService } from "./services/projects";
 import { TaskService } from "./services/tasks";
 import { TaskDependencyService } from "./services/task-dependencies";
-import { DocumentReferenceService } from "./services/document-references";
+import { ProjectDocumentService } from "./services/project-documents";
 import { DocumentService } from "./services/documents";
 import { ActivityLogService } from "./services/activity-log";
 import { ProjectContextService } from "./services/project-context";
@@ -37,7 +37,7 @@ import type {
   ITaskService,
   ITaskDependencyService,
   IDocumentService,
-  IDocumentReferenceService,
+  IProjectDocumentService,
   IActivityLogService,
   ISourceService,
   IAutomationService,
@@ -59,7 +59,7 @@ export interface AppContext {
   taskService: ITaskService;
   taskDependencyService: ITaskDependencyService;
   documentService: IDocumentService;
-  documentReferenceService: IDocumentReferenceService;
+  projectDocumentService: IProjectDocumentService;
   activityLogService: IActivityLogService;
   automationService: IAutomationService;
   sourceService: ISourceService;
@@ -86,15 +86,15 @@ async function bootstrapSqlite(dbPath: string | undefined, eventBus: EventBus): 
   const taskRepo = new TaskRepository(db);
   const documentRepo = new DocumentRepository(db);
   const tagRepo = new TagRepository(db);
-  const documentReferenceRepo = new DocumentReferenceRepository(db);
+  const projectDocumentRepo = new ProjectDocumentRepository(db);
   const taskDependencyRepo = new TaskDependencyRepository(db);
   const activityLogRepo = new ActivityLogRepository(db);
 
-  const documentReferenceService = new DocumentReferenceService(documentReferenceRepo, documentRepo, activityLogRepo, eventBus);
+  const projectDocumentService = new ProjectDocumentService(projectDocumentRepo, documentRepo, activityLogRepo, eventBus);
   const taskDependencyService = new TaskDependencyService(taskDependencyRepo, taskRepo, activityLogRepo, eventBus);
-  const projectService = new ProjectService(projectRepo, activityLogRepo, eventBus, documentReferenceService);
-  const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus, taskDependencyService, documentReferenceService);
-  const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo);
+  const projectService = new ProjectService(projectRepo, activityLogRepo, eventBus, projectDocumentService);
+  const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus, taskDependencyService);
+  const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, projectDocumentRepo);
   const activityLogService = new ActivityLogService(activityLogRepo);
 
   const automationRepo = new AutomationRepository(db);
@@ -109,7 +109,7 @@ async function bootstrapSqlite(dbPath: string | undefined, eventBus: EventBus): 
   const shutdown = async () => { db.close(); };
 
   console.log("[bootstrap] SQLite backend active");
-  return { db, pg: null, backend: "sqlite", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, automationService, sourceService, projectContextService, shutdown };
+  return { db, pg: null, backend: "sqlite", eventBus, projectService, taskService, taskDependencyService, documentService, projectDocumentService, activityLogService, automationService, sourceService, projectContextService, shutdown };
 }
 
 async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promise<AppContext> {
@@ -123,14 +123,14 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   const taskRepo = new PgTaskRepository(pg);
   const documentRepo = new PgDocumentRepository(pg);
   const tagRepo = new PgTagRepository(pg);
-  const documentReferenceRepo = new PgDocumentReferenceRepository(pg);
+  const projectDocumentRepo = new PgProjectDocumentRepository(pg);
   const taskDependencyRepo = new PgTaskDependencyRepository(pg);
   const activityLogRepo = new PgActivityLogRepository(pg);
 
-  const documentReferenceService = new DocumentReferenceService(documentReferenceRepo, documentRepo, activityLogRepo, eventBus);
+  const projectDocumentService = new ProjectDocumentService(projectDocumentRepo, documentRepo, activityLogRepo, eventBus);
   const taskDependencyService = new TaskDependencyService(taskDependencyRepo, taskRepo, activityLogRepo, eventBus);
-  const projectService = new ProjectService(projectRepo, activityLogRepo, eventBus, documentReferenceService);
-  const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus, taskDependencyService, documentReferenceService);
+  const projectService = new ProjectService(projectRepo, activityLogRepo, eventBus, projectDocumentService);
+  const taskService = new TaskService(taskRepo, projectRepo, activityLogRepo, eventBus, taskDependencyService);
 
   // Embeddings are opt-in: EMBEDDINGS_ENABLED=true (default: false)
   const embeddingsEnabled = process.env.EMBEDDINGS_ENABLED === "true";
@@ -151,7 +151,7 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
     console.log("[bootstrap] Embeddings disabled (set EMBEDDINGS_ENABLED=true to enable)");
   }
 
-  const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, documentReferenceRepo, embeddingService);
+  const documentService = new DocumentService(documentRepo, tagRepo, activityLogRepo, eventBus, projectDocumentRepo, embeddingService);
   const activityLogService = new ActivityLogService(activityLogRepo);
 
   const automationRepo = new PgAutomationRepository(pg);
@@ -176,7 +176,7 @@ async function bootstrapPostgres(databaseUrl: string, eventBus: EventBus): Promi
   };
 
   console.log("[bootstrap] Postgres backend active");
-  return { db: null, pg, backend: "postgres", eventBus, projectService, taskService, taskDependencyService, documentService, documentReferenceService, activityLogService, automationService, sourceService, projectContextService, shutdown };
+  return { db: null, pg, backend: "postgres", eventBus, projectService, taskService, taskDependencyService, documentService, projectDocumentService, activityLogService, automationService, sourceService, projectContextService, shutdown };
 }
 
 /**

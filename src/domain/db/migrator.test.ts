@@ -50,7 +50,7 @@ describe("migrator", () => {
     await runMigrations(db);
 
     const tables = getAllUserTables(db);
-    expect(tables).toEqual(["activity_log", "automations", "document_references", "documents", "entity_tags", "projects", "tags", "task_dependencies", "tasks"]);
+    expect(tables).toEqual(["activity_log", "automations", "documents", "entity_tags", "project_documents", "projects", "tags", "task_dependencies", "tasks"]);
   });
 
   it("running migrations twice is idempotent", async () => {
@@ -87,14 +87,16 @@ describe("migrator", () => {
     expect(tables).toContain("tasks");
   });
 
-  it("document_references table exists after migration", async () => {
+  it("project_documents table exists after migration", async () => {
     ({ db, cleanup } = createTestDb());
     await runMigrations(db);
 
     const tables = getAllUserTables(db);
-    expect(tables).toContain("document_references");
+    expect(tables).toContain("project_documents");
+    // The old polymorphic table was collapsed by migration 031.
+    expect(tables).not.toContain("document_references");
 
-    // Verify FK constraint: inserting a reference with nonexistent document_id should fail
+    // Verify FK constraint: inserting a link with nonexistent document_id should fail
     const now = new Date().toISOString();
     const projectId = ulid();
     db.run(
@@ -103,18 +105,10 @@ describe("migrator", () => {
     );
     expect(() =>
       db.run(
-        "INSERT INTO document_references (entity_type, entity_id, document_id, type) VALUES (?, ?, ?, ?)",
-        ["project", projectId, "nonexistent-doc", "reference"]
+        "INSERT INTO project_documents (project_id, document_id) VALUES (?, ?)",
+        [projectId, "nonexistent-doc"]
       )
     ).toThrow();
-  });
-
-  it("project_documents table does not exist after migration", async () => {
-    ({ db, cleanup } = createTestDb());
-    await runMigrations(db);
-
-    const tables = getAllUserTables(db);
-    expect(tables).not.toContain("project_documents");
   });
 
   it("foreign key: task with bad project_id fails", async () => {

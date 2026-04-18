@@ -88,8 +88,8 @@ export async function migrateSqliteToPg(lite: Database, pg: PgClient): Promise<M
   // 5. entity_tags (FK → tags)
   results.push(await migrateTable(lite, pg, "entity_tags"));
 
-  // 6. document_references (FK → documents)
-  results.push(await migrateTable(lite, pg, "document_references"));
+  // 6. project_documents (FK → projects, documents)
+  results.push(await migrateTable(lite, pg, "project_documents"));
 
   // 7. task_dependencies (FK → tasks)
   results.push(await migrateTable(lite, pg, "task_dependencies"));

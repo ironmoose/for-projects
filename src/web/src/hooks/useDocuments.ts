@@ -64,10 +64,8 @@ export function useDocuments(filter?: { tag?: string; title?: string; favorite?:
         setIsSemanticResults(true);
       } else {
         // Standard list mode
-        const { project_id, ...rest } = currentFilter ?? {};
         const body = await fetchDocuments({
-          ...rest,
-          ...(project_id ? { entity_type: "project", entity_id: project_id } : {}),
+          ...currentFilter,
           limit: effectivePageSize,
           offset: (pageRef.current - 1) * effectivePageSize,
         });

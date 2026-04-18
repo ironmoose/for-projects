@@ -9,9 +9,6 @@ export const TAG_NAMES = [
   'architecture', 'conventions', 'guide', 'reference', 'decision', 'troubleshooting',
   'security', 'performance', 'testing', 'accessibility',
 ] as const;
-export const DOCUMENT_REFERENCE_TYPES = ['goal', 'plan', 'requirements', 'design', 'reference', 'note'] as const;
-export type DocumentReferenceType = typeof DOCUMENT_REFERENCE_TYPES[number];
-
 export const DEPENDENCY_TYPES = ['blocks', 'relates_to'] as const;
 export type DependencyType = typeof DEPENDENCY_TYPES[number];
 
@@ -64,11 +61,9 @@ export interface Task {
   updated_at: string;
 }
 
-export interface DocumentReference {
-  entity_type: EntityType;
-  entity_id: string;
+export interface ProjectDocument {
+  project_id: string;
   document_id: string;
-  type: DocumentReferenceType;
 }
 
 // -- Summary types (projections for list responses) -----------------------
@@ -211,23 +206,11 @@ export interface SemanticSearchResult {
   created_at: string;
   updated_at: string;
   similarity: number;
-  references: {
-    entity_type: string;
-    entity_id: string;
-    type: DocumentReferenceType;
-  }[];
 }
 
-export interface DocumentReferenceSummary {
+/** Enriched detail for GET project responses — includes document summary and favorite. */
+export interface ProjectDocumentDetail {
   document_id: string;
-  document_title: string;
-  type: DocumentReferenceType;
-}
-
-/** Enriched reference detail for GET responses — includes document summary and favorite. */
-export interface DocumentReferenceDetail {
-  document_id: string;
-  type: DocumentReferenceType;
   title: string;
   summary: string | null;
   favorite: boolean;

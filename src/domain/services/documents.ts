@@ -1,8 +1,8 @@
-import { type Document, type DocumentSummary, type SemanticSearchResult, type TagName, TAG_NAMES } from "../entities";
+import { type Document, type DocumentSummary, type SemanticSearchResult, TAG_NAMES } from "../entities";
 import type { CreateDocumentInput, UpdateDocumentInput } from "../inputs";
 import type { IDocumentService, Paginated } from "../services";
 import { ServiceError } from "../errors";
-import type { IDocumentRepository, ITagRepository, IDocumentReferenceRepository, IActivityLogRepository } from "../repositories/interfaces";
+import type { IDocumentRepository, ITagRepository, IProjectDocumentRepository, IActivityLogRepository } from "../repositories/interfaces";
 import type { EventBus } from "../events";
 import type { EmbeddingService } from "../embedding";
 
@@ -11,7 +11,6 @@ const FOLDER_PATTERN = /^[a-z0-9._][a-z0-9._-]*(\/[a-z0-9._][a-z0-9._-]*)*$/;
 
 function normalizeFolder(value: string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
-  // Lowercase, trim, collapse duplicate slashes, strip trailing slash
   const trimmed = value.trim().toLowerCase().replace(/\/+/g, "/").replace(/\/$/, "");
   return trimmed === "" ? null : trimmed;
 }
@@ -26,26 +25,26 @@ export class DocumentService implements IDocumentService {
     private tagRepo: ITagRepository,
     private activityLog: IActivityLogRepository,
     private eventBus: EventBus,
-    private docRefRepo?: IDocumentReferenceRepository,
+    private projectDocRepo?: IProjectDocumentRepository,
     private embeddingService?: EmbeddingService,
   ) {}
 
-  async list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; entity_type?: string; entity_id?: string; limit?: number; offset?: number }): Promise<Paginated<DocumentSummary>> {
+  async list(filter?: { search?: string; title?: string; tag?: string; favorite?: boolean; folder?: string; project_id?: string; limit?: number; offset?: number }): Promise<Paginated<DocumentSummary>> {
     let docIds: string[] | undefined;
-    const entityType = filter?.entity_type;
-    const entityId = filter?.entity_id;
-    if (entityType && entityId && this.docRefRepo) {
-      const refs = await this.docRefRepo.getReferencesForEntity(entityType, entityId);
-      docIds = [...new Set(refs.map((r) => r.document_id))];
+    const projectId = filter?.project_id;
+    if (projectId && this.projectDocRepo) {
+      const refs = await this.projectDocRepo.findByProject(projectId);
+      docIds = refs.map((r) => r.document_id);
       if (docIds.length === 0) return { data: [], total: 0 };
     }
 
-    const repoFilter = { ...filter, doc_ids: docIds };
+    const { project_id, ...rest } = filter ?? {};
+    const repoFilter = { ...rest, doc_ids: docIds };
     const summaries = await this.documentRepo.findMany(repoFilter);
     const ids = summaries.map((s) => s.id);
     const tagMap = await this.tagRepo.getTagsForEntities("document", ids);
-    const projectMap = this.docRefRepo
-      ? await this.docRefRepo.getProjectsForDocuments(ids)
+    const projectMap = this.projectDocRepo
+      ? await this.projectDocRepo.getProjectsForDocuments(ids)
       : new Map<string, { id: string; title: string }[]>();
     const data = summaries.map((s) => ({
       ...s,
@@ -58,14 +57,14 @@ export class DocumentService implements IDocumentService {
     };
   }
 
-  async get(id: string): Promise<Document & { tags: string[]; referenced_by: { entity_type: string; entity_id: string; entity_title: string; type: string }[] }> {
+  async get(id: string): Promise<Document & { tags: string[]; linked_projects: { id: string; title: string }[] }> {
     const doc = await this.documentRepo.findById(id);
     if (!doc) throw new ServiceError("document not found", 404);
     const tags = (await this.tagRepo.getTagsForEntity("document", id)).map((t) => t.kind);
-    const referenced_by = this.docRefRepo
-      ? await this.docRefRepo.getEntitiesForDocumentWithTitles(id)
+    const linked_projects = this.projectDocRepo
+      ? (await this.projectDocRepo.getProjectsForDocuments([id])).get(id) ?? []
       : [];
-    return { ...doc, tags, referenced_by };
+    return { ...doc, tags, linked_projects };
   }
 
   async create(inputs: CreateDocumentInput[]): Promise<(Document & { tags: string[] })[]> {
@@ -201,7 +200,7 @@ export class DocumentService implements IDocumentService {
 
   async remove(ids: string[]): Promise<void> {
     for (const id of ids) {
-      if (this.docRefRepo) await this.docRefRepo.removeAllForDocument(id);
+      if (this.projectDocRepo) await this.projectDocRepo.removeAllForDocument(id);
       await this.tagRepo.removeTagsForEntity("document", id);
     }
     await this.documentRepo.deleteMany(ids);
@@ -219,7 +218,6 @@ export class DocumentService implements IDocumentService {
   async semanticSearch(query: string, filter?: { tag?: string; folder?: string; favorite?: boolean; limit?: number }): Promise<SemanticSearchResult[]> {
     if (!query.trim()) return [];
 
-    // No embedding service or repo doesn't support vector search → empty
     if (!this.embeddingService || !this.documentRepo.semanticSearch) return [];
 
     const queryEmbedding = await this.embeddingService.embedQuery(query);
@@ -228,11 +226,10 @@ export class DocumentService implements IDocumentService {
     const results = await this.documentRepo.semanticSearch(queryEmbedding, { ...filter, queryText: query });
     if (results.length === 0) return results;
 
-    // Enrich with tags and linked projects (same pattern as list())
     const ids = results.map((r) => r.document_id);
     const tagMap = await this.tagRepo.getTagsForEntities("document", ids);
-    const projectMap = this.docRefRepo
-      ? await this.docRefRepo.getProjectsForDocuments(ids)
+    const projectMap = this.projectDocRepo
+      ? await this.projectDocRepo.getProjectsForDocuments(ids)
       : new Map<string, { id: string; title: string }[]>();
 
     return results.map((r) => ({

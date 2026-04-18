@@ -475,112 +475,6 @@ describe("Task Routes", () => {
     expect(body[p3.id].counts.in_progress).toBeUndefined();
   });
 
-  it("POST /tasks with documents returns 201 and references are verifiable via GET", async () => {
-    // Create a real document first so the service can validate the reference
-    const docRes = await req("/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Task Doc" }] }),
-    });
-    const [doc] = await docRes.json();
-    const res = await req("/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{
-        project_id: projectId,
-        title: "Task with docs",
-        documents: { [doc.id]: [{ type: "goal" }] },
-      }] }),
-    });
-    expect(res.status).toBe(201);
-    const [task] = await res.json();
-
-    // Verify via GET
-    const getRes = await req(`/tasks/${task.id}`);
-    expect(getRes.status).toBe(200);
-    const body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBe(1);
-    expect(body.documents[0].document_id).toBe(doc.id);
-    expect(body.documents[0].type).toBe("goal");
-  });
-
-  it("PATCH /tasks with documents returns 200 and references are verifiable via GET", async () => {
-    const docRes = await req("/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Patch Task Doc" }] }),
-    });
-    const [doc] = await docRes.json();
-    const create = await req("/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ project_id: projectId, title: "Patch docs task" }] }),
-    });
-    const [task] = await create.json();
-    const res = await req("/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{
-        id: task.id,
-        documents: {
-          [doc.id]: [{ type: "design" }, { type: "reference" }],
-        },
-      }] }),
-    });
-    expect(res.status).toBe(200);
-
-    // Verify via GET
-    const getRes = await req(`/tasks/${task.id}`);
-    expect(getRes.status).toBe(200);
-    const body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBe(2);
-    const types = body.documents.map((d: { type: string }) => d.type).sort();
-    expect(types).toEqual(["design", "reference"]);
-    expect(body.documents.every((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
-  });
-
-  it("PATCH /tasks returns 400 for invalid documents merge-patch (bad type)", async () => {
-    const create = await req("/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ project_id: projectId, title: "Bad docs task" }] }),
-    });
-    const [task] = await create.json();
-    const res = await req("/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{
-        id: task.id,
-        documents: { "doc-1": [{ type: "invalid_type" }] },
-      }] }),
-    });
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("documents");
-  });
-
-  it("PATCH /tasks returns 400 for invalid documents merge-patch (wrong shape)", async () => {
-    const create = await req("/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ project_id: projectId, title: "Wrong shape task" }] }),
-    });
-    const [task] = await create.json();
-    const res = await req("/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{
-        id: task.id,
-        documents: { "doc-1": "not-an-array" },
-      }] }),
-    });
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("documents");
-  });
-
   it("PATCH /tasks works normally when documents field is absent", async () => {
     const create = await req("/tasks", {
       method: "POST",
@@ -1029,8 +923,7 @@ describe("Document Routes", () => {
 // ---------------------------------------------------------------------------
 
 describe("Extended Project Routes", () => {
-  it("PATCH /projects with documents merge-patch attaches documents, verify via GET", async () => {
-    // Create a project and a document
+  it("PATCH /projects links a document via `true` and verifies via GET", async () => {
     const [project] = await (await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1042,25 +935,22 @@ describe("Extended Project Routes", () => {
       body: JSON.stringify({ items: [{ title: "Attach Test Doc" }] }),
     })).json();
 
-    // Attach document to project via merge-patch
     const patchRes = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: project.id, documents: { [doc.id]: [{ type: "reference" }] } }] }),
+      body: JSON.stringify({ items: [{ id: project.id, documents: { [doc.id]: true } }] }),
     });
     expect(patchRes.status).toBe(200);
 
-    // Verify GET includes the document
     const getRes = await req(`/projects/${project.id}`);
     const body = await getRes.json();
     expect(body.documents).toBeArray();
     expect(body.documents.length).toBe(1);
     expect(body.documents[0].document_id).toBe(doc.id);
-    expect(body.documents[0].type).toBe("reference");
+    expect(body.documents[0].type).toBeUndefined();
   });
 
-  it("PATCH /projects with documents merge-patch null removes document", async () => {
-    // Create project + document, attach first
+  it("PATCH /projects with null unlinks a document", async () => {
     const [project] = await (await req("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1075,10 +965,9 @@ describe("Extended Project Routes", () => {
     await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: project.id, documents: { [doc.id]: [{ type: "design" }] } }] }),
+      body: JSON.stringify({ items: [{ id: project.id, documents: { [doc.id]: true } }] }),
     });
 
-    // Detach via null
     const detachRes = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1094,178 +983,69 @@ describe("Extended Project Routes", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Extended Task Routes (documents merge-patch)
+// Task routes reject `documents` field — tasks don't hold links post-031.
 // ---------------------------------------------------------------------------
 
-describe("Extended Task Routes", () => {
-  it("PATCH /tasks with documents merge-patch attaches documents, verify via GET", async () => {
-    const [project] = await ctx.projectService.create([{ title: "Task MP Attach Project" }]);
-    const [doc] = await (await req("/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Task MP Attach Doc" }] }),
-    })).json();
-
-    const createRes = await req("/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ project_id: project.id, title: "Task MP Attach" }] }),
-    });
-    const [task] = await createRes.json();
-
-    // Attach document via merge-patch
-    const patchRes = await req("/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: task.id, documents: { [doc.id]: [{ type: "requirements" }] } }] }),
-    });
-    expect(patchRes.status).toBe(200);
-
-    // Verify GET includes the document
-    const getRes = await req(`/tasks/${task.id}`);
-    const body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBe(1);
-    expect(body.documents[0].document_id).toBe(doc.id);
-    expect(body.documents[0].type).toBe("requirements");
-  });
-
-  it("PATCH /tasks with documents merge-patch null removes document", async () => {
-    const [project] = await ctx.projectService.create([{ title: "Task MP Detach Project" }]);
-    const [doc] = await (await req("/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Task MP Detach Doc" }] }),
-    })).json();
-
-    // Create task with document attached
-    const createRes = await req("/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{
-        project_id: project.id,
-        title: "Task MP Detach",
-        documents: { [doc.id]: [{ type: "design" }] },
-      }] }),
-    });
-    const [task] = await createRes.json();
-
-    // Verify attached
-    let getRes = await req(`/tasks/${task.id}`);
-    let body = await getRes.json();
-    expect(body.documents.some((d: { document_id: string }) => d.document_id === doc.id)).toBe(true);
-
-    // Detach via null
-    const detachRes = await req("/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ id: task.id, documents: { [doc.id]: null } }] }),
-    });
-    expect(detachRes.status).toBe(200);
-
-    getRes = await req(`/tasks/${task.id}`);
-    body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBe(0);
-  });
-
-  it("POST /tasks with documents creates task with references attached", async () => {
-    const [project] = await ctx.projectService.create([{ title: "Task MP Create Project" }]);
-    const [doc] = await (await req("/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ title: "Task MP Create Doc" }] }),
-    })).json();
-
+describe("Task Routes reject documents field", () => {
+  it("POST /tasks with documents returns 400 (or ignores it)", async () => {
+    const [project] = await ctx.projectService.create([{ title: "Task No-Docs Route" }]);
+    // Either the route rejects the unknown key via zod, or the service ignores
+    // it silently and returns 201. Both are acceptable; assert it doesn't
+    // 500 and doesn't produce documents on the response.
     const res = await req("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: [{
         project_id: project.id,
-        title: "Task MP Create",
-        documents: { [doc.id]: [{ type: "goal" }, { type: "note" }] },
+        title: "Task ignoring docs",
+        documents: { "some-id": true },
       }] }),
     });
-    expect(res.status).toBe(201);
-    const [task] = await res.json();
-
-    // Verify via GET
-    const getRes = await req(`/tasks/${task.id}`);
-    const body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBe(2);
-    const types = body.documents.map((d: { type: string }) => d.type).sort();
-    expect(types).toEqual(["goal", "note"]);
+    expect([200, 201, 400]).toContain(res.status);
+    if (res.status === 201) {
+      const [task] = await res.json();
+      expect(task.documents).toBeUndefined();
+    }
   });
 });
 
 // ---------------------------------------------------------------------------
-// Documents Merge-Patch Validation
+// Documents Merge-Patch Validation — project-level only.
 // ---------------------------------------------------------------------------
 
 describe("Documents Merge-Patch Validation", () => {
   let projectId: string;
-  let taskId: string;
   let docId: string;
 
   beforeAll(async () => {
     const [project] = await ctx.projectService.create([{ title: "MergePatch Test Project" }]);
     projectId = project.id;
-    const [task] = await ctx.taskService.create([{ project_id: projectId, title: "MergePatch Test Task" }]);
-    taskId = task.id;
     const [doc] = await ctx.documentService.create([{ title: "MergePatch Test Doc" }]);
     docId = doc.id;
   });
 
-  it("PATCH /projects accepts documents field with valid merge-patch shape", async () => {
+  it("PATCH /projects accepts documents merge-patch with `true`", async () => {
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         items: [{
           id: projectId,
-          documents: {
-            [docId]: [{ type: "design" }, { type: "reference" }],
-          },
+          documents: { [docId]: true },
         }],
       }),
     });
     expect(res.status).toBe(200);
   });
 
-  it("PATCH /tasks accepts documents field and actually applies merge-patch", async () => {
-    const res = await req("/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: [{
-          id: taskId,
-          documents: {
-            [docId]: [{ type: "plan" }],
-          },
-        }],
-      }),
-    });
-    expect(res.status).toBe(200);
-
-    // Verify the documents were actually applied via GET
-    const getRes = await req(`/tasks/${taskId}`);
-    const body = await getRes.json();
-    expect(body.documents).toBeArray();
-    expect(body.documents.length).toBeGreaterThanOrEqual(1);
-    expect(body.documents.some((d: { document_id: string; type: string }) => d.document_id === docId && d.type === "plan")).toBe(true);
-  });
-
-  it("PATCH /projects accepts null value (remove references)", async () => {
+  it("PATCH /projects accepts null value (unlink)", async () => {
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         items: [{
           id: projectId,
-          documents: {
-            [docId]: null,
-          },
+          documents: { [docId]: null },
         }],
       }),
     });
@@ -1286,7 +1066,7 @@ describe("Documents Merge-Patch Validation", () => {
     expect(res.status).toBe(200);
   });
 
-  it("absent documents field means no reference changes", async () => {
+  it("absent documents field leaves links untouched", async () => {
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1297,16 +1077,14 @@ describe("Documents Merge-Patch Validation", () => {
     expect(res.status).toBe(200);
   });
 
-  it("PATCH /projects with invalid type value returns 400", async () => {
+  it("PATCH /projects with array value returns 400 (old shape rejected)", async () => {
     const res = await req("/projects", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         items: [{
           id: projectId,
-          documents: {
-            [docId]: [{ type: "invalid_type" }],
-          },
+          documents: { [docId]: [{ type: "reference" }] },
         }],
       }),
     });
@@ -1315,6 +1093,19 @@ describe("Documents Merge-Patch Validation", () => {
     expect(body.error).toMatch(/documents/i);
   });
 
+  it("PATCH /projects with `false` value returns 400 (only `true` or null allowed)", async () => {
+    const res = await req("/projects", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{
+          id: projectId,
+          documents: { [docId]: false },
+        }],
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
 
   it("PATCH /projects with non-object documents value returns 400", async () => {
     const res = await req("/projects", {
@@ -1332,23 +1123,7 @@ describe("Documents Merge-Patch Validation", () => {
     expect(body.error).toMatch(/documents/i);
   });
 
-  it("PATCH /projects with valid multiple reference types accepted", async () => {
-    const res = await req("/projects", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: [{
-          id: projectId,
-          documents: {
-            [docId]: [{ type: "goal" }, { type: "plan" }, { type: "requirements" }, { type: "design" }, { type: "reference" }, { type: "note" }],
-          },
-        }],
-      }),
-    });
-    expect(res.status).toBe(200);
-  });
-
-  it("PATCH /projects with mixed set and null operations accepted", async () => {
+  it("PATCH /projects with mixed link/unlink accepted", async () => {
     const [doc2] = await ctx.documentService.create([{ title: "MergePatch Doc 2" }]);
     const res = await req("/projects", {
       method: "PATCH",
@@ -1357,24 +1132,8 @@ describe("Documents Merge-Patch Validation", () => {
         items: [{
           id: projectId,
           documents: {
-            [docId]: [{ type: "design" }],
+            [docId]: true,
             [doc2.id]: null,
-          },
-        }],
-      }),
-    });
-    expect(res.status).toBe(200);
-  });
-
-  it("PATCH /projects with empty array value accepted (set zero types)", async () => {
-    const res = await req("/projects", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: [{
-          id: projectId,
-          documents: {
-            [docId]: [],
           },
         }],
       }),

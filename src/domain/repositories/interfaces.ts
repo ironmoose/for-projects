@@ -8,7 +8,7 @@ import type {
   Document, DocumentSummary, SemanticSearchResult,
   Automation, AutomationSummary,
   Tag, EntityType, TagName,
-  DocumentReference, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType,
+  ProjectDocument, ProjectDocumentDetail,
   TaskDependency, TaskDependencyDetail, DependencyType,
   ActivityLog,
 } from "../entities";
@@ -76,20 +76,25 @@ export interface ITagRepository {
   removeTagsForEntity(entityType: EntityType, entityId: string): Promise<void>;
 }
 
-// -- Document references ----------------------------------------------------
+// -- Project documents ------------------------------------------------------
 
-export interface IDocumentReferenceRepository {
-  setReferencesForEntityDocument(entityType: string, entityId: string, documentId: string, types: DocumentReferenceType[]): Promise<void>;
-  removeReferencesForEntityDocument(entityType: string, entityId: string, documentId: string): Promise<void>;
-  removeAllForEntity(entityType: string, entityId: string): Promise<void>;
+export interface IProjectDocumentRepository {
+  /** Link a set of documents to a project (idempotent — no-op if already linked). */
+  linkDocuments(projectId: string, documentIds: string[]): Promise<void>;
+  /** Unlink a single document from a project. */
+  unlinkDocument(projectId: string, documentId: string): Promise<void>;
+  /** Remove every document link for a project (used on project delete). */
+  removeAllForProject(projectId: string): Promise<void>;
+  /** Remove every project link for a document (used on document delete). */
   removeAllForDocument(documentId: string): Promise<void>;
-  getReferencesForEntity(entityType: string, entityId: string): Promise<DocumentReference[]>;
-  getReferencesForEntityWithDocumentTitles(entityType: string, entityId: string): Promise<DocumentReferenceSummary[]>;
-  getReferencesForEntities(entityType: string, entityIds: string[]): Promise<Map<string, DocumentReferenceSummary[]>>;
-  findByEntity(entityType: string, entityId: string): Promise<DocumentReferenceDetail[]>;
+  /** Raw project-document links for a project. */
+  findByProject(projectId: string): Promise<ProjectDocument[]>;
+  /** Enriched view for project GET responses — title/summary/favorite joined in. */
+  findDetailsForProject(projectId: string): Promise<ProjectDocumentDetail[]>;
+  /** Enriched view for multiple projects in one round trip. */
+  findDetailsForProjects(projectIds: string[]): Promise<Map<string, ProjectDocumentDetail[]>>;
+  /** Reverse lookup — which projects does each of these docs belong to? */
   getProjectsForDocuments(documentIds: string[]): Promise<Map<string, { id: string; title: string }[]>>;
-  getEntitiesForDocument(documentId: string): Promise<DocumentReference[]>;
-  getEntitiesForDocumentWithTitles(documentId: string): Promise<{ entity_type: string; entity_id: string; entity_title: string; type: string }[]>;
 }
 
 // -- Task dependencies ------------------------------------------------------

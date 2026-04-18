@@ -114,21 +114,22 @@ scripts/                         # operational scripts (migrations, smoke tests,
 - Validation happens in services; routes parse HTTP and return errors
 - Dependencies wired explicitly in `bootstrap.ts` — no globals or service locators
 - No DEFAULT values in the schema
-- Document-first: all rich content is stored as documents, linked to entities via typed references. Projects and tasks hold only `title` and `summary` (max 1000 chars) inline. Tasks also have `context` (freeform background/rationale, max 100K chars) and `acceptance_criteria` (freeform completion criteria, max 100K chars) as inline text fields.
+- Document-first: all rich content is stored as documents. Projects link to documents via a simple many-to-many (`project_documents`) — no per-link type/kind. Tasks do not link to documents. Projects and tasks hold only `title` and `summary` (max 1000 chars) inline. Tasks also have `context` (freeform background/rationale, max 100K chars) and `acceptance_criteria` (freeform completion criteria, max 100K chars) as inline text fields.
 - **Accessibility is required, not optional.** Every `IconButton` needs `aria-label`. Interactive elements need keyboard handlers (`tabIndex`, `onKeyDown`). Toggles need `aria-pressed`. Collapsible sections need `aria-expanded`. Use semantic HTML (`<main>`, `<nav>`, `<header>`). The `a11y-pass.test.ts` suite enforces these — update it when adding interactive components.
 
-### Document reference types
+### Project ↔ document links
 
-| Type | When to use |
-|------|-------------|
-| goal | What the entity is trying to achieve |
-| plan | Steps and strategy to get there |
-| requirements | Constraints, acceptance criteria, specifications |
-| design | Architectural decisions, technical shape |
-| reference | Supporting material, context, background |
-| note | Freeform — anything that doesn't fit above |
+Projects link to documents through `project_documents`, a plain many-to-many
+with `(project_id, document_id)` as the composite PK. There is no per-link
+type, category, or ordering — a doc is either linked or not. A doc can be
+linked to any number of projects; a project can link to any number of docs.
 
-References are "dumb pointers" — they do not enrich the document; the document is already enriched with its own title, summary, tags, and content.
+Historical note: an earlier iteration used a polymorphic `document_references`
+table with a reference-type column (`goal` / `plan` / `requirements` / `design`
+/ `reference` / `note`) on each link. Migration 031 (sqlite) and pg/006
+collapsed that into the simple link table above; task-side references were
+already stripped in migration 025. See `DocumentReader` and
+`ProjectDocumentsPanel` for the current UI.
 
 ### Embeddings
 
@@ -149,13 +150,13 @@ Single process, single port (default 3000):
 
 ### Data model
 
-Core tables: `projects`, `tasks`, `automations`, `document_references`, `activity_log`.
+Core tables: `projects`, `tasks`, `automations`, `project_documents`, `activity_log`.
 
 **Projects:** `id`, `title`, `summary`, `created_at`, `updated_at`
 
 **Tasks:** `id`, `project_id`, `title`, `summary`, `context`, `acceptance_criteria`, `status`, `effort`, `impact`, `category`, `group_key`, `is_blocked`, `created_at`, `updated_at`
 
-**document_references:** `entity_type`, `entity_id`, `document_id`, `type` — composite PK on all four columns. Polymorphic (no FK on `entity_id`); FK CASCADE on `document_id`. Type is one of: goal, plan, requirements, design, reference, note. Same document can be attached to the same entity with different types. Multiple documents can share the same type on one entity.
+**project_documents:** `project_id`, `document_id` — composite PK on both. FK CASCADE on both sides (document delete removes all its links; project delete removes all its links). No per-link type or category — a doc is either linked to a project or not.
 
 **task_dependencies:** `source_task_id`, `target_task_id`, `dependency_type`, `created_at` — supports `blocks` and `relates_to` edge types. Edges are informational only — they do not enforce `is_blocked`, which is a user-managed field on tasks.
 
@@ -166,7 +167,7 @@ Knowledge base tables (migration 009+):
 - `tags` — id, name (unique index), created_at
 - `entity_tags` — entity_type, entity_id, tag_id (polymorphic join; composite PK; no FK on entity_id)
 
-Migration history: `project_documents` (migration 009) was replaced by `document_references` (migration 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 024 added `folder` column to `documents`. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks. Migration 027 materialized `is_blocked` as a column on tasks (previously computed at read time from dependency edges; now a plain user-managed boolean). Migration 029 added `source_url`, `source_type`, `source_fetched_at` to `documents`.
+Migration history: an original `project_documents` table (migration 009) was replaced by polymorphic `document_references` (migrations 019–020). Old project text columns (`goal`, `requirements`, `design`) migrated to documents in migration 021. Old task text columns (`description`, `plan`, `implementation`, `acceptance_criteria`) migrated in migration 022. Columns dropped in migration 023. Migration 024 added `folder` column to `documents`. Migration 025 stripped every task-side document reference. Migration 026 re-added `context` and `acceptance_criteria` as inline text columns on tasks. Migration 027 materialized `is_blocked` as a column on tasks (previously computed at read time from dependency edges; now a plain user-managed boolean). Migration 029 added `source_url`, `source_type`, `source_fetched_at` to `documents`. Migration 031 (sqlite) / pg/006 collapsed `document_references` back into a simple `project_documents` many-to-many and dropped the reference-type column.
 
 ### REST API
 
@@ -174,12 +175,12 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 
 - `POST /api/projects` — `{items: [{title, summary?, documents?}]}`
 - `PATCH /api/projects` — `{items: [{id, title?, summary?, documents?}]}`
-- `POST /api/tasks` — `{items: [{project_id, title, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, documents?}]}`
-- `PATCH /api/tasks` — `{items: [{id, title?, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, is_blocked?, documents?, add_dependencies?, remove_dependencies?}]}`
+- `POST /api/tasks` — `{items: [{project_id, title, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?}]}`
+- `PATCH /api/tasks` — `{items: [{id, title?, summary?, context?, acceptance_criteria?, status?, effort?, impact?, category?, group_key?, is_blocked?, add_dependencies?, remove_dependencies?}]}`
 - `GET /api/tasks` — supports filters: `project_id`, `status`, `effort`, `impact`, `category`, `group_key`, `title`, `blocked`
 - `POST /api/documents` — `{items: [{title, summary?, content?, folder?, tags?, favorite?}]}` batch create
 - `PATCH /api/documents` — `{items: [{id, title?, summary?, content?, folder?, tags?, favorite?}]}` batch update; tags array replaces all existing tags
-- `GET /api/documents` — list with pagination, `?tag`, `?title`, `?search`, `?favorite`, `?folder`, `?entity_type`+`?entity_id` filters
+- `GET /api/documents` — list with pagination, `?tag`, `?title`, `?search`, `?favorite`, `?folder`, `?project_id` filters
 - `GET /api/documents/:id` — full content with tags
 - `DELETE /api/documents` — `{ids: [...]}` batch delete
 - `POST /api/documents/import` — `{url, folder?, tags?, favorite?}` — import content from an external URL via source connectors
@@ -192,19 +193,20 @@ All create/update endpoints use batch semantics with `{items: [...]}` request bo
 - `GET /api/automations/:id` — full automation with tags
 - `DELETE /api/automations` — `{ids: [...]}` batch delete
 
-The `documents` field on project/task endpoints uses merge-patch semantics:
+The `documents` field on project POST/PATCH uses a minimal merge-patch:
 ```json
 {
   "documents": {
-    "doc-123": [{"type": "design"}, {"type": "reference"}],
-    "doc-456": [{"type": "goal"}],
-    "doc-789": null
+    "doc-123": true,
+    "doc-456": null
   }
 }
 ```
-- **Key present with array** — replaces all reference types for that document on this entity
-- **Key present with null** — removes all references to that document from this entity
+- **`true`** — link the document (no-op if already linked)
+- **`null`** — unlink the document
 - **Key absent** — no change
+
+Tasks do not hold document links; `create_task` / `update_task` carry no `documents` field.
 
 ### MCP tools
 
@@ -217,7 +219,7 @@ The `documents` field on project/task endpoints uses merge-patch semantics:
 
 `search_documents` performs semantic vector search (Postgres + embeddings only). Returns documents ranked by hybrid similarity (vector + keyword boost). Parameters: `query` (required), `tag`, `folder`, `favorite`, `limit`.
 
-`create_project` and `create_task` accept optional `documents` merge-patch field. `update_project` and `update_task` accept `documents` merge-patch field. `get_project` and `get_task` return a `references` array with document_id, type, title, summary, and favorite for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields. `update_task` accepts `is_blocked` boolean. `get_task` returns all fields in the response.
+`create_project` and `update_project` accept an optional `documents` merge-patch field (`{document_id: true | null}`). `get_project` returns a `documents` array with `document_id`, `title`, `summary`, `favorite` for each linked document. `create_task` and `update_task` accept optional `context` and `acceptance_criteria` string fields; tasks carry no document links. `update_task` accepts `is_blocked` boolean. `get_task` returns all task fields in the response.
 
 ### Source connectors
 
@@ -355,7 +357,7 @@ make clean               # remove dist and caches
 - **CONTENT_FALLBACK_LIMIT must match summary max length.** `buildEmbeddingText()` uses the first 500 chars of document content as a fallback when no summary exists. If the summary column max length changes, update `CONTENT_FALLBACK_LIMIT` in `embedding.ts` to match — otherwise fallback vectors will have different weight than summary vectors.
 - **SQLite migrations auto-apply; Postgres doesn't.** Tests use SQLite with auto-migration. Postgres migrations must be explicitly tested via `pg-migration-test.ts`. A migration that works in SQLite can fail in Postgres due to syntax differences (e.g., `BOOLEAN` vs `INTEGER`, `TEXT` vs `VARCHAR`).
 - **Vite build output goes to `src/web/dist/`.** The server serves this directory as static assets. If `bun run build` fails, the server will serve stale assets without warning.
-- **`document_references` has no FK on `entity_id`.** It's polymorphic — the same table references projects, tasks, and documents. Deleting an entity does NOT cascade-delete its references. Entity delete code must explicitly clean up references.
+- **`project_documents` cascades on both sides.** FK cascade on `project_id` and `document_id` means deleting either end cleans up the link automatically — no manual cleanup in service code. This is different from the old polymorphic `document_references` table, which had no FK on `entity_id` and required explicit cleanup.
 - **`entity_tags` has the same polymorphic pattern.** No FK cascade on `entity_id`. Tags must be explicitly cleaned up on entity delete.
 - **`is_blocked` on tasks is user-managed, not computed.** Despite `task_dependencies` existing, `is_blocked` is a plain boolean set by the user. Dependency edges are informational only.
 - **The synth theme uses glow tokens, not theme-name checks.** Components use `theme.glow.*` tokens for glow effects. Only `SynthBackground` checks `themeName === 'synth'` directly. Do not add new `themeName === 'synth'` branches — use glow tokens instead.

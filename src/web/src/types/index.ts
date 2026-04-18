@@ -12,10 +12,8 @@ export type {
   SemanticSearchResult,
   Automation,
   AutomationSummary,
-  DocumentReference,
-  DocumentReferenceSummary,
-  DocumentReferenceDetail,
-  DocumentReferenceType,
+  ProjectDocument,
+  ProjectDocumentDetail,
   LinkedProject,
   ActivityLog,
   TaskStatus,
@@ -37,13 +35,5 @@ export {
   ACTIVITY_ACTIONS,
   TAG_NAMES,
   TAG_CATEGORIES,
-  DOCUMENT_REFERENCE_TYPES,
   SOURCE_TYPES,
 } from '@domain/entities';
-
-// ---------------------------------------------------------------------------
-// Convenience aliases (used by shared document-reference UI components)
-// ---------------------------------------------------------------------------
-
-export { DOCUMENT_REFERENCE_TYPES as REFERENCE_TYPES } from '@domain/entities';
-export type { DocumentReferenceType as ReferenceType } from '@domain/entities';

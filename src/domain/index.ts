@@ -12,13 +12,13 @@ export {
   ActivityLogRepository,
   DocumentRepository,
   TagRepository,
-  DocumentReferenceRepository,
+  ProjectDocumentRepository,
   TaskDependencyRepository,
   AutomationRepository,
 } from "./repositories/sqlite";
 export { ProjectService } from "./services/projects";
 export { TaskService } from "./services/tasks";
-export { DocumentReferenceService } from "./services/document-references";
+export { ProjectDocumentService } from "./services/project-documents";
 export { TaskDependencyService } from "./services/task-dependencies";
 export { ActivityLogService } from "./services/activity-log";
 export { AutomationService } from "./services/automations";

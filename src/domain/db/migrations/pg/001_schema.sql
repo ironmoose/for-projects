@@ -97,16 +97,17 @@ CREATE INDEX IF NOT EXISTS idx_entity_tags_tag_id ON entity_tags(tag_id);
 -- Document references (polymorphic)
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS document_references (
-    entity_type  TEXT NOT NULL,
-    entity_id    TEXT NOT NULL,
+-- Historical note: this used to be a polymorphic `document_references` table
+-- (entity_type, entity_id, document_id, type). Migration 025 dropped every
+-- task reference; migration pg/006 collapsed the remaining project-only rows
+-- into this simple many-to-many and removed the reference-type column.
+CREATE TABLE IF NOT EXISTS project_documents (
+    project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     document_id  TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-    type         TEXT NOT NULL CHECK (type IN ('goal', 'plan', 'requirements', 'design', 'reference', 'note')),
-    PRIMARY KEY (entity_type, entity_id, document_id, type)
+    PRIMARY KEY (project_id, document_id)
 );
-CREATE INDEX IF NOT EXISTS idx_document_references_entity ON document_references(entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_document_references_document ON document_references(document_id);
-CREATE INDEX IF NOT EXISTS idx_document_references_type ON document_references(type);
+CREATE INDEX IF NOT EXISTS idx_project_documents_project ON project_documents(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_documents_document ON project_documents(document_id);
 
 -- ============================================================
 -- Task dependencies

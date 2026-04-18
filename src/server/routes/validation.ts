@@ -1,24 +1,17 @@
 import { z } from "zod";
-import { DOCUMENT_REFERENCE_TYPES, type DocumentReferenceType } from "../../domain";
 import { ServiceError } from "../../domain";
 
 /**
- * Zod schema for the merge-patch `documents` field on project/task PATCH endpoints.
+ * Zod schema for the merge-patch `documents` field on project PATCH endpoints.
  *
- * Shape: `{ [document_id]: Array<{ type: ReferenceType }> | null }`
+ * Shape: `{ [document_id]: true | null }`
  * - Absent key = untouched
- * - Array = full replacement of reference types for that document
- * - null = remove all references to that document
- * - Empty object {} = no-op
+ * - `true` = link the document (no-op if already linked)
+ * - `null` = unlink the document
  */
 export const documentsMergePatchSchema = z.record(
   z.string().min(1).max(26),
-  z.union([
-    z.array(z.object({
-      type: z.enum([...DOCUMENT_REFERENCE_TYPES]),
-    })),
-    z.null(),
-  ]),
+  z.union([z.literal(true), z.null()]),
 ).optional();
 
 /**
@@ -32,7 +25,7 @@ export const documentsMergePatchSchema = z.record(
 export function validateDocumentsMergePatch(
   documents: unknown,
   itemIndex?: number,
-): Record<string, { type: DocumentReferenceType }[] | null> | undefined {
+): Record<string, true | null> | undefined {
   if (documents === undefined) return undefined;
 
   const result = documentsMergePatchSchema.safeParse(documents);

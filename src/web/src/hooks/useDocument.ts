@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, fetchDocument as apiFetchDocument, updateDocuments, deleteDocuments } from "../api";
-import type { ReferencedByEntry } from "../api";
 import type { Document } from "../types";
 import { useEventSubscription } from "./useEventSubscription";
 import { useToast } from "@4lt7ab/ui/ui";
 import { useThrottledCallback } from "./useThrottledCallback";
 
-type DocumentWithTags = Document & { tags: string[]; referenced_by: ReferencedByEntry[] };
+type DocumentWithTags = Document & { tags: string[]; linked_projects: { id: string; title: string }[] };
 
 export function useDocument(documentId: string) {
   const [document, setDocument] = useState<DocumentWithTags | null>(null);

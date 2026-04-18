@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, SemanticSearchResult, Automation, AutomationSummary, DocumentReferenceSummary, DocumentReferenceDetail, DocumentReferenceType, ActivityLog, TaskStatus } from "./types";
+import type { Project, ProjectSummary, Task, TaskSummary, Document, DocumentSummary, SemanticSearchResult, Automation, AutomationSummary, ProjectDocumentDetail, ActivityLog, TaskStatus } from "./types";
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -74,7 +74,7 @@ export async function fetchProjects(params?: { limit?: number; offset?: number }
 }
 
 export interface ProjectDetail extends Project {
-  documents: DocumentReferenceDetail[];
+  documents: ProjectDocumentDetail[];
 }
 
 export async function fetchProject(id: string): Promise<ProjectDetail> {
@@ -82,7 +82,12 @@ export async function fetchProject(id: string): Promise<ProjectDetail> {
   return res.json();
 }
 
-export type DocumentsMergePatch = Record<string, { type: DocumentReferenceType }[] | null>;
+/**
+ * Merge-patch for a project's linked documents.
+ * - `true`: link the document (no-op if already linked).
+ * - `null`: unlink the document.
+ */
+export type DocumentsMergePatch = Record<string, true | null>;
 
 export async function createProjects(inputs: Array<{ title: string; summary?: string; context?: string; requirements?: string }>): Promise<Project[]> {
   const res = await apiFetch("/api/projects", jsonPost({ items: inputs }));
@@ -193,19 +198,12 @@ export async function deleteTasks(ids: string[]): Promise<void> {
 // Documents API
 // ---------------------------------------------------------------------------
 
-export async function fetchDocuments(params?: { tag?: string; title?: string; search?: string; favorite?: boolean; entity_type?: string; entity_id?: string; folder?: string; limit?: number; offset?: number }): Promise<{ data: DocumentSummary[]; total: number }> {
+export async function fetchDocuments(params?: { tag?: string; title?: string; search?: string; favorite?: boolean; project_id?: string; folder?: string; limit?: number; offset?: number }): Promise<{ data: DocumentSummary[]; total: number }> {
   const res = await apiFetch(`/api/documents${qs(params)}`);
   return res.json();
 }
 
-export interface ReferencedByEntry {
-  entity_type: string;
-  entity_id: string;
-  entity_title: string;
-  type: string;
-}
-
-export async function fetchDocument(id: string): Promise<Document & { tags: string[]; referenced_by: ReferencedByEntry[] }> {
+export async function fetchDocument(id: string): Promise<Document & { tags: string[]; linked_projects: { id: string; title: string }[] }> {
   const res = await apiFetch(`/api/documents/${encodeURIComponent(id)}`);
   return res.json();
 }

@@ -28,7 +28,7 @@ const TEST_PREFIX = "SEMANTIC_SMOKE_";
 const now = new Date().toISOString();
 
 // Cleanup from previous runs
-await sql`DELETE FROM document_references WHERE entity_id LIKE ${TEST_PREFIX + "%"} OR document_id LIKE ${TEST_PREFIX + "%"}`;
+await sql`DELETE FROM project_documents WHERE project_id LIKE ${TEST_PREFIX + "%"} OR document_id LIKE ${TEST_PREFIX + "%"}`;
 await sql`DELETE FROM documents WHERE id LIKE ${TEST_PREFIX + "%"}`;
 await sql`DELETE FROM projects WHERE id LIKE ${TEST_PREFIX + "%"}`;
 
@@ -52,9 +52,9 @@ for (const doc of docs) {
   }
 }
 
-// Create document references
-await sql`INSERT INTO document_references (entity_type, entity_id, document_id, type) VALUES ('project', ${TEST_PREFIX + "PROJ"}, ${TEST_PREFIX + "DOC1"}, 'design')`;
-await sql`INSERT INTO document_references (entity_type, entity_id, document_id, type) VALUES ('project', ${TEST_PREFIX + "PROJ"}, ${TEST_PREFIX + "DOC2"}, 'design')`;
+// Link docs to the project
+await sql`INSERT INTO project_documents (project_id, document_id) VALUES (${TEST_PREFIX + "PROJ"}, ${TEST_PREFIX + "DOC1"})`;
+await sql`INSERT INTO project_documents (project_id, document_id) VALUES (${TEST_PREFIX + "PROJ"}, ${TEST_PREFIX + "DOC2"})`;
 
 // Run semantic search
 const repo = new PgDocumentRepository(sql);
@@ -64,16 +64,11 @@ if (queryVec) {
   console.log("\n--- semantic search: 'how does authentication work' ---");
   for (const r of results) {
     console.log(`  ${r.similarity.toFixed(4)}  ${r.title}`);
-    if (r.references.length > 0) {
-      for (const ref of r.references) {
-        console.log(`           ↳ ${ref.entity_type}/${ref.entity_id} as ${ref.type}`);
-      }
-    }
   }
 }
 
 // Cleanup
-await sql`DELETE FROM document_references WHERE entity_id LIKE ${TEST_PREFIX + "%"} OR document_id LIKE ${TEST_PREFIX + "%"}`;
+await sql`DELETE FROM project_documents WHERE project_id LIKE ${TEST_PREFIX + "%"} OR document_id LIKE ${TEST_PREFIX + "%"}`;
 await sql`DELETE FROM documents WHERE id LIKE ${TEST_PREFIX + "%"}`;
 await sql`DELETE FROM projects WHERE id LIKE ${TEST_PREFIX + "%"}`;
 

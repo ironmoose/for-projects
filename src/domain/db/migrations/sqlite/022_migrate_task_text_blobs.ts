@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "ulid";
-import type { DocumentReferenceType } from "../../../entities";
+import type { DocumentReferenceType } from "../../migration-utils";
 import { shouldMigrate, generateDocumentTitle, FIELD_TO_REFERENCE_TYPE } from "../../migration-utils";
 
 /**

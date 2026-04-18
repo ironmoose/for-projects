@@ -371,7 +371,7 @@ export function ProjectDetailPage({
       ) : (
         <ProjectDocumentsPanel
           projectId={projectId}
-          references={project.documents ?? []}
+          documents={project.documents ?? []}
         />
       )}
     </PageShell>

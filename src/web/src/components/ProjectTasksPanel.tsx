@@ -44,7 +44,7 @@ import type { TaskFilter } from "../hooks/useProjectTasks";
 import { useEventSubscription } from "../hooks/useEventSubscription";
 import { useThrottledCallback } from "../hooks/useThrottledCallback";
 import { ApiError, fetchTask, updateTasks } from "../api";
-import type { TaskDetail, DocumentsMergePatch } from "../api";
+import type { TaskDetail } from "../api";
 import { TASK_STATUSES, EFFORT_LEVELS, IMPACT_LEVELS, TASK_CATEGORIES } from "../types";
 import type { TaskSummary, TaskStatus } from "../types";
 import { PillSelect } from "./PillSelect";
@@ -605,7 +605,6 @@ export interface ProjectTasksPanelProps {
     effort?: string;
     impact?: string;
     category?: string;
-    documents?: DocumentsMergePatch;
   }) => Promise<void>;
   updateTask: (taskId: string, input: Record<string, string | null | undefined>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
