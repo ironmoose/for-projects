@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- Fix attach-document modal layout — the reference-type `Select` used to stretch full-width under a `minHeight`-padded list, floating in awkward dead space. Now search and type picker share a pinned row at the top, the list gets its own scroll region below, and the body no longer grows disproportionately with short result sets.
+- Fix attach-document modal layout — the reference-type `Select` used to stretch full-width under a `minHeight`-padded list, floating in awkward dead space. The search now owns the top row; the list scrolls below; the type picker moved to the footer as `ATTACH AS [type]` next to Cancel/Attach so it's unambiguous it's the link-type-on-submit, not a list filter.
 
 ## [0.1.15] - 2026-04-17
 

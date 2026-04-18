@@ -720,7 +720,9 @@ function AttachDocumentModal({
           <IconButton icon="close" size={18} onClick={onClose} aria-label="Close" />
         </div>
 
-        {/* Body — search + type picker pinned at top; list scrolls below. */}
+        {/* Body — search pinned at top; list scrolls below. The "attach as"
+            picker lives next to the Attach button in the footer so users
+            don't misread it as a filter. */}
         <div
           style={{
             flex: 1,
@@ -732,52 +734,13 @@ function AttachDocumentModal({
             minHeight: 0,
           }}
         >
-          {/* Pinned controls row: search (grows) + reference-type picker (fixed width). */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              gap: t.spaceSm,
-              flexShrink: 0,
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ flex: "1 1 240px", minWidth: 160 }}>
-              <SearchInput
-                value={search}
-                onSearch={setSearch}
-                placeholder="Search knowledgebase..."
-                debounceMs={200}
-                aria-label="Search knowledgebase"
-              />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 180 }}>
-              <label
-                htmlFor="attach-doc-type"
-                style={{
-                  fontSize: "0.65rem",
-                  fontFamily: t.fontMono,
-                  color: t.colorTextMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: t.letterSpacingWide,
-                }}
-              >
-                Reference type
-              </label>
-              <Select
-                id="attach-doc-type"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value as DocumentReferenceType)}
-              >
-                {DOCUMENT_REFERENCE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {REFERENCE_TYPE_META[type].label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
+          <SearchInput
+            value={search}
+            onSearch={setSearch}
+            placeholder="Search knowledgebase..."
+            debounceMs={200}
+            aria-label="Search knowledgebase"
+          />
 
           <div
             role="listbox"
@@ -887,17 +850,45 @@ function AttachDocumentModal({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — the "attach as …" picker sits with the submit button so
+            its role (applied on attach, not a filter) is obvious. */}
         <div
           style={{
             padding: `${t.spaceMd} ${t.spaceXl}`,
             borderTop: `1px solid color-mix(in srgb, ${t.colorBorder} 30%, transparent)`,
             display: "flex",
-            justifyContent: "flex-end",
+            alignItems: "center",
             gap: t.spaceSm,
             flexShrink: 0,
+            flexWrap: "wrap",
           }}
         >
+          <label
+            htmlFor="attach-doc-type"
+            style={{
+              fontSize: "0.65rem",
+              fontFamily: t.fontMono,
+              color: t.colorTextMuted,
+              textTransform: "uppercase",
+              letterSpacing: t.letterSpacingWide,
+            }}
+          >
+            Attach as
+          </label>
+          <div style={{ width: 160 }}>
+            <Select
+              id="attach-doc-type"
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value as DocumentReferenceType)}
+            >
+              {DOCUMENT_REFERENCE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {REFERENCE_TYPE_META[type].label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div style={{ flex: 1 }} />
           <Button variant="ghost" size="sm" onClick={onClose}>
             Cancel
           </Button>
