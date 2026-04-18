@@ -29,6 +29,7 @@ import {
   ModalShell,
   IconButton,
   Skeleton,
+  ConfirmDialog,
   useToast,
 } from "@4lt7ab/ui/ui";
 
@@ -110,6 +111,9 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
 
   const [openDocId, setOpenDocId] = useState<string | null>(null);
   const [showAttach, setShowAttach] = useState(false);
+  const [detachTarget, setDetachTarget] = useState<EnrichedReference | null>(null);
+  const [detaching, setDetaching] = useState(false);
+  const { showToast } = useToast();
 
   // Merge references with DocumentSummary rows. Reference list is the source
   // of truth; DocumentSummary only contributes filter fields. When the summary
@@ -181,6 +185,27 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
     setTagFilter("");
     setFolderFilter("");
     setFavoriteFilter(false);
+  }
+
+  async function handleConfirmDetach() {
+    if (!detachTarget || detaching) return;
+    setDetaching(true);
+    try {
+      // Setting documents: { [id]: null } removes ALL references between this
+      // document and this project per the merge-patch semantics.
+      await updateProjects([
+        {
+          id: projectId,
+          documents: { [detachTarget.document_id]: null },
+        },
+      ]);
+      showToast("Document unlinked", "success");
+      setDetachTarget(null);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to unlink document");
+    } finally {
+      setDetaching(false);
+    }
   }
 
   const hasMatches = filteredRefs.length > 0;
@@ -260,6 +285,7 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
                       key={`${ref.document_id}:${ref.type}`}
                       reference={ref}
                       onOpen={() => setOpenDocId(ref.document_id)}
+                      onDetach={() => setDetachTarget(ref)}
                     />
                   ))}
                 </Grid>
@@ -283,6 +309,17 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
           projectId={projectId}
           excludeDocIds={linkedIds}
           onClose={() => setShowAttach(false)}
+        />
+      )}
+
+      {detachTarget && (
+        <ConfirmDialog
+          title="Unlink Document"
+          message={`Unlink "${detachTarget.title}" from this project? The document stays in the knowledge base.`}
+          variant="destructive"
+          confirmLabel={detaching ? "Unlinking..." : "Unlink"}
+          onConfirm={handleConfirmDetach}
+          onCancel={() => !detaching && setDetachTarget(null)}
         />
       )}
     </>
@@ -469,9 +506,11 @@ function FilterChipButton({
 function DocumentReferenceCard({
   reference,
   onOpen,
+  onDetach,
 }: {
   reference: EnrichedReference;
   onOpen: () => void;
+  onDetach: () => void;
 }) {
   const meta = REFERENCE_TYPE_META[reference.type];
   return (
@@ -510,7 +549,7 @@ function DocumentReferenceCard({
         e.currentTarget.style.boxShadow = t.shadowSm;
       }}
     >
-      {/* Title row: type icon + title + favorite star */}
+      {/* Title row: type icon + title + favorite star + unlink */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: t.spaceXs, minWidth: 0 }}>
         <Icon
           name={meta.icon}
@@ -539,6 +578,15 @@ function DocumentReferenceCard({
             aria-label="Favorite"
           />
         )}
+        <IconButton
+          icon="link_off"
+          size={14}
+          aria-label={`Unlink ${reference.title} from this project`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDetach();
+          }}
+        />
       </div>
 
       {/* Summary — 2-line clamp */}
