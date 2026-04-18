@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Add reference-type filter chips (Goals / Plans / Requirements / Design / References / Notes) to `ProjectDocumentsPanel`; single-select, clicking the active chip clears it, composes with the title / tag / folder / favorite filters and the clear-all button
 - Add title / tag / folder / favorite filters (with clear-all) to `ProjectDocumentsPanel`; filters compose client-side and matches flow back into the grouped sections
 - Show linked-doc count on the Documents segment label (e.g. `Documents · 2`); hidden when zero
 - Build `ProjectDocumentsPanel` — linked docs grouped by reference type, cards open the shared `DocumentReader`

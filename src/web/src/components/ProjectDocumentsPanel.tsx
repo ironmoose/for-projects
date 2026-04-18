@@ -93,11 +93,12 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
   // whole project (the task spec caps at ~few hundred linked docs per project).
   const { documents: enrichedDocs } = useDocuments({ project_id: projectId }, { pageSize: 200 });
 
-  // Filter state — all four compose with each other.
+  // Filter state — all five compose with each other.
   const [titleSearch, setTitleSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
   const [favoriteFilter, setFavoriteFilter] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<DocumentReferenceType | null>(null);
 
   const [openDocId, setOpenDocId] = useState<string | null>(null);
 
@@ -131,10 +132,12 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
     return Array.from(set).sort();
   }, [enrichedRefs]);
 
-  // Apply filters. Title is case-insensitive substring over title OR summary.
+  // Apply filters. Reference-type narrows first, then title/tag/folder/favorite.
+  // Title is case-insensitive substring over title OR summary.
   const filteredRefs = useMemo(() => {
     const needle = titleSearch.trim().toLowerCase();
     return enrichedRefs.filter((e) => {
+      if (typeFilter && e.type !== typeFilter) return false;
       if (needle) {
         const hay = `${e.title} ${e.summary ?? ""}`.toLowerCase();
         if (!hay.includes(needle)) return false;
@@ -144,7 +147,7 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
       if (favoriteFilter && !e.favorite) return false;
       return true;
     });
-  }, [enrichedRefs, titleSearch, tagFilter, folderFilter, favoriteFilter]);
+  }, [enrichedRefs, typeFilter, titleSearch, tagFilter, folderFilter, favoriteFilter]);
 
   // Group filtered results by reference type in canonical order.
   const grouped = useMemo(() => {
@@ -156,6 +159,7 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
   }, [filteredRefs]);
 
   const activeFilterCount = [
+    typeFilter ? 1 : 0,
     titleSearch.trim() ? 1 : 0,
     tagFilter ? 1 : 0,
     folderFilter ? 1 : 0,
@@ -163,6 +167,7 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
   ].reduce((a, b) => a + b, 0);
 
   function clearAllFilters() {
+    setTypeFilter(null);
     setTitleSearch("");
     setTagFilter("");
     setFolderFilter("");
@@ -194,6 +199,8 @@ export function ProjectDocumentsPanel({ projectId, references }: ProjectDocument
         folderOptions={folderOptions}
         favorite={favoriteFilter}
         onFavoriteChange={setFavoriteFilter}
+        typeFilter={typeFilter}
+        onTypeChange={setTypeFilter}
         activeCount={activeFilterCount}
         onClearAll={clearAllFilters}
       />
@@ -263,6 +270,8 @@ function ProjectDocumentsFilters({
   folderOptions,
   favorite,
   onFavoriteChange,
+  typeFilter,
+  onTypeChange,
   activeCount,
   onClearAll,
 }: {
@@ -275,74 +284,107 @@ function ProjectDocumentsFilters({
   folderOptions: string[];
   favorite: boolean;
   onFavoriteChange: (v: boolean) => void;
+  typeFilter: DocumentReferenceType | null;
+  onTypeChange: (v: DocumentReferenceType | null) => void;
   activeCount: number;
   onClearAll: () => void;
 }) {
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      gap: t.spaceSm,
-      flexWrap: "wrap",
-    }}>
-      <div style={{ flex: "1 1 200px", minWidth: 160 }}>
-        <SearchInput
-          value={titleSearch}
-          onSearch={onTitleChange}
-          placeholder="Search linked documents..."
-          debounceMs={200}
-          aria-label="Search linked documents"
+    <div style={{ display: "flex", flexDirection: "column", gap: t.spaceSm }}>
+      {/* Primary filter row */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: t.spaceSm,
+        flexWrap: "wrap",
+      }}>
+        <div style={{ flex: "1 1 200px", minWidth: 160 }}>
+          <SearchInput
+            value={titleSearch}
+            onSearch={onTitleChange}
+            placeholder="Search linked documents..."
+            debounceMs={200}
+            aria-label="Search linked documents"
+          />
+        </div>
+
+        <FilterChipButton
+          label="Favorites"
+          icon="star"
+          active={favorite}
+          onClick={() => onFavoriteChange(!favorite)}
         />
+
+        <PillSelect
+          value={tag}
+          options={[{ value: "", label: "Tag" }, ...TAG_NAMES.map((n) => ({ value: n, label: n }))]}
+          onChange={onTagChange}
+          ariaLabel="Filter by tag"
+        />
+
+        {folderOptions.length > 0 && (
+          <PillSelect
+            value={folder}
+            options={[{ value: "", label: "Folder" }, ...folderOptions.map((f) => ({ value: f, label: f }))]}
+            onChange={onFolderChange}
+            ariaLabel="Filter by folder"
+          />
+        )}
+
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={onClearAll}
+            aria-label={`Clear ${activeCount} active filter${activeCount === 1 ? "" : "s"}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              padding: `6px ${t.spaceMd}`,
+              borderRadius: t.radiusFull,
+              border: "none",
+              background: "transparent",
+              color: t.colorTextMuted,
+              fontSize: t.fontSizeSm,
+              minHeight: 32,
+              fontFamily: t.fontSans,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <Icon name="close" size={12} />
+            Clear ({activeCount})
+          </button>
+        )}
       </div>
 
-      <FilterChipButton
-        label="Favorites"
-        icon="star"
-        active={favorite}
-        onClick={() => onFavoriteChange(!favorite)}
-      />
-
-      <PillSelect
-        value={tag}
-        options={[{ value: "", label: "Tag" }, ...TAG_NAMES.map((n) => ({ value: n, label: n }))]}
-        onChange={onTagChange}
-        ariaLabel="Filter by tag"
-      />
-
-      {folderOptions.length > 0 && (
-        <PillSelect
-          value={folder}
-          options={[{ value: "", label: "Folder" }, ...folderOptions.map((f) => ({ value: f, label: f }))]}
-          onChange={onFolderChange}
-          ariaLabel="Filter by folder"
-        />
-      )}
-
-      {activeCount > 0 && (
-        <button
-          type="button"
-          onClick={onClearAll}
-          aria-label={`Clear ${activeCount} active filter${activeCount === 1 ? "" : "s"}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            padding: `6px ${t.spaceMd}`,
-            borderRadius: t.radiusFull,
-            border: "none",
-            background: "transparent",
-            color: t.colorTextMuted,
-            fontSize: t.fontSizeSm,
-            minHeight: 32,
-            fontFamily: t.fontSans,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          <Icon name="close" size={12} />
-          Clear ({activeCount})
-        </button>
-      )}
+      {/* Reference-type chip row — single-select, click active chip to clear */}
+      <div
+        role="group"
+        aria-label="Filter by reference type"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: t.spaceXs,
+          flexWrap: "wrap",
+          paddingTop: t.spaceXs,
+          borderTop: `1px dashed color-mix(in srgb, ${t.colorBorder} 50%, transparent)`,
+        }}
+      >
+        {DOCUMENT_REFERENCE_TYPES.map((type) => {
+          const meta = REFERENCE_TYPE_META[type];
+          const active = typeFilter === type;
+          return (
+            <FilterChipButton
+              key={type}
+              label={meta.label}
+              icon={meta.icon}
+              active={active}
+              onClick={() => onTypeChange(active ? null : type)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
