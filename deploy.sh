@@ -12,7 +12,7 @@ BUMP="${1:-patch}"
 
 LATEST=$(git tag -l 'v*' --sort=-v:refname | head -n1 | sed 's/^v//')
 if [[ -z "$LATEST" ]]; then
-  # Fall back to package.json version
+  # No tags — fall back to package.json version.
   LATEST=$(grep '"version"' package.json | head -1 | sed 's/.*"\([0-9]*\.[0-9]*\.[0-9]*\)".*/\1/')
 fi
 
@@ -34,7 +34,13 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Deploying $TAG..."
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+if [[ "$CURRENT_BRANCH" != "main" ]]; then
+  echo "Error: deploy must run from 'main' branch (currently on '$CURRENT_BRANCH')."
+  exit 1
+fi
+
+echo "Deploying $TAG from branch $CURRENT_BRANCH..."
 echo ""
 
 # ── Preflight ────────────────────────────────────────────────────
@@ -50,42 +56,92 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-# ── Typecheck ────────────────────────────────────────────────────
+# ── Verify ──────────────────────────────────────────────────────
 echo "Typechecking..."
 bun run typecheck
 
-# ── Test ─────────────────────────────────────────────────────────
 echo "Running tests..."
 bun test
 
-# ── Build ────────────────────────────────────────────────────────
 echo "Building frontend..."
 bun run build
 
 # ── Update package.json version ──────────────────────────────────
+#
+# `sed -i ''` is BSD-compatible (macOS) — the single-quote arg to `-i` is the
+# (empty) backup extension. GNU sed tolerates it too if there's a space.
 sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
 
-# ── Stamp changelog ──────────────────────────────────────────────
-if grep -q '\[Unreleased\]' CHANGELOG.md; then
+# ── Stamp CHANGELOG ──────────────────────────────────────────────
+#
+# BSD sed (macOS) does NOT interpret `\n` in the replacement side — it writes
+# a literal `\n`. Historical deploys using `sed ... 's/X/Y\n\nZ/'` mangled the
+# CHANGELOG every run, which is why this repo is full of "fix: version"
+# cleanup commits and has zero `release: vX.Y.Z` commits.
+#
+# Use Bun to do the file transform properly and portably: rename
+# `## [Unreleased]` → `## [VERSION] - DATE`, then insert a fresh
+# `## [Unreleased]` block right under `# Changelog`.
+if grep -q '^## \[Unreleased\]' CHANGELOG.md; then
   DATE=$(date +%Y-%m-%d)
-  sed -i '' "s/## \[Unreleased\]/## [$VERSION] - $DATE/" CHANGELOG.md
-  # Add fresh Unreleased section
-  sed -i '' "s/# Changelog/# Changelog\n\n## [Unreleased]/" CHANGELOG.md
+  export VERSION DATE
+  bun -e '
+    import { readFileSync, writeFileSync } from "node:fs";
+    const path = "CHANGELOG.md";
+    const { VERSION, DATE } = process.env;
+    let c = readFileSync(path, "utf8");
+    // 1. Rename the first `## [Unreleased]` heading line to the dated release.
+    //    Match just the heading + its trailing newline so surrounding blank
+    //    lines are preserved verbatim.
+    c = c.replace(/^## \[Unreleased\]\n/m, `## [${VERSION}] - ${DATE}\n`);
+    // 2. Insert a fresh `## [Unreleased]` block right after the top header.
+    //    `# Changelog\n\n` is the canonical top-of-file; we rebuild it to
+    //    `# Changelog\n\n## [Unreleased]\n\n` so the new block has a blank
+    //    line on each side.
+    c = c.replace(/^# Changelog\n\n/, "# Changelog\n\n## [Unreleased]\n\n");
+    writeFileSync(path, c);
+  '
   echo "Stamped CHANGELOG.md with [$VERSION] - $DATE"
 else
-  echo "Warning: no [Unreleased] section in CHANGELOG.md"
+  echo "Error: no [Unreleased] section in CHANGELOG.md to stamp."
+  echo "Fix CHANGELOG.md and re-run."
+  # Roll back the package.json edit so the working tree is clean for the next try.
+  git checkout -- package.json
+  exit 1
 fi
 
 # ── Commit & tag ─────────────────────────────────────────────────
-git add package.json CHANGELOG.md src/web/dist/
-git commit -m "release: v$VERSION"
+#
+# Stage only the two files we actually edited. The built frontend lives at
+# src/web/dist/ and is gitignored on purpose — publishing via npm uses the
+# `files` field in package.json to include src/, so dist is produced fresh at
+# install time. If this repo ever needs to ship pre-built for github:<tag>
+# installs, force-add dist here and update .gitignore accordingly.
+git add package.json CHANGELOG.md
+git commit -m "release: $TAG"
 git tag "$TAG"
 
-# ── Push ─────────────────────────────────────────────────────────
-git push origin main --tags
+# ── Push (atomic: all-or-nothing) ────────────────────────────────
+#
+# `--atomic` makes the branch + tag push succeed or fail together — no more
+# state where the tag exists locally but never made it to origin (or vice
+# versa). Scope to the specific tag; never push `--tags` which would try to
+# re-push every stale tag from past aborted runs.
+#
+# On failure, roll back the local commit + tag so the next `make deploy`
+# starts from a clean slate instead of fighting the preflight working-tree
+# check.
+if ! git push --atomic origin main "$TAG"; then
+  echo ""
+  echo "Error: push failed. Rolling back local commit and tag."
+  git tag -d "$TAG"
+  git reset --hard HEAD^
+  echo "Local state restored to pre-deploy. Fix the push issue and re-run."
+  exit 1
+fi
 
 echo ""
 echo "Deployed $TAG"
 echo ""
 echo "Install:"
-echo "  \"@x4lt7ab/tab-for-projects\": \"github:4lt7ab/Tab/tab-for-projects#$TAG\""
+echo "  \"@x4lt7ab/tab-for-projects\": \"github:4lt7ab/projects#$TAG\""
