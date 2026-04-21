@@ -72,52 +72,14 @@ bun run build
 # (empty) backup extension. GNU sed tolerates it too if there's a space.
 sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
 
-# ── Stamp CHANGELOG ──────────────────────────────────────────────
-#
-# BSD sed (macOS) does NOT interpret `\n` in the replacement side — it writes
-# a literal `\n`. Historical deploys using `sed ... 's/X/Y\n\nZ/'` mangled the
-# CHANGELOG every run, which is why this repo is full of "fix: version"
-# cleanup commits and has zero `release: vX.Y.Z` commits.
-#
-# Use Bun to do the file transform properly and portably: rename
-# `## [Unreleased]` → `## [VERSION] - DATE`, then insert a fresh
-# `## [Unreleased]` block right under `# Changelog`.
-if grep -q '^## \[Unreleased\]' CHANGELOG.md; then
-  DATE=$(date +%Y-%m-%d)
-  export VERSION DATE
-  bun -e '
-    import { readFileSync, writeFileSync } from "node:fs";
-    const path = "CHANGELOG.md";
-    const { VERSION, DATE } = process.env;
-    let c = readFileSync(path, "utf8");
-    // 1. Rename the first `## [Unreleased]` heading line to the dated release.
-    //    Match just the heading + its trailing newline so surrounding blank
-    //    lines are preserved verbatim.
-    c = c.replace(/^## \[Unreleased\]\n/m, `## [${VERSION}] - ${DATE}\n`);
-    // 2. Insert a fresh `## [Unreleased]` block right after the top header.
-    //    `# Changelog\n\n` is the canonical top-of-file; we rebuild it to
-    //    `# Changelog\n\n## [Unreleased]\n\n` so the new block has a blank
-    //    line on each side.
-    c = c.replace(/^# Changelog\n\n/, "# Changelog\n\n## [Unreleased]\n\n");
-    writeFileSync(path, c);
-  '
-  echo "Stamped CHANGELOG.md with [$VERSION] - $DATE"
-else
-  echo "Error: no [Unreleased] section in CHANGELOG.md to stamp."
-  echo "Fix CHANGELOG.md and re-run."
-  # Roll back the package.json edit so the working tree is clean for the next try.
-  git checkout -- package.json
-  exit 1
-fi
-
 # ── Commit & tag ─────────────────────────────────────────────────
 #
-# Stage only the two files we actually edited. The built frontend lives at
+# Stage only the file we actually edited. The built frontend lives at
 # src/web/dist/ and is gitignored on purpose — publishing via npm uses the
 # `files` field in package.json to include src/, so dist is produced fresh at
 # install time. If this repo ever needs to ship pre-built for github:<tag>
 # installs, force-add dist here and update .gitignore accordingly.
-git add package.json CHANGELOG.md
+git add package.json
 git commit -m "release: $TAG"
 git tag "$TAG"
 

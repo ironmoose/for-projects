@@ -266,13 +266,12 @@ pages/       → DashboardPage, ProjectPage, DocumentsPage, ActivityLogPage
 
 ## Every Commit
 
-Three things are **always** touched alongside code changes:
+Two things are **always** touched alongside code changes:
 
 1. **Tests** — tests ship with the code, not after it. Add or update tests for every functional change. Run `bun test` and confirm green before committing.
-2. **CHANGELOG.md** — every commit adds a bullet to the changelog under the current `## [Unreleased]` section. **No category headers** (no `### Added`, `### Fixed`, etc.) — just flat bullets under the version. **Keep entries terse** — one short line per change, no implementation details. The changelog says *what* changed, not *how* or *why*. Example: `- Migrate Overlay atom to @4lt7ab/ui re-export`.
-3. **CLAUDE.md** — if the change adds modules, changes conventions, alters architecture, or introduces new workflows, update this file. Keep it current — a stale CLAUDE.md teaches wrong patterns.
+2. **CLAUDE.md** — if the change adds modules, changes conventions, alters architecture, or introduces new workflows, update this file. Keep it current — a stale CLAUDE.md teaches wrong patterns.
 
-These are not optional. A commit without updated tests and changelog is incomplete.
+These are not optional. A commit without updated tests is incomplete.
 
 ## Testing
 
@@ -290,8 +289,7 @@ These are not optional. A commit without updated tests and changelog is incomple
 3. Add repository method in `src/domain/repositories/sqlite/{resource}.ts` (and `pg/` if applicable)
 4. Register route in `src/server/routes/` barrel and wire in `src/domain/bootstrap.ts`
 5. Add tests in `src/domain/integration.test.ts` or a dedicated test file
-6. Update CHANGELOG.md
-7. `bun test && bun run typecheck`
+6. `bun test && bun run typecheck`
 
 ## Adding a Migration
 
@@ -301,17 +299,15 @@ These are not optional. A commit without updated tests and changelog is incomple
 4. Update `entities.ts` if new fields or types are introduced
 5. Update service validation in `inputs.ts` if new fields need validation
 6. Add tests for the new schema behavior
-7. Update CHANGELOG.md
-8. `bun test` (SQLite migrations auto-apply in tests)
-9. `bun scripts/smoke-tests/pg-migration-test.ts` (if Postgres is running)
+7. `bun test` (SQLite migrations auto-apply in tests)
+8. `bun scripts/smoke-tests/pg-migration-test.ts` (if Postgres is running)
 
 ## Adding a Frontend Component
 
 1. Create component file in the appropriate tier: `src/web/src/components/{atoms|molecules|organisms}/{Name}.tsx`
 2. Use theme tokens via `useTheme()` — no hardcoded colors or pixel values
 3. Export from `src/web/src/components/index.ts` barrel
-4. Update CHANGELOG.md
-5. `bun run build` (vite build must succeed)
+4. `bun run build` (vite build must succeed)
 
 ## Adding an MCP Tool
 
@@ -319,8 +315,7 @@ These are not optional. A commit without updated tests and changelog is incomple
 2. Wire to the appropriate service method (create new service method if needed)
 3. Add test in `src/mcp/server.test.ts`
 4. Update the MCP tools count in this CLAUDE.md if the total changes
-5. Update CHANGELOG.md
-6. `bun test && bun run typecheck`
+5. `bun test && bun run typecheck`
 
 ## Adding a Source Connector
 
@@ -328,8 +323,7 @@ These are not optional. A commit without updated tests and changelog is incomple
 2. Add the type string to `SOURCE_TYPES` in `entities.ts`
 3. Register the connector in `bootstrap.ts`
 4. Add tests in `src/domain/connectors/{name}.test.ts`
-5. Update CHANGELOG.md
-6. `bun test`
+5. `bun test`
 
 ## Releasing
 
@@ -342,7 +336,7 @@ make deploy-major        # bump major  (0.1.8 → 1.0.0)
 make deploy V=2.0.0      # exact version
 ```
 
-The deploy target: typechecks, runs tests, builds frontend, bumps `package.json` version, stamps `CHANGELOG.md` with the version and date, commits, tags (`v{version}`), and pushes to origin with tags.
+The deploy target: typechecks, runs tests, builds frontend, bumps `package.json` version, commits, tags (`v{version}`), and pushes to origin with tags.
 
 Other useful make targets:
 ```bash
