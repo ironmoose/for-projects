@@ -158,6 +158,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ items }) => handle(() => projectService.update(items))
   );
 
+  server.registerTool(
+    "delete_project",
+    {
+      description: "Delete projects by ID. Pass an `ids` array. Cascades to project_documents links (linked documents themselves are not deleted). Emits a deleted event and an activity-log entry per id. Returns { deleted, ids }.",
+      inputSchema: {
+        ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ ids }) => handle(async () => {
+      await projectService.remove(ids);
+      return { deleted: ids.length, ids };
+    })
+  );
+
   // -- Tasks ----------------------------------------------------------
 
   server.registerTool(
@@ -210,6 +224,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ items }) => handle(() => taskService.update(items))
+  );
+
+  server.registerTool(
+    "delete_task",
+    {
+      description: "Delete tasks by ID. Pass an `ids` array. Removes dependency edges where the task is the source or target. Emits a deleted event and an activity-log entry per id. Returns { deleted, ids }.",
+      inputSchema: {
+        ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ ids }) => handle(async () => {
+      await taskService.remove(ids);
+      return { deleted: ids.length, ids };
+    })
   );
 
   // -- Dependency graph tools -------------------------------------------
@@ -323,6 +351,33 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
     ({ query, tag, folder, favorite, limit }) => handle(() => documentService.semanticSearch(query, { tag, folder, favorite, limit }))
   );
 
+  server.registerTool(
+    "delete_document",
+    {
+      description: "Delete documents. Provide either `ids` (array) OR `folder` (string), but not both. With `ids`, cascades to project_documents and entity_tags links. With `folder`, deletes every document in that folder. Returns { deleted, ids } for the ids branch; { deleted_folder } for the folder branch.",
+      inputSchema: {
+        ids: z.array(z.string().max(26)).optional(),
+        folder: z.string().max(64).optional(),
+      },
+    },
+    ({ ids, folder }) => handle(async () => {
+      const hasIds = Array.isArray(ids);
+      const hasFolder = typeof folder === "string" && folder.trim() !== "";
+      if (hasIds && hasFolder) {
+        throw new ServiceError("provide either ids or folder, not both", 400);
+      }
+      if (!hasIds && !hasFolder) {
+        throw new ServiceError("ids array or folder string is required", 400);
+      }
+      if (hasFolder) {
+        await documentService.removeByFolder(folder!);
+        return { deleted_folder: folder };
+      }
+      await documentService.remove(ids!);
+      return { deleted: ids!.length, ids };
+    })
+  );
+
   // -- Automations ------------------------------------------------------
 
   server.registerTool(
@@ -387,6 +442,20 @@ export function createMcpServer(ctx: McpServiceContext): McpServer {
       },
     },
     ({ items }) => handle(() => automationService.update(items))
+  );
+
+  server.registerTool(
+    "delete_automation",
+    {
+      description: "Delete automations by ID. Pass an `ids` array. Cascades to entity_tags links. Emits a deleted event and an activity-log entry per id. Returns { deleted, ids }.",
+      inputSchema: {
+        ids: z.array(z.string().max(26)),
+      },
+    },
+    ({ ids }) => handle(async () => {
+      await automationService.remove(ids);
+      return { deleted: ids.length, ids };
+    })
   );
 
   // -- Source import ----------------------------------------------------

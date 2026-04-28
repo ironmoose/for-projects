@@ -210,12 +210,12 @@ Tasks do not hold document links; `create_task` / `update_task` carry no `docume
 
 ### MCP tools
 
-18 tools total (no delete tools — deletion is REST-only):
-- **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`
-- **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`
+24 tools total:
+- **Projects:** `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`
+- **Tasks:** `list_tasks`, `get_task`, `create_task`, `update_task`, `delete_task`
 - **Dependencies:** `get_dependency_graph` (returns tasks and edges only; no blocker computation)
-- **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`, `search_documents`
-- **Automations:** `list_automations`, `get_automation`, `create_automation`, `update_automation`
+- **Documents:** `list_documents`, `get_document`, `create_document`, `update_document`, `search_documents`, `delete_document` (accepts `{ids}` XOR `{folder}`)
+- **Automations:** `list_automations`, `get_automation`, `create_automation`, `update_automation`, `delete_automation`
 
 `search_documents` performs semantic vector search (Postgres + embeddings only). Returns documents ranked by hybrid similarity (vector + keyword boost). Parameters: `query` (required), `tag`, `folder`, `favorite`, `limit`.
 

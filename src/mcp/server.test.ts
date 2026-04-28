@@ -873,46 +873,249 @@ describe("task MCP tools ignore documents field", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Deleted tools -- negative tests
+// Delete tools
 // ---------------------------------------------------------------------------
 
-describe("deleted tools are not registered", () => {
-  it("delete_projects is not found", async () => {
-    const result = await callTool("delete_projects", { ids: ["fake"] });
-    expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
+describe("delete_project", () => {
+  it("deletes a project and subsequent get_project errors with not found", async () => {
+    const [proj] = parseResult(
+      await callTool("create_project", { items: [{ title: "Delete Me Project" }] })
+    );
+
+    const result = await callTool("delete_project", { ids: [proj.id] });
+    expect(result.isError).toBeUndefined();
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(parsed.ids).toEqual([proj.id]);
+
+    const getResult = await callTool("get_project", { id: proj.id });
+    expect(getResult.isError).toBe(true);
+    expect(getErrorText(getResult)).toMatch(/not found/i);
   });
 
-  it("delete_tasks is not found", async () => {
-    const result = await callTool("delete_tasks", { ids: ["fake"] });
-    expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
+  it("is a no-op for an unknown id (deleteMany matches REST DELETE semantics)", async () => {
+    // Service-layer remove() does not throw on missing ids — the underlying
+    // deleteMany simply matches zero rows. Mirrors REST DELETE which 204s on
+    // missing ids. This locks in that contract through the MCP layer.
+    const result = await callTool("delete_project", { ids: ["00000000000000000000000000"] });
+    expect(result.isError).toBeUndefined();
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(parsed.ids).toEqual(["00000000000000000000000000"]);
   });
 
-  it("delete_project is not found", async () => {
-    const result = await callTool("delete_project", { ids: ["fake"] });
+  it("surfaces handle()'s isError path for malformed input", async () => {
+    // Triggers Zod input validation (string-not-array) rather than ServiceError.
+    const result = await callTool("delete_project", { ids: "not-an-array" });
     expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
   });
 
-  it("delete_task is not found", async () => {
-    const result = await callTool("delete_task", { ids: ["fake"] });
-    expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
+  it("cascades to project_documents but leaves the linked document intact", async () => {
+    const [proj] = parseResult(
+      await callTool("create_project", { items: [{ title: "Cascade Source Project" }] })
+    );
+    const [doc] = parseResult(
+      await callTool("create_document", { items: [{ title: "Linked Doc Survives" }] })
+    );
+    await callTool("update_project", {
+      items: [{ id: proj.id, documents: { [doc.id]: true } }],
+    });
+
+    // Sanity: link exists.
+    const linksBefore = ctx.db!.query(
+      "SELECT project_id, document_id FROM project_documents WHERE project_id = ? AND document_id = ?"
+    ).all(proj.id, doc.id) as unknown[];
+    expect(linksBefore.length).toBe(1);
+
+    const result = await callTool("delete_project", { ids: [proj.id] });
+    expect(result.isError).toBeUndefined();
+
+    // Link is gone via FK cascade.
+    const linksAfter = ctx.db!.query(
+      "SELECT project_id, document_id FROM project_documents WHERE project_id = ? AND document_id = ?"
+    ).all(proj.id, doc.id) as unknown[];
+    expect(linksAfter.length).toBe(0);
+
+    // Document itself still exists.
+    const fetched = parseResult(await callTool("get_document", { id: doc.id }));
+    expect(fetched.id).toBe(doc.id);
+  });
+});
+
+describe("delete_task", () => {
+  it("deletes a task and subsequent get_task errors with not found", async () => {
+    const [proj] = parseResult(
+      await callTool("create_project", { items: [{ title: "Delete Task Project" }] })
+    );
+    const [task] = parseResult(
+      await callTool("create_task", { items: [{ project_id: proj.id, title: "Disposable Task" }] })
+    );
+
+    const result = await callTool("delete_task", { ids: [task.id] });
+    expect(result.isError).toBeUndefined();
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(parsed.ids).toEqual([task.id]);
+
+    const getResult = await callTool("get_task", { id: task.id });
+    expect(getResult.isError).toBe(true);
+    expect(getErrorText(getResult)).toMatch(/not found/i);
   });
 
-  it("delete_document is not found", async () => {
-    const result = await callTool("delete_document", { ids: ["fake"] });
-    expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
+  it("is a no-op for an unknown id (deleteMany matches REST DELETE semantics)", async () => {
+    const result = await callTool("delete_task", { ids: ["00000000000000000000000000"] });
+    expect(result.isError).toBeUndefined();
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
   });
 
-  it("query is not found", async () => {
-    const result = await callTool("query", { sql: "SELECT 1" });
+  it("surfaces handle()'s isError path for malformed input", async () => {
+    const result = await callTool("delete_task", { ids: "not-an-array" });
     expect(result.isError).toBe(true);
-    expect(getErrorText(result)).toMatch(/tool.*not found|unknown tool/i);
   });
 
+  it("writes a 'deleted' activity-log entry for the task", async () => {
+    const [proj] = parseResult(
+      await callTool("create_project", { items: [{ title: "Activity Log Task Project" }] })
+    );
+    const [task] = parseResult(
+      await callTool("create_task", { items: [{ project_id: proj.id, title: "Logged Delete" }] })
+    );
+
+    await callTool("delete_task", { ids: [task.id] });
+
+    const log = await ctx.activityLogService.list({ entity_type: "task", entity_id: task.id });
+    const deletedEntries = log.data.filter((e) => e.action === "deleted");
+    expect(deletedEntries.length).toBe(1);
+  });
+});
+
+describe("delete_document", () => {
+  it("deletes by ids", async () => {
+    const [doc] = parseResult(
+      await callTool("create_document", { items: [{ title: "Doc By Id" }] })
+    );
+    const result = await callTool("delete_document", { ids: [doc.id] });
+    expect(result.isError).toBeUndefined();
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(parsed.ids).toEqual([doc.id]);
+
+    const getResult = await callTool("get_document", { id: doc.id });
+    expect(getResult.isError).toBe(true);
+  });
+
+  it("deletes every document in a folder", async () => {
+    const folder = "delete-doc-folder-test";
+    const created = parseResult(
+      await callTool("create_document", {
+        items: [
+          { title: "Folder Doc 1", folder },
+          { title: "Folder Doc 2", folder },
+          { title: "Folder Doc 3", folder },
+        ],
+      })
+    );
+    expect(created.length).toBe(3);
+
+    const result = await callTool("delete_document", { folder });
+    expect(result.isError).toBeUndefined();
+    const parsed = parseResult(result);
+    expect(parsed.deleted_folder).toBe(folder);
+
+    const list = parseResult(await callTool("list_documents", { folder }));
+    expect(list.total).toBe(0);
+    expect(list.data.length).toBe(0);
+  });
+
+  it("rejects when both ids and folder are provided", async () => {
+    const result = await callTool("delete_document", {
+      ids: ["00000000000000000000000000"],
+      folder: "any-folder",
+    });
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/either ids or folder/i);
+  });
+
+  it("rejects when neither ids nor folder are provided", async () => {
+    const result = await callTool("delete_document", {});
+    expect(result.isError).toBe(true);
+    expect(getErrorText(result)).toMatch(/ids array or folder/i);
+  });
+
+  it("cascades to project_documents and entity_tags", async () => {
+    const [proj] = parseResult(
+      await callTool("create_project", { items: [{ title: "Doc Cascade Project" }] })
+    );
+    const [doc] = parseResult(
+      await callTool("create_document", {
+        items: [{ title: "Cascading Doc", tags: ["data"] }],
+      })
+    );
+    await callTool("update_project", {
+      items: [{ id: proj.id, documents: { [doc.id]: true } }],
+    });
+
+    // Sanity: both link rows present.
+    const projLinksBefore = ctx.db!.query(
+      "SELECT 1 FROM project_documents WHERE document_id = ?"
+    ).all(doc.id) as unknown[];
+    expect(projLinksBefore.length).toBeGreaterThanOrEqual(1);
+    const tagLinksBefore = ctx.db!.query(
+      "SELECT 1 FROM entity_tags WHERE entity_type = 'document' AND entity_id = ?"
+    ).all(doc.id) as unknown[];
+    expect(tagLinksBefore.length).toBeGreaterThanOrEqual(1);
+
+    const result = await callTool("delete_document", { ids: [doc.id] });
+    expect(result.isError).toBeUndefined();
+
+    const projLinksAfter = ctx.db!.query(
+      "SELECT 1 FROM project_documents WHERE document_id = ?"
+    ).all(doc.id) as unknown[];
+    expect(projLinksAfter.length).toBe(0);
+    const tagLinksAfter = ctx.db!.query(
+      "SELECT 1 FROM entity_tags WHERE entity_type = 'document' AND entity_id = ?"
+    ).all(doc.id) as unknown[];
+    expect(tagLinksAfter.length).toBe(0);
+  });
+});
+
+describe("delete_automation", () => {
+  it("deletes an automation and subsequent get_automation errors with not found", async () => {
+    const [auto] = parseResult(
+      await callTool("create_automation", { items: [{ title: "Delete Me Automation" }] })
+    );
+    const result = await callTool("delete_automation", { ids: [auto.id] });
+    expect(result.isError).toBeUndefined();
+    const parsed = parseResult(result);
+    expect(parsed.deleted).toBe(1);
+    expect(parsed.ids).toEqual([auto.id]);
+
+    const getResult = await callTool("get_automation", { id: auto.id });
+    expect(getResult.isError).toBe(true);
+    expect(getErrorText(getResult)).toMatch(/not found/i);
+  });
+
+  it("cascades to entity_tags", async () => {
+    const [auto] = parseResult(
+      await callTool("create_automation", {
+        items: [{ title: "Tagged Automation", tags: ["data"] }],
+      })
+    );
+
+    const tagLinksBefore = ctx.db!.query(
+      "SELECT 1 FROM entity_tags WHERE entity_type = 'automation' AND entity_id = ?"
+    ).all(auto.id) as unknown[];
+    expect(tagLinksBefore.length).toBeGreaterThanOrEqual(1);
+
+    const result = await callTool("delete_automation", { ids: [auto.id] });
+    expect(result.isError).toBeUndefined();
+
+    const tagLinksAfter = ctx.db!.query(
+      "SELECT 1 FROM entity_tags WHERE entity_type = 'automation' AND entity_id = ?"
+    ).all(auto.id) as unknown[];
+    expect(tagLinksAfter.length).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
