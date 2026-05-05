@@ -32,11 +32,13 @@ bun scripts/smoke-tests/pg-migration-test.ts       # test Postgres migrations
 bun scripts/smoke-tests/pg-smoke-test.ts            # verify schema, vectors, indexes
 bun scripts/smoke-tests/embedding-smoke-test.ts     # Ollama embedding pipeline
 bun scripts/smoke-tests/semantic-search-smoke-test.ts  # vector similarity search
+bun scripts/smoke-tests/pg-to-sqlite-test.ts        # test pg -> sqlite migration round trip
 ```
 
 Other scripts:
 ```bash
-bun scripts/migrate-sqlite-to-pg.ts          # dry-run SQLite→Postgres migration (--commit to write)
+bun scripts/migrate-sqlite-to-pg.ts          # dry-run SQLite->Postgres migration (--commit to write)
+bun scripts/migrate-pg-to-sqlite.ts          # dry-run Postgres->SQLite migration (--commit to write)
 bun scripts/prune-activity-log.ts            # prune old activity log entries
 bun scripts/regenerate-embeddings.sh         # re-embed all entities
 ```
@@ -72,6 +74,8 @@ src/
 │   │   ├── registry.ts          # ConnectorRegistry
 │   │   └── github.ts            # GitHub file/README connector
 │   └── db/
+│       ├── pg-to-sqlite.ts      # Postgres -> SQLite data migration
+│       ├── sqlite-to-pg.ts      # SQLite -> Postgres data migration
 │       └── migrations/
 │           ├── sqlite/          # numbered .sql migration files
 │           └── pg/              # Postgres equivalents

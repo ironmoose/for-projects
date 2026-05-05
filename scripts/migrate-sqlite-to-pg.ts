@@ -46,7 +46,7 @@ if (commit) {
   console.log(`  ${"TOTAL".padEnd(24)} ${String(total).padStart(6)} rows`);
 } else {
   // Dry run — just report row counts from SQLite
-  const tables = ["projects", "tasks", "documents", "tags", "entity_tags", "project_documents", "task_dependencies", "activity_log"];
+  const tables = ["projects", "tasks", "documents", "tags", "entity_tags", "project_documents", "task_dependencies", "automations", "activity_log"];
   let total = 0;
   for (const table of tables) {
     try {

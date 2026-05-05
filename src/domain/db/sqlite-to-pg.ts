@@ -94,7 +94,12 @@ export async function migrateSqliteToPg(lite: Database, pg: PgClient): Promise<M
   // 7. task_dependencies (FK → tasks)
   results.push(await migrateTable(lite, pg, "task_dependencies"));
 
-  // 8. activity_log (no FKs — last since it's largest and least critical)
+  // 8. automations (no FKs)
+  results.push(await migrateTable(lite, pg, "automations", {
+    transform: (row) => ({ ...row, is_favorite: !!row.is_favorite }),
+  }));
+
+  // 9. activity_log (no FKs, last since it's largest and least critical)
   results.push(await migrateTable(lite, pg, "activity_log"));
 
   return results;
